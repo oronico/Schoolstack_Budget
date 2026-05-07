@@ -1,0 +1,201 @@
+URGENT UNDERWRITING FIX SPRINT
+
+Repo:
+oronico/Schoolstack_Budget
+
+File to prioritize:
+artifacts/school-financial-model/src/pages/underwriting.tsx
+
+Problem:
+The public guest wizard is technically live, but it is not underwriting-ready. It also appears to build payloads that may not conform to the canonical model schema.
+
+Critical evidence:
+1. Guest wizard buildModelDataPayload creates revenueRows with categories:
+   - "tuition"
+   - "publicFunding"
+   - "philanthropy"
+
+   But the canonical schema expects:
+   - "tuition_and_fees"
+   - "tuition_offsets"
+   - "public_funding"
+   - "school_choice"
+   - "grants_contributions"
+   - "philanthropy"
+   - "other_revenue"
+
+2. Guest wizard uses driverType "fixed" in places, but the canonical schema and engines use "annual_fixed", "monthly", "per_student", "percent_of_base", etc.
+
+3. Guest wizard appears to pre-multiply per-student revenue in amounts, then also labels the row driverType as "per_student". That risks double-counting revenue because the canonical engine multiplies per_student amounts by enrollment.
+
+4. Proof pack smoke output shows a 30-student microschool producing $21,069,525 in Year 5 revenue and 99.1% profit margin. That is not credible and suggests payload mapping or formula mismatch.
+
+Do this first. Do not add new features until the math is fixed.
+
+PHASE 1. Fix guest payload mapping
+
+Update buildModelDataPayload in underwriting.tsx so it uses the same shape as the authenticated wizard and canonical schema.
+
+Revenue rows:
+- Tuition:
+  category: "tuition_and_fees"
+  driverType: "per_student"
+  amounts: [perStudentTuition, perStudentTuition, perStudentTuition, perStudentTuition, perStudentTuition]
+  Do NOT multiply tuition by enrollment inside amounts.
+
+- Public funding:
+  category: "public_funding" or "school_choice", depending current canonical handling
+  driverType: "per_student"
+  amounts: [perPupilPublicFunding, perPupilPublicFunding, perPupilPublicFunding, perPupilPublicFunding, perPupilPublicFunding]
+  Do NOT multiply by enrollment inside amounts.
+
+- Philanthropy:
+  category: "grants_contributions" or "philanthropy", whichever canonical export expects
+  driverType: "annual_fixed"
+  amounts: [annualAmount, annualAmount, annualAmount, annualAmount, annualAmount]
+
+Expense rows:
+- Use canonical categories. For facility-related costs use "occupancy_facility", not "facilities".
+- Use driverType "annual_fixed", "monthly", or "per_student", not "fixed".
+- If curriculum is entered as annual total, use "annual_fixed".
+- If curriculum is intended per student, rename the UI field to “Curriculum per student” and use per_student.
+
+Staffing rows:
+- Confirm benefitsRate and payrollTaxRate are expressed as percentages, not decimals.
+- If canonical engine divides by 100, use 18 and 7.65, not 0.18 and 0.0765.
+- If payrollLike false means contractor/no payroll tax, do not set payrollLike false for full-time employee rows.
+
+PHASE 2. Add underwriting fields, minimum viable
+
+Add the following fields to the guest model and UI.
+
+Founder compensation:
+- founderIsPaidYear1: yes/no
+- founderAnnualCompensation
+- founderCompensationBeginsYear
+- unpaidOrVolunteerLaborDescription
+
+Enrollment validation:
+- enrollmentValidationStatus: projected / waitlist / verbal commitments / deposits collected / signed agreements
+- signedAgreementCount
+- depositCount
+- averageDepositAmount
+- tuitionCollectionRate
+- retentionRate
+
+Facility readiness:
+- facilityType: commercial / church_shared / dedicated_school / community_center / residential / virtual / other
+- leaseSigned: yes/no
+- leaseInEntityName: yes/no
+- occupancyDocumentationStatus: obtained / in process / not started / unknown
+- fireInspectionStatus: passed / scheduled / not started / unknown
+- insuranceStatus: active / quoted / not started / unknown
+
+Debt:
+- hasExistingDebt
+- existingDebtBalance
+- existingAnnualDebtService
+- requestedLoanAmount
+- requestedLoanAnnualDebtService or loan terms if already supported
+
+Cash:
+- beginningCash
+- expectedSummerRevenueGap: yes/no
+- publicFundingApprovalStatus: approved / pending / not applicable
+- canWithstand90DayDelay: yes/no
+
+PHASE 3. Wire these fields into model payload
+
+- Put retentionRate into enrollment.retentionRate.
+- Put beginningCash into openingBalances.cash.
+- Add debt through capitalAndDebtRows using canonical loan/debt structure.
+- Ensure requested loan debt service is included only if the founder enters it.
+- Do not imply approval or eligibility.
+- Keep /underwriting public and localStorage-backed.
+
+PHASE 4. Add explicit lender-readiness flags
+
+Add a Review section called “Lender Readiness Snapshot.”
+
+Show:
+- Overall status: Strong / Developing / Not Yet Ready
+- Top 3 strengths
+- Top 3 lender concerns
+- Suggested next fix
+
+Flag rules:
+- Founder unpaid in all years: high risk
+- No founder compensation before Year 3: medium/high risk
+- Year 0 or Year 1 with fewer than 10 deposits or signed agreements: high risk
+- Tuition collection modeled at 100%: caution
+- Retention below 80% for operating school: caution/high risk
+- Residential facility: high risk or ineligible depending program policy
+- No signed lease: high risk
+- No occupancy documentation path: high risk
+- No insurance path: high risk
+- Facility cost above 22% of revenue: caution/high risk
+- Staffing above 65% of revenue: high risk
+- Days cash on hand below 45: high risk
+- Days cash on hand below 30: critical
+- DSCR below 1.0x: critical
+- DSCR 1.0x to 1.15x: high risk
+- DSCR 1.15x to 1.25x: caution
+- DSCR above 1.25x: stronger
+
+Use existing benchmark thresholds where available:
+- DSCR green is 1.25
+- DSCR amber is 1.15
+- Days cash green is 90
+- Days cash amber is 45
+- Facility green is 15%
+- Facility amber is 22%
+- Payroll green is 55%
+- Payroll amber is 65%
+
+PHASE 5. Fix the proof pack sample
+
+The previous proof pack cannot remain as-is if it says a 30-student school produces $21M in Year 5 revenue.
+
+Create a new proof pack:
+docs/UNDERWRITING_GUEST_WIZARD_PROOF_PACK_2026-05-06.md
+
+Include:
+- exact payload sent to /api/public/consultant
+- Year 1 and Year 5 enrollment
+- Year 1 and Year 5 revenue
+- Year 1 and Year 5 expenses
+- net income
+- staffing ratio
+- facility ratio
+- DSCR if debt included
+- cash runway
+- top risks produced
+
+Acceptance:
+A 30-student microschool with $12,000 tuition should not show $21M in Year 5 revenue.
+
+PHASE 6. Tests
+
+Run:
+pnpm install --frozen-lockfile
+pnpm run typecheck
+pnpm --filter @workspace/school-financial-model run build
+pnpm --filter @workspace/api-server run build
+pnpm --filter @workspace/api-server run qa:excel
+pnpm --filter @workspace/api-server run qa:formula-results
+pnpm --filter @workspace/api-server run qa:smoke-arithmetic
+pnpm --filter @workspace/school-financial-model run test
+
+Manual smoke:
+- Incognito /underwriting loads with zero redirects
+- Complete guest wizard
+- Refresh mid-flow preserves data
+- Readiness analysis returns credible revenue and margin
+- Excel export downloads
+- Workbook opens
+- No undefined, NaN, #REF!, #DIV/0!, or #VALUE!
+- No Plaid or ACH copy appears
+- No approval or guarantee language appears
+
+Launch decision:
+Do not publish this as underwriting-ready until the guest payload mapping produces credible math.

@@ -142,26 +142,59 @@ function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
     Math.max(1, Math.ceil(s / Math.max(1, m.studentsPerTeacher))),
   );
 
+  // CANONICAL PAYLOAD CONTRACT — keep in lockstep with the authenticated
+  // wizard's Zod schemas (see model-wizard/schema.ts) and the engine in
+  // lib/finance/src/decision-engine/scenario-engine.ts.
+  //
+  // Critical (Task #598 underwriting fix sprint, Phase 1):
+  //   - revenueRowSchema.category enum (schema.ts:393):
+  //       "tuition_and_fees" | "tuition_offsets" | "public_funding" |
+  //       "school_choice" | "grants_contributions" | "philanthropy" |
+  //       "other_revenue"
+  //   - revenueRowSchema.driverType enum (schema.ts:399):
+  //       "annual_fixed" | "monthly" | "per_student" | "percent_of_base"
+  //   - expenseRow canonical built-in categories (expense-defaults.ts):
+  //       "personnel" | "instructional_program" | "technology" |
+  //       "occupancy_facility" | "administrative_general" | "capital_financing"
+  //   - expenseRowSchema.driverType enum (schema.ts:503):
+  //       "annual_fixed" | "monthly" | "per_student" |
+  //       "per_new_student" | "per_returning_student" |
+  //       "percent_of_revenue" | "per_fte"
+  //
+  // BUG that PHASE 1 fixes:
+  //   The previous payload labelled tuition + per-pupil rows as
+  //   driverType "per_student" while ALSO pre-multiplying the amounts by
+  //   enrollment. The engine then multiplied a SECOND time inside
+  //   driverVal() (`base * students`), producing ~30x revenue. A 30-student
+  //   microschool at $12k tuition was emitting ~$21M Y5. Per-student amounts
+  //   must be the per-pupil rate; the engine handles the multiplication.
+  //
+  //   benefitsRate / payrollTaxRate are WHOLE PERCENTS in the canonical
+  //   schema (z.number().min(0).max(100), see schema.ts:463-464). The engine
+  //   divides by 100 internally (scenario-engine.ts:226, 248). Sending
+  //   decimals (0.18, 0.0765) made benefits + payroll tax round to zero.
   const revenueRows: Array<Record<string, unknown>> = [];
   if (m.perStudentTuition > 0) {
     revenueRows.push({
       id: "rev_tuition",
-      category: "tuition",
+      category: "tuition_and_fees",
       lineItem: "Tuition revenue",
       enabled: true,
       driverType: "per_student",
-      amounts: enroll.map((s) => Math.round(s * m.perStudentTuition)),
+      // PER-STUDENT RATE — engine multiplies by enrollment internally.
+      amounts: [m.perStudentTuition, m.perStudentTuition, m.perStudentTuition, m.perStudentTuition, m.perStudentTuition],
       escalationRate: 3,
     });
   }
   if (m.perPupilPublicFunding > 0) {
     revenueRows.push({
       id: "rev_ppf",
-      category: "publicFunding",
+      category: "public_funding",
       lineItem: "Per-pupil public funding",
       enabled: true,
       driverType: "per_student",
-      amounts: enroll.map((s) => Math.round(s * m.perPupilPublicFunding)),
+      // PER-STUDENT RATE — engine multiplies by enrollment internally.
+      amounts: [m.perPupilPublicFunding, m.perPupilPublicFunding, m.perPupilPublicFunding, m.perPupilPublicFunding, m.perPupilPublicFunding],
       escalationRate: 2,
     });
   }
@@ -171,7 +204,7 @@ function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
       category: "philanthropy",
       lineItem: "Philanthropy & grants",
       enabled: true,
-      driverType: "fixed",
+      driverType: "annual_fixed",
       amounts: [m.philanthropyAnnual, m.philanthropyAnnual, m.philanthropyAnnual, m.philanthropyAnnual, m.philanthropyAnnual],
     });
   }
@@ -180,28 +213,29 @@ function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
   staffingRows.push({
     id: "staff_teachers",
     roleName: "Lead teacher",
-    functionCategory: "instruction",
+    functionCategory: "instructional",
     employmentType: "full_time",
     fte: teachersPerYear[0],
     annualizedRate: m.avgTeacherSalary,
     benefitsEligible: true,
-    benefitsRate: 0.18,
-    payrollTaxRate: 0.0765,
-    payrollLike: false,
+    // Whole percents — engine divides by 100. 0.18/0.0765 zeroed out benefits + tax.
+    benefitsRate: 18,
+    payrollTaxRate: 7.65,
+    payrollLike: true,
     notes: `Scales with enrollment at 1 teacher per ${m.studentsPerTeacher} students`,
   });
   if (m.numAdminStaff > 0 && m.avgAdminSalary > 0) {
     staffingRows.push({
       id: "staff_admin",
       roleName: "Head of school / admin",
-      functionCategory: "administration",
+      functionCategory: "administrative",
       employmentType: "full_time",
       fte: m.numAdminStaff,
       annualizedRate: m.avgAdminSalary,
       benefitsEligible: true,
-      benefitsRate: 0.18,
-      payrollTaxRate: 0.0765,
-      payrollLike: false,
+      benefitsRate: 18,
+      payrollTaxRate: 7.65,
+      payrollLike: true,
       notes: "",
     });
   }
@@ -210,40 +244,44 @@ function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
   if (m.annualUtilities > 0) {
     expenseRows.push({
       id: "exp_utilities",
-      category: "facilities",
+      category: "occupancy_facility",
       lineItem: "Utilities",
       enabled: true,
-      driverType: "fixed",
+      driverType: "annual_fixed",
       amounts: [m.annualUtilities, m.annualUtilities * 1.03, m.annualUtilities * 1.06, m.annualUtilities * 1.09, m.annualUtilities * 1.12].map(Math.round),
     });
   }
   if (m.annualInsurance > 0) {
     expenseRows.push({
       id: "exp_insurance",
-      category: "facilities",
+      category: "occupancy_facility",
       lineItem: "Insurance",
       enabled: true,
-      driverType: "fixed",
+      driverType: "annual_fixed",
       amounts: [m.annualInsurance, m.annualInsurance * 1.05, m.annualInsurance * 1.10, m.annualInsurance * 1.16, m.annualInsurance * 1.22].map(Math.round),
     });
   }
   if (m.annualCurriculum > 0) {
+    // The UI labels this as "Annual curriculum & materials" (a total),
+    // so flow it through as annual_fixed. If we want per-student behavior
+    // later, rename the field to "Curriculum per student" and switch
+    // driverType to "per_student" with the per-pupil rate as the amount.
     expenseRows.push({
       id: "exp_curriculum",
-      category: "instruction",
+      category: "instructional_program",
       lineItem: "Curriculum & materials",
       enabled: true,
-      driverType: "per_student",
-      amounts: enroll.map((s) => Math.round(s * (m.annualCurriculum / Math.max(1, m.year1Students)))),
+      driverType: "annual_fixed",
+      amounts: [m.annualCurriculum, m.annualCurriculum * 1.03, m.annualCurriculum * 1.06, m.annualCurriculum * 1.09, m.annualCurriculum * 1.12].map(Math.round),
     });
   }
   if (m.annualOtherOpex > 0) {
     expenseRows.push({
       id: "exp_other",
-      category: "general",
+      category: "administrative_general",
       lineItem: "Other operating expenses",
       enabled: true,
-      driverType: "fixed",
+      driverType: "annual_fixed",
       amounts: [m.annualOtherOpex, m.annualOtherOpex * 1.03, m.annualOtherOpex * 1.06, m.annualOtherOpex * 1.09, m.annualOtherOpex * 1.12].map(Math.round),
     });
   }
@@ -279,7 +317,7 @@ function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
     },
     revenue: { annualTuitionIncrease: 3 },
     revenueRows,
-    staffing: { studentsPerTeacher: m.studentsPerTeacher, offersBenefits: true, benefitsRate: 0.18, payrollTaxRate: 0.0765 },
+    staffing: { studentsPerTeacher: m.studentsPerTeacher, offersBenefits: true, benefitsRate: 18, payrollTaxRate: 7.65 },
     staffingRows,
     facilities: {
       annualRentIncrease: 3,
