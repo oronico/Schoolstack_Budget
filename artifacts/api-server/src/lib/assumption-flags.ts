@@ -42,6 +42,13 @@ export interface AssumptionFlag {
   benchmark: string;
   severity: FlagSeverity;
   defaultPrompt: string;
+  /**
+   * Task #658 — short, concrete one-line next step the founder can take
+   * right now. Required, never empty. Example:
+   *   "Open Step 4: Enrollment and lower retention to 80-85% or paste
+   *    your retention plan into the Story step."
+   */
+  nextStep: string;
 }
 
 interface Enrollment {
@@ -114,6 +121,10 @@ function buildFragilityFlag(
       flagType === "litigated_funding"
         ? `Your forecast counts on ${m.stateCode} ${m.programLabel} across ${yearSpan}, which ${statusLabel}. If the dollars stop, what's your backstop — tuition, philanthropy, or scaled-back staffing? Lenders will ask.`
         : `Your forecast counts on ${m.stateCode} ${m.programLabel} across ${yearSpan}, which ${statusLabel}. Confirm the program's expected start date and what happens to enrollment if it slips a year.`,
+    nextStep:
+      flagType === "litigated_funding"
+        ? `Open Step 5: Revenue, lower the ${m.stateCode} ${m.programLabel} amount, and add a backstop revenue line (tuition, philanthropy) covering the same dollars.`
+        : `Open Step 5: Revenue and either delay the ${m.stateCode} ${m.programLabel} line by one year, or trim Step 6: Staffing to cover the gap if funding slips.`,
   };
 }
 
@@ -150,6 +161,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
       benchmark: "80%+",
       severity: "critical",
       defaultPrompt: `Your retention rate is ${retentionRate}%. High attrition is the #1 killer of school financial models. What specific strategies will you use to keep families year over year?`,
+      nextStep: "Open Step 4: Enrollment and either raise retention to 80%+ or paste your family-retention plan into Step 1: Story.",
     });
   }
 
@@ -165,6 +177,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
           benchmark: "≤ 30% year-over-year",
           severity: "warning",
           defaultPrompt: `You're projecting ${(growthRate * 100).toFixed(0)}% enrollment growth from Year ${y} to Year ${y + 1}. What's driving this — a new grade level, second location, or marketing push? Lenders will want specifics.`,
+          nextStep: "Open Step 4: Enrollment and either soften the steepest year to a 15-25% jump or document the new grade, second site, or marketing push driving the growth in Step 1: Story.",
         });
         break;
       }
@@ -180,6 +193,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
       benchmark: "≥ 50% of building capacity",
       severity: "info",
       defaultPrompt: `Year 1 enrollment fills only ${((enrollmentByYear[0] / maxCapacity) * 100).toFixed(0)}% of your building capacity. Is this a phased growth strategy, or could you open with more students?`,
+      nextStep: "Open Step 4: Enrollment and either grow Year 1 to fill at least 50% of capacity, or note the phased-growth strategy in Step 1: Story.",
     });
   }
 
@@ -194,6 +208,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
         benchmark: "Growth expected",
         severity: "warning",
         defaultPrompt: "Your enrollment doesn't grow after Year 1. Is this intentional (e.g., a single-cohort model), or did you miss entering growth targets?",
+        nextStep: "Open Step 4: Enrollment and add growth across Years 2-5, or note in Step 1: Story why a single-cohort or flat enrollment is intentional.",
       });
     } else if (decliningYears > 0) {
       const declineYearIndices = enrollmentByYear.slice(1).map((e, i) => e < enrollmentByYear[i] ? i + 2 : null).filter(Boolean);
@@ -205,6 +220,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
           benchmark: "Sustained growth expected",
           severity: "info",
           defaultPrompt: `Your enrollment declines in some years. Is this intentional (e.g., planned cohort exit), or does it reflect a conservative assumption?`,
+          nextStep: "Open Step 4: Enrollment and add growth across Years 2-5, or note in Step 1: Story why a single-cohort or flat enrollment is intentional.",
         });
       }
     }
@@ -226,6 +242,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
             benchmark: `General cost inflation: ${costInflationPct}%`,
             severity: "warning",
             defaultPrompt: `You set 0% escalation on "${row.lineItem}" but your general cost inflation is ${costInflationPct}%. The system uses the inflation fallback. If you intend truly flat costs, explain why this line item won't increase with inflation.`,
+            nextStep: "Open Step 7: Expenses, raise the escalation rate on this line to your general inflation rate, or note in Step 1: Story why the cost is contractually fixed.",
           });
         } else {
           flags.push({
@@ -235,6 +252,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
             benchmark: `Costs typically rise 2-4% per year`,
             severity: "warning",
             defaultPrompt: `You set 0% escalation on "${row.lineItem}". Costs typically rise with inflation. Is this line item contractually fixed, or should it increase over time?`,
+            nextStep: "Open Step 7: Expenses, raise the escalation rate on this line to your general inflation rate, or note in Step 1: Story why the cost is contractually fixed.",
           });
         }
       }
@@ -252,6 +270,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
           benchmark: "≤ 5% per year",
           severity: "warning",
           defaultPrompt: `You're increasing tuition by ${resolvedTuitionEsc}% per year. That's aggressive — what market conditions, program enhancements, or competitive positioning justifies this?`,
+          nextStep: "Open Step 5: Revenue, lower the gross tuition escalation to under 5% per year, or document the market or program enhancements supporting it in Step 1: Story.",
         });
       }
     }
@@ -294,6 +313,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
           benchmark: "> -10%",
           severity: "warning",
           defaultPrompt: `Year ${y + 1} shows a ${(yf.netMargin * 100).toFixed(1)}% net margin — deep losses that need explanation. What's your plan to reach breakeven?`,
+          nextStep: "Open Step 7: Expenses to trim cost or Step 5: Revenue to add a line, until the deepest-loss year clears -10% net margin.",
         });
         break;
       }
@@ -310,6 +330,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
           benchmark: "≥ 70%",
           severity: "info",
           defaultPrompt: `Tuition accounts for only ${tuitionPct}% of Year 1 expenses, meaning you depend on grants or donations to cover costs. What's your plan if that external funding doesn't materialize?`,
+          nextStep: "Open Step 5: Revenue and grow tuition lines, or trim Step 7: Expenses, until tuition covers at least 70% of Year 1 expenses.",
         });
       }
     }
@@ -326,6 +347,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
           benchmark: "Debt service > $0 when loans exist",
           severity: "info",
           defaultPrompt: "You have loan rows in your model but no debt service is being calculated. Check your loan terms and rates — this might be a configuration issue.",
+          nextStep: "Open Step 5: Revenue, find your capital and debt rows, and double-check the loan principal, rate, and amortization months.",
         });
       }
     }
@@ -350,6 +372,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
             benchmark: "< 1:50",
             severity: "warning",
             defaultPrompt: `Your student-teacher ratio is 1:${Math.round(ratio)}, which seems unusually high. Is this correct, or might you need to add more teaching staff?`,
+            nextStep: "Open Step 6: Staffing and add or correct teaching FTEs so the student-teacher ratio falls under 1:50.",
           });
         }
       }
@@ -373,6 +396,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
         benchmark: "≥ 1.1x",
         severity: "warning",
         defaultPrompt: `Your opening current ratio is ${currentRatio.toFixed(2)}x, which is below the 1.1x minimum lenders expect. How will you ensure short-term obligations are covered? Consider increasing cash reserves or reducing short-term liabilities.`,
+        nextStep: "Open Step 2: School Details and raise opening cash, or reduce opening short-term liabilities, until the current ratio clears 1.1x.",
       });
     }
   }
@@ -419,6 +443,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
             benchmark: "≥ 1.1x",
             severity: "warning",
             defaultPrompt: `Your projected current ratio drops to ${projRatio.toFixed(2)}x before Year ${y + 1}, which is below the 1.1x minimum. Build cash reserves earlier or reduce short-term liabilities to avoid liquidity stress.`,
+            nextStep: "Open Step 2: School Details and raise opening cash, or reduce opening short-term liabilities, until the current ratio clears 1.1x.",
           });
           break;
         }

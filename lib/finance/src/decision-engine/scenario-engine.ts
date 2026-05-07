@@ -309,6 +309,12 @@ export interface NudgeItem {
   signal: "green" | "amber" | "red";
   label: string;
   message: string;
+  /**
+   * Task #658 — short, concrete one-line next step the founder can take
+   * right now. Required, never empty. Example:
+   *   "Open Step 6: Staffing and shift one role to part-time."
+   */
+  nextStep: string;
 }
 
 export interface ScenarioResult {
@@ -1368,57 +1374,57 @@ function generateNudges(metrics: ScenarioMetrics, name: string, leverNudges?: Qu
 
   if (metrics.breakEvenYear !== null) {
     if (metrics.breakEvenYear <= 2) {
-      nudges.push({ signal: "green", label: "Break-Even", message: `${name} reaches break-even in Year ${metrics.breakEvenYear}.` });
+      nudges.push({ signal: "green", label: "Break-Even", message: `${name} reaches break-even in Year ${metrics.breakEvenYear}.`, nextStep: "Re-check this scenario after every enrollment or staffing change in Steps 4-6." });
     } else if (metrics.breakEvenYear <= 4) {
-      nudges.push({ signal: "amber", label: "Break-Even", message: `${name} reaches break-even in Year ${metrics.breakEvenYear}. Earlier is better for long-term stability.` });
+      nudges.push({ signal: "amber", label: "Break-Even", message: `${name} reaches break-even in Year ${metrics.breakEvenYear}. Earlier is better for long-term stability.`, nextStep: "Open Step 4: Enrollment to grow Year 1 students, or trim Step 7: Expenses, until break-even moves up to Year 2." });
     } else {
-      nudges.push({ signal: "red", label: "Break-Even", message: `${name} doesn't break even until Year ${metrics.breakEvenYear}. Consider reducing costs or increasing revenue.` });
+      nudges.push({ signal: "red", label: "Break-Even", message: `${name} doesn't break even until Year ${metrics.breakEvenYear}. Consider reducing costs or increasing revenue.`, nextStep: "Open Step 7: Expenses to trim cost or Step 5: Revenue to add a line, then re-run this scenario." });
     }
   } else {
-    nudges.push({ signal: "red", label: "Break-Even", message: `${name} doesn't reach break-even in 5 years. This scenario needs significant adjustments.` });
+    nudges.push({ signal: "red", label: "Break-Even", message: `${name} doesn't reach break-even in 5 years. This scenario needs significant adjustments.`, nextStep: "Open Step 4: Enrollment, Step 5: Revenue, or Step 7: Expenses and pick the lever you can move the most, then re-run." });
   }
 
   const avgStaffPct = metrics.staffingPctOfRevenue.reduce((a, b) => a + b, 0) / 5;
   if (avgStaffPct > 0.7) {
     const staffLever = leverNudges?.find(l => l.id === "staff_minus_1");
     const leverHint = staffLever ? ` ${staffLever.coaching}` : "";
-    nudges.push({ signal: "red", label: "Staffing", message: `Staffing costs average ${Math.round(avgStaffPct * 100)}% of revenue - above 70% leaves very little room for other costs.${leverHint}` });
+    nudges.push({ signal: "red", label: "Staffing", message: `Staffing costs average ${Math.round(avgStaffPct * 100)}% of revenue - above 70% leaves very little room for other costs.${leverHint}`, nextStep: "Open Step 6: Staffing and remove or defer at least one role until staffing falls under 65% of revenue." });
   } else if (avgStaffPct > 0.6) {
     const staffLever = leverNudges?.find(l => l.id === "staff_minus_1");
     const leverHint = staffLever ? ` ${staffLever.coaching}` : "";
-    nudges.push({ signal: "amber", label: "Staffing", message: `Staffing costs average ${Math.round(avgStaffPct * 100)}% of revenue. That's within range but worth watching.${leverHint}` });
+    nudges.push({ signal: "amber", label: "Staffing", message: `Staffing costs average ${Math.round(avgStaffPct * 100)}% of revenue. That's within range but worth watching.${leverHint}`, nextStep: "Open Step 6: Staffing and shift one Year 1 role to part-time or to a Year 2 start date." });
   } else if (avgStaffPct > 0) {
-    nudges.push({ signal: "green", label: "Staffing", message: `Staffing costs are ${Math.round(avgStaffPct * 100)}% of revenue. Well managed.` });
+    nudges.push({ signal: "green", label: "Staffing", message: `Staffing costs are ${Math.round(avgStaffPct * 100)}% of revenue. Well managed.`, nextStep: "Re-check after every staffing change in Step 6 to keep payroll under 60% of revenue." });
   }
 
   const hasDscr = metrics.dscr.some((d) => d > 0);
   if (hasDscr) {
     const y1Dscr = metrics.dscr[0];
     if (y1Dscr >= BENCHMARK_DSCR_GREEN) {
-      nudges.push({ signal: "green", label: "DSCR", message: `Debt service coverage of ${y1Dscr.toFixed(2)}x exceeds the ${BENCHMARK_DSCR_GREEN}x benchmark - strong position.` });
+      nudges.push({ signal: "green", label: "DSCR", message: `Debt service coverage of ${y1Dscr.toFixed(2)}x exceeds the ${BENCHMARK_DSCR_GREEN}x benchmark - strong position.`, nextStep: "Re-check DSCR after any new debt or capital plan change in Step 5." });
     } else if (y1Dscr >= BENCHMARK_DSCR_AMBER) {
-      nudges.push({ signal: "amber", label: "DSCR", message: `DSCR of ${y1Dscr.toFixed(2)}x is tight. A target of at least ${BENCHMARK_DSCR_GREEN}x gives more breathing room.` });
+      nudges.push({ signal: "amber", label: "DSCR", message: `DSCR of ${y1Dscr.toFixed(2)}x is tight. A target of at least ${BENCHMARK_DSCR_GREEN}x gives more breathing room.`, nextStep: "Open Step 7: Expenses and trim 5-10% of operating cost, or revisit your loan terms in Step 5, until DSCR clears 1.25x." });
     } else {
-      nudges.push({ signal: "red", label: "DSCR", message: `DSCR of ${y1Dscr.toFixed(2)}x is below ${BENCHMARK_DSCR_AMBER}x. Debt coverage is critically thin.` });
+      nudges.push({ signal: "red", label: "DSCR", message: `DSCR of ${y1Dscr.toFixed(2)}x is below ${BENCHMARK_DSCR_AMBER}x. Debt coverage is critically thin.`, nextStep: "Open Step 5: Revenue and lower the loan principal, extend the term, or phase the capex into smaller tranches." });
     }
   }
 
   if (y5 > 0 && y1 < 0) {
-    nudges.push({ signal: "green", label: "Trajectory", message: `Starts negative in Year 1 but reaches $${Math.round(y5).toLocaleString()} by Year 5. Normal growth trajectory.` });
+    nudges.push({ signal: "green", label: "Trajectory", message: `Starts negative in Year 1 but reaches $${Math.round(y5).toLocaleString()} by Year 5. Normal growth trajectory.`, nextStep: "Re-check after every revenue or staffing update in Steps 5-6 to keep the trajectory intact." });
   } else if (y5 > 0) {
-    nudges.push({ signal: "green", label: "Trajectory", message: `Positive throughout with $${Math.round(y5).toLocaleString()} net income by Year 5.` });
+    nudges.push({ signal: "green", label: "Trajectory", message: `Positive throughout with $${Math.round(y5).toLocaleString()} net income by Year 5.`, nextStep: "Re-check after every revenue or staffing update in Steps 5-6 to keep the trajectory intact." });
   } else {
     const revLever = leverNudges?.find(l => l.id === "tuition_up_5");
     const leverHint = revLever ? ` ${revLever.coaching}` : "";
-    nudges.push({ signal: "red", label: "Trajectory", message: `Still negative by Year 5. This scenario needs stronger revenue or lower costs.${leverHint}` });
+    nudges.push({ signal: "red", label: "Trajectory", message: `Still negative by Year 5. This scenario needs stronger revenue or lower costs.${leverHint}`, nextStep: "Open Step 5: Revenue to lift tuition or add a line, or trim Step 7: Expenses, until Year 5 net income clears zero." });
   }
 
   if (metrics.reserveMonths >= 3) {
-    nudges.push({ signal: "green", label: "Reserves", message: `${metrics.reserveMonths.toFixed(1)} months of operating reserves by Year 5. Solid cushion.` });
+    nudges.push({ signal: "green", label: "Reserves", message: `${metrics.reserveMonths.toFixed(1)} months of operating reserves by Year 5. Solid cushion.`, nextStep: "Keep building toward 6 months of reserves through controlled spending in Step 7." });
   } else if (metrics.reserveMonths > 0) {
-    nudges.push({ signal: "amber", label: "Reserves", message: `Only ${metrics.reserveMonths.toFixed(1)} months of reserves. Target at least 3 months.` });
+    nudges.push({ signal: "amber", label: "Reserves", message: `Only ${metrics.reserveMonths.toFixed(1)} months of reserves. Target at least 3 months.`, nextStep: "Open Step 7: Expenses and trim 3-5% of cost, or grow Step 4: Enrollment by 5-10 students, until reserves hit 3 months." });
   } else {
-    nudges.push({ signal: "red", label: "Reserves", message: `No operating reserves accumulated. The school has no financial cushion.` });
+    nudges.push({ signal: "red", label: "Reserves", message: `No operating reserves accumulated. The school has no financial cushion.`, nextStep: "Open Step 2: School Details to raise opening cash, or trim Step 7: Expenses, to start accumulating at least 1 month of operating reserves." });
   }
 
   return nudges;

@@ -186,9 +186,16 @@ function NudgeCard({ nudge }: { nudge: NudgeItem }) {
   return (
     <div className={`flex items-start gap-2 px-3 py-2 rounded-lg border text-sm ${bg[nudge.signal]}`}>
       {icons[nudge.signal]}
-      <div>
-        <span className="font-medium text-foreground">{nudge.label}:</span>{" "}
-        <span className="text-muted-foreground">{nudge.message}</span>
+      <div className="space-y-1">
+        <div>
+          <span className="font-medium text-foreground">{nudge.label}:</span>{" "}
+          <span className="text-muted-foreground">{nudge.message}</span>
+        </div>
+        {nudge.nextStep && (
+          <div className="text-xs text-emerald-700">
+            <span className="font-semibold">Next step:</span> {nudge.nextStep}
+          </div>
+        )}
       </div>
     </div>
   );

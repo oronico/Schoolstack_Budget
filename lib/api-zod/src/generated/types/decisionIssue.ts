@@ -15,6 +15,10 @@ export interface DecisionIssue {
   summary: string;
   whyItMatters: string;
   recommendedAction: string;
+  /** Task #658 — short, concrete one-line next step the founder can
+take right now. Required, never empty.
+ */
+  nextStep: string;
   relatedStep: number;
   supportingMetrics: DecisionIssueSupportingMetricsItem[];
 }

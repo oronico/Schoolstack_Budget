@@ -101,10 +101,15 @@ export function HealthSignalsSection({ signals }: HealthSignalsSectionProps) {
               <p className="text-xs text-foreground/70 leading-relaxed mb-2 flex-1">
                 {signal.explanation}
               </p>
-              <div className="pt-2 border-t border-border/40">
+              <div className="pt-2 border-t border-border/40 space-y-1">
                 <p className="text-xs text-muted-foreground">
                   <span className="font-medium">Watch:</span> {signal.watchItem}
                 </p>
+                {signal.nextStep && (
+                  <p className="text-xs text-emerald-700">
+                    <span className="font-semibold">Next step:</span> {signal.nextStep}
+                  </p>
+                )}
               </div>
             </div>
           );

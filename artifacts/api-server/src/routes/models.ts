@@ -669,6 +669,9 @@ router.get("/models/:id/consultant", authMiddleware, async (req: AuthRequest, re
       currentValue: f.currentValue,
       benchmark: f.benchmark,
       defaultPrompt: f.defaultPrompt,
+      // Task #658 — persist coach-voice next step alongside the prompt so
+      // it survives across reloads and downstream packet builds.
+      nextStep: f.nextStep,
       reason: responseMap.get(`${f.flagType}:${f.field}`) || "",
     }));
     const updatedData = { ...data, assumptionFlags: persistedFlags };
@@ -1223,6 +1226,7 @@ router.get("/models/:id/export/underwriting", authMiddleware, async (req: AuthRe
       severity: f.severity,
       message: f.defaultPrompt,
       currentValue: f.currentValue,
+      nextStep: f.nextStep,
     }));
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
@@ -1288,6 +1292,7 @@ router.get("/models/:id/export/underwriting-v2", authMiddleware, async (req: Aut
       severity: f.severity,
       message: f.defaultPrompt,
       currentValue: f.currentValue,
+      nextStep: f.nextStep,
     }));
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";

@@ -89,6 +89,16 @@ function DiagnosticCard({ finding, onNavigate, whatIf }: { finding: DiagnosticFi
               </div>
             </div>
           )}
+          {finding.nextStep && (
+            <div className="mb-3 rounded-lg bg-white/70 border border-emerald-200 p-2.5">
+              <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-0.5">
+                Next step
+              </p>
+              <p className="text-xs text-foreground/90 leading-relaxed">
+                {finding.nextStep}
+              </p>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-medium text-foreground/80 italic flex-1">
               {finding.action}

@@ -5,5 +5,18 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ModelFormDataAssumptionFlagsItemSeverity } from "./modelFormDataAssumptionFlagsItemSeverity";
 
-export type ModelFormDataAssumptionFlagsItem = { [key: string]: unknown };
+export type ModelFormDataAssumptionFlagsItem = {
+  field: string;
+  flagType: string;
+  severity: ModelFormDataAssumptionFlagsItemSeverity;
+  currentValue: string;
+  benchmark: string;
+  defaultPrompt: string;
+  /** Task #658 — short, concrete one-line next step the founder
+can take right now. Required, never empty.
+ */
+  nextStep: string;
+  reason?: string;
+};

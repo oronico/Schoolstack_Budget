@@ -1328,7 +1328,35 @@ components:
           type: array
           items:
             type: object
-            additionalProperties: true
+            properties:
+              field:
+                type: string
+              flagType:
+                type: string
+              severity:
+                type: string
+                enum: [info, warning, critical]
+              currentValue:
+                type: string
+              benchmark:
+                type: string
+              defaultPrompt:
+                type: string
+              nextStep:
+                type: string
+                description: |
+                  Task #658 — short, concrete one-line next step the founder
+                  can take right now. Required, never empty.
+              reason:
+                type: string
+            required:
+              - field
+              - flagType
+              - severity
+              - currentValue
+              - benchmark
+              - defaultPrompt
+              - nextStep
         programs:
           type: array
           items:
@@ -2132,12 +2160,18 @@ components:
           type: string
         watchItem:
           type: string
+        nextStep:
+          type: string
+          description: |
+            Task #658 — short, concrete one-line next step the founder can
+            take right now. Required, never empty.
       required:
         - dimension
         - status
         - label
         - explanation
         - watchItem
+        - nextStep
     DecisionIssue:
       type: object
       properties:
@@ -2154,6 +2188,11 @@ components:
           type: string
         recommendedAction:
           type: string
+        nextStep:
+          type: string
+          description: |
+            Task #658 — short, concrete one-line next step the founder can
+            take right now. Required, never empty.
         relatedStep:
           type: integer
         supportingMetrics:
@@ -2175,6 +2214,7 @@ components:
         - summary
         - whyItMatters
         - recommendedAction
+        - nextStep
         - relatedStep
         - supportingMetrics
     ConsultantKeyMetric:

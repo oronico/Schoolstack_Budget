@@ -7,6 +7,12 @@ export interface DecisionIssue {
   summary: string;
   whyItMatters: string;
   recommendedAction: string;
+  /**
+   * Task #658 — short, concrete one-line next step the founder can take
+   * right now. Required, never empty. Example:
+   *   "Open Step 4: Enrollment and grow Year 1 by 5 students."
+   */
+  nextStep: string;
   relatedStep: number;
   supportingMetrics: { label: string; value: string }[];
 }
@@ -88,6 +94,7 @@ const negativeCashRule: RuleFn = (input) => {
     summary: `Your model shows negative cumulative cash in Year${negativeYears.length > 1 ? "s" : ""} ${negativeYears.join(", ")}. The deepest shortfall is ${fmt(deficit)} in Year ${worstYear.year}.`,
     whyItMatters: "Negative cash means the school cannot pay its bills without outside funding. Lenders and authorizers will flag this immediately.",
     recommendedAction: `Identify how you'll bridge the ${fmt(deficit)} gap — startup grants, a line of credit, or phased expense reductions. Then adjust your revenue or cost assumptions to close it faster.`,
+    nextStep: `Open Step 7: Expenses and trim ${fmt(Math.round(deficit / yearFinancials.length))} of annual cost, or revisit Step 5: Revenue to add a funding source covering the gap.`,
     relatedStep: 6,
     supportingMetrics: [
       { label: "Deepest shortfall", value: fmt(-deficit) },
@@ -110,6 +117,7 @@ const weakReservesRule: RuleFn = (input) => {
     summary: `By Year ${yearNum}, your projected reserve covers ${lastYear.reserveMonths.toFixed(1)} months of expenses. The standard target is 3–6 months.`,
     whyItMatters: "Without adequate reserves, any unexpected cost or revenue dip could force emergency decisions — cutting programs, delaying payroll, or taking on expensive short-term debt.",
     recommendedAction: "Look for ways to widen your surplus in the early years. Even small margin improvements compound into meaningful reserves by Year 3–4.",
+    nextStep: "Open Step 7: Expenses and trim 3-5% of annual cost, or grow Step 4: Enrollment by 5-10 students, until reserves reach at least 3 months of expenses.",
     relatedStep: 6,
     supportingMetrics: [
       { label: "Reserve months", value: `${lastYear.reserveMonths.toFixed(1)}` },
@@ -131,6 +139,7 @@ const highStaffingCostRule: RuleFn = (input) => {
     summary: `Payroll is ${pct(staffPct)} of Year 1 revenue. Most sustainable schools keep this under 65%.`,
     whyItMatters: "When staffing consumes this much revenue, there's little left for facilities, programs, and reserves. A small enrollment dip could push you into deficit.",
     recommendedAction: "Review your staffing plan for phased hiring — start lean in Year 1 and add positions as enrollment grows. Consider whether any roles can be part-time or shared.",
+    nextStep: "Open Step 6: Staffing and move at least one Year 1 role to a Year 2 start date, or convert one full-time role to part-time, to bring staffing back under 65% of revenue.",
     relatedStep: 4,
     supportingMetrics: [
       { label: "Staffing % of revenue", value: pct(staffPct) },
@@ -153,6 +162,7 @@ const highOccupancyCostRule: RuleFn = (input) => {
     summary: `Facility costs are ${pct(occPct)} of Year 1 revenue. The typical target is under 20%.`,
     whyItMatters: "High occupancy costs are fixed — they don't shrink if enrollment dips. This makes your budget rigid and harder to adjust in a downturn.",
     recommendedAction: "Explore shared-space arrangements, negotiate lease terms, or consider a smaller facility until enrollment supports the full space.",
+    nextStep: "Open Step 7: Expenses, find your facility line, and reduce it (smaller square footage, shared space, or phased build-out) until facility lands under 20% of Year 1 revenue.",
     relatedStep: 5,
     supportingMetrics: [
       { label: "Facility % of revenue", value: pct(occPct) },
@@ -193,6 +203,7 @@ const aggressiveEnrollmentRule: RuleFn = (input) => {
     summary: summaryParts.join(", and ") + ".",
     whyItMatters: "Demand is the engine of your financial model. Every revenue line, staffing decision, and cost assumption depends on filling seats. If enrollment falls short, the entire model breaks downstream.",
     recommendedAction: "Back every enrollment target with documented demand — signed letters of intent, waitlist depth, community survey results, or recruitment pipeline data. Growth over 25% per year typically requires an exceptional recruitment engine or facility expansion.",
+    nextStep: "Open Step 4: Enrollment and either soften the steepest year to a 15-25% jump, or paste your waitlist count, signed letters of intent, and recruitment plan into the Story step so reviewers see the evidence.",
     relatedStep: 2,
     supportingMetrics: [
       ...enrollmentByYear.map((e, i) => ({ label: `Year ${i + 1}`, value: `${e} students` })),
@@ -232,6 +243,7 @@ const breakEvenNearCapacityRule: RuleFn = (input) => {
     summary: `You need ${breakEvenEnrollment} students to break even, which is ${pct(utilizationAtBE)} of your ${maxCapacity}-student capacity. There's almost no margin for enrollment shortfalls.`,
     whyItMatters: "When break-even requires near-full enrollment, you have no room for a slow enrollment year, mid-year withdrawals, or delayed recruitment. The model only works at peak demand.",
     recommendedAction: "Reduce fixed costs (phased hiring, smaller facility) or increase per-student revenue so break-even occurs at 70-80% of capacity. This gives your enrollment room to breathe.",
+    nextStep: "Open Step 6: Staffing or Step 7: Expenses and trim fixed cost, or revisit Step 5: Revenue to lift per-student tuition, until break-even sits at 70-80% of capacity.",
     relatedStep: 6,
     supportingMetrics: [
       { label: "Break-even enrollment", value: `${breakEvenEnrollment} students` },
@@ -267,6 +279,7 @@ const staffingAheadOfDemandRule: RuleFn = (input) => {
     summary: `In Year${flaggedYears.length > 1 ? "s" : ""} ${flaggedYears.join(", ")}, staffing cost growth outpaces enrollment growth by more than 10 percentage points.`,
     whyItMatters: "Hiring ahead of demand locks in fixed costs before the revenue to support them arrives. If enrollment doesn't materialize as planned, staffing becomes an unsustainable burden.",
     recommendedAction: "Align staffing additions to enrollment milestones. Hire when students are enrolled, not when you hope they will be. Use part-time or contract roles to bridge gaps.",
+    nextStep: "Open Step 6: Staffing and tie each new role's start date to a specific enrollment milestone (e.g. 'add when Y2 enrollment hits 60'), or push the role into a later year.",
     relatedStep: 4,
     supportingMetrics: [
       ...flaggedYears.map(y => ({ label: `Year ${y} enrollment`, value: `${enrollmentByYear[y - 1]} students` })),
@@ -291,6 +304,7 @@ const grantDependencyRule: RuleFn = (input) => {
     summary: `Philanthropy accounts for ${pct(philPct)} of Year 1 revenue${y3PhilPct > 0.20 ? ` and is still ${pct(y3PhilPct)} by Year ${Math.min(3, yearFinancials.length)}` : ""}.`,
     whyItMatters: "Grants are competitive, time-limited, and unpredictable. A model built on philanthropy as the primary revenue source is fragile — one missed grant cycle can create a cash crisis.",
     recommendedAction: "Build a transition plan to shift toward earned revenue (tuition, fees, per-pupil funding) so that philanthropy becomes supplemental rather than foundational. Aim for under 20% by Year 3.",
+    nextStep: "Open Step 5: Revenue and either grow tuition / per-pupil lines, or wind down a grant line by Year 3, until philanthropy is below 20% of Year 3 revenue.",
     relatedStep: 3,
     supportingMetrics: [
       { label: "Philanthropy % (Y1)", value: pct(philPct) },
@@ -316,6 +330,9 @@ const weakDscrRule: RuleFn = (input) => {
     recommendedAction: dscr < BENCHMARK_DSCR_AMBER
       ? "Reduce loan amounts, extend terms, or increase revenue before committing to this debt load. Consider whether the capital expenditure can be phased."
       : "Look for ways to boost operating income by 10–15% or negotiate slightly better loan terms to widen this buffer.",
+    nextStep: dscr < BENCHMARK_DSCR_AMBER
+      ? "Open Step 5: Revenue and lower the loan principal in your capital and debt rows, extend the loan term, or phase the capex into smaller tranches, then re-run the model."
+      : "Open Step 7: Expenses and trim 5-10% of operating cost, or revisit your loan terms in Step 5 to lower annual debt service, until DSCR clears 1.25x.",
     relatedStep: 5,
     supportingMetrics: [
       { label: "DSCR", value: `${dscr.toFixed(2)}x` },
@@ -336,6 +353,7 @@ const shortCashRunwayRule: RuleFn = (input) => {
     summary: `Based on your projected revenue and expenses, cash runs out in ${cashRunwayMonths} month${cashRunwayMonths === 1 ? "" : "s"}.`,
     whyItMatters: "A short cash runway means you need revenue to arrive on schedule with no delays. Any hiccup — late tuition payments, delayed public funding, or unexpected costs — could create a cash crisis.",
     recommendedAction: "Build a cash buffer through startup fundraising, a line of credit, or by reducing early expenses. Target at least 18 months of runway before opening.",
+    nextStep: "Open Step 2: School Details and raise opening cash, or trim Year 1 expenses in Step 7, until projected cash runway clears 18 months.",
     relatedStep: 6,
     supportingMetrics: [
       { label: "Cash runway", value: `${cashRunwayMonths} months` },

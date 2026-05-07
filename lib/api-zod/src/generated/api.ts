@@ -764,7 +764,22 @@ export const CreateModelBody = zod.object({
       )
       .optional(),
     assumptionFlags: zod
-      .array(zod.record(zod.string(), zod.unknown()))
+      .array(
+        zod.object({
+          field: zod.string(),
+          flagType: zod.string(),
+          severity: zod.enum(["info", "warning", "critical"]),
+          currentValue: zod.string(),
+          benchmark: zod.string(),
+          defaultPrompt: zod.string(),
+          nextStep: zod
+            .string()
+            .describe(
+              "Task #658 — short, concrete one-line next step the founder\ncan take right now. Required, never empty.\n",
+            ),
+          reason: zod.string().optional(),
+        }),
+      )
       .optional(),
     programs: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
     tuitionTiers: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
@@ -1382,7 +1397,22 @@ export const GetModelResponse = zod.object({
       )
       .optional(),
     assumptionFlags: zod
-      .array(zod.record(zod.string(), zod.unknown()))
+      .array(
+        zod.object({
+          field: zod.string(),
+          flagType: zod.string(),
+          severity: zod.enum(["info", "warning", "critical"]),
+          currentValue: zod.string(),
+          benchmark: zod.string(),
+          defaultPrompt: zod.string(),
+          nextStep: zod
+            .string()
+            .describe(
+              "Task #658 — short, concrete one-line next step the founder\ncan take right now. Required, never empty.\n",
+            ),
+          reason: zod.string().optional(),
+        }),
+      )
       .optional(),
     programs: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
     tuitionTiers: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
@@ -2006,7 +2036,22 @@ export const UpdateModelBody = zod.object({
       )
       .optional(),
     assumptionFlags: zod
-      .array(zod.record(zod.string(), zod.unknown()))
+      .array(
+        zod.object({
+          field: zod.string(),
+          flagType: zod.string(),
+          severity: zod.enum(["info", "warning", "critical"]),
+          currentValue: zod.string(),
+          benchmark: zod.string(),
+          defaultPrompt: zod.string(),
+          nextStep: zod
+            .string()
+            .describe(
+              "Task #658 — short, concrete one-line next step the founder\ncan take right now. Required, never empty.\n",
+            ),
+          reason: zod.string().optional(),
+        }),
+      )
       .optional(),
     programs: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
     tuitionTiers: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
@@ -2619,7 +2664,22 @@ export const UpdateModelResponse = zod.object({
       )
       .optional(),
     assumptionFlags: zod
-      .array(zod.record(zod.string(), zod.unknown()))
+      .array(
+        zod.object({
+          field: zod.string(),
+          flagType: zod.string(),
+          severity: zod.enum(["info", "warning", "critical"]),
+          currentValue: zod.string(),
+          benchmark: zod.string(),
+          defaultPrompt: zod.string(),
+          nextStep: zod
+            .string()
+            .describe(
+              "Task #658 — short, concrete one-line next step the founder\ncan take right now. Required, never empty.\n",
+            ),
+          reason: zod.string().optional(),
+        }),
+      )
       .optional(),
     programs: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
     tuitionTiers: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
@@ -3266,7 +3326,22 @@ export const ArchiveModelResponse = zod.object({
       )
       .optional(),
     assumptionFlags: zod
-      .array(zod.record(zod.string(), zod.unknown()))
+      .array(
+        zod.object({
+          field: zod.string(),
+          flagType: zod.string(),
+          severity: zod.enum(["info", "warning", "critical"]),
+          currentValue: zod.string(),
+          benchmark: zod.string(),
+          defaultPrompt: zod.string(),
+          nextStep: zod
+            .string()
+            .describe(
+              "Task #658 — short, concrete one-line next step the founder\ncan take right now. Required, never empty.\n",
+            ),
+          reason: zod.string().optional(),
+        }),
+      )
       .optional(),
     programs: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
     tuitionTiers: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
@@ -3435,6 +3510,11 @@ export const GetConsultantAnalysisResponse = zod.object({
       summary: zod.string(),
       whyItMatters: zod.string(),
       recommendedAction: zod.string(),
+      nextStep: zod
+        .string()
+        .describe(
+          "Task #658 — short, concrete one-line next step the founder can\ntake right now. Required, never empty.\n",
+        ),
       relatedStep: zod.number(),
       supportingMetrics: zod.array(
         zod.object({
@@ -3451,6 +3531,11 @@ export const GetConsultantAnalysisResponse = zod.object({
       label: zod.string(),
       explanation: zod.string(),
       watchItem: zod.string(),
+      nextStep: zod
+        .string()
+        .describe(
+          "Task #658 — short, concrete one-line next step the founder can\ntake right now. Required, never empty.\n",
+        ),
     }),
   ),
   lendingLabAssessment: zod.object({
@@ -3765,6 +3850,11 @@ export const PublicConsultantAnalysisResponse = zod.object({
       summary: zod.string(),
       whyItMatters: zod.string(),
       recommendedAction: zod.string(),
+      nextStep: zod
+        .string()
+        .describe(
+          "Task #658 — short, concrete one-line next step the founder can\ntake right now. Required, never empty.\n",
+        ),
       relatedStep: zod.number(),
       supportingMetrics: zod.array(
         zod.object({
@@ -3781,6 +3871,11 @@ export const PublicConsultantAnalysisResponse = zod.object({
       label: zod.string(),
       explanation: zod.string(),
       watchItem: zod.string(),
+      nextStep: zod
+        .string()
+        .describe(
+          "Task #658 — short, concrete one-line next step the founder can\ntake right now. Required, never empty.\n",
+        ),
     }),
   ),
   lendingLabAssessment: zod.object({

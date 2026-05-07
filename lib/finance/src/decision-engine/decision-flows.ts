@@ -505,12 +505,14 @@ function genDecisionNudges(
       signal: "green",
       label: "Year 5 net income rises",
       message: `Net income at Year 5 is ${yr5Delta >= 0 ? "+" : ""}$${Math.round(yr5Delta).toLocaleString()} vs. the base model.`,
+      nextStep: "Re-check Step 5: Revenue and Step 7: Expenses to make sure the assumptions behind this lift still hold.",
     });
   } else if (yr5Delta < 0) {
     nudges.push({
       signal: "amber",
       label: "Year 5 net income declines",
       message: `Net income at Year 5 falls $${Math.abs(Math.round(yr5Delta)).toLocaleString()}. Make sure the strategic upside is worth it.`,
+      nextStep: "Open Step 7: Expenses and trim cost, or grow Step 4: Enrollment, to offset the Year 5 dip.",
     });
   }
   if (yr5Net < 0) {
@@ -518,6 +520,7 @@ function genDecisionNudges(
       signal: "red",
       label: "Year 5 net income is negative",
       message: `After this change, Year 5 ends at ($${Math.abs(Math.round(yr5Net)).toLocaleString()}). Consider tightening assumptions.`,
+      nextStep: "Open Step 5: Revenue to lift tuition or add a line, or trim Step 7: Expenses, until Year 5 net income clears zero.",
     });
   }
   if (deltas.cashRunwayDeltaMonths < -3) {
@@ -525,6 +528,7 @@ function genDecisionNudges(
       signal: "amber",
       label: "Cash runway shrinks",
       message: `You'll lose about ${Math.abs(deltas.cashRunwayDeltaMonths).toFixed(1)} months of cash cushion.`,
+      nextStep: "Open Step 2: School Details and raise opening cash, or trim Step 7: Expenses, until cash runway clears 6 months.",
     });
   }
   if (deltas.breakEvenYearShift !== null && deltas.breakEvenYearShift > 0) {
@@ -532,12 +536,14 @@ function genDecisionNudges(
       signal: "amber",
       label: "Break-even pushes out",
       message: `Break-even moves out by ${deltas.breakEvenYearShift} year${deltas.breakEvenYearShift === 1 ? "" : "s"}.`,
+      nextStep: "Open Step 4: Enrollment to grow Year 1 students, or trim Step 7: Expenses, to pull break-even back in.",
     });
   } else if (deltas.breakEvenYearShift !== null && deltas.breakEvenYearShift < 0) {
     nudges.push({
       signal: "green",
       label: "Break-even arrives sooner",
       message: `Break-even pulls in by ${Math.abs(deltas.breakEvenYearShift)} year${Math.abs(deltas.breakEvenYearShift) === 1 ? "" : "s"}.`,
+      nextStep: "Re-check this decision after any enrollment or staffing change in Steps 4-6.",
     });
   }
   if (decisionType === "add_program") {
@@ -546,6 +552,7 @@ function genDecisionNudges(
         signal: "amber",
         label: "Profitable, but watch year 1 cash",
         message: "The program improves Year 5 net income but draws down cash short term — plan ramp-up reserves.",
+        nextStep: "Open Step 2: School Details and raise opening cash to cover the program ramp-up.",
       });
     }
     if (decisionInputs.type === "add_program" && decisionInputs.inputs.staffingTbd) {
@@ -553,6 +560,7 @@ function genDecisionNudges(
         signal: "amber",
         label: "Staffing not yet modeled",
         message: "You marked staffing as TBD. The numbers above don't include any new salaries or benefits yet — make sure you revisit this before sharing with a lender.",
+        nextStep: "Open Step 6: Staffing and add the new program's roles with start dates and salaries before sharing this with anyone.",
       });
     }
   }
@@ -574,18 +582,21 @@ function genDecisionNudges(
           signal: "red",
           label: `DSCR falls below 1.00× in Year ${worstYear}`,
           message: `At ${worstDscr.toFixed(2)}×, lenders see this as cash flow that can't service debt. Most won't underwrite a school lease at this level.`,
+          nextStep: "Open Step 5: Revenue and lower the loan principal, extend the term, or phase the capex until DSCR clears 1.20x.",
         });
       } else if (worstDscr < 1.20) {
         nudges.push({
           signal: "red",
           label: `DSCR is ${worstDscr.toFixed(2)}× in Year ${worstYear} — below most lender thresholds`,
           message: "Charter and school lenders typically require 1.20–1.25× minimum DSCR. Plan to negotiate the lease, raise tuition, or grow enrollment before signing.",
+          nextStep: "Open Step 7: Expenses and trim 5-10% of operating cost, or revisit Step 5 lease or loan terms, until DSCR clears 1.25x.",
         });
       } else if (worstDscr < 1.25) {
         nudges.push({
           signal: "amber",
           label: `DSCR is ${worstDscr.toFixed(2)}× in Year ${worstYear} — borderline for school lenders`,
           message: "Most school lenders look for 1.25× or better. You're close — a small operating cushion (extra enrollment, tighter expenses) would put this firmly in approval range.",
+          nextStep: "Open Step 4: Enrollment to grow students, or trim Step 7: Expenses by 3-5%, to lift DSCR firmly above 1.25x.",
         });
       } else {
         // Compare worst adjusted year against the same base year (and any year
@@ -608,6 +619,7 @@ function genDecisionNudges(
             signal: "amber",
             label: `Site weakens DSCR by ${largestDrop.toFixed(2)}× in Year ${dropYear}`,
             message: "Coverage holds above lender thresholds, but be ready to explain the trade-off (capacity, location) when a lender asks why coverage thinned out.",
+            nextStep: "Open Step 5: Revenue and confirm the lease or capex assumptions for this site so you can explain the trade-off later.",
           });
         }
       }
@@ -618,6 +630,7 @@ function genDecisionNudges(
         signal: "red",
         label: "Cash runway under 6 months",
         message: `Adjusted runway is ${adjusted.cashRunwayMonths.toFixed(1)} months. Most lenders want to see at least 60–90 days of operating cash on hand at all times.`,
+        nextStep: "Open Step 2: School Details and raise opening cash, or trim Step 7: Expenses, until cash runway clears 6 months.",
       });
     }
   }
@@ -642,6 +655,7 @@ function genDecisionNudges(
                 studentsPerFte > 0 ? `That pushes you to ~${studentsPerFte} students per FTE in Year 5 — ` : ""
               }revisit your staffing plan before sharing this scenario.`
             : `You're modeling ${Math.abs(deltaTotal)} ${direction} students cumulatively but didn't reduce FTE. Salaries and benefits will run higher per student than your base — consider whether staffing should also adjust.`,
+        nextStep: "Open Step 6: Staffing and adjust FTEs to match the new enrollment trajectory.",
       });
     }
   }
@@ -651,6 +665,7 @@ function genDecisionNudges(
       signal: "green",
       label: "No major shifts",
       message: "This decision doesn't materially move your headline numbers.",
+      nextStep: "Re-check this decision after any change to enrollment, staffing, or revenue lines.",
     });
   }
   return nudges;

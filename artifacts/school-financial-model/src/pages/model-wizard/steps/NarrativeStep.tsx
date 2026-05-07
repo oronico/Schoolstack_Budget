@@ -22,6 +22,9 @@ interface AssumptionFlag {
   benchmark: string;
   severity: "info" | "warning" | "critical";
   defaultPrompt: string;
+  // Task #658 — required coach-voice next step. Always populated by the
+  // server-side emit sites and round-tripped through `persistedFlags`.
+  nextStep: string;
 }
 
 function getNarrativeSections(schoolType?: string): { key: string; label: string; conversationalPrompt: string; icon: typeof Users; primary: boolean; helpText: React.ReactNode }[] { return [
@@ -657,6 +660,9 @@ function FlagCard({
           <div className="mt-2">
             <label className="text-sm text-muted-foreground block mb-1">
               {flag.defaultPrompt}
+              <span className="block mt-1.5 text-xs text-emerald-700">
+                <span className="font-semibold">Next step:</span> {flag.nextStep}
+              </span>
               {isRequired && !isResolved && (
                 <span className="text-red-500 ml-1">*</span>
               )}

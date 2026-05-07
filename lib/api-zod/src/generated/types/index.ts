@@ -57,6 +57,7 @@ export * from "./messageResponse";
 export * from "./modelFormData";
 export * from "./modelFormDataAssumptionFlagResponsesItem";
 export * from "./modelFormDataAssumptionFlagsItem";
+export * from "./modelFormDataAssumptionFlagsItemSeverity";
 export * from "./modelFormDataBudgetNarrative";
 export * from "./modelFormDataCustomCategoryLabels";
 export * from "./modelFormDataEscalationRates";

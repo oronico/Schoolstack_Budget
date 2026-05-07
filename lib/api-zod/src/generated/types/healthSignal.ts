@@ -13,4 +13,8 @@ export interface HealthSignal {
   label: string;
   explanation: string;
   watchItem: string;
+  /** Task #658 — short, concrete one-line next step the founder can
+take right now. Required, never empty.
+ */
+  nextStep: string;
 }

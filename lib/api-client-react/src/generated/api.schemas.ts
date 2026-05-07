@@ -759,6 +759,15 @@ export interface Facilities {
   [key: string]: unknown;
 }
 
+export type ModelFormDataAssumptionFlagsItemSeverity =
+  (typeof ModelFormDataAssumptionFlagsItemSeverity)[keyof typeof ModelFormDataAssumptionFlagsItemSeverity];
+
+export const ModelFormDataAssumptionFlagsItemSeverity = {
+  info: "info",
+  warning: "warning",
+  critical: "critical",
+} as const;
+
 export type ModelFormDataBudgetNarrative = { [key: string]: unknown };
 
 export type ModelFormDataAssumptionFlagResponsesItem = {
@@ -767,7 +776,19 @@ export type ModelFormDataAssumptionFlagResponsesItem = {
   reason?: string;
 };
 
-export type ModelFormDataAssumptionFlagsItem = { [key: string]: unknown };
+export type ModelFormDataAssumptionFlagsItem = {
+  field: string;
+  flagType: string;
+  severity: ModelFormDataAssumptionFlagsItemSeverity;
+  currentValue: string;
+  benchmark: string;
+  defaultPrompt: string;
+  /** Task #658 — short, concrete one-line next step the founder
+can take right now. Required, never empty.
+ */
+  nextStep: string;
+  reason?: string;
+};
 
 export type ModelFormDataProgramsItem = { [key: string]: unknown };
 
@@ -965,6 +986,10 @@ export interface DecisionIssue {
   summary: string;
   whyItMatters: string;
   recommendedAction: string;
+  /** Task #658 — short, concrete one-line next step the founder can
+take right now. Required, never empty.
+ */
+  nextStep: string;
   relatedStep: number;
   supportingMetrics: DecisionIssueSupportingMetricsItem[];
 }
@@ -984,6 +1009,10 @@ export interface HealthSignal {
   label: string;
   explanation: string;
   watchItem: string;
+  /** Task #658 — short, concrete one-line next step the founder can
+take right now. Required, never empty.
+ */
+  nextStep: string;
 }
 
 export type LendingLabCriterionStatus =

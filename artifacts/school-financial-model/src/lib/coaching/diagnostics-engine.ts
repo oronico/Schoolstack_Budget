@@ -9,7 +9,14 @@ export interface DiagnosticFinding {
   severity: DiagnosticSeverity;
   headline: string;
   explanation: string;
+  /** Coach-voice prose explaining the broader fix (kept for backwards
+   *  compatibility — most surfaces still render this above the concrete
+   *  next step). */
   action: string;
+  /** Task #658 — short, concrete one-line next step the founder can take
+   *  right now. Required, never empty. Example: "Open Step 5: Staffing
+   *  and shift one role to part-time for Year 1." */
+  nextStep: string;
   targetStep: number;
 }
 
@@ -307,6 +314,7 @@ const RULES: DiagnosticRule[] = [
         headline: `I'm seeing cash go negative in Year ${badYear + 1}`,
         explanation: `Your projected ending cash drops below zero in Year ${badYear + 1}. That means the school wouldn't be able to cover its bills. We see this a lot in early drafts, so don't worry - it's fixable.`,
         action: "I'd start by reviewing your revenue assumptions or trimming expenses so cash stays positive every year. Even small timing adjustments can make a big difference.",
+        nextStep: `Open Step 7: Expenses and trim ${Math.round(Math.abs(m.endingCashByYear[badYear]) / 1000)}K of cost from Year ${badYear + 1}, or revisit Step 4: Enrollment to add a revenue source.`,
         targetStep: 7,
       };
     },
@@ -321,6 +329,7 @@ const RULES: DiagnosticRule[] = [
         headline: "I'm seeing Year 1 cash go negative",
         explanation: "Your projected ending cash for Year 1 drops below zero. That means the school wouldn't be able to cover its bills. We see this a lot in early drafts, so don't worry - it's fixable.",
         action: "I'd start by reviewing your revenue assumptions or trimming expenses so cash stays positive in Year 1. Even small timing adjustments can make a big difference.",
+        nextStep: `Open Step 7: Expenses and trim about ${Math.round(Math.abs(y1Cash) / 1000)}K of Year 1 cost, or add a revenue line in Step 5.`,
         targetStep: 7,
       };
     },
@@ -336,6 +345,7 @@ const RULES: DiagnosticRule[] = [
         headline: `I'd watch this - staffing costs are ${Math.round(pct)}% of revenue`,
         explanation: `Personnel costs above ${THRESHOLDS.staffingPctCritical}% of revenue leave almost nothing for operations, facilities, and reserves. This is one of the most common issues we see in early-stage models - and it's very fixable.`,
         action: "We'd recommend looking at whether all positions are truly needed in Year 1. Phasing in roles as enrollment grows is one of the most effective levers you have.",
+        nextStep: "Open Step 6: Staffing and move at least one role to a Year 2 start date, or convert a full-time line to part-time.",
         targetStep: 5,
       };
     },
@@ -351,6 +361,7 @@ const RULES: DiagnosticRule[] = [
         headline: `I'd keep an eye on this - staffing costs are at ${Math.round(pct)}% of revenue`,
         explanation: `Personnel costs between ${THRESHOLDS.staffingPctWarning}% and ${THRESHOLDS.staffingPctCritical}% are on the high side. Healthy schools typically stay between 50-60%. You still have room to adjust, but it's worth looking at whether you can trim here.`,
         action: "I'd look at whether some roles can start part-time or be phased in after Year 1. That's usually the quickest way to create breathing room.",
+        nextStep: "Open Step 6: Staffing and lower one Year 1 role's FTE (e.g. 1.0 → 0.5) to bring staffing back under 60% of revenue.",
         targetStep: 5,
       };
     },
@@ -366,6 +377,7 @@ const RULES: DiagnosticRule[] = [
         headline: `Worth watching - facility costs are ${Math.round(pct)}% of revenue`,
         explanation: `Spending more than ${THRESHOLDS.rentPctWarning}% of revenue on your facility is something we see often. It crowds out staffing and program budgets, which puts pressure on the whole model.`,
         action: "I'd explore lower-cost space options, shared facilities, or phased facility upgrades. Many successful schools start in modest space and upgrade as enrollment proves out.",
+        nextStep: "Open Step 7: Expenses, find your facility line, and reduce it (smaller square footage, shared space, or phased build-out) until facility lands under 25% of Year 1 revenue.",
         targetStep: 6,
       };
     },
@@ -381,6 +393,7 @@ const RULES: DiagnosticRule[] = [
         headline: `I'd watch this - ${Math.round(pct)}% of your revenue comes from grants`,
         explanation: `Relying on grants and philanthropy for more than ${THRESHOLDS.grantDependencyPct}% of revenue is worth watching. Grants are time-limited and competitive. The strongest models are anchored to enrollment-driven revenue.`,
         action: "We'd recommend focusing on growing enrollment-driven revenue (tuition, per-pupil funding) so grants become supplemental, not foundational. That's what makes a model resilient.",
+        nextStep: "Open Step 5: Revenue and add or grow an enrollment-driven line (tuition or per-pupil) so grants drop below 40% of total revenue.",
         targetStep: 4,
       };
     },
@@ -401,6 +414,7 @@ const RULES: DiagnosticRule[] = [
             headline: `I'd question this - enrollment jumps ${Math.round(growth)}% in Year ${y + 1}`,
             explanation: `Growing by more than ${THRESHOLDS.enrollmentGrowthPct}% in a single year is hard to achieve. Most new schools grow 15-25% per year. Anyone reviewing your model will want to understand how you plan to recruit this many students.`,
             action: "I'd make sure you have evidence to support this growth - waitlist data, marketing plans, or community partnerships. If you can't back it up, consider moderating the projection.",
+            nextStep: `Open Step 4: Enrollment, and either lower Year ${y + 1} enrollment to a 15-25% jump or add a note describing the waitlist, marketing, or partnership evidence behind the ${Math.round(growth)}% growth.`,
             targetStep: 3,
           };
         }
@@ -422,6 +436,7 @@ const RULES: DiagnosticRule[] = [
         headline: "I see no cash reserve cushion here - we need to address this",
         explanation: "Your model shows less than one month of operating reserves. Any unexpected expense or delayed funding could put the school at risk. Best practice is at least 45-60 days of reserves - and we'd encourage you to aim higher.",
         action: "I'd build in a reserve target - either through additional fundraising, reduced spending, or a line of credit. Even a modest cushion makes a big difference in how strong your model looks.",
+        nextStep: "Open Step 2: School Details and raise opening cash, or trim Step 7: Expenses, until you have at least 45 days of operating cushion.",
         targetStep: 2,
       };
     },
@@ -443,6 +458,7 @@ const RULES: DiagnosticRule[] = [
         headline: "Here's something I'd watch - expenses are growing faster than revenue",
         explanation: "Over the 5-year projection, your costs are increasing faster than your income. That means your financial health deteriorates over time, even if Year 1 looks fine. This is worth addressing early.",
         action: "I'd check whether your expense escalation rates (COLA, rent increases, inflation) are outpacing your revenue growth assumptions. That's usually where the mismatch lives.",
+        nextStep: "Open Step 3: Assumptions and lower your salary increase or general cost inflation rates so they line up with your revenue growth assumption.",
         targetStep: 2,
       };
     },
@@ -456,6 +472,7 @@ const RULES: DiagnosticRule[] = [
         headline: "I notice you haven't entered any revenue yet - let's fix that",
         explanation: "Your model doesn't have any revenue sources yet. We can't run meaningful financial projections without knowing how your school will generate income.",
         action: "Go ahead and add your primary revenue sources - tuition, per-pupil funding, or grants. We'll start generating insights as soon as we have numbers to work with.",
+        nextStep: "Open Step 5: Revenue and add at least one revenue line (tuition, per-pupil, or grants) so we can run the rest of the analysis.",
         targetStep: 4,
       };
     },
@@ -475,6 +492,7 @@ const RULES: DiagnosticRule[] = [
         headline: "I see a healthy surplus, but I'd note your cash reserves are thin",
         explanation: "Your annual budget shows a surplus - that's great. But ending cash stays tight relative to monthly expenses. Timing mismatches between when revenue arrives and bills are due are one of the most common cash flow problems we see with new schools.",
         action: "I'd review your revenue collection timing. Make sure tuition payments and grant disbursements align with your monthly expense obligations. That alignment is often the difference between a model that works on paper and one that works in practice.",
+        nextStep: "Open Step 5: Revenue, set realistic collection delay days and collection rates on each line, and confirm tuition cadence matches when bills hit.",
         targetStep: 4,
       };
     },
@@ -491,6 +509,7 @@ const RULES: DiagnosticRule[] = [
           headline: `I see enrollment is below breakeven - you'll need ${m.breakevenEnrollment} students`,
           explanation: `Your projected Year 1 enrollment of ${m.enrollment[0]} is below the ${m.breakevenEnrollment} students needed to cover your costs. The school would operate at a loss from day one. The good news: most founders fix this by adjusting staffing or phasing costs.`,
           action: "I'd focus on three levers: increase enrollment targets, reduce fixed costs (staffing, facility), or add revenue sources to lower your breakeven point. Even small changes can move the needle significantly.",
+          nextStep: `Open Step 4: Enrollment and grow Year 1 by ${Math.max(1, m.breakevenEnrollment - m.enrollment[0])} student${m.breakevenEnrollment - m.enrollment[0] === 1 ? "" : "s"}, or trim Step 6: Staffing / Step 7: Expenses to lower the breakeven number itself.`,
           targetStep: 3,
         };
       }
@@ -499,7 +518,112 @@ const RULES: DiagnosticRule[] = [
         headline: `I'd note you're within 10% of breakeven - ${m.breakevenEnrollment} students needed`,
         explanation: `Your breakeven point is ${m.breakevenEnrollment} students and you're projecting ${m.enrollment[0]} in Year 1 - that's only ${Math.round(margin * 100)}% above breakeven. Any enrollment shortfall could push you into a deficit. That's a thin margin, and it's worth building more cushion.`,
         action: "We'd recommend looking at whether you can grow enrollment, add revenue sources, or reduce fixed costs to build more cushion above breakeven. A 15-20% buffer is much more comfortable.",
+        nextStep: "Open Step 4: Enrollment and grow Year 1 by 5-10 students, or trim Step 6: Staffing or Step 7: Expenses to give yourself a 15-20% breakeven cushion.",
         targetStep: 3,
+      };
+    },
+  },
+  // Task #658 — required check: revenue per student is unusually high.
+  // Anchored to a coarse $40K/student ceiling — well above K-12 norms
+  // (charters typically run $10-18K/pupil, private microschools
+  // $15-30K). Above $40K means either a niche premium tuition
+  // assumption or a data-entry error worth flagging.
+  {
+    id: "revenue_per_student_high",
+    check: (_data, m) => {
+      const students = m.enrollment[0] || 0;
+      if (students <= 0 || m.y1Revenue <= 0) return null;
+      const rps = m.y1Revenue / students;
+      if (rps < 40000) return null;
+      return {
+        severity: "warning",
+        headline: `Revenue per student looks high at $${Math.round(rps).toLocaleString()}`,
+        explanation: `Your model brings in $${Math.round(rps).toLocaleString()} per student in Year 1. Most schools land in the $10-30K range. A higher number can be right for a premium private model, but it's worth a sanity check before a reviewer sees it.`,
+        action: "I'd double-check that tuition rates and per-pupil figures are entered as annual amounts (not multiplied by months) and that grant or in-kind dollars aren't being counted twice.",
+        nextStep: "Open Step 5: Revenue and confirm each line is an annual figure (not monthly × 12) and that no grant is also double-counted in tuition.",
+        targetStep: 4,
+      };
+    },
+  },
+  // Task #658 — required check: staffing may be too low. Mirror of the
+  // existing "too high" check on the other side of the band. Below 35%
+  // of revenue usually signals missing staffing rows or unrealistically
+  // low FTEs.
+  {
+    id: "staffing_too_low",
+    check: (_data, m) => {
+      if (m.y1Revenue <= 0 || m.y1StaffingCost <= 0) return null;
+      const pct = (m.y1StaffingCost / m.y1Revenue) * 100;
+      if (pct >= 35) return null;
+      return {
+        severity: "warning",
+        headline: `Staffing looks light at ${Math.round(pct)}% of revenue`,
+        explanation: `Personnel costs are only ${Math.round(pct)}% of Year 1 revenue. Most schools spend 50-65% on staff. A number this low usually means a teacher or admin role is missing, or FTEs are entered as fractions when they should be whole positions.`,
+        action: "I'd revisit your staffing roster and confirm every role you'll need on day one is listed, with realistic FTEs and salaries.",
+        nextStep: "Open Step 6: Staffing and add any missing roles (lead teachers, head of school, ops/admin) or correct FTE entries so total payroll matches your actual hiring plan.",
+        targetStep: 5,
+      };
+    },
+  },
+  // Task #658 — required check: founder compensation missing. Looks
+  // for any leadership-style staffing row (head of school / director /
+  // founder / principal). When none exists, lenders and boards will
+  // assume the founder is working unpaid — which masks the real cost
+  // of running the school.
+  {
+    id: "founder_compensation_missing",
+    check: (data) => {
+      const rows = data.staffingRows || [];
+      const leadershipKeywords = ["founder", "head of school", "director", "principal", "executive", "head teacher"];
+      const hasPaidLeader = rows.some((r) => {
+        const enabled = (r as Record<string, unknown>).enabled !== false;
+        if (!enabled) return false;
+        const role = ((r.roleName || "") as string).toLowerCase();
+        const cat = ((r.functionCategory || "") as string).toLowerCase();
+        const matches = leadershipKeywords.some((k) => role.includes(k) || cat.includes(k));
+        const fte = (r.fte || 0) as number;
+        const rate = (r.annualizedRate || 0) as number;
+        return matches && fte > 0 && rate > 0;
+      });
+      if (hasPaidLeader) return null;
+      return {
+        severity: "warning",
+        headline: "I don't see a paid leadership role in your staffing plan",
+        explanation: "Your staffing roster doesn't include a paid head of school, director, or founder line. Reviewers will assume you're working unpaid, which hides the real cost of running the school and breaks down once a board or lender normalizes to market rates.",
+        action: "I'd add a leadership role at a market-rate salary even if you plan to take a personal discount. Showing the full cost first, then the discount, is the cleanest way to present this.",
+        nextStep: "Open Step 6: Staffing, add a Head of School / Director / Founder row at a market-rate salary (typical range $70K-$120K), and note any voluntary discount separately.",
+        targetStep: 5,
+      };
+    },
+  },
+  // Task #658 — required check: public funding timing. Schools that
+  // depend on per-pupil public funding face a real cash gap because
+  // the state typically pays in arrears. If public funding is more
+  // than 30% of Year 1 revenue and opening cash is light, surface it.
+  {
+    id: "public_funding_timing",
+    check: (data, m) => {
+      if (m.y1Revenue <= 0) return null;
+      const rows = data.revenueRows || [];
+      let publicY1 = 0;
+      for (const r of rows) {
+        if (!r.enabled) continue;
+        if (r.category === "public_funding") {
+          publicY1 += r.amounts?.[0] ?? 0;
+        }
+      }
+      const publicPct = publicY1 / m.y1Revenue;
+      if (publicPct < 0.30) return null;
+      const startingCash = data.openingBalances?.cash ?? 0;
+      const monthlyExp = m.y1TotalExpenses / 12;
+      const monthsCash = monthlyExp > 0 ? startingCash / monthlyExp : 99;
+      return {
+        severity: monthsCash < 2 ? "critical" : "warning",
+        headline: `${Math.round(publicPct * 100)}% of revenue depends on public funding timing`,
+        explanation: `Public per-pupil dollars are reliable, but they typically arrive 30-90 days after enrollment is verified. With only ${monthsCash.toFixed(1)} months of opening cash, you may not be able to cover payroll while you wait for the first state check.`,
+        action: "I'd look at adding bridge cash — a startup grant, a short-term line of credit, or pushing some early hires to a slightly later start date — so you can carry payroll through the first state disbursement.",
+        nextStep: "Open Step 5: Revenue and set the collection delay days on each public funding line to a realistic value (60-90 days), then revisit Step 2: School Details to confirm opening cash covers at least the first 90 days.",
+        targetStep: 4,
       };
     },
   },

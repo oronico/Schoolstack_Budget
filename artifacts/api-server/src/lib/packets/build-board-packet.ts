@@ -380,7 +380,9 @@ function buildTopRisks(co: ConsultantOutput): BoardRiskItem[] {
     risk: issue.title,
     severity: issue.severity,
     plainLanguage: issue.whyItMatters,
-    suggestedAction: issue.recommendedAction,
+    suggestedAction: issue.nextStep
+      ? `${issue.recommendedAction} Next step: ${issue.nextStep}`
+      : issue.recommendedAction,
   }));
 }
 
@@ -526,7 +528,12 @@ function simplifyRisksForBoard(section: PacketSection, co: ConsultantOutput): Pa
 
   const rows: PacketTableRow[] = risks.map((issue) => ({
     label: issue.title,
-    values: [issue.whyItMatters, issue.recommendedAction],
+    values: [
+      issue.whyItMatters,
+      issue.nextStep
+        ? `${issue.recommendedAction} Next step: ${issue.nextStep}`
+        : issue.recommendedAction,
+    ],
     isBold: issue.severity === "critical",
   }));
 

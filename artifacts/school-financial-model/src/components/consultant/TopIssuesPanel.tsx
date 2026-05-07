@@ -125,6 +125,17 @@ export function TopIssuesPanel({ issues, jumpToStep }: TopIssuesPanelProps) {
                     </p>
                   </div>
 
+                  {issue.nextStep && (
+                    <div className="rounded-lg border border-emerald-300 bg-emerald-100/70 dark:bg-emerald-900/30 p-3">
+                      <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 uppercase tracking-wide mb-1">
+                        Next step
+                      </p>
+                      <p className="text-sm font-medium text-foreground leading-relaxed">
+                        {issue.nextStep}
+                      </p>
+                    </div>
+                  )}
+
                   {issue.supportingMetrics.length > 0 && (
                     <div className="flex flex-wrap gap-3">
                       {issue.supportingMetrics.map((m) => (

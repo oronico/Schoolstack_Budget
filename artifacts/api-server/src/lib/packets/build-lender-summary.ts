@@ -270,7 +270,9 @@ export function buildLenderSummary(
     .map((iss) => ({
       severity: iss.severity,
       risk: iss.title,
-      mitigant: iss.recommendedAction,
+      mitigant: iss.nextStep
+        ? `${iss.recommendedAction} Next step: ${iss.nextStep}`
+        : iss.recommendedAction,
     }));
 
   // 6-8 key assumptions, each tagged with the wizard step that set it.
