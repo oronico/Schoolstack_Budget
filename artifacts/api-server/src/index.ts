@@ -87,17 +87,42 @@ function logCrashToDb(message: string, stack: string | undefined) {
     .catch(() => {});
 }
 
+// Task #586 — In production we want fail-fast on uncaught errors so the
+// platform's process supervisor (Replit Deployments / autoscale) can
+// restart us into a known-good state. In dev / e2e there is *no*
+// supervisor: the api-server is spawned once by `playwright.config.ts`
+// (via `pnpm --filter @workspace/api-server run dev`) and a single
+// `process.exit(1)` here permanently kills it for the rest of the run,
+// which is exactly the "dev server died mid-run → 17 cascading
+// ECONNREFUSED specs" flake Task #586 was filed against. Log the crash
+// (still write it to error_logs so we can audit it) but keep the
+// process alive in non-production so subsequent specs can keep
+// hitting a healthy /api.
 process.on("uncaughtException", (err) => {
   console.error("[FATAL] Uncaught exception:", err);
   logCrashToDb(err.message, err.stack);
-  setTimeout(() => process.exit(1), 500);
+  if (isProduction) {
+    setTimeout(() => process.exit(1), 500);
+  } else {
+    console.error(
+      "[FATAL] Non-production mode — keeping process alive so e2e tests can continue. " +
+        "Set NODE_ENV=production to restore fail-fast behavior.",
+    );
+  }
 });
 
 process.on("unhandledRejection", (reason) => {
   const err = reason instanceof Error ? reason : new Error(String(reason));
   console.error("[FATAL] Unhandled promise rejection:", err);
   logCrashToDb(err.message, err.stack);
-  setTimeout(() => process.exit(1), 500);
+  if (isProduction) {
+    setTimeout(() => process.exit(1), 500);
+  } else {
+    console.error(
+      "[FATAL] Non-production mode — keeping process alive so e2e tests can continue. " +
+        "Set NODE_ENV=production to restore fail-fast behavior.",
+    );
+  }
 });
 
 validateEnv();
