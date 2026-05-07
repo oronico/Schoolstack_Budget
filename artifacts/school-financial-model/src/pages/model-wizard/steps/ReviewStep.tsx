@@ -458,7 +458,12 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Does Everything Look Right?</h2>
         <p className="text-muted-foreground text-lg">Review your inputs before we run the numbers. You can go back and make changes anytime. Remember, this is your first draft - every version of your budget gets stronger.</p>
-        <SectionExplainers section="review" className="mt-4" schoolType={schoolType} />
+        <SectionExplainers
+          section="review"
+          className="mt-4"
+          schoolType={schoolType}
+          schoolStage={watch("schoolProfile.schoolStage") as string | undefined}
+        />
       </div>
 
       <DiagnosticPanel

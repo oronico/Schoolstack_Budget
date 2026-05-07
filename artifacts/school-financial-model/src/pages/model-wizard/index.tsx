@@ -17,7 +17,7 @@ import { WhatThisMeansInYourBooks } from "@/components/coaching/WhatThisMeansInY
 import { WizardPrepChecklist } from "@/components/coaching/WizardPrepChecklist";
 import { useAuth } from "@/lib/auth-context";
 import { FounderPersonaPrompt } from "@/components/coaching/FounderPersonaPrompt";
-import { hasCompletePersona, isYetToLaunch } from "@/lib/coaching/founder-persona";
+import { hasCompletePersona } from "@/lib/coaching/founder-persona";
 
 import { fullModelSchema, isSingleYearModel, type FullModelData } from "./schema";
 import { migrateGrantsToPhilanthropy, type RevenueRowData } from "@/lib/revenue-defaults";
@@ -1517,11 +1517,18 @@ export function ModelWizardPage() {
         <FormProvider {...methods}>
           <div className="bg-card rounded-3xl p-6 sm:p-10 shadow-xl shadow-black/5 border border-border/50 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <MicroLessonContainer data={methods.getValues() as FullModelData} currentStepTitle={visibleSteps[safeStep - 1]?.title || ""} className="mb-4" />
-            {!isYetToLaunch(user) && (
+            {/* Task #597: gate the bookkeeping sidebar on the model's
+                schoolStage rather than the founder's onboarding persona.
+                The component already drops itself for `new_school` models
+                via its own `schoolStage` prop, but we still avoid mounting
+                it at all so the persona-gated wrapper here matches the
+                stage-vs-tone audit pattern from Tasks #594/#595. */}
+            {(methods.getValues() as FullModelData).schoolProfile?.schoolStage !== "new_school" && (
               <WhatThisMeansInYourBooks
                 stepTitle={visibleSteps[safeStep - 1]?.title || ""}
                 schoolType={(methods.getValues() as FullModelData).schoolProfile?.schoolType}
                 entityType={(methods.getValues() as FullModelData).schoolProfile?.entityType}
+                schoolStage={(methods.getValues() as FullModelData).schoolProfile?.schoolStage}
                 className="mb-4"
               />
             )}

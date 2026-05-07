@@ -368,7 +368,11 @@ export function NarrativeStep({ modelId, jumpToStep }: NarrativeStepProps) {
         </p>
       </div>
 
-      <SectionExplainers section="narrative" schoolType={schoolType} />
+      <SectionExplainers
+        section="narrative"
+        schoolType={schoolType}
+        schoolStage={watch("schoolProfile.schoolStage") as string | undefined}
+      />
 
       <div className="border rounded-xl bg-card p-4">
         <div className="flex items-center justify-between mb-3">

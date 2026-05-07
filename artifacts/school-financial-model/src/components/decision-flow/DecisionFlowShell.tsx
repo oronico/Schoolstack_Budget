@@ -192,6 +192,7 @@ export function DecisionFlowShell({
                 <SectionExplainers
                   section={sidebarSection}
                   schoolType={data?.schoolProfile?.schoolType as string | undefined}
+                  schoolStage={data?.schoolProfile?.schoolStage as string | undefined}
                 />
               )}
               {showCoaching && data && (

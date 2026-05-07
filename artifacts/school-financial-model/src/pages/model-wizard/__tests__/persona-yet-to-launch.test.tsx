@@ -433,4 +433,24 @@ describe("ModelWizardPage — yet_to_launch founder with an operating-school mod
     // present in operating-school mode.
     expect(text).toMatch(/variance analysis/i);
   });
+
+  // Task #597: the bookkeeping sidebar (`WhatThisMeansInYourBooks`) is
+  // rendered by `pages/model-wizard/index.tsx` and was previously gated
+  // by `!isYetToLaunch(user)`. That hid the sidebar for a yet_to_launch
+  // founder editing an operating_school model, which is exactly the
+  // stage-vs-tone regression #594/#595 just fixed inside the steps. The
+  // gate now follows the model's schoolStage, so this test asserts the
+  // sidebar mounts for the operating-school fixture even with the
+  // yet_to_launch persona.
+  it("renders the WhatThisMeansInYourBooks sidebar when the model is operating_school", async () => {
+    const container = await renderWizardAtStep(2);
+    await waitFor(
+      () => {
+        expect(
+          container.querySelector('[data-testid^="bookkeeping-sidebar-"]'),
+        ).not.toBeNull();
+      },
+      { timeout: 4000 },
+    );
+  });
 });

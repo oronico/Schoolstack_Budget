@@ -124,4 +124,35 @@ describe("WhatThisMeansInYourBooks", () => {
       screen.getByText(/Opening cash, receivables, fixed assets/),
     ).toBeInTheDocument();
   });
+
+  // Task #597: the persona check that previously hid this sidebar for
+  // every yet_to_launch founder is now a model-scoped schoolStage check.
+  // A `new_school` model still hides the sidebar (the QuickBooks /
+  // prior-year framing makes no sense pre-opening), but an
+  // `operating_school` model surfaces it regardless of the founder
+  // persona — mirroring the operating-school describe block in
+  // `pages/model-wizard/__tests__/persona-yet-to-launch.test.tsx`.
+  it("hides the sidebar when the model schoolStage is new_school", () => {
+    const { container } = render(
+      <WhatThisMeansInYourBooks
+        stepTitle="Review"
+        entityType="llc_single"
+        schoolStage="new_school"
+      />,
+    );
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("renders the sidebar when the model schoolStage is operating_school", () => {
+    render(
+      <WhatThisMeansInYourBooks
+        stepTitle="Review"
+        entityType="llc_single"
+        schoolStage="operating_school"
+      />,
+    );
+    expect(
+      screen.getByTestId("bookkeeping-sidebar-review"),
+    ).toBeInTheDocument();
+  });
 });

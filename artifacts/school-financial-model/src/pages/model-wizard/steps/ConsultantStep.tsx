@@ -76,7 +76,11 @@ export function ConsultantStep({ jumpToStep, modelId }: ConsultantStepProps) {
 
   return (
     <>
-      <SectionExplainers section="consultant" schoolType={schoolType} />
+      <SectionExplainers
+        section="consultant"
+        schoolType={schoolType}
+        schoolStage={watch("schoolProfile.schoolStage") as string | undefined}
+      />
       <ConsultantAnalysisView
         data={data}
         niLabel={niLabel}

@@ -125,6 +125,13 @@ export function DashboardPage() {
   };
 
   const tone = getPersonaTone(user);
+  // Task #597: kept as a *tone* check. The dashboard is account-wide (not
+  // scoped to any specific model) so the founder's onboarding persona is
+  // the right input — it changes the welcome subtitle and seeds the
+  // schoolStage default for the next new-model creation. The structural
+  // schoolStage gates that #594/#595/#597 migrated all live on
+  // model-scoped surfaces (the wizard steps, the bookkeeping sidebar, the
+  // scenarios actuals roll-up).
   const yetToLaunch = isYetToLaunch(user);
   const greetingPrefix = getGreeting();
   const dashboardSubtitle = yetToLaunch

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { BookOpen, ChevronDown, ChevronUp } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
 import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import {
@@ -8,7 +7,6 @@ import {
   STATEMENT_LABELS,
   type StatementKind,
 } from "@/lib/coaching/bookkeeping-translations";
-import { isYetToLaunch } from "@/lib/coaching/founder-persona";
 import { GlossaryTerm } from "./GlossaryTerm";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +14,17 @@ interface WhatThisMeansInYourBooksProps {
   stepTitle: string;
   schoolType?: string;
   entityType?: string;
+  /**
+   * Task #597: structural gate now follows the *model's* schoolStage rather
+   * than the founder's onboarding persona. The sidebar leans on
+   * QuickBooks/Xero, variance, and prior-year language that only makes
+   * sense for a model with live books — i.e. `operating_school`. A
+   * yet_to_launch founder editing an operating-school model (a planned
+   * school that has since opened, or a consultant managing multiple
+   * schools) should still see this surface; an existing-school founder
+   * spinning up a `new_school` model should not.
+   */
+  schoolStage?: string;
   className?: string;
 }
 
@@ -30,9 +39,9 @@ export function WhatThisMeansInYourBooks({
   stepTitle,
   schoolType,
   entityType,
+  schoolStage,
   className,
 }: WhatThisMeansInYourBooksProps) {
-  const { user } = useAuth();
   const { guidanceLevel: level } = useShowCoach();
   const rawEntry = stepTitle ? BOOKKEEPING_TRANSLATIONS[stepTitle] : undefined;
   const entityKnown = !!entityType && entityType !== "undetermined";
@@ -42,13 +51,15 @@ export function WhatThisMeansInYourBooks({
   // has answered the entity question (asked on School Details, step 2). The
   // generic "program vs. admin / restricted vs. unrestricted" framing on
   // step 1 is misleading for for-profit schools, so we wait.
-  // Yet-to-launch founders also never see this sidebar at all: it's framed
-  // around what each wizard input does inside an existing chart of accounts,
-  // and it leans on QuickBooks/Xero, variance, and prior-year language that
-  // is explicitly off-limits for the pre-opening persona (Tasks #302, #304).
-  const yetToLaunch = isYetToLaunch(user);
+  // Task #597: stage gate (was a founder-persona check pre-#597). The sidebar
+  // is framed around an existing chart of accounts and leans on
+  // QuickBooks/Xero, variance, and prior-year language — appropriate only
+  // for a model with live books. Hide it whenever the *model* is
+  // `new_school`. Default to showing when the stage is unknown so legacy
+  // models (no schoolStage saved) keep the existing behavior.
+  const isPreOpening = schoolStage === "new_school";
   const gated =
-    yetToLaunch || (!!rawEntry?.requiresEntityType && !entityKnown);
+    isPreOpening || (!!rawEntry?.requiresEntityType && !entityKnown);
 
   // Filter out nonprofit-only lines for for-profit schools, and pick the
   // for-profit intro variant when one is provided.

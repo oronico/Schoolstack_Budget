@@ -76,7 +76,6 @@ import type { DecisionType } from "@/pages/model-wizard/schema";
 import { ImpactSummary, findTroughIndex } from "@/components/decision-flow/ImpactSummary";
 import { ForecastAccuracyView } from "@/components/forecast-accuracy/ForecastAccuracyView";
 import { computeForecastAccuracy } from "@/lib/forecast-accuracy";
-import { isYetToLaunch as personaIsYetToLaunch } from "@/lib/coaching/founder-persona";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 
@@ -2053,12 +2052,15 @@ export function ScenarioPage() {
   const [match, params] = useRoute("/model/:id/scenarios");
   const modelId = params?.id ? parseInt(params.id) : null;
   const [, setLocation] = useLocation();
-  // Hide actuals / variance / QuickBooks / forecast-accuracy surfaces for
-  // yet_to_launch founders (Task #302). Computed once at the page level so
-  // every CustomScenarioCard and the page-level Forecast Accuracy roll-up
-  // share the same gate.
+  // Task #597: `hideActualsForStage` (computed below, once `modelData` is
+  // materialized) replaces the prior `personaIsYetToLaunch(authUser)` gate.
+  // The pre-#597 version mis-hid actuals / variance / QuickBooks /
+  // forecast-accuracy surfaces for an existing-school founder spinning up a
+  // `new_school` model, and conversely surfaced them for a yet_to_launch
+  // founder editing an `operating_school` model. The new gate follows the
+  // model's schoolStage so every CustomScenarioCard and the page-level
+  // Forecast Accuracy roll-up share a single, model-correct rule.
   const { user: authUser } = useAuth();
-  const hideActualsForPersona = personaIsYetToLaunch(authUser);
 
   const { data: model, isLoading } = useGetModel(modelId || 0, {
     query: { queryKey: [`/api/models/${modelId || 0}`], enabled: !!modelId },
@@ -2271,6 +2273,15 @@ export function ScenarioPage() {
   }, [model, initialized, setLocation, modelId]);
 
   const modelData = (model?.data as FullModelData) || {};
+
+  // Task #597: derive the actuals/variance gate from the model's
+  // schoolStage. `new_school` models have no live books so the
+  // prior-year / variance / QuickBooks-flavored surfaces are off-limits.
+  // Default to *showing* (i.e. don't hide) when stage is unknown so
+  // legacy models (saved before schoolStage was tracked) keep the
+  // previous operating-school behavior.
+  const hideActualsForStage =
+    (modelData as FullModelData)?.schoolProfile?.schoolStage === "new_school";
 
   const results = useMemo(() => {
     if (!initialized || !model) return null;
@@ -3428,7 +3439,7 @@ export function ScenarioPage() {
             ("you tend to over-project enrollment by 5%") before drilling into
             individual cards below. Hidden when there's nothing to roll up so
             we don't render an empty surface for newer accounts. */}
-        {!hideActualsForPersona && forecastAccuracyRollup.entries.length > 0 && (
+        {!hideActualsForStage && forecastAccuracyRollup.entries.length > 0 && (
           <ForecastAccuracyView rollup={forecastAccuracyRollup} />
         )}
 
@@ -3738,7 +3749,7 @@ export function ScenarioPage() {
                       onPatch={patchCustom}
                       onOpenInPlanner={openInPlanner}
                       onApplyToModel={applyScenarioToModel}
-                      hideActualsSurfaces={hideActualsForPersona}
+                      hideActualsSurfaces={hideActualsForStage}
                       searchQuery={searchQuery}
                       getProjectedSnapshot={(asOfYear) =>
                         computeProjectedSnapshot(
