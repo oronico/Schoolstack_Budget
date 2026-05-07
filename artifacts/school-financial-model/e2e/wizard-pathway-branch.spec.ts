@@ -116,3 +116,79 @@ test("assumptions pathway shows framing block and badges 'Built from assumptions
   await expect(badgeAfter).toHaveAttribute("data-pathway", "assumptions");
   await expect(page.getByTestId("assumptions-framing-block")).toBeVisible();
 });
+
+test("path switch is bidirectional with confirmation and preserves typed-in values", async ({ page, request }) => {
+  const { token, modelId } = await seedFounderWithBlankModel(request);
+  await primeAuthToken(page, token);
+  await page.goto(`/model/${modelId}`);
+  await dismissIntro(page);
+
+  // Pick assumptions, then offer the switch back to actuals with confirmation.
+  await page.getByTestId("pathway-option-assumptions").click();
+  await expect(page.getByTestId("assumptions-framing-block")).toBeVisible();
+  await page.getByTestId("assumptions-switch-to-actuals").click();
+  await expect(page.getByTestId("assumptions-switch-confirm")).toBeVisible();
+  await expect(page.getByTestId("assumptions-switch-confirm")).toContainText(/stay saved/i);
+  await page.getByTestId("assumptions-switch-confirm-button").click();
+
+  // Pathway flipped — badge tracks actuals and Continue lands on Actuals Intake.
+  await expect(page.getByTestId("wizard-provenance-badge")).toHaveAttribute("data-pathway", "actuals");
+  await page.getByRole("button", { name: /^Continue$/ }).first().click();
+  await expect(page.getByTestId("actuals-intake-form")).toBeVisible();
+
+  // Type a number, then switch back via the actuals-side confirmation.
+  // The typed value must still be on the form when we land back on Story.
+  const revenue = page.getByLabel(/Last-year total revenue/i);
+  await revenue.fill("123456");
+  await page.getByTestId("actuals-switch-to-assumptions").click();
+  await expect(page.getByTestId("actuals-switch-confirm")).toBeVisible();
+  await expect(page.getByTestId("actuals-switch-confirm")).toContainText(/stay saved/i);
+  await page.getByTestId("actuals-switch-confirm-button").click();
+
+  // Now back on Story, on the assumptions pathway. Reload to verify the
+  // typed-in revenue value really persisted across the switch.
+  await page.reload();
+  await expect(page.getByTestId("wizard-provenance-badge")).toHaveAttribute("data-pathway", "assumptions");
+  // Switch back to actuals one more time to confirm the value is still there.
+  await page.getByTestId("assumptions-switch-to-actuals").click();
+  await page.getByTestId("assumptions-switch-confirm-button").click();
+  await page.getByRole("button", { name: /^Continue$/ }).first().click();
+  await expect(page.getByLabel(/Last-year total revenue/i)).toHaveValue("123456");
+});
+
+test("Actuals Intake shows a working P&L upload control", async ({ page, request }) => {
+  const { token, modelId } = await seedFounderWithBlankModel(request);
+  await primeAuthToken(page, token);
+  await page.goto(`/model/${modelId}`);
+  await dismissIntro(page);
+
+  await page.getByTestId("pathway-option-actuals").click();
+  await page.getByRole("button", { name: /^Continue$/ }).first().click();
+  await expect(page.getByTestId("actuals-intake-form")).toBeVisible();
+
+  // Upload affordance is visible and wired to a real file input.
+  await expect(page.getByTestId("actuals-intake-upload")).toBeVisible();
+  await expect(page.getByTestId("actuals-intake-upload-button")).toBeEnabled();
+
+  const csv = [
+    "Income,,",
+    "  Tuition,,\"$500,000.00\"",
+    "  Donations,,\"$120,000.00\"",
+    "Total Income,,\"$620,000.00\"",
+    "Expenses,,",
+    "  Salaries,,\"$300,000.00\"",
+    "  Rent,,\"$60,000.00\"",
+    "Total Expenses,,\"$400,000.00\"",
+  ].join("\n");
+  await page.getByTestId("actuals-intake-upload-input").setInputFiles({
+    name: "playwright-pnl.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv, "utf-8"),
+  });
+
+  // Summary acknowledges what was filled and the headline cells now hold
+  // the parsed P&L totals.
+  await expect(page.getByTestId("actuals-intake-upload-summary")).toContainText(/playwright-pnl\.csv/);
+  await expect(page.getByLabel(/Last-year total revenue/i)).toHaveValue("620000");
+  await expect(page.getByLabel(/Last-year total expenses paid/i)).toHaveValue("400000");
+});

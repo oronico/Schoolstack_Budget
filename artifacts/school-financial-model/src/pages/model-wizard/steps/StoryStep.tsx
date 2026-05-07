@@ -1,6 +1,6 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
-import { Sparkles, BookOpen, CheckCircle2, Lightbulb, GraduationCap, ClipboardCheck, Compass } from "lucide-react";
+import { Sparkles, BookOpen, CheckCircle2, Lightbulb, GraduationCap, ClipboardCheck, Compass, ArrowLeftRight } from "lucide-react";
 import { FormInput, FormSelect } from "@/components/ui/form-inputs";
 import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS, getWizardPathway, type WizardPathway } from "../schema";
@@ -99,6 +99,15 @@ export function StoryStep() {
         { shouldDirty: true },
       );
     }
+  };
+  // Bidirectional path switch with explicit data-preservation
+  // confirmation. Switching only flips `wizardPathway` — typed-in
+  // numbers (program inputs, founding questions, etc.) stay on the
+  // model so founders can flip back without losing work.
+  const [confirmingSwitchToActuals, setConfirmingSwitchToActuals] = useState(false);
+  const confirmSwitchToActuals = () => {
+    choosePathway("actuals");
+    setConfirmingSwitchToActuals(false);
   };
   // Single-year mode hides the Y5 column on both the age-band and grade
   // matrices below — single-year founders shouldn't be asked for Y5
@@ -415,15 +424,56 @@ export function StoryStep() {
         {explicitPathway === "assumptions" && (
           <div
             data-testid="assumptions-framing-block"
-            className="rounded-xl border border-sky-200 bg-sky-50/60 p-4 flex items-start gap-3"
+            className="rounded-xl border border-sky-200 bg-sky-50/60 p-4 space-y-3"
           >
-            <Compass className="h-4 w-4 text-sky-700 mt-0.5 shrink-0" />
-            <div className="text-sm">
-              <p className="font-semibold text-sky-900">Building a planning model from assumptions</p>
-              <p className="text-sky-800/90 mt-1 leading-relaxed">
-                You don't have last year's books to start from - that's normal for new schools. Every input from here on is an assumption, and the consultant and lender narrative steps will help you stress-test the ones that matter most. Your dashboard and exports will be tagged "Built from assumptions" so reviewers know the framing.
-              </p>
+            <div className="flex items-start gap-3">
+              <Compass className="h-4 w-4 text-sky-700 mt-0.5 shrink-0" />
+              <div className="text-sm">
+                <p className="font-semibold text-sky-900">Building a planning model from assumptions</p>
+                <p className="text-sky-800/90 mt-1 leading-relaxed">
+                  You don't have last year's books to start from - that's normal for new schools. Every input from here on is an assumption, and the consultant and lender narrative steps will help you stress-test the ones that matter most. Your dashboard and exports will be tagged "Built from assumptions" so reviewers know the framing.
+                </p>
+              </div>
             </div>
+            {!confirmingSwitchToActuals ? (
+              <button
+                type="button"
+                data-testid="assumptions-switch-to-actuals"
+                onClick={() => setConfirmingSwitchToActuals(true)}
+                className="inline-flex items-center gap-2 text-xs text-sky-800 hover:text-sky-900 underline"
+              >
+                <ArrowLeftRight className="h-3.5 w-3.5" /> Wrong path? Switch to start from last year's books instead
+              </button>
+            ) : (
+              <div
+                role="dialog"
+                aria-label="Confirm path switch"
+                data-testid="assumptions-switch-confirm"
+                className="rounded-lg border border-sky-300 bg-white px-3 py-2.5 space-y-2"
+              >
+                <p className="text-xs text-foreground">
+                  <span className="font-semibold">Switch to the operating path?</span>{" "}
+                  Your typed-in numbers stay saved on the model - you can switch back any time without losing them.
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingSwitchToActuals(false)}
+                    className="rounded border border-border bg-background px-2.5 py-1 text-xs font-medium hover:bg-muted"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="assumptions-switch-confirm-button"
+                    onClick={confirmSwitchToActuals}
+                    className="rounded bg-sky-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-700"
+                  >
+                    Yes, switch
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
