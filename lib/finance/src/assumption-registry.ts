@@ -8,10 +8,13 @@ export type AssumptionKey =
   | "tuition_per_student"
   | "tuition_collection_rate"
   | "tuition_escalation"
+  | "public_funding_y1"
+  | "philanthropy_revenue_y1"
   | "staffing_total_cost"
   | "staffing_salary_escalation"
   | "benefits_rate"
   | "payroll_tax_rate"
+  | "founder_compensation_y1"
   | "facility_rent_y1"
   | "operating_expenses_y1"
   | "general_cost_inflation"
@@ -90,6 +93,22 @@ export const ASSUMPTION_REGISTRY: Record<AssumptionKey, AssumptionMeta> = {
     format: "percent",
     description: "Annual tuition increase.",
   },
+  public_funding_y1: {
+    key: "public_funding_y1",
+    label: "Year 1 public funding",
+    stepTitle: "Revenue",
+    defaultStepNumber: 4,
+    format: "currency",
+    description: "Per-pupil state, federal, or local government funding in Year 1.",
+  },
+  philanthropy_revenue_y1: {
+    key: "philanthropy_revenue_y1",
+    label: "Year 1 philanthropy",
+    stepTitle: "Revenue",
+    defaultStepNumber: 4,
+    format: "currency",
+    description: "Grants, major gifts, and annual fund total in Year 1.",
+  },
   staffing_total_cost: {
     key: "staffing_total_cost",
     label: "Year 1 staffing cost",
@@ -121,6 +140,14 @@ export const ASSUMPTION_REGISTRY: Record<AssumptionKey, AssumptionMeta> = {
     defaultStepNumber: 5,
     format: "percent",
     description: "Effective payroll tax rate (FICA, FUTA, SUI).",
+  },
+  founder_compensation_y1: {
+    key: "founder_compensation_y1",
+    label: "Year 1 founder compensation",
+    stepTitle: "Staffing",
+    defaultStepNumber: 5,
+    format: "currency",
+    description: "Founder / head-of-school compensation drawn in Year 1.",
   },
   facility_rent_y1: {
     key: "facility_rent_y1",
@@ -375,6 +402,27 @@ function extractAssumptionValues(data: FullModelData): Record<AssumptionKey, Ass
   const tuitionCollection = tuitionRow?.collectionRate;
   const tuitionEsc = data.tuitionEscalation?.rate ?? tuitionRow?.escalationRate;
 
+  // Task #659 — sum public-funding and philanthropy revenue rows for Y1
+  // so the registry can drive picker rows for those assumption families.
+  const enrollmentY1 = (en.year1 as number) || 0;
+  const sumCategoryY1 = (cat: string): number => {
+    return (data.revenueRows || [])
+      .filter((r) => r.enabled !== false && r.category === cat)
+      .reduce((acc, r) => {
+        const a = r.amounts?.[0] ?? 0;
+        return acc + (r.driverType === "per_student" ? a * enrollmentY1 : a);
+      }, 0);
+  };
+  const publicFundingY1 = sumCategoryY1("public_funding");
+  const philanthropyY1 = sumCategoryY1("philanthropy");
+
+  // Founder compensation Y1: prefer normalized > reported > legacy single value.
+  const staffingLike = (data.staffing || {}) as Record<string, unknown>;
+  const normalizedComp = (staffingLike.normalizedFounderComp as number[] | undefined)?.[0];
+  const reportedComp = (staffingLike.reportedFounderComp as number[] | undefined)?.[0];
+  const legacyComp = staffingLike.founderSalary as number | undefined;
+  const founderCompY1 = normalizedComp ?? reportedComp ?? legacyComp;
+
   // Compute base financials once for derived headline drivers.
   let metrics: ReturnType<typeof computeBaseFinancials> | null = null;
   try {
@@ -402,10 +450,13 @@ function extractAssumptionValues(data: FullModelData): Record<AssumptionKey, Ass
     tuition_per_student: tuitionAmount,
     tuition_collection_rate: tuitionCollection,
     tuition_escalation: tuitionEsc,
+    public_funding_y1: publicFundingY1,
+    philanthropy_revenue_y1: philanthropyY1,
     staffing_total_cost: staffingTotal,
     staffing_salary_escalation: (fac.annualSalaryIncrease as number) ?? (sp.annualSalaryIncrease as number),
     benefits_rate: staffingFirst?.benefitsRate,
     payroll_tax_rate: staffingFirst?.payrollTaxRate,
+    founder_compensation_y1: founderCompY1,
     facility_rent_y1: facilityTotal,
     operating_expenses_y1: opexTotal,
     general_cost_inflation: fac.generalCostInflation as number,

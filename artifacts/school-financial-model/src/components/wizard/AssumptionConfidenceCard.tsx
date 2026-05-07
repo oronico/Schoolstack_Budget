@@ -81,7 +81,17 @@ export function AssumptionConfidenceCard({ stepTitle }: { stepTitle: string }) {
     setEntry(key, { confidence: cur.confidence, evidenceNote: note });
   };
 
-  const set = keys.filter((k) => !!map[k]).length;
+  // Task #659 — "with evidence" = either a non-estimate confidence level
+  // (which itself implies evidence: actuals, signed agreement, quote,
+  // research) OR an "estimate" tagged with an evidence note. Bare
+  // "estimate" with no note doesn't count, matching the requirement that
+  // the tally reflects evidence attachment, not just any selection.
+  const withEvidence = keys.filter((k) => {
+    const e = map[k];
+    if (!e) return false;
+    if (e.confidence !== "estimate") return true;
+    return !!(e.evidenceNote && e.evidenceNote.trim().length > 0);
+  }).length;
   const total = keys.length;
 
   return (
@@ -107,7 +117,7 @@ export function AssumptionConfidenceCard({ stepTitle }: { stepTitle: string }) {
           className="text-xs font-semibold text-muted-foreground whitespace-nowrap"
           data-testid="assumption-confidence-tally"
         >
-          {set} of {total} sourced
+          {withEvidence} of {total} with evidence
         </div>
       </div>
 
