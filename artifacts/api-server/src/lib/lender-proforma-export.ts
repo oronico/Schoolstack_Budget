@@ -17,7 +17,7 @@ import {
   type SchoolProfile as SharedSchoolProfile,
   type RevenueRow as SharedRevenueRow,
 } from "./workbook-helpers.js";
-import { defaultCollectionRateForMethod } from "@workspace/finance";
+import { computeInterestPortion, defaultCollectionRateForMethod } from "@workspace/finance";
 import { addDecisionHistorySheet } from "./packets/build-decision-history.js";
 
 const SCHOOL_TYPE_DISPLAY: Record<string, string> = {
@@ -450,6 +450,8 @@ interface LenderResults {
   existingDebtService: number;
   proposedDebtService: number;
   totalDebtService: number;
+  interestByYear: number[];
+  principalCapByYear: number[];
   dscr: number[];
   netIncomeAfterDebt: number[];
   cumulativeCash: number[];
@@ -571,6 +573,20 @@ function computeLenderResults(input: Record<string, string | number>): LenderRes
   const proposedDebtService = loanAmount > 0 ? computeAnnualDebt(loanAmount, loanRate, loanTerm) : 0;
   const totalDebtService = existingDebt + proposedDebtService;
 
+  // Split each year's debt service into Interest Expense vs Principal &
+  // Capital Outlays so the 5-Year P&L tab matches the GAAP-style operating
+  // statement in the underwriting workbook (task #663). The lender input only
+  // carries enough detail to amortize the proposed loan; existing debt is
+  // entered as a single flat annual figure with no rate/term, so it stays
+  // entirely within Principal & Capital Outlays.
+  const interestByYear: number[] = [];
+  const principalCapByYear: number[] = [];
+  for (let y = 0; y < 5; y++) {
+    const interest = loanAmount > 0 ? computeInterestPortion(loanAmount, loanRate, loanTerm, y) : 0;
+    interestByYear.push(interest);
+    principalCapByYear.push(totalDebtService - interest);
+  }
+
   const dscr: number[] = [];
   const netIncomeAfterDebt: number[] = [];
   const cumulativeCash: number[] = [];
@@ -589,6 +605,7 @@ function computeLenderResults(input: Record<string, string | number>): LenderRes
     teacherFte, teacherSalaries, adminSalaries, benefits, totalStaffing,
     rent, otherFacility, programCost, gaAndTech, totalOpEx, totalExpenses, noi, operatingMargin,
     existingDebtService: existingDebt, proposedDebtService, totalDebtService,
+    interestByYear, principalCapByYear,
     managementFee, hasManagementFee: hasMgmtFee, managementFeePercent: n("managementFeePercent"),
     dscr, netIncomeAfterDebt, cumulativeCash, adminFte,
   };
@@ -1285,19 +1302,34 @@ function buildPnL(wb: ExcelJS.Workbook, res: LenderResults) {
     [0, 1, 2, 3, 4].map(y => `IF(${YEAR_COLS[y]}10>0,${YEAR_COLS[y]}${noiRow}/${YEAR_COLS[y]}10,0)`),
     res.operatingMargin, PCT);
 
-  const debtRow = marginRow + 2;
-  lbl(debtRow, "Capital & Debt Service");
+  // Split the legacy "Capital & Debt Service" row into "Interest Expense" and
+  // "Principal & Capital Outlays" so the lender P&L tab matches the GAAP-style
+  // operating statement in the underwriting workbook (task #663). Net Income
+  // still subtracts the full debt service so totals tie to Cash Flow & DSCR.
+  const interestRow = marginRow + 2;
+  lbl(interestRow, "Interest Expense");
   for (let y = 0; y < 5; y++) {
-    const cell = ws.getCell(debtRow, y + 3);
-    setFormula(cell, `'Cash Flow & DSCR'!${YEAR_COLS[y]}9`, res.totalDebtService);
+    const cell = ws.getCell(interestRow, y + 3);
+    cell.value = Math.round(res.interestByYear[y] || 0);
     cell.numFmt = CUR; cell.font = NF; cell.border = BORDER;
     cell.alignment = { horizontal: "right" };
   }
 
-  const niRow = debtRow + 2;
+  const principalRow = interestRow + 1;
+  lbl(principalRow, "Principal & Capital Outlays");
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(principalRow, y + 3);
+    setFormula(cell,
+      `'Cash Flow & DSCR'!${YEAR_COLS[y]}9-${YEAR_COLS[y]}${interestRow}`,
+      res.principalCapByYear[y]);
+    cell.numFmt = CUR; cell.font = NF; cell.border = BORDER;
+    cell.alignment = { horizontal: "right" };
+  }
+
+  const niRow = principalRow + 2;
   lbl(niRow, "Net Income", true);
   localFormula(niRow,
-    [0, 1, 2, 3, 4].map(y => `${YEAR_COLS[y]}${noiRow}-${YEAR_COLS[y]}${debtRow}`),
+    [0, 1, 2, 3, 4].map(y => `${YEAR_COLS[y]}${noiRow}-${YEAR_COLS[y]}${interestRow}-${YEAR_COLS[y]}${principalRow}`),
     res.netIncomeAfterDebt, CUR, true, true);
 
   const niMarginRow = niRow + 1;

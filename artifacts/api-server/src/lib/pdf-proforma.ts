@@ -6,12 +6,13 @@ import {
 } from "./pdf-utils.js";
 import {
   computeAnnualDebt,
+  computeInterestPortion,
   defaultCollectionRateForMethod,
   computeYear1MonthlyCashFlow,
   findLowestCashMonthAcrossYears,
   type MonthlyRevenueRowLike,
 } from "@workspace/finance";
-import { computeMonthlyCashInflow } from "./workbook-helpers.js";
+import { computeFlatDebtSplit, computeMonthlyCashInflow } from "./workbook-helpers.js";
 
 interface SchoolProfile {
   schoolName?: string;
@@ -104,6 +105,9 @@ interface CapitalDebtRow {
   loanPrincipal?: number;
   loanRate?: number;
   loanTermYears?: number;
+  flatAnnualDebtService?: number;
+  flatInterestRate?: number;
+  flatStartingBalance?: number;
 }
 
 interface TuitionTier {
@@ -352,6 +356,40 @@ function computeCapDebt(rows: CapitalDebtRow[], yearIdx: number, students: numbe
   return total;
 }
 
+// Mirrors underwriting-workbook.computeInterestByYear so the PDF Operating
+// Statement can show "Interest Expense" above "Principal & Capital Outlays"
+// (task #663). Splits both amortizing loans (computeInterestPortion) and
+// flat-debt rows that carry an interest rate + starting balance
+// (computeFlatDebtSplit), exactly the same way the underwriting workbook
+// derives its split. Non-loan / pure-capex rows without flat-debt fields
+// have no interest portion and fall entirely into Principal & Capital
+// Outlays.
+function computeCapDebtInterestByYear(rows: CapitalDebtRow[], yc: number): number[] {
+  const result: number[] = new Array(yc).fill(0);
+  for (const r of rows) {
+    if (!r.enabled) continue;
+    if (r.isLoan && r.loanPrincipal && r.loanPrincipal > 0) {
+      const principal = r.loanPrincipal;
+      const rate = (r.loanRate || 0) / 100;
+      const term = r.loanTermYears || 0;
+      for (let y = 0; y < yc; y++) {
+        result[y] += computeInterestPortion(principal, rate, term, y);
+      }
+    } else if ((r.flatAnnualDebtService || 0) > 0) {
+      const annual = r.flatAnnualDebtService || 0;
+      const ratePct = r.flatInterestRate || 0;
+      const startBal = r.flatStartingBalance || 0;
+      if (ratePct > 0 && startBal > 0) {
+        const split = computeFlatDebtSplit(annual, startBal, ratePct, yc);
+        for (let y = 0; y < yc; y++) {
+          result[y] += split.interest[y];
+        }
+      }
+    }
+  }
+  return result;
+}
+
 export async function generateProFormaPDF(rawData: Record<string, unknown>): Promise<Buffer> {
   const data = rawData as unknown as ModelData;
   const sp = data.schoolProfile || {};
@@ -522,6 +560,8 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
   const staffTotals: number[] = [];
   const opexTotals: number[] = [];
   const capDebtTotals: number[] = [];
+  const interestTotals: number[] = computeCapDebtInterestByYear(capDebtRows, yearCount);
+  const principalCapTotals: number[] = [];
   const niTotals: number[] = [];
   let cumNI = 0;
   const cumNIs: number[] = [];
@@ -533,12 +573,14 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
     const staff = computeStaffingCost(staffingRows, salaryEsc, pf);
     const opex = computeExpensesCost(expenseRows, y, enrollment[y], rev, localNewStudentsPDF(enrollment, pdfRR, y), localReturningStudentsPDF(enrollment, pdfRR, y));
     const capDebt = computeCapDebt(capDebtRows, y, enrollment[y]);
+    const principalCap = capDebt - (interestTotals[y] || 0);
     const ni = rev - staff - opex - capDebt;
     cumNI += ni;
     revTotals.push(rev);
     staffTotals.push(staff);
     opexTotals.push(opex);
     capDebtTotals.push(capDebt);
+    principalCapTotals.push(principalCap);
     niTotals.push(ni);
     cumNIs.push(cumNI);
   }
@@ -569,7 +611,12 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
     pnlRows.push(["Total Operating Expenses", ...opexTotals.map(v => `(${fmtCurrency(v)})`)]);
   }
   if (capDebtRows.length > 0) {
-    pnlRows.push(["Capital & Debt Service", ...capDebtTotals.map(v => `(${fmtCurrency(v)})`)]);
+    // Split the legacy "Capital & Debt Service" line into "Interest Expense"
+    // and "Principal & Capital Outlays" so the lender PDF matches the
+    // GAAP-style P&L in the underwriting workbook (task #663). Net Income
+    // still uses the full capDebt deduction so totals tie out.
+    pnlRows.push(["Interest Expense", ...interestTotals.map(v => `(${fmtCurrency(v)})`)]);
+    pnlRows.push(["Principal & Capital Outlays", ...principalCapTotals.map(v => `(${fmtCurrency(v)})`)]);
   }
   pnlRows.push([profitLabel(sp.entityType), ...niTotals.map(v => fmtCurrency(v))]);
   pnlRows.push([`${profitMarginLabel(sp.entityType)} %`, ...niTotals.map((v, i) => fmtPct(revTotals[i] > 0 ? v / revTotals[i] : 0))]);
