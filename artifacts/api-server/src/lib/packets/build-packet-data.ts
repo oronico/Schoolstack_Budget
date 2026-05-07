@@ -34,6 +34,7 @@ import {
   REVENUE_QUALITY_LABELS,
   REVENUE_QUALITY_ORDER,
   computeYear1MonthlyCashFlow,
+  findLowestCashMonth,
   findLowestCashMonthAcrossYears,
   type RevenueQuality,
   type MonthlyRevenueRowLike,
@@ -1058,6 +1059,16 @@ function buildCashFlow(s: PacketSection, co: ConsultantOutput, md: ModelData, ye
     ? findLowestCashMonthAcrossYears(seriesByYear.map((s) => s.series.cumulative), fyStartMonth)
     : null;
 
+  // Task #662 — per-year lowest-cash month so lenders see the trough for
+  // every modeled year, not just the global one. Years with no series
+  // (no revenue / not modeled) are omitted rather than rendered as zeros.
+  const perYearTroughs = seriesByYear
+    .map(({ year, series }) => {
+      const t = findLowestCashMonth(series.cumulative, fyStartMonth);
+      return t ? { year, ...t } : null;
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+
   const monthlyTables: PacketTable[] = seriesByYear.map(({ year, series, opening }) => {
     let running = opening;
     const monthRows: PacketTableRow[] = [];
@@ -1086,6 +1097,18 @@ function buildCashFlow(s: PacketSection, co: ConsultantOutput, md: ModelData, ye
     { title: "Cumulative Cash Position", headers: ["Year", "Cumulative Net Income", "Reserve Months"], rows },
     ...monthlyTables,
   ];
+
+  if (perYearTroughs.length > 0) {
+    tables.push({
+      title: "Lowest Cash Month by Year",
+      headers: ["Year", "Month", "Ending Cash"],
+      rows: perYearTroughs.map((t) => ({
+        label: yearLabel(t.year),
+        values: [t.monthLabel, fmt(t.amount)],
+        isBold: t.isNegative,
+      })),
+    });
+  }
 
   const troughLabel = trough
     ? `Year ${(trough.yearIndex ?? 0) + 1} — ${trough.monthLabel}`

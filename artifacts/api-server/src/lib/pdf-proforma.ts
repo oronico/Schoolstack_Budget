@@ -9,6 +9,7 @@ import {
   computeInterestPortion,
   defaultCollectionRateForMethod,
   computeYear1MonthlyCashFlow,
+  findLowestCashMonth,
   findLowestCashMonthAcrossYears,
   type MonthlyRevenueRowLike,
 } from "@workspace/finance";
@@ -859,6 +860,31 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
     if (trough) {
       const yLabel = `Year ${(trough.yearIndex ?? 0) + 1}`;
       bodyText(doc, `Lowest cash month across the 5-year forecast: ${yLabel} — ${trough.monthLabel} at ${fmtCurrency(trough.amount)}.`);
+    }
+
+    // Task #662 — per-year lowest-cash month so lenders see the trough
+    // for every modeled year, not just the global one. Years without a
+    // series (no revenue) are already filtered out via seriesByYear.
+    const perYearTroughs = seriesByYear
+      .map(({ year, series }) => {
+        const t = findLowestCashMonth(series.cumulative, fyStart);
+        return t ? { year, ...t } : null;
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+    if (perYearTroughs.length > 0) {
+      ensureSpace(doc, 120);
+      sectionTitle(doc, "Lowest Cash Month by Year");
+      const lcCols: TableColumn[] = [
+        { header: "Year", width: 80 },
+        { header: "Month", width: 80 },
+        { header: "Ending Cash", width: 100, align: "right" },
+      ];
+      const lcRows = perYearTroughs.map((t) => [
+        `Year ${t.year + 1}`,
+        t.monthLabel,
+        fmtCurrency(t.amount),
+      ]);
+      drawTable(doc, lcCols, lcRows, { zebra: true });
     }
     if (anyNegativeMonth) {
       bodyText(doc, "⚠ Cash position turns negative during the forecast. Consider adjusting revenue timing or securing a line of credit.");
