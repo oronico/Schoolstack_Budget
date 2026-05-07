@@ -641,7 +641,7 @@ export function AssumptionsStep() {
                   </div>
                 </div>
 
-                {watch("schoolProfile.enrollmentRevenueMethod") === "ada" && !isYetToLaunch(user) && (
+                {watch("schoolProfile.enrollmentRevenueMethod") === "ada" && schoolStage === "operating_school" && (
                   <div className="bg-amber-50/50 border border-amber-200 rounded-xl p-3 space-y-3">
                     <p className="text-xs font-semibold text-amber-800"><GlossaryTerm termKey="ada" schoolType={schoolType}>ADA</GlossaryTerm> Attendance Ratio</p>
                     <p className="text-[11px] text-amber-700">

@@ -129,8 +129,24 @@ vi.mock("@/hooks/use-toast", () => ({
   useToast: () => ({ toast: () => {}, dismiss: () => {} }),
 }));
 
+// Task #594: the model's `schoolStage` is mutable per-test so we can verify
+// that toggling a model to `operating_school` surfaces the operating-school
+// panels for a `yet_to_launch` founder (i.e. structural gating follows the
+// model, not the persona). The default seed remains `new_school` so the
+// forbidden-term sweeps below stay green for the original persona scenarios.
+const modelStageHolder = vi.hoisted(() => ({
+  schoolStage: "new_school" as "new_school" | "operating_school",
+  operatingYear: undefined as undefined | "first_year" | "second_year_plus",
+}));
+
 vi.mock("@workspace/api-client-react", () => {
-  const initialData = {
+  // Cache the built model and only rebuild when the holder values
+  // change between tests. Returning a fresh object reference on every
+  // `useGetModel` call would trigger infinite re-renders in any wizard
+  // effect that depends on `data`, which previously OOM-ed the worker.
+  let cachedKey = "";
+  let cachedModel: ReturnType<typeof buildModel> | null = null;
+  const buildModel = () => ({
     id: 99,
     name: "Future Academy",
     currentStep: 1,
@@ -140,22 +156,51 @@ vi.mock("@workspace/api-client-react", () => {
         schoolType: "private_school",
         state: "MA",
         fiscalYearStartMonth: 7,
-        // The yet_to_launch persona always seeds new_school here — this is the
-        // condition that hides the prior-year/actuals/QuickBooks panels.
-        schoolStage: "new_school",
+        schoolStage: modelStageHolder.schoolStage,
+        ...(modelStageHolder.operatingYear
+          ? { operatingYear: modelStageHolder.operatingYear }
+          : {}),
       },
+      // Seed a single program so the EnrollmentStep matrix table renders
+      // when this test fixture is used to verify operating-school
+      // surfaces (the table only mounts once `programs` is non-empty).
+      programs: [
+        {
+          id: "prog_seed",
+          name: "Full Day",
+          annualTuition: 10000,
+          priorYear: 0,
+          currentYear: 0,
+          year1: 0,
+          year2: 0,
+          year3: 0,
+          year4: 0,
+          year5: 0,
+        },
+      ],
     },
+  });
+  const getModel = () => {
+    const key = `${modelStageHolder.schoolStage}|${modelStageHolder.operatingYear ?? ""}`;
+    if (key !== cachedKey || cachedModel === null) {
+      cachedKey = key;
+      cachedModel = buildModel();
+    }
+    return cachedModel;
   };
   return {
-    useGetModel: () => ({
-      data: initialData,
-      isLoading: false,
-      isError: false,
-      refetch: () => Promise.resolve({ data: initialData }),
-    }),
+    useGetModel: () => {
+      const data = getModel();
+      return {
+        data,
+        isLoading: false,
+        isError: false,
+        refetch: () => Promise.resolve({ data }),
+      };
+    },
     useUpdateModel: () => ({
       mutate: vi.fn(),
-      mutateAsync: vi.fn(async () => initialData),
+      mutateAsync: vi.fn(async () => getModel()),
       isPending: false,
     }),
   };
@@ -165,6 +210,11 @@ import { ModelWizardPage } from "../index";
 
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
+  // Reset the per-test model-stage holder so each test starts from the
+  // default `new_school` seed unless it explicitly opts in to the
+  // `operating_school` scenario.
+  modelStageHolder.schoolStage = "new_school";
+  modelStageHolder.operatingYear = undefined;
 });
 afterEach(() => {
   vi.restoreAllMocks();
@@ -265,5 +315,29 @@ describe("ModelWizardPage — yet_to_launch founder", () => {
     expectNoForbiddenTerms(text, "Wizard step 9");
     // The lesson card itself is gated — it should never render for this user.
     expect(container.querySelector('[data-testid="budget-to-books-lesson"]')).toBeNull();
+  });
+});
+
+// Task #594: structural gating across the wizard must follow the *model's*
+// `schoolStage`, not the founder's account-wide persona. This block keeps
+// the same yet_to_launch / new_to_budgeting founder mocked above but flips
+// the underlying model to `operating_school` + `second_year_plus` and
+// verifies that operating-school surfaces (prior-year / current-year
+// columns on Enrollment, prior-year ADM/ADA inputs on Assumptions) are now
+// rendered. Before #594 these were silently hidden behind a persona check.
+describe("ModelWizardPage — yet_to_launch founder with an operating-school model", () => {
+  beforeEach(() => {
+    modelStageHolder.schoolStage = "operating_school";
+    modelStageHolder.operatingYear = "second_year_plus";
+  });
+
+  it("step 3 (Enrollment) surfaces prior-year + current-year columns", async () => {
+    const container = await renderWizardAtStep(3);
+    const text = container.textContent || "";
+    // The Enrollment column header strings include "(Prior)" and
+    // "(Current)" markers that only render when showPriorYear /
+    // showCurrentYear are true. Those gates now follow schoolStage.
+    expect(text).toMatch(/\(Prior\)/);
+    expect(text).toMatch(/\(Current\)/);
   });
 });

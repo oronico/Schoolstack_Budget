@@ -6,6 +6,10 @@ import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS } from "../schema";
 import { useAuth } from "@/lib/auth-context";
 import { isYetToLaunch, getFounderPersona } from "@/lib/coaching/founder-persona";
+// Task #594 note: structural input framing in this step (Y1 vs current,
+// planning vs operating) is gated on the *model's* schoolStage. The
+// `yetToLaunch` persona check below is reserved for tone-only copy
+// variants (the "what happens next" onboarding blurb).
 import { useModelDuration } from "@/lib/use-model-duration";
 import {
   GRADE_BAND_KEYS,
@@ -63,8 +67,18 @@ export function StoryStep() {
   const { watch, setValue, register } = useFormContext();
   const { user } = useAuth();
   const persona = getFounderPersona(user);
-  const yetToLaunch = isYetToLaunch(user);
   const newComfort = persona.comfort === "new_to_budgeting";
+  // Tone-only persona check, used for the generic onboarding blurb at
+  // the bottom of this step. Structural framing uses `isPlanning`.
+  const yetToLaunch = isYetToLaunch(user);
+  // Task #594: input framing (Y1 vs current, planning vs operating
+  // descriptions) follows the *model's* stage, not the founder's
+  // account-wide persona. A yet_to_launch founder who marks a model
+  // Already Operating must see "Students now" / "currently enrolled"
+  // language; an existing founder who marks New School (Pre-Opening)
+  // must see "Y1 students" / "opening year" language.
+  const isOperating = watch("schoolProfile.schoolStage") === "operating_school";
+  const isPlanning = !isOperating;
   // Single-year mode hides the Y5 column on both the age-band and grade
   // matrices below — single-year founders shouldn't be asked for Y5
   // numbers they explicitly opted out of on the duration picker.
@@ -399,7 +413,7 @@ export function StoryStep() {
           <div>
             <h3 className="font-display text-lg font-bold text-foreground">Your program</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              {yetToLaunch
+              {isPlanning
                 ? "Sketch out the school you're planning. Don't worry about being precise - you can refine every number later."
                 : "Tell us how your program is set up today. We'll use these as the starting point for your projections."}
             </p>
@@ -589,7 +603,7 @@ export function StoryStep() {
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <p className="text-sm font-semibold text-foreground">
-                {yetToLaunch ? "Year-1 enrollment and tuition by band" : "Current enrollment and tuition by band"}
+                {isPlanning ? "Year-1 enrollment and tuition by band" : "Current enrollment and tuition by band"}
               </p>
               <label className="inline-flex items-center gap-2 text-xs text-foreground" data-testid="story-same-tuition-toggle">
                 <input
@@ -614,7 +628,7 @@ export function StoryStep() {
                 className={`hidden sm:grid ${isSingleYear ? "sm:grid-cols-4" : "sm:grid-cols-5"} bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground`}
               >
                 <div className="text-left font-semibold px-3 py-2">Band</div>
-                <div className="text-left font-semibold px-3 py-2">{yetToLaunch ? "Y1 students" : "Students now"}</div>
+                <div className="text-left font-semibold px-3 py-2">{isPlanning ? "Y1 students" : "Students now"}</div>
                 <div className="text-left font-semibold px-3 py-2">Tuition $/yr</div>
                 {!isSingleYear && (
                   <div className="text-left font-semibold px-3 py-2" data-testid="story-band-y5-header">
@@ -633,7 +647,7 @@ export function StoryStep() {
                 const longTermShare = computeLongTermShare(opt.key);
                 const displayLabel = opt.key === "other" && otherLabel ? otherLabel : opt.label;
                 const tuitionDisabled = sameTuition && activeBands[0]?.key !== opt.key;
-                const year1Label = yetToLaunch ? "Y1 students" : "Students now";
+                const year1Label = isPlanning ? "Y1 students" : "Students now";
                 return (
                   <div
                     key={opt.key}
@@ -800,7 +814,7 @@ export function StoryStep() {
         {showGrades && activeGrades.length > 0 && (
           <div className="space-y-3" data-testid="story-grades-detail-section">
             <p className="text-sm font-semibold text-foreground">
-              {yetToLaunch ? "Year-1 enrollment by grade" : "Current enrollment by grade"}
+              {isPlanning ? "Year-1 enrollment by grade" : "Current enrollment by grade"}
             </p>
             {newComfort && (
               <p className="text-xs text-muted-foreground">
@@ -813,7 +827,7 @@ export function StoryStep() {
                 className={`hidden sm:grid ${isSingleYear ? "sm:grid-cols-4" : "sm:grid-cols-5"} bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground`}
               >
                 <div className="text-left font-semibold px-3 py-2">Grade</div>
-                <div className="text-left font-semibold px-3 py-2">{yetToLaunch ? "Y1 students" : "Students now"}</div>
+                <div className="text-left font-semibold px-3 py-2">{isPlanning ? "Y1 students" : "Students now"}</div>
                 <div className="text-left font-semibold px-3 py-2">Tuition $/yr</div>
                 {!isSingleYear && (
                   <div className="text-left font-semibold px-3 py-2" data-testid="story-grade-y5-header">
@@ -830,7 +844,7 @@ export function StoryStep() {
                 const ratioOverride = gradeRatio[key];
                 const ratioDefault = GRADE_DEFAULT_RATIO[key];
                 const longTermVal = gradeLongTermGoal[key];
-                const year1Label = yetToLaunch ? "Y1 students" : "Students now";
+                const year1Label = isPlanning ? "Y1 students" : "Students now";
                 return (
                   <div
                     key={key}
@@ -996,16 +1010,16 @@ export function StoryStep() {
           !(showBands && activeBands.length > 0) &&
           !(showGrades && activeGrades.length > 0) && (
             <p className="text-xs text-muted-foreground" data-testid="story-year1-total">
-              {yetToLaunch ? "That's " : "Total: "}
+              {isPlanning ? "That's " : "Total: "}
               <span className="font-semibold text-foreground">{totalYear1}</span>{" "}
-              {yetToLaunch ? "students in your opening year." : "students currently enrolled."}
+              {isPlanning ? "students in your opening year." : "students currently enrolled."}
             </p>
           )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormInput
             name="schoolProfile.longTermEnrollmentGoal"
-            label={yetToLaunch ? "Long-term enrollment goal (year 5, total)" : "Where do you want total enrollment in 5 years?"}
+            label={isPlanning ? "Long-term enrollment goal (year 5, total)" : "Where do you want total enrollment in 5 years?"}
             type="number"
             placeholder="e.g. 120"
             helperText={

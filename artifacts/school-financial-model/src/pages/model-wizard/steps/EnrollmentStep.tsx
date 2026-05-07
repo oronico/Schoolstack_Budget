@@ -22,7 +22,7 @@ import {
 } from "@/lib/revenue-defaults";
 import { useAuth } from "@/lib/auth-context";
 import { useShowCoach } from "@/lib/coaching/use-show-coach";
-import { isYetToLaunch, getFounderPersona } from "@/lib/coaching/founder-persona";
+import { getFounderPersona } from "@/lib/coaching/founder-persona";
 import { useYearCount } from "@/lib/use-model-duration";
 import { enrollmentBenchmarkFor } from "@/lib/school-type-benchmarks";
 import {
@@ -388,7 +388,6 @@ export function EnrollmentStep() {
   const { watch, setValue } = useFormContext();
   const { user } = useAuth();
   const persona = getFounderPersona(user);
-  const yetToLaunch = isYetToLaunch(user);
   const newComfort = persona.comfort === "new_to_budgeting";
   // Task #416 / #499: shared coach-gate hook keeps every wizard step in sync.
   const { showCoach } = useShowCoach();
@@ -408,9 +407,14 @@ export function EnrollmentStep() {
   const isSecondYearPlus = schoolStage === "operating_school" && operatingYear === "second_year_plus";
   const [prefillDismissed, setPrefillDismissed] = useState(false);
 
-  // Hide actuals columns when the founder has not yet launched.
-  const showPriorYear = isSecondYearPlus && !yetToLaunch;
-  const showCurrentYear = (isFirstYear || isSecondYearPlus) && !yetToLaunch;
+  // Task #594: structural prior-year / current-year columns follow the
+  // *model's* stage, not the founder's account-wide persona. A
+  // yet_to_launch founder who marks a model Already Operating must see
+  // the operating-school columns; an existing founder who marks New
+  // School (Pre-Opening) must see the pre-opening view. Persona keeps
+  // driving coaching tone elsewhere.
+  const showPriorYear = isSecondYearPlus;
+  const showCurrentYear = isFirstYear || isSecondYearPlus;
 
   // Resolve grouping mode from the form, falling back to the school-type default.
   const storedGrouping = watch("schoolProfile.studentGroupingMode") as StudentGroupingMode | undefined;

@@ -653,12 +653,13 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
     const method = enrollmentRevenueMethod || "adm";
     const adm = priorYearADM || 0;
     const ada = priorYearADA || 0;
-    // For yet_to_launch founders we never collect prior-year attendance data —
-    // the ADA inputs live behind a persona-gated block in AssumptionsStep — so
-    // fall back to a clean 1.0 ratio (no haircut) instead of using the 0.95
-    // sentinel default. This keeps the per-pupil math believable when the
-    // founder hasn't (and can't) supply attendance history.
-    const ratio = method === "ada" && !yetToLaunch
+    // Task #594: prior-year attendance data is only collected when the
+    // *model* is marked Already Operating (the ADA inputs live behind a
+    // schoolStage-gated block in AssumptionsStep). For pre-opening
+    // models we fall back to a clean 1.0 ratio (no haircut) instead of
+    // the 0.95 sentinel — keeps the per-pupil math believable when the
+    // founder hasn't (and can't) supply attendance history yet.
+    const ratio = method === "ada" && schoolStage === "operating_school"
       ? (adm > 0 && ada > 0 ? Math.min(ada / adm, 1) : 0.95)
       : 1;
 
@@ -903,14 +904,15 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
       <div className="flex items-center gap-2.5 rounded-xl bg-slate-50 border border-slate-200/60 px-4 py-3">
         <Info className="h-4 w-4 text-slate-500 flex-shrink-0" />
         <p className="text-sm text-slate-700">
-          {/* Yet_to_launch founders never see the prior-year ADA inputs (they're
-              persona-gated out of AssumptionsStep), so we drop the "ADA inputs"
-              clause for them and only mention the dials they'll actually find. */}
+          {/* Task #594: prior-year ADA inputs only render when the
+              *model* is marked Already Operating, so we drop the "ADA
+              inputs" clause for pre-opening models and only mention the
+              dials the founder will actually find on Assumptions. */}
           Enrollment growth rate
           {isCharter
-            ? yetToLaunch
-              ? ", charter methodology, and deposit timing are"
-              : ", charter methodology, deposit timing, and ADA inputs are"
+            ? schoolStage === "operating_school"
+              ? ", charter methodology, deposit timing, and ADA inputs are"
+              : ", charter methodology, and deposit timing are"
             : " and tuition escalation are"}
           {" "}configured on the{" "}
           {jumpToStep ? (
@@ -1006,13 +1008,13 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
               const method = watch("schoolProfile.enrollmentRevenueMethod") || "adm";
               const adm = watch("schoolProfile.priorYearADM") || 0;
               const ada = watch("schoolProfile.priorYearADA") || 0;
-              // Mirror the grade-band sync effect above: yet_to_launch
-              // founders never supply prior-year attendance data (the inputs
-              // are persona-gated out of AssumptionsStep), so we keep the
-              // estimate at the un-haircut value rather than applying the
-              // 0.95 sentinel and rendering a confusing attendance-ratio
-              // annotation they can't act on.
-              const ratio = method === "ada" && !yetToLaunch
+              // Task #594: mirror the grade-band sync effect above —
+              // prior-year attendance inputs only exist when the *model*
+              // is marked Already Operating, so pre-opening models keep
+              // the estimate at the un-haircut value rather than
+              // rendering a confusing attendance-ratio annotation the
+              // founder can't act on.
+              const ratio = method === "ada" && schoolStage === "operating_school"
                 ? (adm > 0 ? ada / adm : 0.95)
                 : 1;
               const y1Total = GRADE_BAND_KEYS.reduce((sum, k) => sum + (gbe[k]?.[0] ?? 0) * (gbp[k] ?? 0), 0) * ratio;
