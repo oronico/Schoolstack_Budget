@@ -515,7 +515,12 @@ function CtaConversionSection() {
                       {showTrend && (
                         <td className="py-2 pl-3 text-right">
                           <div className="inline-block" data-testid={`cta-spark-${row.source}`}>
-                            <MiniSparkline values={row.sparkline} />
+                            <MiniSparkline
+                              values={row.sparkline}
+                              bucketStarts={data.trendBucketStarts}
+                              bucketUnit={data.bucketUnit}
+                              metricLabel="click"
+                            />
                           </div>
                         </td>
                       )}
@@ -611,7 +616,12 @@ function CtaConversionSection() {
                     {showTrend && (
                       <td className="py-2 pl-3 text-right">
                         <div className="inline-block">
-                          <MiniSparkline values={row.sparkline} />
+                          <MiniSparkline
+                            values={row.sparkline}
+                            bucketStarts={data.trendBucketStarts}
+                            bucketUnit={data.bucketUnit}
+                            metricLabel="click"
+                          />
                         </div>
                       </td>
                     )}
@@ -680,7 +690,12 @@ function CtaConversionSection() {
                   <div className="flex items-center gap-4 flex-shrink-0 text-right">
                     {showTrend && (
                       <div className="hidden sm:block">
-                        <MiniSparkline values={row.sparkline} />
+                        <MiniSparkline
+                          values={row.sparkline}
+                          bucketStarts={data.trendBucketStarts}
+                          bucketUnit={data.bucketUnit}
+                          metricLabel="click"
+                        />
                       </div>
                     )}
                     <div className="text-right">
