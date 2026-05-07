@@ -1,7 +1,7 @@
 # SchoolStack Budget — Underwriting Guest Wizard Proof Pack
 
 **Date:** 2026-05-06
-**Commit:** `e01d33ac`
+**Commits:** `e01d33ac` (QA fixes) → `28365c53` (post-merge re-validation 2026-05-07)
 **Sprint:** Revenue-inflation fix + QA hardening (Task #598)
 **Verdict:** **GO** — all validations pass; revenue math verified; readiness flags functional.
 

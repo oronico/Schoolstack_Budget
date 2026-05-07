@@ -991,7 +991,7 @@ export function UnderwritingLandingPage() {
                   ) : null}
 
                   <div className="grid sm:grid-cols-2 gap-3 mt-3">
-                    <FieldText label="Tuition collection rate (%)" type="number" min={0} max={100} step={1} value={String(model.tuitionCollectionRate)} onChange={(v) => updateNum("tuitionCollectionRate", v)} testId="input-collection-rate" hint="Percent of billed tuition you expect to collect" />
+                    <FieldText label="Tuition collection rate (%)" type="number" min={0} max={100} step={1} value={String(model.tuitionCollectionRate)} onChange={(v) => updateNum("tuitionCollectionRate", v)} testId="input-collection-rate" hint="Applied to annual revenue: effective tuition = sticker × collection rate" />
                     <FieldText label="Retention rate (%)" type="number" min={0} max={100} step={1} value={String(model.retentionRate)} onChange={(v) => updateNum("retentionRate", v)} testId="input-retention-rate" hint="Year-over-year student retention" />
                   </div>
                 </div>
