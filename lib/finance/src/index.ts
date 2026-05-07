@@ -89,6 +89,8 @@ export {
 
 export {
   computeBaseFinancials,
+  computeProgramBreakEven,
+  type ProgramBreakEven,
   computeScenarios,
   computeQuickLevers,
   computeBreakEvenStudentsForYear,

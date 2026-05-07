@@ -107,6 +107,7 @@ vi.mock("@/lib/coaching/track", () => ({
 }));
 
 vi.mock("@/lib/scenario-engine", () => ({
+  computeProgramBreakEven: () => [],
   computeScenarios: () => ({
     base: {
       name: "Base Model",

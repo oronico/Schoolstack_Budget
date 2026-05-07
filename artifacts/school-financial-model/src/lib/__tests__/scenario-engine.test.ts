@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeScenarios, type ScenarioAdjustments } from "../scenario-engine";
+import { computeScenarios, computeBaseFinancials, computeProgramBreakEven, type ScenarioAdjustments } from "../scenario-engine";
 
 type ModelInput = Parameters<typeof computeScenarios>[0];
 
@@ -1217,5 +1217,117 @@ describe("scenario-engine: cash-reality — restricted vs unrestricted cash", ()
       ],
     });
     expect(m.unrestrictedCashRunwayMonths).toBeLessThanOrEqual(m.cashRunwayMonths);
+  });
+});
+
+describe("scenario-engine: per-program break-even (Task #627)", () => {
+  it("returns empty array when no programs are defined", () => {
+    const data = buildBaseModel({});
+    const m = computeBaseFinancials(data);
+    expect(computeProgramBreakEven(data, m, 0)).toEqual([]);
+  });
+
+  it("splits revenue and allocates fixed costs by enrollment share", () => {
+    const data = { ...buildBaseModel({
+      enrollment: { year1: 100, year2: 100, year3: 100, year4: 100, year5: 100, retentionRate: 85 },
+      revenueRows: [
+        { id: "r1", enabled: true, category: "tuition_and_fees", driverType: "per_student", amounts: [10000, 10000, 10000, 10000, 10000] },
+      ],
+      staffingRows: [
+        { id: "s1", enabled: true, fte: 5, annualizedRate: 60000, role: "Teacher" },
+      ],
+      expenseRows: [
+        { id: "e1", enabled: true, category: "other", driverType: "annual_fixed", amounts: [400000, 400000, 400000, 400000, 400000] },
+      ],
+    }), programs: [
+        { id: "lower", name: "Lower School", annualTuition: 18000, year1: 60, year2: 60, year3: 60, year4: 60, year5: 60 },
+        { id: "upper", name: "Upper School", annualTuition: 4000, year1: 40, year2: 40, year3: 40, year4: 40, year5: 40 },
+      ] };
+    const m = computeBaseFinancials(data);
+    const programs = computeProgramBreakEven(data, m, 0);
+    expect(programs).toHaveLength(2);
+    const [lower, upper] = programs;
+    expect(lower.revenue).toBeCloseTo(18000 * 60, 0);
+    expect(upper.revenue).toBeCloseTo(4000 * 40, 0);
+    expect(lower.allocatedFixedCost / upper.allocatedFixedCost).toBeCloseTo(60 / 40, 4);
+    expect(lower.surplus).toBeGreaterThan(upper.surplus);
+    expect(lower.carriesSchool).toBe(true);
+    expect(upper.carriesSchool).toBe(false);
+    expect(lower.breakEvenStudents).not.toBeNull();
+    expect(lower.breakEvenStudents).toBeGreaterThan(0);
+  });
+
+  it("returns null break-even for programs with zero enrollment", () => {
+    const data = {
+      ...buildBaseModel({
+        enrollment: { year1: 50, year2: 50, year3: 50, year4: 50, year5: 50, retentionRate: 85 },
+        revenueRows: [
+          { id: "r1", enabled: true, category: "tuition_and_fees", driverType: "per_student", amounts: [10000, 10000, 10000, 10000, 10000] },
+        ],
+        staffingRows: [
+          { id: "s1", enabled: true, fte: 2, annualizedRate: 60000, role: "Teacher" },
+        ],
+      }),
+      programs: [
+        { id: "active", name: "Active", annualTuition: 10000, year1: 50, year2: 50, year3: 50, year4: 50, year5: 50 },
+        { id: "future", name: "Future", annualTuition: 12000, year1: 0, year2: 20, year3: 30, year4: 40, year5: 50 },
+      ],
+    } as ModelInput;
+    const m = computeBaseFinancials(data);
+    const programs = computeProgramBreakEven(data, m, 0);
+    const future = programs.find((p) => p.programId === "future")!;
+    expect(future.enrollment).toBe(0);
+    expect(future.revenue).toBe(0);
+    expect(future.allocatedFixedCost).toBe(0);
+    expect(future.breakEvenStudents).toBeNull();
+    const programsY2 = computeProgramBreakEven(data, m, 1);
+    const futureY2 = programsY2.find((p) => p.programId === "future")!;
+    expect(futureY2.enrollment).toBe(20);
+    expect(futureY2.breakEvenStudents).not.toBeNull();
+  });
+
+  it("scales program enrollment by enrollmentAdjustment for scenarios", () => {
+    const data = {
+      ...buildBaseModel({
+        enrollment: { year1: 100, year2: 100, year3: 100, year4: 100, year5: 100, retentionRate: 85 },
+        revenueRows: [
+          { id: "r1", enabled: true, category: "tuition_and_fees", driverType: "per_student", amounts: [10000, 10000, 10000, 10000, 10000] },
+        ],
+      }),
+      programs: [
+        { id: "p1", name: "P1", annualTuition: 10000, year1: 100, year2: 100, year3: 100, year4: 100, year5: 100 },
+      ],
+    } as ModelInput;
+    const m = computeBaseFinancials(data);
+    const base = computeProgramBreakEven(data, m, 0, 0);
+    const down = computeProgramBreakEven(data, m, 0, -10);
+    expect(base[0].enrollment).toBe(100);
+    expect(down[0].enrollment).toBe(90);
+  });
+
+  it("scales program tuition by tuitionAdjustment for scenarios", () => {
+    const data = {
+      ...buildBaseModel({
+        enrollment: { year1: 100, year2: 100, year3: 100, year4: 100, year5: 100, retentionRate: 85 },
+        revenueRows: [
+          { id: "r1", enabled: true, category: "tuition_and_fees", driverType: "per_student", amounts: [10000, 10000, 10000, 10000, 10000] },
+        ],
+        staffingRows: [
+          { id: "s1", enabled: true, fte: 5, annualizedRate: 60000, role: "Teacher" },
+        ],
+      }),
+      programs: [
+        { id: "p1", name: "P1", annualTuition: 10000, year1: 100, year2: 100, year3: 100, year4: 100, year5: 100 },
+      ],
+    } as ModelInput;
+    const m = computeBaseFinancials(data);
+    const base = computeProgramBreakEven(data, m, 0, 0, 0);
+    const up = computeProgramBreakEven(data, m, 0, 0, 10);
+    expect(up[0].annualTuition).toBeCloseTo(base[0].annualTuition * 1.1, 4);
+    expect(up[0].revenue).toBeCloseTo(base[0].revenue * 1.1, 4);
+    expect(up[0].surplus).toBeGreaterThan(base[0].surplus);
+    if (base[0].breakEvenStudents !== null && up[0].breakEvenStudents !== null) {
+      expect(up[0].breakEvenStudents).toBeLessThanOrEqual(base[0].breakEvenStudents);
+    }
   });
 });

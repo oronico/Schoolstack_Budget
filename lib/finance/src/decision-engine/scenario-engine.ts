@@ -1,4 +1,4 @@
-import type { FullModelData } from "./model-shape.js";
+import type { FullModelData, ProgramLike } from "./model-shape.js";
 import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "../constants.js";
 import {
   computeYear1MonthlyCashFlow,
@@ -161,6 +161,116 @@ export function computeBreakEvenStudentsForYear(m: ScenarioMetrics, y: number): 
   const contributionMargin = revenuePerStudent - variableCostPerStudent;
   if (contributionMargin <= 0) return null;
   return Math.ceil(fixedCosts / contributionMargin);
+}
+
+/**
+ * Per-program break-even view for a single year (Task #627). Splits revenue
+ * and variable cost across the school's `programs` array using each program's
+ * own `annualTuition` and projected enrollment for the year, allocates shared
+ * fixed costs (staffing + facility + loan debt service + fixed-driver opex)
+ * by enrollment share, then computes:
+ *
+ *  - `breakEvenStudents` — the headcount this program would need (at its own
+ *    tuition) to fully cover its allocated share of fixed costs. `null` when
+ *    the math is undefined (zero enrollment, contribution margin <= 0, or no
+ *    enrollment school-wide that year).
+ *  - `surplus` — the program's contribution margin minus its allocated fixed
+ *    costs. Positive means the program is "carrying" the school (covering
+ *    more than its share of overhead); negative means it's being subsidised
+ *    by the rest of the portfolio.
+ *
+ * Tuition is escalated by `data.tuitionEscalation.rate` for years past Y1
+ * to mirror the engine's per-row tier math. When `enrollmentAdjustment`
+ * is non-zero, program enrollment is scaled by `1 + adj/100` (matching how
+ * `applyAdjustments` scales school-wide enrollment for scenario rows).
+ */
+export interface ProgramBreakEven {
+  programId: string;
+  programName: string;
+  enrollment: number;
+  annualTuition: number;
+  revenue: number;
+  variableCost: number;
+  contributionMargin: number;
+  contributionMarginPerStudent: number;
+  allocatedFixedCost: number;
+  breakEvenStudents: number | null;
+  surplus: number;
+  carriesSchool: boolean;
+}
+
+export function computeProgramBreakEven(
+  data: FullModelData,
+  metrics: ScenarioMetrics,
+  yearIndex: number,
+  enrollmentAdjustment: number = 0,
+  tuitionAdjustment: number = 0,
+): ProgramBreakEven[] {
+  const programs = data.programs || [];
+  if (programs.length === 0) return [];
+
+  const y = yearIndex;
+  const yearKey = (`year${y + 1}`) as keyof ProgramLike;
+  const tuitionEsc = (data.tuitionEscalation?.rate ?? 0) / 100;
+  const tuitionFactor = Math.pow(1 + tuitionEsc, y) * (1 + tuitionAdjustment / 100);
+  const enrollmentFactor = 1 + enrollmentAdjustment / 100;
+
+  const programEnrollments = programs.map((p) => {
+    const raw = (p[yearKey] as number) ?? 0;
+    return Math.max(0, Math.round(raw * enrollmentFactor));
+  });
+  const programTotal = programEnrollments.reduce((a, b) => a + b, 0);
+
+  // Use the engine's school-wide enrollment as the allocation denominator
+  // when it's larger than the sum of program rows (i.e. the founder hasn't
+  // assigned every enrolled student to a program yet). That keeps allocated
+  // fixed costs from being overstated for the programs that *are* defined.
+  const schoolTotal = metrics.enrollment[y] || 0;
+  const denom = Math.max(programTotal, schoolTotal);
+
+  const fixedOpex = metrics.fixedOpex?.[y] ?? 0;
+  const fixedCostsTotal =
+    (metrics.staffingCost[y] ?? 0) +
+    (metrics.facilityCost?.[y] ?? 0) +
+    (metrics.loanDebtService?.[y] ?? 0) +
+    fixedOpex;
+  const variableOpexTotal =
+    metrics.variableOpex?.[y] ?? (metrics.fixedOpex ? 0 : (metrics.opex[y] ?? 0));
+
+  return programs.map((p, i) => {
+    const students = programEnrollments[i];
+    const escalatedTuition = (p.annualTuition ?? 0) * tuitionFactor;
+    const revenue = escalatedTuition * students;
+    const share = denom > 0 ? students / denom : 0;
+    const variableCost = variableOpexTotal * share;
+    const allocatedFixedCost = fixedCostsTotal * share;
+    const contributionMargin = revenue - variableCost;
+    const variableCostPerStudent = students > 0 ? variableCost / students : 0;
+    const contributionMarginPerStudent = escalatedTuition - variableCostPerStudent;
+
+    let breakEvenStudents: number | null = null;
+    if (students > 0 && contributionMarginPerStudent > 0 && allocatedFixedCost > 0) {
+      breakEvenStudents = Math.ceil(allocatedFixedCost / contributionMarginPerStudent);
+    } else if (allocatedFixedCost === 0 && students > 0) {
+      breakEvenStudents = 0;
+    }
+
+    const surplus = contributionMargin - allocatedFixedCost;
+    return {
+      programId: p.id ?? `program_${i}`,
+      programName: p.name?.trim() || `Program ${i + 1}`,
+      enrollment: students,
+      annualTuition: escalatedTuition,
+      revenue,
+      variableCost,
+      contributionMargin,
+      contributionMarginPerStudent,
+      allocatedFixedCost,
+      breakEvenStudents,
+      surplus,
+      carriesSchool: surplus > 0,
+    };
+  });
 }
 
 function buildBreakEvenArrays(

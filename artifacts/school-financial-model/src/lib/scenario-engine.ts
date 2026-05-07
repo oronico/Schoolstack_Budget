@@ -4,6 +4,8 @@
 // `@/lib/scenario-engine` import keep working unchanged.
 export {
   computeBaseFinancials,
+  computeProgramBreakEven,
+  type ProgramBreakEven,
   computeScenarios,
   computeQuickLevers,
   computeBreakEvenStudentsForYear,

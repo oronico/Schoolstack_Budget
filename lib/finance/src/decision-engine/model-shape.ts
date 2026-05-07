@@ -113,6 +113,24 @@ export interface TuitionTierLike {
   studentCounts?: number[];
 }
 
+/**
+ * A program / grade band the school offers. The wizard tracks programs
+ * separately from `revenueRows` so the engine can compute a per-program
+ * break-even view (Task #627). `annualTuition` is the program's headline
+ * tuition rate in Year 1 dollars (escalated by `tuitionEscalation.rate`
+ * for later years); `year1`-`year5` are projected enrolled student counts.
+ */
+export interface ProgramLike {
+  id?: string;
+  name?: string;
+  annualTuition?: number;
+  year1?: number;
+  year2?: number;
+  year3?: number;
+  year4?: number;
+  year5?: number;
+}
+
 export interface SchoolProfileLike {
   isPartialFirstYear?: boolean;
   year1OperatingMonths?: number;
@@ -251,6 +269,7 @@ export interface FullModelData {
   expenseRows?: ExpenseRowLike[];
   capitalAndDebtRows?: CapitalDebtRowLike[];
   tuitionTiers?: TuitionTierLike[];
+  programs?: ProgramLike[];
   tuitionEscalation?: { rate?: number };
   openingBalances?: OpeningBalancesLike;
   customScenarios?: Array<Record<string, unknown>>;

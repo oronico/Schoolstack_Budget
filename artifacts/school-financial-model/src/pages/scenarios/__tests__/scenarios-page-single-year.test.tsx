@@ -122,6 +122,7 @@ vi.mock("@/lib/coaching/track", () => ({
 // with deterministic metrics so the Side-by-Side Comparison table renders
 // past the `results && scenarios.length > 0` gate.
 vi.mock("@/lib/scenario-engine", () => ({
+  computeProgramBreakEven: () => [],
   computeScenarios: () => ({
     base: {
       name: "Base Model",

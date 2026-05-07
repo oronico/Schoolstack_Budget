@@ -26,7 +26,7 @@ import {
   X,
   Share2,
 } from "lucide-react";
-import { computeScenarios, type ScenarioAdjustments, type ScenarioResult, type NudgeItem } from "@/lib/scenario-engine";
+import { computeScenarios, computeProgramBreakEven, type ScenarioAdjustments, type ScenarioResult, type NudgeItem, type ProgramBreakEven } from "@/lib/scenario-engine";
 import { compareScenarios } from "@/lib/scenario-compare";
 import { ScenarioComparisonView } from "@/components/consultant/ScenarioComparisonView";
 import { AdvisorPreviewPanel } from "@/components/scenarios/AdvisorPreviewPanel";
@@ -2889,6 +2889,79 @@ export function ScenarioPage() {
                             : "N/A"
                         )}
                       />
+                      {(() => {
+                        const basePrograms = computeProgramBreakEven(modelData, results.base.metrics, 0);
+                        if (basePrograms.length === 0) return null;
+                        const scenarioPrograms = results.scenarios.map((s) =>
+                          computeProgramBreakEven(modelData, s.metrics, 0, s.adjustments.enrollmentAdjustment, s.adjustments.tuitionAdjustment),
+                        );
+                        return (
+                          <>
+                            <tr className="border-b border-border/40" data-testid="per-program-breakeven-header">
+                              <td
+                                colSpan={2 + results.scenarios.length}
+                                className="py-2 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-muted/30"
+                                title="Break-even student count per program (Yr 1). Allocates shared fixed costs by enrollment share so you can see which programs are carrying the school."
+                              >
+                                Per-program break-even (Yr 1) — students needed at this program's tuition
+                              </td>
+                            </tr>
+                            {basePrograms.map((p, pIdx) => (
+                              <tr
+                                key={p.programId}
+                                className="border-b border-border/40"
+                                data-testid={`per-program-breakeven-row-${p.programId}`}
+                              >
+                                <td className="py-3 pr-4 text-sm font-medium text-foreground whitespace-nowrap">
+                                  <span className="inline-flex items-center gap-2">
+                                    {p.programName}
+                                    {p.carriesSchool ? (
+                                      <span
+                                        className="text-[10px] uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5"
+                                        title="This program's contribution margin exceeds its allocated share of fixed costs."
+                                      >
+                                        Carrying
+                                      </span>
+                                    ) : p.enrollment > 0 && p.surplus < 0 ? (
+                                      <span
+                                        className="text-[10px] uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5"
+                                        title="This program's contribution margin doesn't cover its allocated share of fixed costs — other programs are subsidising it."
+                                      >
+                                        Subsidised
+                                      </span>
+                                    ) : null}
+                                  </span>
+                                  <div className="text-[11px] text-muted-foreground font-normal">
+                                    {p.enrollment} enrolled · ${Math.round(p.annualTuition).toLocaleString()}/yr tuition
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4 text-sm text-center font-mono bg-muted/30">
+                                  {p.breakEvenStudents === null
+                                    ? "N/A"
+                                    : p.breakEvenStudents.toString()}
+                                </td>
+                                {scenarioPrograms.map((sp, i) => {
+                                  const sProg = sp[pIdx];
+                                  const sVal = sProg?.breakEvenStudents ?? null;
+                                  let colorClass = "";
+                                  if (sVal !== null && p.breakEvenStudents !== null) {
+                                    if (sVal < p.breakEvenStudents) colorClass = "text-emerald-700";
+                                    else if (sVal > p.breakEvenStudents) colorClass = "text-red-600";
+                                  }
+                                  return (
+                                    <td
+                                      key={i}
+                                      className={`py-3 px-4 text-sm text-center font-mono ${colorClass}`}
+                                    >
+                                      {sVal === null ? "N/A" : sVal.toString()}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))}
+                          </>
+                        );
+                      })()}
                       {results.base.downsideBand && (
                         <>
                           <tr className="border-b border-border/40">
