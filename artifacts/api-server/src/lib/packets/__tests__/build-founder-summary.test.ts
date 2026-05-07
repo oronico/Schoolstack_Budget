@@ -139,6 +139,22 @@ const BANNED_WORDS = [
   "ineligible",
 ];
 
+/** Low-cash fixture: short runway + small starting cash + thin margin. */
+function buildLowCashModel(): Record<string, unknown> {
+  const m = buildModel();
+  (m as { openingBalances: { cash: number } }).openingBalances.cash = 5_000;
+  // Halve the enrollment so revenue is too thin to cover staff + rent.
+  (m as { enrollment: Record<string, number> }).enrollment.year1 = 4;
+  return m;
+}
+
+/** Missing-founder-comp fixture: no founder/leadership salary line. */
+function buildNoFounderCompModel(): Record<string, unknown> {
+  const m = buildModel();
+  (m as { staffingRows: unknown[] }).staffingRows = [];
+  return m;
+}
+
 async function run(): Promise<void> {
   const model = buildModel();
   const consultantOutput = await runConsultantEngine(model);
@@ -208,6 +224,123 @@ async function run(): Promise<void> {
     "summary.bundle is the same canonical bundle shape used by lender/board commentary",
     summary.bundle.schoolName === "Acme Microschool" &&
       summary.bundle.cashRunwayMonths === consultantOutput.cashRunwayMonths,
+  );
+
+  // ── Reviewer-question count is in the required 5-8 range ─────────────
+  const reviewer = summary.sections.find((s) => s.id === "what_reviewers_may_ask");
+  const qCount = reviewer?.bullets?.length ?? 0;
+  check(
+    "reviewer questions count is in the required 5..8 range (default fixture)",
+    qCount >= 5 && qCount <= 8,
+    `got ${qCount}`,
+  );
+
+  // ── Fix-first comes from canonical flags, ordered by impact ──────────
+  const fixFirst = summary.sections.find((s) => s.id === "what_to_fix_first");
+  const fixBullets = fixFirst?.bullets || [];
+  check(
+    "fix-first has at most 6 bullets (cap)",
+    fixBullets.length <= 6,
+    `got ${fixBullets.length}`,
+  );
+  // If the engine produced any flags, every cash-impact flag must come
+  // before any sustainability / polish flag in the rendered list.
+  const flags = consultantOutput.assumptionFlags || [];
+  if (flags.length > 0 && fixBullets.length > 0) {
+    const cashImpactTypes = new Set([
+      "litigated_funding", "pending_funding", "low_retention",
+      "negative_cash_runway", "dscr_below_covenant",
+      "negative_operating_cash", "operating_loss_year_one",
+    ]);
+    const isCashImpact = (fl: { severity: string; flagType: string }) =>
+      fl.severity === "critical" || cashImpactTypes.has(fl.flagType);
+    const cashFlags = flags.filter(isCashImpact);
+    if (cashFlags.length > 0 && flags.length > cashFlags.length) {
+      // First bullet must originate from a cash-impact flag (look for
+      // any cash-impact field name in the bullet text).
+      const firstBullet = fixBullets[0]?.toLowerCase() || "";
+      const matched = cashFlags.some((fl) =>
+        firstBullet.includes(fl.field.toLowerCase().replace(/_/g, " ")) ||
+        firstBullet.includes(fl.flagType.replace(/_/g, " ")),
+      );
+      check(
+        "fix-first first bullet is a cash-impact flag",
+        matched,
+        `firstBullet=${firstBullet.slice(0, 120)}; cash flags=${cashFlags.map((f) => f.flagType).join(",")}`,
+      );
+    }
+  }
+
+  // ── Fixture: low-cash model still yields a valid summary ─────────────
+  const lowCashModel = buildLowCashModel();
+  const lowCashCO = await runConsultantEngine(lowCashModel);
+  const lowCashSummary = buildFounderSummary(lowCashModel as ModelData, lowCashCO);
+  const lowText = lowCashSummary.sections
+    .flatMap((s) => [...s.paragraphs, ...(s.bullets || [])])
+    .join("\n");
+  check(
+    "low-cash fixture: summary has six sections",
+    lowCashSummary.sections.length === 6,
+  );
+  check(
+    "low-cash fixture: no em-dashes",
+    !lowText.includes("\u2014") && !lowText.includes("\u2013"),
+  );
+  for (const w of BANNED_WORDS) {
+    check(
+      `low-cash fixture: banned word "${w}" not present`,
+      !new RegExp(`\\b${w}\\b`).test(lowText.toLowerCase()),
+    );
+  }
+  const lowAllowed = new Set(lowCashSummary.allowedFigures);
+  const lowUnauthorized = extractFigures(lowText).filter((f) => !lowAllowed.has(f));
+  check(
+    "low-cash fixture: every numeric figure is on the allowed list",
+    lowUnauthorized.length === 0,
+    `unauthorized: ${JSON.stringify(lowUnauthorized)}`,
+  );
+  const lowReviewer = lowCashSummary.sections.find(
+    (s) => s.id === "what_reviewers_may_ask",
+  );
+  const lowQCount = lowReviewer?.bullets?.length ?? 0;
+  check(
+    "low-cash fixture: reviewer questions count is in 5..8",
+    lowQCount >= 5 && lowQCount <= 8,
+    `got ${lowQCount}`,
+  );
+
+  // ── Fixture: missing-founder-comp model still yields a valid summary ─
+  const noCompModel = buildNoFounderCompModel();
+  const noCompCO = await runConsultantEngine(noCompModel);
+  const noCompSummary = buildFounderSummary(noCompModel as ModelData, noCompCO);
+  const noCompText = noCompSummary.sections
+    .flatMap((s) => [...s.paragraphs, ...(s.bullets || [])])
+    .join("\n");
+  check(
+    "no-founder-comp fixture: summary has six sections",
+    noCompSummary.sections.length === 6,
+  );
+  check(
+    "no-founder-comp fixture: no em-dashes",
+    !noCompText.includes("\u2014") && !noCompText.includes("\u2013"),
+  );
+  const noCompAllowed = new Set(noCompSummary.allowedFigures);
+  const noCompUnauthorized = extractFigures(noCompText).filter(
+    (f) => !noCompAllowed.has(f),
+  );
+  check(
+    "no-founder-comp fixture: every numeric figure is on the allowed list",
+    noCompUnauthorized.length === 0,
+    `unauthorized: ${JSON.stringify(noCompUnauthorized)}`,
+  );
+  const noCompReviewer = noCompSummary.sections.find(
+    (s) => s.id === "what_reviewers_may_ask",
+  );
+  const noCompQCount = noCompReviewer?.bullets?.length ?? 0;
+  check(
+    "no-founder-comp fixture: reviewer questions count is in 5..8",
+    noCompQCount >= 5 && noCompQCount <= 8,
+    `got ${noCompQCount}`,
   );
 
   console.log(`\n${passed} passed, ${failed} failed`);

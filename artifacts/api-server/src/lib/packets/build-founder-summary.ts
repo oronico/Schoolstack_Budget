@@ -125,7 +125,11 @@ class FigureScribe {
   }
 
   monthsCount(months: number): string {
-    return this.push(`${months} months`);
+    // Round to integer so the rendered token always matches the
+    // `\d+\s+months\b` shape the guard test extracts; decimal values
+    // (e.g. 171.7 months) would otherwise leave a stray bare integer
+    // and a fragmented "7 months" token in the prose.
+    return this.push(`${Math.round(months)} months`);
   }
 
   /**
@@ -198,9 +202,9 @@ function buildWhatYourModelSays(
       : `The base case carries no senior debt, so debt service coverage is not yet part of the picture.`;
   const runwaySentence =
     bundle.cashRunwayMonths >= 60
-      ? `Cash stays positive across the full 5-year window` +
+      ? `Cash stays positive across the full ${f.yearLabel(5)} window` +
         (bundle.reserveMonthsLastYear !== null
-          ? `, reaching about ${f.num(bundle.reserveMonthsLastYear)} months of operating reserves by ${f.yearLabel(bundle.reserveLastYearNumber)}.`
+          ? `, reaching about ${f.monthsCount(bundle.reserveMonthsLastYear)} of operating reserves by ${f.yearLabel(bundle.reserveLastYearNumber)}.`
           : `.`)
       : `Operating cash carries the school for ${f.monthsCount(bundle.cashRunwayMonths)} from open before another funding event would be needed` +
         (bundle.troughEndingCash !== null && bundle.troughYear !== null
@@ -243,7 +247,7 @@ function buildWhatLooksStrong(
   // Healthy break-even inside the modeled window is a strength.
   if (bundle.breakEvenYear !== null) {
     bullets.push(
-      `The plan crosses operating break-even in ${f.yearLabel(bundle.breakEvenYear)}, inside the 5-year window.`,
+      `The plan crosses operating break-even in ${f.yearLabel(bundle.breakEvenYear)}, inside the ${f.yearLabel(5)} window.`,
     );
   }
 
@@ -343,7 +347,7 @@ function buildCashPressure(
     );
   } else {
     paragraphs.push(
-      `Cash stays positive across the modeled 5 years, so the pressure points below are about preserving that cushion under stress, not surviving the base case.`,
+      `Cash stays positive across the modeled ${f.yearLabel(5)} window, so the pressure points below are about preserving that cushion under stress, not surviving the base case.`,
     );
   }
 
@@ -397,62 +401,117 @@ function buildCashPressure(
   };
 }
 
+/**
+ * Task #660 - Bucket each canonical assumption flag by founder-facing
+ * impact. The product spec is explicit about the ordering:
+ *   cash-impact > sustainability > polish.
+ *
+ * "Cash-impact" = anything that can put the school out of cash or push
+ * it below a covenant (severity=critical, plus runway/DSCR/funding
+ * fragility flag types regardless of severity).
+ *
+ * "Sustainability" = warning-level structural assumptions that won't
+ * sink the school next month but will erode the model under stress
+ * (enrollment shape, tuition growth, retention, escalation).
+ *
+ * "Polish" = info-level assumptions where the model is workable but
+ * sourcing or framing needs tightening before a reviewer reads it.
+ */
+type FixFirstBucket = "cash-impact" | "sustainability" | "polish";
+
+const CASH_IMPACT_FLAG_TYPES = new Set<string>([
+  "litigated_funding",
+  "pending_funding",
+  "low_retention",
+  "negative_cash_runway",
+  "dscr_below_covenant",
+  "negative_operating_cash",
+  "operating_loss_year_one",
+]);
+
+function bucketForFlag(fl: AssumptionFlag): FixFirstBucket {
+  if (fl.severity === "critical") return "cash-impact";
+  if (CASH_IMPACT_FLAG_TYPES.has(fl.flagType)) return "cash-impact";
+  if (fl.severity === "warning") return "sustainability";
+  return "polish";
+}
+
 function buildFixFirst(
   bundle: NarrativeSourceBundle,
   co: ConsultantOutput,
+  flags: AssumptionFlag[],
   f: FigureScribe,
 ): FounderSummarySection {
   const paragraphs: string[] = [];
   const bullets: string[] = [];
 
-  // Order: cash-impact (critical issues) > sustainability (high) > polish (medium).
-  // The engine has already severity-ordered topIssues; we re-bucket by
-  // category for clearer founder framing.
-  const cashImpactRe = /cash|runway|deficit|debt service|dscr|liquidity/i;
-  const sustainabilityRe =
-    /staffing|enrollment|tuition|philanthropy|revenue|capacity/i;
+  // Bucket the canonical flags. Each flag's bullet uses its own
+  // `nextStep` so the founder sees the same one-line action the rest of
+  // the app already shows for that flag.
+  const buckets: Record<FixFirstBucket, AssumptionFlag[]> = {
+    "cash-impact": [],
+    sustainability: [],
+    polish: [],
+  };
+  for (const fl of flags || []) buckets[bucketForFlag(fl)].push(fl);
 
-  const issues = co.topIssues || [];
-  const ranked = [
-    ...issues.filter(
-      (i) => i.severity === "critical" || cashImpactRe.test(i.title),
-    ),
-    ...issues.filter(
-      (i) =>
-        i.severity === "high" &&
-        !cashImpactRe.test(i.title) &&
-        sustainabilityRe.test(i.title),
-    ),
-    ...issues.filter(
-      (i) =>
-        i.severity !== "critical" &&
-        !cashImpactRe.test(i.title) &&
-        !(i.severity === "high" && sustainabilityRe.test(i.title)),
-    ),
-  ];
-
-  // Dedupe while preserving order.
   const seen = new Set<string>();
-  const ordered = ranked.filter((i) => {
-    if (seen.has(i.title)) return false;
-    seen.add(i.title);
-    return true;
-  });
+  const pushBullet = (label: string, action: string) => {
+    const cleaned = stripDashes(`${label}: ${action}`).trim();
+    if (cleaned && !seen.has(cleaned)) {
+      seen.add(cleaned);
+      bullets.push(cleaned);
+    }
+  };
 
-  for (const iss of ordered.slice(0, 5)) {
-    bullets.push(
-      stripDashes(
-        `${f.absorb(iss.title)}: ${f.absorb(iss.recommendedAction || iss.summary)}`,
-      ).trim(),
-    );
+  for (const fl of [
+    ...buckets["cash-impact"],
+    ...buckets.sustainability,
+    ...buckets.polish,
+  ]) {
+    if (bullets.length >= 6) break;
+    const meta = ASSUMPTION_REGISTRY[fl.field as AssumptionKey] as
+      | AssumptionMeta
+      | undefined;
+    const label = meta?.label || fl.field;
+    pushBullet(f.absorb(label), f.absorb(fl.nextStep || fl.defaultPrompt));
   }
 
-  // Fall back to high-priority recommendations when no critical/high issues.
+  // Fall back to engine top-issues / recommendations only when no
+  // canonical flags fired. We still bucket by the same impact regex so
+  // ordering matches the flag path.
   if (bullets.length === 0) {
-    for (const a of bundle.highPriorityActions.slice(0, 3)) {
-      bullets.push(
-        stripDashes(`${f.absorb(a.title)}: ${f.absorb(a.description)}`).trim(),
+    const cashImpactRe = /cash|runway|deficit|debt service|dscr|liquidity/i;
+    const sustainabilityRe =
+      /staffing|enrollment|tuition|philanthropy|revenue|capacity/i;
+    const issues = co.topIssues || [];
+    const ranked = [
+      ...issues.filter(
+        (i) => i.severity === "critical" || cashImpactRe.test(i.title),
+      ),
+      ...issues.filter(
+        (i) =>
+          i.severity === "high" &&
+          !cashImpactRe.test(i.title) &&
+          sustainabilityRe.test(i.title),
+      ),
+      ...issues.filter(
+        (i) =>
+          i.severity !== "critical" &&
+          !cashImpactRe.test(i.title) &&
+          !(i.severity === "high" && sustainabilityRe.test(i.title)),
+      ),
+    ];
+    for (const iss of ranked.slice(0, 5)) {
+      pushBullet(
+        f.absorb(iss.title),
+        f.absorb(iss.recommendedAction || iss.summary),
       );
+    }
+    if (bullets.length === 0) {
+      for (const a of bundle.highPriorityActions.slice(0, 3)) {
+        pushBullet(f.absorb(a.title), f.absorb(a.description));
+      }
     }
   }
 
@@ -534,22 +593,43 @@ function buildReviewerQuestions(
   }
   if (bundle.breakEvenYear === null) {
     addQuestion(
-      `The plan does not reach cumulative break-even within 5 years. What gets you there in Year 6 or 7?`,
+      `The plan does not reach cumulative break-even within ${f.yearLabel(5)}. What gets you there in ${f.yearLabel(6)} or ${f.yearLabel(7)}?`,
     );
   }
 
-  // Flag-driven questions. Every assumption the engine flagged gets a
-  // pointed question so the reviewer's drill-down has a prepared answer.
+  // Flag-driven questions are added BEFORE structural questions so a
+  // reviewer's drill-down on a flagged assumption is never crowded out
+  // by a generic question. We then trim the final list to 5-8 entries.
+  const flagQuestions: string[] = [];
   for (const fl of flags || []) {
-    if (bullets.length >= 12) break;
     const meta = ASSUMPTION_REGISTRY[fl.field as AssumptionKey] as
       | AssumptionMeta
       | undefined;
     const label = meta?.label || fl.field;
-    addQuestion(
-      `On ${label}: ${f.absorb(fl.defaultPrompt)}`,
-    );
+    const q = stripDashes(`On ${label}: ${f.absorb(fl.defaultPrompt)}`).trim();
+    if (q && !flagQuestions.includes(q)) flagQuestions.push(q);
   }
+  const structural = [...bullets];
+  bullets.length = 0;
+  seen.clear();
+  for (const q of flagQuestions) addQuestion(q);
+  for (const q of structural) addQuestion(q);
+
+  // Spec: 5-8 reviewer questions. Trim to 8; if we have fewer than 5,
+  // top up with always-safe structural questions so the reviewer always
+  // has at least 5 prepared answers ready.
+  const fillers = [
+    `What is your evidence base for the ${f.yearLabel(5)} enrollment of ${f.num(bundle.enrollmentY5)}?`,
+    `Which assumption in this model would you most want a second opinion on, and from whom?`,
+    `What is your contingency if ${f.yearLabel(1)} enrollment lands ${f.pct(20, 0)} below plan?`,
+    `What does your hiring sequence look like quarter by quarter for the next ${f.monthsCount(12)}?`,
+    `What is your fundraising plan for closing any cash-pressure gap before opening?`,
+  ];
+  for (const q of fillers) {
+    if (bullets.length >= 5) break;
+    addQuestion(q);
+  }
+  if (bullets.length > 8) bullets.length = 8;
 
   return {
     id: "what_reviewers_may_ask",
@@ -577,7 +657,7 @@ export function buildFounderSummary(
     buildWhatLooksStrong(bundle, co, f),
     buildWhatNeedsClarity(co, flags, f),
     buildCashPressure(bundle, co, f),
-    buildFixFirst(bundle, co, f),
+    buildFixFirst(bundle, co, flags, f),
     buildReviewerQuestions(bundle, flags, f),
   ];
 

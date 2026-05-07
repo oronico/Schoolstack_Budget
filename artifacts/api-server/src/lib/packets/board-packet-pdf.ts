@@ -25,11 +25,15 @@ export async function generateBoardPacketPDF(
   drawCoverPage(doc, packet);
   doc.addPage();
 
-  // Task #660 - Plain-English founder summary leads the body of the packet
-  // when supplied. Same canonical engine that powers the in-app /summary
-  // route, so trustees see the same six sections the founder reviewed.
+  // Task #660 - Plain-English founder summary leads the body of the
+  // packet as a STANDALONE one-pager when supplied. Same canonical
+  // engine that powers the in-app /summary route, so trustees see the
+  // same six sections the founder reviewed. Wrapped in explicit page
+  // boundaries so a board / funder reader can detach this single page
+  // and share it without any other packet content trailing it.
   if (founderSummary) {
     renderFounderSummarySection(doc, founderSummary);
+    doc.addPage();
   }
 
   // Task #617 - board-ready narrative commentary leads the body of the
@@ -427,6 +431,11 @@ function renderMetrics(doc: PDFDoc, metrics: LinkedMetric[]) {
  */
 function renderFounderSummarySection(doc: PDFDoc, summary: FounderSummary) {
   if (!summary || summary.sections.length === 0) return;
+  // Task #660 - Standalone one-pager. The caller wraps this with an
+  // explicit doc.addPage() afterwards so subsequent packet sections do
+  // not bleed onto the founder-summary page; here we only enforce the
+  // start-of-page boundary and use compact typography so the six
+  // sections fit on a single sheet for the typical model.
   sectionTitle(doc, "Plain-English Summary");
   doc.font("Helvetica-Oblique").fontSize(8).fillColor(BRAND.gray);
   doc.text(
@@ -436,27 +445,34 @@ function renderFounderSummarySection(doc: PDFDoc, summary: FounderSummary) {
     { width: doc.page.width - doc.page.margins.left - doc.page.margins.right },
   );
   doc.fillColor(BRAND.black);
-  doc.moveDown(0.4);
+  doc.moveDown(0.3);
 
   for (const sect of summary.sections) {
-    ensureSpace(doc, 60);
-    subSection(doc, sect.title);
+    // Compact subsection header so we do not page-break mid-summary.
+    doc.font("Helvetica-Bold").fontSize(10).fillColor(BRAND.darkGray);
+    doc.text(sect.title, doc.page.margins.left, doc.y, {
+      width: doc.page.width - doc.page.margins.left - doc.page.margins.right,
+    });
+    doc.fillColor(BRAND.black);
+    doc.moveDown(0.15);
+
     for (const p of sect.paragraphs) {
-      ensureSpace(doc, 30);
-      bodyText(doc, p);
+      doc.font("Helvetica").fontSize(9).fillColor(BRAND.black);
+      doc.text(p, doc.page.margins.left, doc.y, {
+        width: doc.page.width - doc.page.margins.left - doc.page.margins.right,
+      });
     }
     if (sect.bullets && sect.bullets.length > 0) {
       doc.moveDown(0.1);
-      const indent = doc.page.margins.left + 12;
+      const indent = doc.page.margins.left + 10;
       const w = doc.page.width - doc.page.margins.right - indent;
       for (const b of sect.bullets) {
-        ensureSpace(doc, 18);
-        doc.font("Helvetica").fontSize(9).fillColor(BRAND.darkGray);
+        doc.font("Helvetica").fontSize(8.5).fillColor(BRAND.darkGray);
         doc.text(`\u2022 ${b}`, indent, doc.y, { width: w });
       }
       doc.fillColor(BRAND.black);
     }
-    doc.moveDown(0.3);
+    doc.moveDown(0.25);
   }
 }
 
