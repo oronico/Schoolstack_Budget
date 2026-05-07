@@ -197,6 +197,26 @@ describe("ModelWizardPage — yet_to_launch founder", () => {
     expectNoForbiddenTerms(container.textContent || "", "Wizard step 2");
   });
 
+  // Task #593: stage belongs to the model, not the persona. Even a
+  // yet_to_launch founder must see BOTH stage options on School Profile
+  // so a planned-school-that-opens (or a consultant managing multiple
+  // schools) can mark a model as Already Operating without changing
+  // their account-wide persona. The previous gate hid the toggle and
+  // silently force-reset saved operating_school models — both removed.
+  it("step 2 shows both stage options to a yet_to_launch founder", async () => {
+    const container = await renderWizardAtStep(2);
+    const newSchoolBtn = container.querySelector(
+      '[data-testid="school-stage-option-new_school"]',
+    );
+    const operatingBtn = container.querySelector(
+      '[data-testid="school-stage-option-operating_school"]',
+    );
+    expect(newSchoolBtn).not.toBeNull();
+    expect(operatingBtn).not.toBeNull();
+    expect(newSchoolBtn?.textContent).toMatch(/New School/i);
+    expect(operatingBtn?.textContent).toMatch(/Already Operating/i);
+  });
+
   it("step 4 (Revenue) reframes the source picker for opening-year founders", async () => {
     const container = await renderWizardAtStep(4);
     const text = container.textContent || "";

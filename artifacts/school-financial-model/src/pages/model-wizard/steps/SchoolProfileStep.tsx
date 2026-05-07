@@ -1145,25 +1145,14 @@ export function SchoolProfileStep({ focus }: { focus?: string } = {}) {
   const { user } = useAuth();
   // Task #416 / #499: shared coach-gate hook keeps every wizard step in sync.
   const { showCoach } = useShowCoach();
-  // Task #302: persona-stage gating overrides model.schoolStage. A founder
-  // who picked `yet_to_launch` should never see prior-year actuals,
-  // QuickBooks/Xero callouts, or any "import last year's books" surfaces —
-  // even if a legacy model on their account was saved with
-  // `schoolStage = "operating_school"`. We compute this once here and use
-  // it everywhere the schoolStage gate previously stood alone.
+  // Task #593: school stage belongs to the *model*, not the founder's
+  // account-wide persona. We still read `personaIsYetToLaunch` so coaching
+  // copy elsewhere on the step can reflect tone, but the stage toggle is
+  // always shown and the saved value is always honored — no silent reset.
   const yetToLaunch = personaIsYetToLaunch(user);
-  const isOperatingSchool = !yetToLaunch && watch("schoolProfile.schoolStage") === "operating_school";
+  const isOperatingSchool = watch("schoolProfile.schoolStage") === "operating_school";
   const isPartialFirstYear = watch("schoolProfile.isPartialFirstYear");
   const schoolStage = watch("schoolProfile.schoolStage");
-  // If a yet_to_launch founder opens a legacy model that was saved with
-  // `schoolStage = "operating_school"`, force it back to `"new_school"` so
-  // every downstream calc treats them as pre-opening. This runs once per
-  // mount and only when the persona + saved stage are out of sync.
-  useEffect(() => {
-    if (yetToLaunch && schoolStage === "operating_school") {
-      setValue("schoolProfile.schoolStage", "new_school", { shouldDirty: true });
-    }
-  }, [yetToLaunch, schoolStage, setValue]);
   const operatingYear = watch("schoolProfile.operatingYear");
   const schoolType = watch("schoolProfile.schoolType");
   // Model Duration is locked once the model exists. We read the current
@@ -1433,14 +1422,50 @@ export function SchoolProfileStep({ focus }: { focus?: string } = {}) {
         />
       </div>
 
-      {yetToLaunch ? (
-        // Yet-to-launch founders never see the "are you operating?" radio
-        // or any of its operating-school branches. Their persona implies
-        // pre-opening, and we ask only for the planned opening year so the
-        // wizard can still build a 5-year ramp.
-        <div>
-          <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">When are you planning to open?</h3>
-          <div className="max-w-sm">
+      {/*
+        Task #593: stage belongs to the model, not the founder's persona.
+        Both options are always shown — a short helper teaches the
+        distinction so a pre-opening founder isn't confused by the
+        Operating option, without hiding it.
+      */}
+      <div>
+        <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">What stage is your school?</h3>
+        <div className={cn("flex flex-wrap gap-2 rounded-xl", stageError && "ring-2 ring-destructive/50 p-1")}>
+          {([
+            { value: "new_school" as const, icon: <Rocket className="h-4 w-4" />, label: "New School (Pre-Opening)" },
+            { value: "operating_school" as const, icon: <Building2 className="h-4 w-4" />, label: "Already Operating" },
+          ]).map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              data-testid={`school-stage-option-${opt.value}`}
+              onClick={() => setValue("schoolProfile.schoolStage", opt.value, { shouldDirty: true, shouldValidate: true })}
+              className={cn(
+                "inline-flex items-center gap-2 px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all",
+                schoolStage === opt.value
+                  ? "border-primary bg-primary/5 text-primary"
+                  : "border-border bg-card text-muted-foreground hover:border-primary/40"
+              )}
+            >
+              {opt.icon}
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        <p className="mt-2 text-xs text-muted-foreground">
+          Pick <strong>Already Operating</strong> only if your school currently has students enrolled. Still planning to open? Pick <strong>New School (Pre-Opening)</strong>.
+        </p>
+
+        {stageError && (
+          <div className="flex items-center gap-2 mt-3 text-destructive" data-error="true">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <p className="text-sm font-medium">{stageError}</p>
+          </div>
+        )}
+
+        {schoolStage === "new_school" && (
+          <div className="mt-4 max-w-sm">
             <FormSelect
               name="schoolProfile.plannedOpeningYear"
               label="Planned Opening School Year"
@@ -1451,67 +1476,21 @@ export function SchoolProfileStep({ focus }: { focus?: string } = {}) {
               ]}
             />
           </div>
-        </div>
-      ) : (
-        <div>
-          <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">What stage is your school?</h3>
-          <div className={cn("flex flex-wrap gap-2 rounded-xl", stageError && "ring-2 ring-destructive/50 p-1")}>
-            {([
-              { value: "new_school" as const, icon: <Rocket className="h-4 w-4" />, label: "New School (Pre-Opening)" },
-              { value: "operating_school" as const, icon: <Building2 className="h-4 w-4" />, label: "Already Operating" },
-            ]).map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setValue("schoolProfile.schoolStage", opt.value, { shouldDirty: true, shouldValidate: true })}
-                className={cn(
-                  "inline-flex items-center gap-2 px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all",
-                  schoolStage === opt.value
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-border bg-card text-muted-foreground hover:border-primary/40"
-                )}
-              >
-                {opt.icon}
-                {opt.label}
-              </button>
-            ))}
+        )}
+
+        {schoolStage === "operating_school" && (
+          <div className="mt-4 max-w-sm">
+            <FormSelect
+              name="schoolProfile.operatingYear"
+              label="How long have you been operating?"
+              options={[
+                { value: "first_year", label: "This is our first year of operation" },
+                { value: "second_year_plus", label: "We've completed at least one full school year" },
+              ]}
+            />
           </div>
-
-          {stageError && (
-            <div className="flex items-center gap-2 mt-3 text-destructive" data-error="true">
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              <p className="text-sm font-medium">{stageError}</p>
-            </div>
-          )}
-
-          {schoolStage === "new_school" && (
-            <div className="mt-4 max-w-sm">
-              <FormSelect
-                name="schoolProfile.plannedOpeningYear"
-                label="Planned Opening School Year"
-                options={[
-                  { value: "2026-27", label: "2026–27" },
-                  { value: "2027-28", label: "2027–28" },
-                  { value: "2028-29", label: "2028–29" },
-                ]}
-              />
-            </div>
-          )}
-
-          {schoolStage === "operating_school" && (
-            <div className="mt-4 max-w-sm">
-              <FormSelect
-                name="schoolProfile.operatingYear"
-                label="How long have you been operating?"
-                options={[
-                  { value: "first_year", label: "This is our first year of operation" },
-                  { value: "second_year_plus", label: "We've completed at least one full school year" },
-                ]}
-              />
-            </div>
-          )}
-        </div>
-      )}
+        )}
+      </div>
 
       {!isCharter && (
         <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
