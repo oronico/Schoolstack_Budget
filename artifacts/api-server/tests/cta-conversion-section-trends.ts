@@ -80,6 +80,10 @@ interface CtaResponse {
   range: "7d" | "30d" | "90d" | "all";
   bucketUnit: "day" | "week" | null;
   bucketCount: number;
+  // Task #569 — per-bucket start timestamps aligned with the trend
+  // arrays so the admin UI can label "Tue Apr 28" / "Week of Apr 28"
+  // in its hover tooltip. Empty for range=all.
+  trendBucketStarts?: string[];
   sectionEngagement?: {
     source: string;
     sections: {
@@ -329,6 +333,66 @@ async function main(): Promise<void> {
       `bucketUnit=${cta7d.bucketUnit} bucketCount=${cta7d.bucketCount}`,
     );
 
+    // --- Task #569: trendBucketStarts shape -------------------------------
+    // The admin UI tooltip ("Tue Apr 28: 3 impressions, 1 click") needs a
+    // bucket-date payload that lines up positionally with each trend
+    // value. Pin the contract: length === bucketCount, every entry is a
+    // valid ISO timestamp at midnight UTC for day-bucketed ranges, and
+    // each seeded event's date_trunc'd day appears at exactly the slot
+    // the UI will index into for the same value.
+    check(
+      "7d response includes trendBucketStarts with length === bucketCount",
+      Array.isArray(cta7d.trendBucketStarts) &&
+        cta7d.trendBucketStarts.length === 7,
+      `trendBucketStarts=${JSON.stringify(cta7d.trendBucketStarts)}`,
+    );
+    if (cta7d.trendBucketStarts) {
+      const allMidnightUtc = cta7d.trendBucketStarts.every((s) =>
+        /T00:00:00\.000Z$/.test(s),
+      );
+      check(
+        "7d trendBucketStarts entries are midnight-UTC ISO strings (day buckets)",
+        allMidnightUtc,
+        `entries=${cta7d.trendBucketStarts.join(",")}`,
+      );
+      const allValid = cta7d.trendBucketStarts.every(
+        (s) => !Number.isNaN(new Date(s).getTime()),
+      );
+      check(
+        "7d trendBucketStarts entries parse as valid Dates",
+        allValid,
+        `entries=${cta7d.trendBucketStarts.join(",")}`,
+      );
+      // For each seeded impression, the trendBucketStarts[idx] must be
+      // the date_trunc('day') of that event. This pins the UI tooltip
+      // to the right calendar day per slot.
+      let perDayMatches = true;
+      for (const daysAgo of seededDays7d) {
+        const eventDay = new Date(now7 - daysAgo * dayMs);
+        const truncated = Date.UTC(
+          eventDay.getUTCFullYear(),
+          eventDay.getUTCMonth(),
+          eventDay.getUTCDate(),
+        );
+        const idx = expectedTrendIndex(
+          truncated + 12 * 60 * 60 * 1000, // noon, what we actually inserted
+          approxNow7,
+          7,
+          dayMs,
+        );
+        const slotMs = new Date(cta7d.trendBucketStarts[idx]).getTime();
+        if (slotMs !== truncated) {
+          perDayMatches = false;
+          break;
+        }
+      }
+      check(
+        "7d trendBucketStarts[idx] equals the date_trunc'd day for each seeded event",
+        perDayMatches,
+        `starts=${cta7d.trendBucketStarts.join(",")}`,
+      );
+    }
+
     const sectionEntry7d = cta7d.sectionEngagement?.find((p) => p.source === SOURCE);
     check(
       "7d response surfaces our seeded source in sectionEngagement",
@@ -439,6 +503,74 @@ async function main(): Promise<void> {
       cta90d.bucketUnit === "week" && cta90d.bucketCount === 13,
       `bucketUnit=${cta90d.bucketUnit} bucketCount=${cta90d.bucketCount}`,
     );
+
+    // Task #569 — weekly bucketStarts must align to Monday 00:00 UTC
+    // (postgres date_trunc('week') matches the ISO definition), with
+    // length === bucketCount and slot positions consistent with the
+    // expectedTrendIndex math the UI uses to read them.
+    check(
+      "90d response includes trendBucketStarts with length === 13",
+      Array.isArray(cta90d.trendBucketStarts) &&
+        cta90d.trendBucketStarts.length === 13,
+      `trendBucketStarts=${JSON.stringify(cta90d.trendBucketStarts)}`,
+    );
+    if (cta90d.trendBucketStarts) {
+      const allMondayMidnightUtc = cta90d.trendBucketStarts.every((s) => {
+        if (!/T00:00:00\.000Z$/.test(s)) return false;
+        const d = new Date(s);
+        // ISO weeks start on Monday (getUTCDay === 1).
+        return d.getUTCDay() === 1;
+      });
+      check(
+        "90d trendBucketStarts entries are Monday 00:00 UTC ISO strings (week buckets)",
+        allMondayMidnightUtc,
+        `entries=${cta90d.trendBucketStarts.join(",")}`,
+      );
+      // Per-week spacing: each consecutive pair is exactly 7 days apart.
+      let weeklySpacingOk = true;
+      for (let i = 1; i < cta90d.trendBucketStarts.length; i++) {
+        const prev = new Date(cta90d.trendBucketStarts[i - 1]).getTime();
+        const cur = new Date(cta90d.trendBucketStarts[i]).getTime();
+        if (cur - prev !== weekMs) {
+          weeklySpacingOk = false;
+          break;
+        }
+      }
+      check(
+        "90d trendBucketStarts entries are exactly 7 days apart",
+        weeklySpacingOk,
+        `entries=${cta90d.trendBucketStarts.join(",")}`,
+      );
+      // Spot-check: the seeded day-22 click's date_trunc('week') (its
+      // ISO Monday) must equal trendBucketStarts at the slot the UI
+      // computes for that event.
+      const click22Truncated = (() => {
+        const d = click22Day;
+        const dow = d.getUTCDay() || 7;
+        return Date.UTC(
+          d.getUTCFullYear(),
+          d.getUTCMonth(),
+          d.getUTCDate() - (dow - 1),
+        );
+      })();
+      const idx22 = expectedTrendIndex(
+        Date.UTC(
+          click22Day.getUTCFullYear(),
+          click22Day.getUTCMonth(),
+          click22Day.getUTCDate(),
+          12,
+        ),
+        approxNow90,
+        13,
+        weekMs,
+      );
+      const slotMs = new Date(cta90d.trendBucketStarts[idx22]).getTime();
+      check(
+        "90d trendBucketStarts[idx22] equals the ISO Monday of the day-22 click",
+        slotMs === click22Truncated,
+        `slot=${cta90d.trendBucketStarts[idx22]} expectedMs=${click22Truncated}`,
+      );
+    }
     const sectionEntry90d = cta90d.sectionEngagement?.find((p) => p.source === SOURCE);
     if (!sectionEntry90d) {
       throw new Error("missing seeded source in 90d response; aborting");
@@ -563,6 +695,15 @@ async function main(): Promise<void> {
       "all-time response sets bucketCount=0",
       ctaAll.bucketCount === 0,
       `bucketCount=${ctaAll.bucketCount}`,
+    );
+    // Task #569 — All-time has no buckets, so trendBucketStarts must be
+    // an empty array. The UI relies on this to keep falling back to the
+    // dash placeholder rather than rendering a tooltip-less sparkline.
+    check(
+      "all-time trendBucketStarts is an empty array",
+      Array.isArray(ctaAll.trendBucketStarts) &&
+        ctaAll.trendBucketStarts.length === 0,
+      `value=${JSON.stringify(ctaAll.trendBucketStarts)}`,
     );
     const sectionEntryAll = ctaAll.sectionEngagement?.find((p) => p.source === SOURCE);
     if (!sectionEntryAll) {

@@ -582,6 +582,42 @@ router.get(
           Math.max(0, Math.floor((ts - startMs) / bucketMs)),
         );
 
+      // Compute the date_trunc'd start of each sparkline bucket so the
+      // admin UI can label exactly which day (or ISO week) a spike
+      // landed on. The route's trendIndex math floors
+      // `(date_trunc(createdAt) - currentStart) / bucketMs`, which means
+      // bucket i contains events whose date_trunc'd timestamp falls in
+      // `[currentStart + i*bucketMs, currentStart + (i+1)*bucketMs)`.
+      // Since date_trunc snaps to a day or ISO-week boundary in UTC,
+      // there is exactly one such boundary per slot. We surface that
+      // boundary as the bucket's representative date — that is what the
+      // tooltip names ("Tue Apr 28" / "Week of Apr 28").
+      const dayMs = 24 * 60 * 60 * 1000;
+      function computeBucketStarts(): string[] {
+        if (!cfg.windowed) return [];
+        const startUtc = cfg.currentStart.getTime();
+        let firstBucketMs: number;
+        if (cfg.bucketUnit === "day") {
+          firstBucketMs = Math.ceil(startUtc / dayMs) * dayMs;
+        } else {
+          // ISO-week start: Monday 00:00 UTC, matching postgres'
+          // date_trunc('week'). Find the first Monday >= currentStart.
+          const d = new Date(startUtc);
+          const dow = d.getUTCDay() || 7; // Sunday = 7
+          const dayStart = Date.UTC(
+            d.getUTCFullYear(),
+            d.getUTCMonth(),
+            d.getUTCDate(),
+          );
+          const monday = dayStart - (dow - 1) * dayMs;
+          firstBucketMs = monday >= startUtc ? monday : monday + 7 * dayMs;
+        }
+        return Array.from({ length: cfg.bucketCount }, (_, i) =>
+          new Date(firstBucketMs + i * cfg.bucketMs).toISOString(),
+        );
+      }
+      const trendBucketStarts = computeBucketStarts();
+
       const sectionImpressionsBySource = new Map<string, Map<string, number>>();
       const sectionImpressionTrends = new Map<string, number[]>();
       for (const r of sectionImpressions) {
@@ -773,6 +809,12 @@ router.get(
         bucketCount: cfg.windowed ? cfg.bucketCount : 0,
         rangeStart: cfg.windowed ? cfg.currentStart.toISOString() : null,
         rangeEnd: cfg.windowed ? cfg.now.toISOString() : null,
+        // Bucket-start timestamps aligned positionally with every
+        // sparkline trend array in this response (impressionsTrend,
+        // clicksTrend, capability/audience/crossLinks sparkline). Used
+        // by the admin UI to label the date a sparkline point
+        // represents in its hover tooltip. Empty array for range=all.
+        trendBucketStarts,
         capability: {
           summary: capabilitySummary.map(({ key: _key, ...rest }) => rest),
           byPosition: capabilityRows,

@@ -40,6 +40,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+// Sparkline tooltip helpers (formatBucketLabel, pluralize) live in
+// src/lib/sparkline-bucket-label.ts so they can be unit-tested without
+// pulling in the rest of this admin page tree.
+import {
+  formatBucketLabel,
+  pluralize,
+} from "@/lib/sparkline-bucket-label";
 
 interface AnalyticsData {
   totalUsers: number;
@@ -164,6 +171,11 @@ interface CtaConversionData {
   bucketCount: number;
   rangeStart: string | null;
   rangeEnd: string | null;
+  // Per-bucket start timestamps (length === bucketCount, ISO strings)
+  // aligned positionally with every sparkline trend array. Empty for
+  // range=all. Used to label which day/week a sparkline point covers
+  // in the hover tooltip.
+  trendBucketStarts?: string[];
   capability: {
     summary: (CtaSummaryRow & { source: string })[];
     byPosition: { source: string; position: string; clicks: number }[];
@@ -196,7 +208,28 @@ const RANGE_OPTIONS: { value: CtaRange; label: string }[] = [
 
 // Tiny inline SVG sparkline for the trend cells. Returns a placeholder
 // dash when there are no data points yet (e.g. brand new capability page).
-function MiniSparkline({ values, color = "#0f766e" }: { values: number[]; color?: string }) {
+//
+// When `bucketStarts` is supplied (one ISO timestamp per value, same
+// length as `values`), each data point gets an invisible hover target
+// with a native `<title>` tooltip naming the bucket date and value.
+// `companion` lets section sparklines (impressions + clicks stacked)
+// show a combined "Tue Apr 28: 3 impressions, 1 click" line per bucket
+// from either of the two SVGs the row renders.
+function MiniSparkline({
+  values,
+  color = "#0f766e",
+  bucketStarts,
+  bucketUnit,
+  metricLabel,
+  companion,
+}: {
+  values: number[];
+  color?: string;
+  bucketStarts?: string[];
+  bucketUnit?: "day" | "week" | null;
+  metricLabel?: string;
+  companion?: { values: number[]; label: string };
+}) {
   if (!values || values.length === 0) {
     return <span className="text-xs text-muted-foreground">-</span>;
   }
@@ -213,6 +246,12 @@ function MiniSparkline({ values, color = "#0f766e" }: { values: number[]; color?
       return `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
     })
     .join(" ");
+
+  const showTooltips =
+    Array.isArray(bucketStarts) &&
+    bucketStarts.length === values.length &&
+    !!metricLabel;
+
   return (
     <svg
       width={width}
@@ -222,6 +261,42 @@ function MiniSparkline({ values, color = "#0f766e" }: { values: number[]; color?
       aria-label="Trend"
     >
       <path d={path} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      {showTooltips
+        ? values.map((v, i) => {
+            const x = i * stepX;
+            const y = height - ((v - min) / range) * height;
+            const dateLabel = formatBucketLabel(bucketStarts![i], bucketUnit);
+            const primary = pluralize(v, metricLabel!);
+            const tip = companion
+              ? `${dateLabel}: ${primary}, ${pluralize(
+                  companion.values[i] ?? 0,
+                  companion.label,
+                )}`
+              : `${dateLabel}: ${primary}`;
+            // Two overlay shapes per bucket: a visible dot at the data
+            // point (so the line has affordances even without hover)
+            // and a wider invisible rect that captures hover anywhere
+            // along the bucket's vertical column. Both carry the same
+            // <title> so either hover surface produces the tooltip.
+            const colWidth = values.length > 1 ? stepX : width;
+            return (
+              <g key={i} data-testid={`sparkline-bucket-${i}`}>
+                <rect
+                  x={x - colWidth / 2}
+                  y={0}
+                  width={colWidth}
+                  height={height}
+                  fill="transparent"
+                >
+                  <title>{tip}</title>
+                </rect>
+                <circle cx={x} cy={y} r={2} fill={color}>
+                  <title>{tip}</title>
+                </circle>
+              </g>
+            );
+          })
+        : null}
     </svg>
   );
 }
@@ -747,10 +822,24 @@ function CtaConversionSection() {
                                     <MiniSparkline
                                       values={s.impressionsTrend}
                                       color="#0f766e"
+                                      bucketStarts={data.trendBucketStarts}
+                                      bucketUnit={data.bucketUnit}
+                                      metricLabel="impression"
+                                      companion={{
+                                        values: s.clicksTrend,
+                                        label: "click",
+                                      }}
                                     />
                                     <MiniSparkline
                                       values={s.clicksTrend}
                                       color="#b45309"
+                                      bucketStarts={data.trendBucketStarts}
+                                      bucketUnit={data.bucketUnit}
+                                      metricLabel="click"
+                                      companion={{
+                                        values: s.impressionsTrend,
+                                        label: "impression",
+                                      }}
                                     />
                                   </div>
                                 ) : (
