@@ -19,6 +19,12 @@ import {
 } from "./workbook-helpers.js";
 import { computeInterestPortion, defaultCollectionRateForMethod } from "@workspace/finance";
 import { addDecisionHistorySheet } from "./packets/build-decision-history.js";
+import {
+  buildLenderSummary,
+  type LenderSummaryData,
+} from "./packets/build-lender-summary.js";
+import { buildLenderSummarySheet } from "./packets/lender-summary-sheet.js";
+import type { ConsultantOutput } from "./consultant-engine.js";
 
 const SCHOOL_TYPE_DISPLAY: Record<string, string> = {
   charter_school: "Charter School",
@@ -1837,7 +1843,10 @@ function buildSummary(wb: ExcelJS.Workbook, input: Record<string, string | numbe
   ws.mergeCells("B21:C21");
 }
 
-export async function generateLenderProFormaWorkbook(rawData: Record<string, unknown>): Promise<Buffer> {
+export async function generateLenderProFormaWorkbook(
+  rawData: Record<string, unknown>,
+  consultantOutput?: ConsultantOutput,
+): Promise<Buffer> {
   const input = mapModelToTemplateInput(rawData);
   const res = computeLenderResults(input);
 
@@ -1845,6 +1854,18 @@ export async function generateLenderProFormaWorkbook(rawData: Record<string, unk
   wb.creator = "SchoolStack Budget";
   wb.created = new Date();
 
+  // Task #615 — When the route supplies a ConsultantOutput, build the
+  // Lender Summary as the very first tab so lenders see it immediately on
+  // open. Falls back to the legacy ordering (Instructions first) when no
+  // ConsultantOutput is available, so isolated tests continue to work.
+  let lenderSummary: LenderSummaryData | null = null;
+  if (consultantOutput) {
+    lenderSummary = buildLenderSummary(
+      rawData as unknown as Parameters<typeof buildLenderSummary>[0],
+      consultantOutput,
+    );
+    buildLenderSummarySheet(wb, lenderSummary);
+  }
   addInstructionsSheet(wb, {
     workbookType: "lender",
     schoolName: String(input.schoolName || ""),

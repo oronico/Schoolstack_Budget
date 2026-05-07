@@ -10,9 +10,23 @@ import type { LenderPacket, RiskMitigant, BudgetNarrativeData, FlaggedAssumption
 import type { PacketSection, LinkedMetric } from "./packet-types";
 import { renderForecastAccuracySection } from "./forecast-accuracy-pdf.js";
 import { renderCashRunwayTroughCallout } from "./cash-runway-pdf.js";
+import { drawLenderSummaryPage } from "./lender-summary-pdf.js";
+import type { LenderSummaryData } from "./build-lender-summary.js";
 
-export async function generateLenderPacketPDF(packet: LenderPacket): Promise<Buffer> {
+export async function generateLenderPacketPDF(
+  packet: LenderPacket,
+  lenderSummary?: LenderSummaryData,
+): Promise<Buffer> {
   const doc = createDoc();
+
+  // Task #615 — one-page Lender Summary leads the packet, on letter
+  // portrait. Only rendered when the route supplies the canonical-engine
+  // summary; otherwise we keep the legacy cover-first layout for callers /
+  // tests that still build the packet without the summary.
+  if (lenderSummary) {
+    drawLenderSummaryPage(doc, lenderSummary);
+    doc.addPage();
+  }
 
   drawCoverPage(doc, packet);
   doc.addPage();

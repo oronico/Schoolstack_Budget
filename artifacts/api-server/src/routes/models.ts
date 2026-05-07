@@ -141,6 +141,7 @@ function checkUnresolvedFlags(
 }
 import { buildLenderPacket } from "../lib/packets/build-lender-packet";
 import { generateLenderPacketPDF } from "../lib/packets/lender-packet-pdf";
+import { buildLenderSummary } from "../lib/packets/build-lender-summary";
 import { buildBoardPacket } from "../lib/packets/build-board-packet";
 import { generateBoardPacketPDF } from "../lib/packets/board-packet-pdf";
 import {
@@ -813,7 +814,14 @@ router.get("/models/:id/export/lender-proforma", authMiddleware, async (req: Aut
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
-    const buffer = await generateLenderProFormaWorkbook(data);
+    // Task #615 — feed the canonical engine output into the workbook so the
+    // new "Lender Summary" tab is sourced from the same engine as the
+    // dashboard / lender packet PDF (no hand-typed values).
+    const consultantOutput = await runConsultantEngine(data);
+
+    if (abortGuard(req, res)) return;
+
+    const buffer = await generateLenderProFormaWorkbook(data, consultantOutput);
 
     if (abortGuard(req, res)) return;
 
@@ -947,7 +955,12 @@ router.get("/models/:id/export/lender-packet-pdf", authMiddleware, async (req: A
       personaComfort,
       forecastAccuracyFilter,
     );
-    const buffer = await generateLenderPacketPDF(packet);
+    // Task #615 — lead the lender packet PDF with a one-page summary
+    // sourced from the canonical engine. Same builder powers the new
+    // workbook tab so the PDF and Excel one-pagers carry identical
+    // numbers.
+    const lenderSummary = buildLenderSummary(data, consultantOutput);
+    const buffer = await generateLenderPacketPDF(packet, lenderSummary);
 
     if (abortGuard(req, res)) return;
 
