@@ -2,6 +2,32 @@ import { isSingleYearModel, type FullModelData } from "@/pages/model-wizard/sche
 import { computeAnnualDebt, DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE, DEFAULT_COLA_PCT } from "@workspace/finance";
 import { computeQuickLevers } from "@/lib/scenario-engine";
 
+// Task #658 — engine ownership map.
+//
+// Coach-tone "next step" guidance lives in five engines, each owning a
+// distinct flag type and surface:
+//
+// 1. THIS FILE — DiagnosticFinding (frontend wizard / DiagnosticPanel).
+//    Owns the 8 required diagnostic checks the founder sees while
+//    building the model: negative_cash_y1, weak_break_even, high_staffing,
+//    high_facility, grant_dependency, retention_assumption,
+//    revenue_per_student_high, staffing_too_low, founder_comp_missing,
+//    public_funding_timing, plus a few advisory checks.
+// 2. artifacts/api-server/src/lib/decision-rules.ts — DecisionIssue
+//    (consultant + lender top-issues panel and packets). Independent rule
+//    set focused on lender-readiness rollups, not duplicated here on
+//    purpose: the wizard wants founder-language coaching, the lender
+//    packet wants concise underwriting commentary.
+// 3. artifacts/api-server/src/lib/financial-health.ts — HealthSignal (8
+//    health dimensions × 3 statuses, used in HealthSignalCard).
+// 4. artifacts/api-server/src/lib/assumption-flags.ts — AssumptionFlag
+//    (NarrativeStep "answer about your assumption" cards).
+// 5. lib/finance/src/decision-engine/{scenario-engine,decision-flows}.ts
+//    — NudgeItem (scenario-comparison NudgeCards + program-pathway
+//    decision flows).
+//
+// All five engines are required to populate `nextStep`; the
+// next-step-registry.test.ts source-scan enforces this at PR time.
 export type DiagnosticSeverity = "critical" | "warning" | "info";
 
 export interface DiagnosticFinding {
@@ -46,6 +72,12 @@ export interface ComputedMetrics {
   opexByYear: number[];
   capDebtByYear: number[];
   grantRevenue: number;
+  // Task #658 — Year 1 public-funding revenue, computed with the same
+  // driver-expanded math as `revenueByYear` (handles `per_student`,
+  // `monthly`, `annual_fixed`, etc.). Used by the `public_funding_timing`
+  // required diagnostic so the trigger fires on real public-funding
+  // exposure rather than on the raw amount cell.
+  publicY1Revenue: number;
   endingCashByYear: number[];
   breakevenEnrollment: number;
   y1VariableCostPerStudent: number;
@@ -115,6 +147,7 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
 
   const revenueByYear = [0, 0, 0, 0, 0];
   let grantRevenue = 0;
+  let publicY1Revenue = 0;
 
   for (let y = 0; y < 5; y++) {
     const students = enrollment[y] || y1Students;
@@ -140,6 +173,12 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
       else revenueByYear[y] += v;
       if (y === 0 && (r.category === "grants_contributions" || r.category === "philanthropy")) {
         grantRevenue += v;
+      }
+      // Task #658 — accumulate driver-expanded public funding for Year 1
+      // so the `public_funding_timing` rule sees real exposure, not raw
+      // `amounts[0]` (which under-counts per-student / monthly drivers).
+      if (y === 0 && r.category === "public_funding") {
+        publicY1Revenue += v;
       }
     }
   }
@@ -284,6 +323,7 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
     y1TotalExpenses,
     y1NetIncome,
     y1FacilityCost,
+    publicY1Revenue,
     enrollment,
     revenueByYear,
     expensesByYear,
@@ -604,15 +644,11 @@ const RULES: DiagnosticRule[] = [
     id: "public_funding_timing",
     check: (data, m) => {
       if (m.y1Revenue <= 0) return null;
-      const rows = data.revenueRows || [];
-      let publicY1 = 0;
-      for (const r of rows) {
-        if (!r.enabled) continue;
-        if (r.category === "public_funding") {
-          publicY1 += r.amounts?.[0] ?? 0;
-        }
-      }
-      const publicPct = publicY1 / m.y1Revenue;
+      // Task #658 — use the driver-expanded Y1 public-funding total from
+      // computeMetrics. Reading `r.amounts[0]` directly under-counts
+      // per-student or monthly driver types and would silently fail to
+      // fire on the very models that face the worst cash-timing risk.
+      const publicPct = m.publicY1Revenue / m.y1Revenue;
       if (publicPct < 0.30) return null;
       const startingCash = data.openingBalances?.cash ?? 0;
       const monthlyExp = m.y1TotalExpenses / 12;
