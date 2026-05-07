@@ -2178,14 +2178,49 @@ function buildDebtSchedule(wb: ExcelJS.Workbook, data: ModelData) {
 
   // Guest debt rows (isLoan:false) carry an explicit flatAnnualDebtService
   // when the wizard collected an annual payment without principal/term info.
-  // Fold those amounts into debtByYear so DSCR & Covenants reflects the real
-  // debt burden, even though we don't amortize them on the Debt Schedule.
+  // Render them on the Debt Schedule as their own block so a lender can see
+  // each line item, and fold the amounts into debtByYear so DSCR & Covenants
+  // reflects the real debt burden.
   const flatDebtRows = capDebtRows.filter(r => !r.isLoan && (r.flatAnnualDebtService || 0) > 0);
+  const flatDebtRowNumbers: number[] = [];
   if (flatDebtRows.length > 0) {
+    r += 2;
+    sec(ws, r, yc + 1); ws.getCell(r, 1).value = "OTHER CONTRACTUAL DEBT SERVICE";
+    for (const fd of flatDebtRows) {
+      r++;
+      flatDebtRowNumbers.push(r);
+      const annual = fd.flatAnnualDebtService || 0;
+      ws.getCell(r, 1).value = fd.lineItem || "Other contractual debt service";
+      dc(ws.getCell(r, 1));
+      for (let y = 0; y < yc; y++) {
+        const col = y + 2;
+        const cell = ws.getCell(r, col);
+        cell.value = Math.round(annual);
+        cell.numFmt = CUR;
+        dc(cell);
+        inputCell(cell);
+      }
+    }
+
     for (let y = 0; y < yc; y++) {
       for (const fd of flatDebtRows) {
         debtByYear[y] += fd.flatAnnualDebtService || 0;
       }
+    }
+
+    r += 2;
+    sec(ws, r, yc + 1); ws.getCell(r, 1).value = "TOTAL ANNUAL DEBT SERVICE";
+    r++;
+    ws.getCell(r, 1).value = "Total Annual Debt Service"; bc(ws.getCell(r, 1));
+    for (let y = 0; y < yc; y++) {
+      const col = y + 2;
+      const parts = [
+        ...loanBlocks.map(lb => cn(lb.pmtRow, col)),
+        ...flatDebtRowNumbers.map(rowNum => cn(rowNum, col)),
+      ];
+      const formula = parts.length > 0 ? parts.join("+") : "0";
+      setFormula(ws.getCell(r, col), formula, Math.round(debtByYear[y]));
+      ws.getCell(r, col).numFmt = CUR; gc(ws.getCell(r, col)); outputCell(ws.getCell(r, col));
     }
   }
 
