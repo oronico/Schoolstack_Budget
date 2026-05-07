@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { isYetToLaunch } from "@/lib/coaching/founder-persona";
 import { cn } from "@/lib/utils";
+import { AssumptionConfidenceCard } from "@/components/wizard/AssumptionConfidenceCard";
 import { useYearCount } from "@/lib/use-model-duration";
 import {
   DEFAULT_BENEFITS_RATE,
@@ -1014,6 +1015,7 @@ export function AssumptionsStep() {
             </InfoBadge>
           </div>
         </section>
+        <AssumptionConfidenceCard stepTitle="Assumptions & Sensitivity" />
       </div>
     </div>
   );

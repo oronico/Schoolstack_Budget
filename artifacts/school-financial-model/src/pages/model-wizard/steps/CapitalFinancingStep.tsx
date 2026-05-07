@@ -3,6 +3,7 @@ import { Building2, Shield, Lightbulb, Info } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { RationaleField } from "@/components/coaching/RationaleField";
+import { AssumptionConfidenceCard } from "@/components/wizard/AssumptionConfidenceCard";
 import { ConceptExplainer } from "@/components/coaching/ConceptExplainer";
 import { cn } from "@/lib/utils";
 import { useYearCount } from "@/lib/use-model-duration";
@@ -256,6 +257,7 @@ export function CapitalFinancingStep() {
               : "A self-imposed DSCR ramp tells lenders you've already stress-tested your model - call out where the targets came from."}
           />
         </section>
+        <AssumptionConfidenceCard stepTitle="Capital & Financing" />
       </div>
     </div>
   );

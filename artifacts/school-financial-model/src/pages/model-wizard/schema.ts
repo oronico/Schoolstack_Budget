@@ -927,6 +927,20 @@ export const fullModelSchema = z.object({
   covenantThresholds: covenantThresholdsSchema.optional(),
   budgetNarrative: budgetNarrativeSchema.optional(),
   assumptionFlagResponses: z.array(assumptionFlagResponseSchema).optional(),
+  // Task #659 — per-assumption confidence + evidence note. Keys correspond
+  // to AssumptionKey in lib/finance/src/assumption-registry.ts. Optional
+  // map so older models without confidence data continue to load. The
+  // wizard's AssumptionConfidenceCard writes to this field; lender PDF,
+  // underwriting workbook, and share-link page read from it.
+  assumptionConfidence: z
+    .record(
+      z.string(),
+      z.object({
+        confidence: z.enum(["actuals", "signed_agreement", "quote", "research", "estimate"]),
+        evidenceNote: z.string().optional(),
+      }),
+    )
+    .optional(),
   chesterton: chestertonSchema.optional(),
 });
 

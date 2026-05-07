@@ -57,6 +57,18 @@ export interface LenderPacket extends PacketData {
     explanation: string;
   };
   budgetNarrative: BudgetNarrativeData;
+  /**
+   * Task #659 — per-assumption Confidence + evidence note collected by
+   * the wizard's AssumptionConfidenceCard. Keyed by AssumptionKey from
+   * lib/finance/src/assumption-registry.ts. The PDF / workbook render an
+   * "Assumptions Confidence" section grouping entries by step so a
+   * lender can see, at a glance, which numbers are anchored vs. an
+   * estimate. Empty record when no founder confidence data exists.
+   */
+  assumptionConfidence: Record<
+    string,
+    { confidence: "actuals" | "signed_agreement" | "quote" | "research" | "estimate"; evidenceNote?: string }
+  >;
   flaggedAssumptions: FlaggedAssumptionExport[];
   decisionHistory: DecisionHistoryItem[];
   /**
@@ -168,6 +180,11 @@ export function buildLenderPacket(
 
   const raw = modelData as unknown as Record<string, unknown>;
   const budgetNarrative: BudgetNarrativeData = (raw.budgetNarrative as BudgetNarrativeData) || {};
+  // Task #659 — pull-through. The shape is enforced upstream by zod
+  // (`assumptionConfidenceSchema` in the wizard schema), so a permissive
+  // cast through unknown is safe here.
+  const assumptionConfidence =
+    (raw.assumptionConfidence as LenderPacket["assumptionConfidence"]) || {};
   const flagResponses = (raw.assumptionFlagResponses as Array<{ field: string; flagType: string; reason: string }>) || [];
   const assumptionFlags = consultantOutput.assumptionFlags || [];
 
@@ -224,6 +241,7 @@ export function buildLenderPacket(
       explanation: consultantOutput.lenderReadinessExplanation,
     },
     budgetNarrative,
+    assumptionConfidence,
     flaggedAssumptions,
     decisionHistory,
     cashRunway,

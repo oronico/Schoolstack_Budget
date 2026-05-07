@@ -1,5 +1,11 @@
 import ExcelJS from "exceljs";
 import {
+  ASSUMPTION_REGISTRY,
+  ASSUMPTION_CONFIDENCE_LABELS,
+  isEstimateWithoutEvidence,
+  HIGH_IMPACT_CONFIDENCE_KEYS,
+  type AssumptionConfidenceEntry,
+  type AssumptionKey,
   computeStraightLineDepreciation,
   computeProjectedAR,
   computeBaseFinancials,
@@ -51,7 +57,7 @@ function getTabNames(yc: number): string[] {
     "Enrollment Tuition Fcst", "Staffing Costs Fcst", "Budget Detail", "Budget Summary",
     "Monthly Cash Flow Y1", operatingStmtTabName(yc), "Debt Schedule", "Balance Sheet",
     "DSCR & Covenants", "Sources & Uses", "Scenarios", "Underwriting Snapshot", "Financial Health",
-    "Budget Narrative",
+    "Budget Narrative", "Assumptions Confidence",
   ];
 }
 
@@ -3212,6 +3218,7 @@ async function generateWorkbook(data: ModelData, computedFlags?: ComputedFlag[])
   });
 
   buildNarrativeTab(wb, data, computedFlags);
+  buildAssumptionsConfidenceTab(wb, data);
   buildAssumptionsMemoTab(wb, data);
   addDecisionHistorySheet(wb, data);
 
@@ -3297,6 +3304,77 @@ function buildAssumptionsMemoTab(wb: ExcelJS.Workbook, data: ModelData) {
       ws.getCell(row, 3).alignment = { wrapText: true, vertical: "top" };
       row++;
     }
+    row++;
+  }
+}
+
+// Task #659 — Assumptions Confidence tab. Mirrors the lender PDF section:
+// groups every tagged assumption by its wizard step, prints confidence
+// label, evidence note, and a flag in the rightmost column when a
+// high-impact assumption is still a bare "estimate". Skipped silently
+// when the founder hasn't tagged anything.
+function buildAssumptionsConfidenceTab(wb: ExcelJS.Workbook, data: ModelData) {
+  const raw = data as unknown as Record<string, unknown>;
+  const confidence = (raw.assumptionConfidence as Record<string, AssumptionConfidenceEntry>) || {};
+  const entries = Object.entries(confidence).filter(([k]) =>
+    Object.prototype.hasOwnProperty.call(ASSUMPTION_REGISTRY, k),
+  ) as Array<[AssumptionKey, AssumptionConfidenceEntry]>;
+
+  // Always emit the tab — Cover ToC links to every TAB_NAMES entry, so
+  // an empty state here keeps the workbook ToC honest. Older models
+  // without assumption confidence simply see the empty-state hint.
+  const ws = wb.addWorksheet("Assumptions Confidence");
+  printSetup(ws);
+  ws.columns = [{ width: 22 }, { width: 32 }, { width: 22 }, { width: 50 }, { width: 18 }];
+
+  let row = 1;
+  ws.getRow(row).values = ["Assumptions Confidence", "", "", "", ""];
+  hdr(ws, row, 5);
+  ws.mergeCells(row, 1, row, 5);
+  row += 2;
+
+  if (entries.length === 0) {
+    ws.getCell(row, 1).value =
+      "No assumptions tagged yet — open the wizard and tag each major assumption (Actuals, Signed agreement, Written quote, Research, Estimate) with a one-line evidence note. The tags surface here, in the lender PDF, and on share links.";
+    ws.getCell(row, 1).font = NF;
+    ws.getCell(row, 1).alignment = { wrapText: true, vertical: "top" };
+    ws.mergeCells(row, 1, row, 5);
+    return;
+  }
+
+  ws.getRow(row).values = ["Step", "Assumption", "Confidence", "Evidence Note", "Flag"];
+  hdr(ws, row, 5);
+  row++;
+
+  // Sort by step's defaultStepNumber, then by registry order within step.
+  entries.sort((a, b) => {
+    const ma = ASSUMPTION_REGISTRY[a[0]];
+    const mb = ASSUMPTION_REGISTRY[b[0]];
+    if (ma.defaultStepNumber !== mb.defaultStepNumber) {
+      return ma.defaultStepNumber - mb.defaultStepNumber;
+    }
+    return ma.label.localeCompare(mb.label);
+  });
+
+  for (const [key, entry] of entries) {
+    const meta = ASSUMPTION_REGISTRY[key];
+    const isBare = isEstimateWithoutEvidence(entry);
+    const isHighImpact = HIGH_IMPACT_CONFIDENCE_KEYS.includes(key);
+    ws.getCell(row, 1).value = meta.stepTitle;
+    ws.getCell(row, 1).font = NF;
+    ws.getCell(row, 2).value = meta.label;
+    ws.getCell(row, 2).font = NF;
+    ws.getCell(row, 3).value = ASSUMPTION_CONFIDENCE_LABELS[entry.confidence];
+    ws.getCell(row, 3).font = isBare ? { ...NF, bold: true, color: { argb: "FFD97706" } } : NF;
+    ws.getCell(row, 4).value = entry.evidenceNote?.trim() || "";
+    ws.getCell(row, 4).font = NF;
+    ws.getCell(row, 4).alignment = { wrapText: true, vertical: "top" };
+    ws.getCell(row, 5).value =
+      isHighImpact && isBare ? "Add evidence" : isHighImpact ? "High impact" : "";
+    ws.getCell(row, 5).font =
+      isHighImpact && isBare
+        ? { ...NF, bold: true, color: { argb: "FFD97706" } }
+        : NF;
     row++;
   }
 }

@@ -8,6 +8,14 @@ import {
 } from "../pdf-utils.js";
 import type { LenderPacket, RiskMitigant, BudgetNarrativeData, FlaggedAssumptionExport, BreakEvenDownsideExport } from "./build-lender-packet";
 import type { LenderStressTestResults } from "@workspace/finance";
+import {
+  ASSUMPTION_REGISTRY,
+  ASSUMPTION_CONFIDENCE_LABELS,
+  listAssumptionKeys,
+  isEstimateWithoutEvidence,
+  HIGH_IMPACT_CONFIDENCE_KEYS,
+  type AssumptionKey,
+} from "@workspace/finance";
 import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "../benchmark-thresholds";
 import type { PacketSection, LinkedMetric } from "./packet-types";
 import { renderForecastAccuracySection } from "./forecast-accuracy-pdf.js";
@@ -40,6 +48,11 @@ export async function generateLenderPacketPDF(
 
   const execSummary = packet.sections.find(s => s.id === "executive_summary");
   renderBudgetNarrativeSection(doc, packet.budgetNarrative, packet.flaggedAssumptions, execSummary?.narrative);
+  // Task #659 — Assumptions Confidence summary, grouped by wizard step.
+  // Renders right after the budget narrative so a reviewer reading the
+  // founder's prose immediately sees which numbers are anchored vs.
+  // estimate. Skipped silently when the founder hasn't tagged anything.
+  renderAssumptionsConfidenceSection(doc, packet.assumptionConfidence);
 
   for (const section of packet.sections) {
     if (!section.included) continue;
@@ -207,6 +220,89 @@ function renderBudgetNarrativeSection(doc: PDFDoc, narrative: BudgetNarrativeDat
   }
 
   doc.moveDown(0.5);
+}
+
+// Task #659 — group registered assumption keys by their wizard step
+// title and render confidence + (optional) evidence note for each one
+// the founder has tagged. Skipped silently when no entries exist.
+function renderAssumptionsConfidenceSection(
+  doc: PDFDoc,
+  confidence: LenderPacket["assumptionConfidence"],
+): void {
+  const entries = Object.entries(confidence || {}).filter(([k]) =>
+    Object.prototype.hasOwnProperty.call(ASSUMPTION_REGISTRY, k),
+  ) as Array<[AssumptionKey, { confidence: keyof typeof ASSUMPTION_CONFIDENCE_LABELS; evidenceNote?: string }]>;
+  if (entries.length === 0) return;
+
+  ensureSpace(doc, 60);
+  sectionTitle(doc, "Assumptions Confidence");
+  bodyText(
+    doc,
+    "Each major assumption below is tagged by the founder with the source they leaned on. " +
+      "Higher-confidence sources (actuals, signed agreements, written quotes) are stronger evidence than research benchmarks or estimates.",
+  );
+
+  // Cover summary: how many of the registered keys are tagged at all,
+  // and which high-impact assumptions are still bare estimates. The same
+  // tally drives the AssumptionFlag emitted by detectUnusualAssumptions.
+  const totalRegistered = listAssumptionKeys().length;
+  ensureSpace(doc, 16);
+  doc.font("Helvetica").fontSize(9).fillColor(BRAND.darkGray);
+  doc.text(`${entries.length} of ${totalRegistered} assumptions tagged.`);
+  doc.moveDown(0.2);
+  const bareHighImpact = HIGH_IMPACT_CONFIDENCE_KEYS.filter((k) =>
+    isEstimateWithoutEvidence(confidence?.[k]),
+  );
+  if (bareHighImpact.length > 0) {
+    doc.font("Helvetica-Bold").fontSize(9).fillColor(BRAND.amber);
+    doc.text(
+      `${bareHighImpact.length} swing-factor assumption${bareHighImpact.length === 1 ? "" : "s"} still tagged "estimate" with no evidence note: ${bareHighImpact
+        .map((k) => ASSUMPTION_REGISTRY[k].label)
+        .join(", ")}.`,
+    );
+    doc.moveDown(0.3);
+  }
+
+  // Group by stepTitle so the section reads in the same order the founder
+  // walked the wizard. Sort steps by `defaultStepNumber` of their first
+  // tagged key so non-default step orders still render coherently.
+  const byStep = new Map<string, AssumptionKey[]>();
+  for (const [key] of entries) {
+    const step = ASSUMPTION_REGISTRY[key].stepTitle;
+    if (!byStep.has(step)) byStep.set(step, []);
+    byStep.get(step)!.push(key);
+  }
+  const orderedSteps = [...byStep.keys()].sort((a, b) => {
+    const ka = byStep.get(a)![0];
+    const kb = byStep.get(b)![0];
+    return ASSUMPTION_REGISTRY[ka].defaultStepNumber - ASSUMPTION_REGISTRY[kb].defaultStepNumber;
+  });
+
+  for (const step of orderedSteps) {
+    ensureSpace(doc, 30);
+    subSection(doc, step);
+    for (const key of byStep.get(step)!) {
+      const entry = confidence[key];
+      if (!entry) continue;
+      ensureSpace(doc, 24);
+      const meta = ASSUMPTION_REGISTRY[key];
+      const label = ASSUMPTION_CONFIDENCE_LABELS[entry.confidence];
+      const isBare = isEstimateWithoutEvidence(entry);
+      doc.font("Helvetica-Bold").fontSize(9).fillColor(BRAND.navy);
+      doc.text(`${meta.label}: `, doc.page.margins.left, doc.y, { continued: true });
+      doc.font("Helvetica").fontSize(9).fillColor(isBare ? BRAND.amber : BRAND.black);
+      doc.text(label);
+      const note = entry.evidenceNote?.trim();
+      if (note) {
+        doc.font("Helvetica-Oblique").fontSize(8).fillColor(BRAND.darkGray);
+        doc.text(`  Evidence: ${note}`, doc.page.margins.left + 10, doc.y, {
+          width: doc.page.width - doc.page.margins.left - doc.page.margins.right - 10,
+        });
+      }
+      doc.moveDown(0.2);
+    }
+    doc.moveDown(0.3);
+  }
 }
 
 function renderSection(doc: PDFDoc, section: PacketSection, packet: LenderPacket) {

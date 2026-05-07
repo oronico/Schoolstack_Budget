@@ -5,6 +5,7 @@ import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { RationaleField } from "@/components/coaching/RationaleField";
+import { AssumptionConfidenceCard } from "@/components/wizard/AssumptionConfidenceCard";
 import { ConceptExplainer } from "@/components/coaching/ConceptExplainer";
 import { cn, formatCurrency } from "@/lib/utils";
 import { formatPerStudent } from "@/lib/per-student-lens";
@@ -1284,6 +1285,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
       {hasAnyRevenue && (
         <CashFlowTimingSummary monthlyInflow={monthlyCashInflow} />
       )}
+      <AssumptionConfidenceCard stepTitle="Revenue" />
     </div>
   );
 }

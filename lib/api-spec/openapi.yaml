@@ -1324,6 +1324,23 @@ components:
                 type: string
               reason:
                 type: string
+        assumptionConfidence:
+          type: object
+          description: |
+            Task #659 — per-assumption confidence + evidence note. Keyed by
+            AssumptionKey (see lib/finance/src/assumption-registry.ts). Each
+            value is `{ confidence, evidenceNote? }` with confidence one of
+            actuals | signed_agreement | quote | research | estimate.
+          additionalProperties:
+            type: object
+            properties:
+              confidence:
+                type: string
+                enum: [actuals, signed_agreement, quote, research, estimate]
+              evidenceNote:
+                type: string
+            required:
+              - confidence
         assumptionFlags:
           type: array
           items:

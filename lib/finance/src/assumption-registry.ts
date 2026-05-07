@@ -438,3 +438,68 @@ export function isAssumptionKey(key: string): key is AssumptionKey {
 export function listAssumptionKeys(): AssumptionKey[] {
   return Object.keys(ASSUMPTION_REGISTRY) as AssumptionKey[];
 }
+
+/** Task #659 — five-level confidence ladder used by the Assumptions
+ *  Confidence layer. Ordered strongest → weakest evidence. */
+export type AssumptionConfidenceLevel =
+  | "actuals"
+  | "signed_agreement"
+  | "quote"
+  | "research"
+  | "estimate";
+
+export interface AssumptionConfidenceEntry {
+  confidence: AssumptionConfidenceLevel;
+  evidenceNote?: string;
+}
+
+export const ASSUMPTION_CONFIDENCE_LEVELS: AssumptionConfidenceLevel[] = [
+  "actuals",
+  "signed_agreement",
+  "quote",
+  "research",
+  "estimate",
+];
+
+export const ASSUMPTION_CONFIDENCE_LABELS: Record<AssumptionConfidenceLevel, string> = {
+  actuals: "Actuals",
+  signed_agreement: "Signed agreement",
+  quote: "Written quote",
+  research: "Research / benchmark",
+  estimate: "Estimate",
+};
+
+/** Short founder-facing description shown under the picker option. */
+export const ASSUMPTION_CONFIDENCE_DESCRIPTIONS: Record<AssumptionConfidenceLevel, string> = {
+  actuals: "Pulled from your books or last year's financials.",
+  signed_agreement: "Backed by an executed contract, lease, or letter.",
+  quote: "Written quote or proposal from a vendor / partner.",
+  research: "Industry benchmark, peer-school data, or a published source.",
+  estimate: "Best-guess placeholder you'd like to firm up later.",
+};
+
+/** Task #659 — high-impact assumption keys whose "estimate" confidence
+ *  with no evidence note triggers a coach-tone AssumptionFlag. Kept small
+ *  and strategic so the founder isn't drowned in nudges. */
+export const HIGH_IMPACT_CONFIDENCE_KEYS: AssumptionKey[] = [
+  "tuition_per_student",
+  "enrollment_y1",
+  "enrollment_y5",
+];
+
+/** True when the entry is "estimate" with no evidence note — the
+ *  trigger condition for the AssumptionFlag in detectUnusualAssumptions. */
+export function isEstimateWithoutEvidence(entry: AssumptionConfidenceEntry | undefined): boolean {
+  if (!entry) return false;
+  if (entry.confidence !== "estimate") return false;
+  return !entry.evidenceNote || entry.evidenceNote.trim().length === 0;
+}
+
+/** All registry keys grouped by their wizard step title. Used by the
+ *  AssumptionConfidenceCard to render one card per step listing only
+ *  the keys that step owns. */
+export function listAssumptionKeysByStep(stepTitle: string): AssumptionKey[] {
+  return (Object.keys(ASSUMPTION_REGISTRY) as AssumptionKey[]).filter(
+    (k) => ASSUMPTION_REGISTRY[k].stepTitle === stepTitle,
+  );
+}

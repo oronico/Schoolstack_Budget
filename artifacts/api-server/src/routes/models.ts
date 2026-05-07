@@ -1866,6 +1866,14 @@ router.get("/shared/:token", sharedLinkRateLimiter, async (req, res) => {
       createdAt: link.createdAt.toISOString(),
       decisionScenarios,
       isSingleYear,
+      // Task #659 — surface the founder's per-assumption confidence + evidence
+      // notes so the share-link page can render the same Assumptions
+      // Confidence section as the lender PDF and underwriting workbook. Empty
+      // map (or omitted entirely on older models) renders no section.
+      assumptionConfidence:
+        ((data as Record<string, unknown>).assumptionConfidence as
+          | Record<string, { confidence: string; evidenceNote?: string }>
+          | undefined) || {},
     });
   } catch (err) {
     console.error("Get shared model error:", err);

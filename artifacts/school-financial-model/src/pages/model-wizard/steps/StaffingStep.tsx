@@ -6,6 +6,7 @@ import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { RationaleField } from "@/components/coaching/RationaleField";
+import { AssumptionConfidenceCard } from "@/components/wizard/AssumptionConfidenceCard";
 import { PayingYourselfMatters } from "@/components/coaching/PayingYourselfMatters";
 import type { FullModelData } from "@/pages/model-wizard/schema";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -1094,6 +1095,7 @@ export function StaffingStep() {
       >
         <Plus className="h-4 w-4" /> Add Staff Member
       </button>
+      <AssumptionConfidenceCard stepTitle="Staffing" />
     </div>
   );
 }

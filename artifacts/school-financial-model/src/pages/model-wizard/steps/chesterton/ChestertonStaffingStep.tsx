@@ -3,6 +3,7 @@ import { useFormContext, useFieldArray, useWatch } from "react-hook-form";
 import { Plus, Trash2, BookOpen, Calculator } from "lucide-react";
 import { FormInput } from "@/components/ui/form-inputs";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
+import { AssumptionConfidenceCard } from "@/components/wizard/AssumptionConfidenceCard";
 import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { formatCurrency } from "@/lib/utils";
 import { buildDefaultChestertonData, avgSalaryPerPeriod } from "@/lib/chesterton/template";
@@ -162,6 +163,12 @@ export function ChestertonStaffingStep() {
           </div>
         </div>
       </div>
+
+      {/* Task #659 — Chesterton swaps in a periods-based salary model but the
+          staffing assumption keys (avg salary, benefits load, headcount)
+          still belong to the "Staffing" stepTitle, so we mount the same
+          AssumptionConfidenceCard so Chesterton founders can tag evidence. */}
+      <AssumptionConfidenceCard stepTitle="Staffing" />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { IDontKnowYet } from "@/components/coaching/IDontKnowYet";
 import { RationaleField } from "@/components/coaching/RationaleField";
+import { AssumptionConfidenceCard } from "@/components/wizard/AssumptionConfidenceCard";
 import { cn, formatCurrency } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS } from "../schema";
 import type { Program } from "../schema";
@@ -1428,6 +1429,7 @@ export function EnrollmentStep() {
         }
         helperText="A lender or board reviewer will read this next to your enrollment ramp. Be specific about your demand evidence."
       />
+      <AssumptionConfidenceCard stepTitle="Enrollment" />
     </div>
   );
 }

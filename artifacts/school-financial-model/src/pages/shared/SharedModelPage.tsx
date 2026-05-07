@@ -7,6 +7,13 @@ import { SEOHead } from "@/components/SEOHead";
 import { DECISION_LABELS, type DecisionImpact } from "@/lib/decision-flows";
 import type { DecisionType } from "@/pages/model-wizard/schema";
 import { ImpactSummary } from "@/components/decision-flow/ImpactSummary";
+import {
+  ASSUMPTION_REGISTRY,
+  ASSUMPTION_CONFIDENCE_LABELS,
+  isEstimateWithoutEvidence,
+  HIGH_IMPACT_CONFIDENCE_KEYS,
+  type AssumptionKey,
+} from "@workspace/finance";
 
 // Mirrors the (decision-typed) saved scenario shape exposed by GET
 // /api/shared/:token. The server precomputes the engine-derived `impact`
@@ -52,6 +59,111 @@ interface SharedModelData {
   // and PDF stay scoped to the same aggregates the rest of this payload
   // already publishes — no per-line-item model inputs leak over the wire.
   decisionScenarios?: SharedDecisionScenario[];
+  // Task #659 — per-assumption confidence + evidence note keyed by
+  // AssumptionKey. Empty / omitted on older shared models, in which
+  // case the Assumptions Confidence section is silently skipped.
+  assumptionConfidence?: Record<
+    string,
+    { confidence: "actuals" | "signed_agreement" | "quote" | "research" | "estimate"; evidenceNote?: string }
+  >;
+}
+
+// Task #659 — Assumptions Confidence section. Mirrors the lender PDF /
+// underwriting workbook layout: groups every founder-tagged assumption
+// by its wizard step, prints confidence + (optional) evidence note, and
+// calls out high-impact assumptions still tagged "estimate" with no
+// evidence so a recipient can see at a glance where the model is
+// anchored vs. still a placeholder. Skipped silently when no entries
+// exist (or for older share links predating this layer).
+function AssumptionsConfidenceSection({ data }: { data: SharedModelData }) {
+  const confidence = data.assumptionConfidence || {};
+  const entries = Object.entries(confidence).filter(([k]) =>
+    Object.prototype.hasOwnProperty.call(ASSUMPTION_REGISTRY, k),
+  ) as Array<[AssumptionKey, { confidence: keyof typeof ASSUMPTION_CONFIDENCE_LABELS; evidenceNote?: string }]>;
+  if (entries.length === 0) return null;
+
+  const byStep = new Map<string, AssumptionKey[]>();
+  for (const [key] of entries) {
+    const step = ASSUMPTION_REGISTRY[key].stepTitle;
+    if (!byStep.has(step)) byStep.set(step, []);
+    byStep.get(step)!.push(key);
+  }
+  const orderedSteps = [...byStep.keys()].sort((a, b) => {
+    const ka = byStep.get(a)![0];
+    const kb = byStep.get(b)![0];
+    return ASSUMPTION_REGISTRY[ka].defaultStepNumber - ASSUMPTION_REGISTRY[kb].defaultStepNumber;
+  });
+
+  const bareHighImpact = HIGH_IMPACT_CONFIDENCE_KEYS.filter((k) =>
+    isEstimateWithoutEvidence(confidence[k]),
+  );
+
+  return (
+    <section
+      className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8"
+      data-testid="shared-assumptions-confidence"
+    >
+      <h2 className="text-lg font-bold text-slate-800 mb-2">Assumptions Confidence</h2>
+      <p className="text-sm text-slate-600 mb-4">
+        The founder tagged each major assumption with the source they leaned
+        on. Higher-confidence sources (actuals, signed agreements, written
+        quotes) are stronger evidence than research benchmarks or estimates.
+      </p>
+      {bareHighImpact.length > 0 && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          {bareHighImpact.length} swing-factor assumption
+          {bareHighImpact.length === 1 ? "" : "s"} still tagged "estimate" with
+          no evidence note: {bareHighImpact
+            .map((k) => ASSUMPTION_REGISTRY[k].label)
+            .join(", ")}.
+        </div>
+      )}
+      <div className="space-y-5">
+        {orderedSteps.map((step) => (
+          <div key={step}>
+            <h3 className="text-sm font-bold text-slate-700 mb-2">{step}</h3>
+            <div className="space-y-2">
+              {byStep.get(step)!.map((key) => {
+                const entry = confidence[key]!;
+                const meta = ASSUMPTION_REGISTRY[key];
+                const isBare = isEstimateWithoutEvidence(entry);
+                return (
+                  <div
+                    key={key}
+                    className="rounded-lg border border-slate-200 p-3"
+                    data-testid={`shared-confidence-row-${key}`}
+                  >
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div className="text-sm font-semibold text-slate-800">
+                        {meta.label}
+                      </div>
+                      <span
+                        className={`text-xs font-semibold rounded px-2 py-0.5 border ${
+                          isBare
+                            ? "bg-amber-50 text-amber-800 border-amber-200"
+                            : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                        }`}
+                      >
+                        {ASSUMPTION_CONFIDENCE_LABELS[entry.confidence]}
+                      </span>
+                    </div>
+                    {entry.evidenceNote?.trim() && (
+                      <div className="mt-1.5 text-sm text-slate-600">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          Evidence:{" "}
+                        </span>
+                        {entry.evidenceNote.trim()}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function fmt(n: number): string {
@@ -793,6 +905,8 @@ export function SharedModelPage() {
           <h2 className="text-lg font-bold text-slate-800 mb-4">Expense Breakdown</h2>
           <ExpenseBreakdownSection data={data} />
         </section>
+
+        <AssumptionsConfidenceSection data={data} />
 
         {/* Side-by-side decision comparison + Download-as-PDF - only renders
             when the founder has at least two saved decision-flow scenarios.

@@ -7,6 +7,7 @@ import { ToastAction } from "@/components/ui/toast";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
+import { AssumptionConfidenceCard } from "@/components/wizard/AssumptionConfidenceCard";
 import { InlineHelpCard } from "@/components/coaching/InlineHelpCard";
 import { MicroLessonCardInner } from "@/components/coaching/MicroLessonCard";
 import { EXPLAINERS } from "@/lib/coaching/explainers";
@@ -2580,6 +2581,7 @@ export function SchoolProfileStep({ focus }: { focus?: string } = {}) {
           </p>
         </div>
       )}
+      <AssumptionConfidenceCard stepTitle="School Details" />
     </div>
   );
 }

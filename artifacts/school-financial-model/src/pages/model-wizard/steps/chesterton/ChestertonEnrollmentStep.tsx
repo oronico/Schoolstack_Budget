@@ -3,6 +3,7 @@ import { useFormContext } from "react-hook-form";
 import { GraduationCap, Users } from "lucide-react";
 import { FormInput } from "@/components/ui/form-inputs";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
+import { AssumptionConfidenceCard } from "@/components/wizard/AssumptionConfidenceCard";
 import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import {
   CHESTERTON_GRADES,
@@ -118,6 +119,14 @@ export function ChestertonEnrollmentStep() {
           </tbody>
         </table>
       </div>
+
+      {/* Task #659 — Chesterton replaces the standard EnrollmentStep but the
+          enrollment_y1 / enrollment_y5 / retention_rate registry keys still
+          live under the "Enrollment" stepTitle, so mount the same
+          AssumptionConfidenceCard here so Chesterton founders can tag those
+          assumptions and have them flow into the lender PDF / underwriting
+          XLSX / share-link Assumptions Confidence section. */}
+      <AssumptionConfidenceCard stepTitle="Enrollment" />
     </div>
   );
 }

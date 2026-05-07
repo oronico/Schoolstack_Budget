@@ -11,6 +11,10 @@ import {
 } from "./workbook-helpers.js";
 import {
   detectFragileFunding,
+  HIGH_IMPACT_CONFIDENCE_KEYS,
+  isEstimateWithoutEvidence,
+  ASSUMPTION_REGISTRY,
+  type AssumptionConfidenceEntry,
   type FragileProgramMatch,
   type SchoolType,
 } from "@workspace/finance";
@@ -450,5 +454,30 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
       }
     }
   }
+
+  // Task #659 — Assumptions Confidence layer: emit a coach-tone flag when
+  // a high-impact assumption (tuition_per_student, enrollment_y1,
+  // enrollment_y5) is marked "estimate" with no evidence note. Capped to
+  // the 3 strategic keys so the founder isn't drowned in nudges.
+  const assumptionConfidence = (data as Record<string, unknown>).assumptionConfidence as
+    | Record<string, AssumptionConfidenceEntry>
+    | undefined;
+  if (assumptionConfidence) {
+    for (const key of HIGH_IMPACT_CONFIDENCE_KEYS) {
+      const entry = assumptionConfidence[key];
+      if (!isEstimateWithoutEvidence(entry)) continue;
+      const meta = ASSUMPTION_REGISTRY[key];
+      flags.push({
+        field: `assumptionConfidence.${key}`,
+        flagType: "estimate_without_evidence",
+        currentValue: `${meta.label} marked as estimate with no evidence note`,
+        benchmark: "Quote, signed agreement, research, or actuals",
+        severity: "warning",
+        defaultPrompt: `Your ${meta.label.toLowerCase()} is one of the biggest swing factors in the model. Drop in the source you're leaning on — a peer-school benchmark, a draft tuition schedule, or last year's roster — so a reviewer can see the reasoning, not just the number.`,
+        nextStep: `Open Step ${meta.defaultStepNumber}: ${meta.stepTitle}, raise the confidence above estimate, or add a short evidence note (peer benchmark, prior-year roster, draft tuition schedule) to anchor the number.`,
+      });
+    }
+  }
+
   return flags;
 }
