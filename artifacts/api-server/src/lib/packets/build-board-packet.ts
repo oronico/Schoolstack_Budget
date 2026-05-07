@@ -398,9 +398,8 @@ function buildTopRisks(co: ConsultantOutput): BoardRiskItem[] {
     risk: issue.title,
     severity: issue.severity,
     plainLanguage: issue.whyItMatters,
-    suggestedAction: issue.nextStep
-      ? `${issue.recommendedAction} Next step: ${issue.nextStep}`
-      : issue.recommendedAction,
+    // Task #686 — `nextStep` is a required field on every DecisionIssue.
+    suggestedAction: `${issue.recommendedAction} Next step: ${issue.nextStep}`,
   }));
 }
 
@@ -548,9 +547,8 @@ function simplifyRisksForBoard(section: PacketSection, co: ConsultantOutput): Pa
     label: issue.title,
     values: [
       issue.whyItMatters,
-      issue.nextStep
-        ? `${issue.recommendedAction} Next step: ${issue.nextStep}`
-        : issue.recommendedAction,
+      // Task #686 — `nextStep` is a required field on every DecisionIssue.
+      `${issue.recommendedAction} Next step: ${issue.nextStep}`,
     ],
     isBold: issue.severity === "critical",
   }));

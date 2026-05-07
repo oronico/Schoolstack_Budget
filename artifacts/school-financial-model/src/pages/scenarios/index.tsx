@@ -191,11 +191,10 @@ function NudgeCard({ nudge }: { nudge: NudgeItem }) {
           <span className="font-medium text-foreground">{nudge.label}:</span>{" "}
           <span className="text-muted-foreground">{nudge.message}</span>
         </div>
-        {nudge.nextStep && (
-          <div className="text-xs text-emerald-700">
-            <span className="font-semibold">Next step:</span> {nudge.nextStep}
-          </div>
-        )}
+        {/* Task #686 — `nextStep` is a required field on every nudge. */}
+        <div className="text-xs text-emerald-700">
+          <span className="font-semibold">Next step:</span> {nudge.nextStep}
+        </div>
       </div>
     </div>
   );

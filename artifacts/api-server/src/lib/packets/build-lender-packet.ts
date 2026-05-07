@@ -297,9 +297,8 @@ function buildRiskMitigants(co: ConsultantOutput): RiskMitigant[] {
     mitigants.push({
       risk: issue.title,
       severity: issue.severity,
-      mitigant: issue.nextStep
-        ? `${issue.recommendedAction} Next step: ${issue.nextStep}`
-        : issue.recommendedAction,
+      // Task #686 — `nextStep` is a required field on every DecisionIssue.
+      mitigant: `${issue.recommendedAction} Next step: ${issue.nextStep}`,
       whyItMatters: issue.whyItMatters,
       supportingMetrics: issue.supportingMetrics,
     });

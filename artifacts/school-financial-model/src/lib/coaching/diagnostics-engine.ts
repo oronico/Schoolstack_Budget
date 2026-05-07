@@ -1,5 +1,5 @@
 import { isSingleYearModel, type FullModelData } from "@/pages/model-wizard/schema";
-import { computeAnnualDebt, DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE, DEFAULT_COLA_PCT } from "@workspace/finance";
+import { computeAnnualDebt, DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE, DEFAULT_COLA_PCT, assertEveryNextStep } from "@workspace/finance";
 import { computeQuickLevers } from "@/lib/scenario-engine";
 
 // Task #658 — engine ownership map.
@@ -680,7 +680,9 @@ export function runDiagnostics(data: FullModelData, maxResults = 3): DiagnosticF
   const severityOrder: Record<DiagnosticSeverity, number> = { critical: 0, warning: 1, info: 2 };
   findings.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
 
-  return findings.slice(0, maxResults);
+  // Task #686 — guardrail: every emitted DiagnosticFinding must carry a
+  // concrete coach-voice nextStep.
+  return assertEveryNextStep(findings.slice(0, maxResults), "DiagnosticFinding") as DiagnosticFinding[];
 }
 
 export interface WhatIfSuggestion {

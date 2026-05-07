@@ -16,6 +16,7 @@ import {
   ShieldX,
 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
+import { assertEveryNextStep } from "@workspace/finance";
 
 const STORAGE_KEY = "guest_underwriting_model_v1";
 const STORAGE_VERSION = 1;
@@ -832,7 +833,9 @@ export function computeLenderFlags(m: GuestModel, enrollProjection: number[]): L
     });
   }
 
-  return flags;
+  // Task #686 — guardrail: every emitted LenderFlag must carry a
+  // concrete coach-voice nextStep.
+  return assertEveryNextStep(flags, "LenderFlag") as LenderFlag[];
 }
 
 function overallReadiness(flags: LenderFlag[]): { status: string; color: string; Icon: typeof ShieldCheck } {

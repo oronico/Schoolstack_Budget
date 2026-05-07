@@ -1,4 +1,5 @@
 import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "./benchmark-thresholds.js";
+import { assertEveryNextStep } from "@workspace/finance";
 
 export interface DecisionIssue {
   id: string;
@@ -390,5 +391,8 @@ export function generateTopIssues(input: IssueInput, maxIssues = 3): DecisionIss
     return 0;
   });
 
-  return issues.slice(0, maxIssues);
+  // Task #686 — guardrail: every emitted DecisionIssue must carry a
+  // concrete coach-voice nextStep. The validator throws on missing,
+  // empty, banned, or generic phrasings so a regression cannot ship.
+  return assertEveryNextStep(issues.slice(0, maxIssues), "DecisionIssue") as DecisionIssue[];
 }

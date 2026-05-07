@@ -17,6 +17,7 @@ import {
   type AssumptionConfidenceEntry,
   type FragileProgramMatch,
   type SchoolType,
+  assertEveryNextStep,
 } from "@workspace/finance";
 
 type YearFinancials = {
@@ -479,5 +480,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
     }
   }
 
-  return flags;
+  // Task #686 — guardrail: every emitted AssumptionFlag must carry a
+  // concrete coach-voice nextStep.
+  return assertEveryNextStep(flags, "AssumptionFlag") as AssumptionFlag[];
 }

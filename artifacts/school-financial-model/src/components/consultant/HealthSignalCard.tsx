@@ -105,11 +105,10 @@ export function HealthSignalsSection({ signals }: HealthSignalsSectionProps) {
                 <p className="text-xs text-muted-foreground">
                   <span className="font-medium">Watch:</span> {signal.watchItem}
                 </p>
-                {signal.nextStep && (
-                  <p className="text-xs text-emerald-700">
-                    <span className="font-semibold">Next step:</span> {signal.nextStep}
-                  </p>
-                )}
+                {/* Task #686 — `nextStep` is a required field on every signal. */}
+                <p className="text-xs text-emerald-700">
+                  <span className="font-semibold">Next step:</span> {signal.nextStep}
+                </p>
               </div>
             </div>
           );

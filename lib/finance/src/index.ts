@@ -315,6 +315,14 @@ export {
 
 export { isRestrictedRevenueRow } from "./restricted-revenue.js";
 
+export {
+  validateNextStep,
+  assertEveryNextStep,
+  NextStepGuardrailError,
+  BANNED_NEXT_STEP_PATTERNS,
+  WEAK_NEXT_STEP_PATTERNS,
+} from "./coaching-flag-guardrail.js";
+
 export function computeStraightLineDepreciation(
   fixedAssets: number,
   usefulLifeYears: number,

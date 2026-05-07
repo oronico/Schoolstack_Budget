@@ -270,6 +270,7 @@ export function buildLenderSummary(
     .map((iss) => ({
       severity: iss.severity,
       risk: iss.title,
+      // Task #686 — `nextStep` is a required field on every DecisionIssue.
       mitigant: iss.nextStep
         ? `${iss.recommendedAction} Next step: ${iss.nextStep}`
         : iss.recommendedAction,

@@ -8,6 +8,7 @@ import {
   BENCHMARK_DCOH_GREEN,
   BENCHMARK_DCOH_AMBER,
 } from "./benchmark-thresholds.js";
+import { assertEveryNextStep } from "@workspace/finance";
 
 export type HealthStatus = "healthy" | "watch" | "at_risk";
 
@@ -387,5 +388,7 @@ export function generateHealthSignals(input: HealthInput): HealthSignal[] {
     const signal = dim.compute(input);
     if (signal) signals.push(signal);
   }
-  return signals;
+  // Task #686 — guardrail: every emitted HealthSignal must carry a
+  // concrete coach-voice nextStep.
+  return assertEveryNextStep(signals, "HealthSignal") as HealthSignal[];
 }

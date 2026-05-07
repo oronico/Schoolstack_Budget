@@ -295,7 +295,8 @@ function buildWhatNeedsClarity(
     const label = meta?.label || fl.field;
     bullets.push(
       stripDashes(
-        `${label} (${f.absorb(fl.currentValue)} vs ${f.absorb(fl.benchmark)}): ${f.absorb(fl.nextStep || fl.defaultPrompt)}`,
+        // Task #686 — `nextStep` is a required field on every AssumptionFlag.
+        `${label} (${f.absorb(fl.currentValue)} vs ${f.absorb(fl.benchmark)}): ${f.absorb(fl.nextStep)}`,
       ).trim(),
     );
   }
@@ -474,7 +475,8 @@ function buildFixFirst(
       | AssumptionMeta
       | undefined;
     const label = meta?.label || fl.field;
-    pushBullet(f.absorb(label), f.absorb(fl.nextStep || fl.defaultPrompt));
+    // Task #686 — `nextStep` is a required field on every AssumptionFlag.
+    pushBullet(f.absorb(label), f.absorb(fl.nextStep));
   }
 
   // Fall back to engine top-issues / recommendations only when no

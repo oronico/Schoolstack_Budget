@@ -15,6 +15,7 @@ import {
 } from "../monthly-cash-flow.js";
 import { computeFounderCompNormalization, type FounderCompNormalization } from "../founder-comp.js";
 import { isRestrictedRevenueRow } from "../restricted-revenue.js";
+import { assertEveryNextStep } from "../coaching-flag-guardrail.js";
 
 export interface ScenarioAdjustments {
   name: string;
@@ -1488,6 +1489,13 @@ export function computeScenarios(
       downsideBand: downsideForScenario(adj),
     };
   });
+
+  // Task #686 — guardrail: every NudgeItem emitted by the scenario engine
+  // (base + each scenario) must carry a concrete coach-voice nextStep.
+  assertEveryNextStep(baseResult.nudges, "NudgeItem(base)");
+  for (const sc of scenarioResults) {
+    assertEveryNextStep(sc.nudges, `NudgeItem(${sc.name})`);
+  }
 
   return { base: baseResult, scenarios: scenarioResults, leverNudges };
 }
