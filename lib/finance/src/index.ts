@@ -216,6 +216,7 @@ export {
   distributeDebtMonthly,
   computeYear1MonthlyCashFlow,
   findLowestCashMonth,
+  findLowestCashMonthAcrossYears,
   computeCashRunwayMonths,
   type MonthlyRevenueRowLike,
   type PayrollCadence,

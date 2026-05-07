@@ -34,7 +34,7 @@ import {
   REVENUE_QUALITY_LABELS,
   REVENUE_QUALITY_ORDER,
   computeYear1MonthlyCashFlow,
-  findLowestCashMonth,
+  findLowestCashMonthAcrossYears,
   type RevenueQuality,
   type MonthlyRevenueRowLike,
   ASSUMPTION_REGISTRY,
@@ -1020,63 +1020,84 @@ function buildCashFlow(s: PacketSection, co: ConsultantOutput, md: ModelData, ye
     openingNote = ` Opening balance: ${fmt(totalAssets)} total assets, ${fmt(totalLiabilities)} total liabilities, ${fmt(totalAssets - totalLiabilities)} net position.`;
   }
 
-  // Task #609 — full per-stream timing (revenue + expenses) so the packet
-  // surfaces the same cash trough month the lender will scrutinize.
+  // Task #609 → #636 — full per-stream timing (revenue + expenses) for
+  // every modeled year so the packet surfaces the cash trough month the
+  // lender will scrutinize and the multi-year cash arc lenders use to
+  // size reserves. Each year's opening cash chains off the prior year's
+  // ending cash; Y1 uses partial-year op months when configured.
   const fySp = md.schoolProfile;
-  const opMonthsPacket = fySp?.isPartialFirstYear ? (fySp.year1OperatingMonths || 10) : 12;
-  const seriesY1 = y1 && y1.totalRevenue > 0
-    ? computeYear1MonthlyCashFlow({
+  const fyStartMonth = fySp?.fiscalYearStartMonth || 7;
+  const baseOpMonthsPacket = fySp?.isPartialFirstYear ? (fySp.year1OperatingMonths || 10) : 12;
+  const calendarMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const fyStartIdx = fyStartMonth - 1;
+  const startingCashPacket = ob?.cash ?? 0;
+
+  const seriesByYear: { year: number; series: ReturnType<typeof computeYear1MonthlyCashFlow>; opening: number }[] = [];
+  {
+    let runningOpening = startingCashPacket;
+    for (let y = 0; y < yearlyData.length && y < 5; y++) {
+      const yd = yearlyData[y];
+      if (!yd || yd.totalRevenue <= 0) break;
+      const yOpMonths = y === 0 ? baseOpMonthsPacket : 12;
+      const series = computeYear1MonthlyCashFlow({
         revenueRows: (md.revenueRows || []) as unknown as MonthlyRevenueRowLike[],
-        yearIndex: 0,
-        students: y1.students,
-        annualPersonnel: y1.totalStaffing || 0,
-        annualOpex: (y1.totalExpenses - (y1.totalStaffing || 0) - (y1.debtService || 0)) || 0,
-        annualDebt: y1.debtService || 0,
-        openingCash: ob?.cash ?? 0,
-        opMonths: opMonthsPacket,
-      })
+        yearIndex: y,
+        students: yd.students,
+        annualPersonnel: yd.totalStaffing || 0,
+        annualOpex: (yd.totalExpenses - (yd.totalStaffing || 0) - (yd.debtService || 0)) || 0,
+        annualDebt: yd.debtService || 0,
+        openingCash: runningOpening,
+        opMonths: yOpMonths,
+      });
+      seriesByYear.push({ year: y, series, opening: runningOpening });
+      runningOpening = series.cumulative[series.cumulative.length - 1];
+    }
+  }
+
+  const trough = seriesByYear.length > 0
+    ? findLowestCashMonthAcrossYears(seriesByYear.map((s) => s.series.cumulative), fyStartMonth)
     : null;
-  const troughY1 = seriesY1
-    ? findLowestCashMonth(seriesY1.cumulative, fySp?.fiscalYearStartMonth || 7)
-    : null;
-  const monthlyTable: PacketTable | undefined = y1 && y1.totalRevenue > 0 && seriesY1 ? {
-    title: "Year 1 Monthly Cash Flow Summary",
-    headers: ["Month", "Beginning", "Inflows", "Outflows", "Net Cash Flow", "Ending"],
-    rows: (() => {
-      const calendarMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      const fyStart = ((fySp?.fiscalYearStartMonth || 7) - 1);
-      let running = ob?.cash ?? 0;
-      const monthRows: PacketTableRow[] = [];
-      for (let i = 0; i < 12; i++) {
-        const mIdx = (fyStart + i) % 12;
-        const begin = running;
-        const inflow = seriesY1.inflow[i];
-        const outflow = seriesY1.outflow[i];
-        const netCash = seriesY1.net[i];
-        const end = begin + netCash;
-        monthRows.push({
-          label: calendarMonths[mIdx],
-          values: [fmt(begin), fmt(inflow), `(${fmt(outflow)})`, fmt(netCash), fmt(end)],
-          isBold: end < 0,
-        });
-        running = end;
-      }
-      return monthRows;
-    })(),
-  } : undefined;
+
+  const monthlyTables: PacketTable[] = seriesByYear.map(({ year, series, opening }) => {
+    let running = opening;
+    const monthRows: PacketTableRow[] = [];
+    for (let i = 0; i < 12; i++) {
+      const mIdx = (fyStartIdx + i) % 12;
+      const begin = running;
+      const inflow = series.inflow[i];
+      const outflow = series.outflow[i];
+      const netCash = series.net[i];
+      const end = begin + netCash;
+      monthRows.push({
+        label: calendarMonths[mIdx],
+        values: [fmt(begin), fmt(inflow), `(${fmt(outflow)})`, fmt(netCash), fmt(end)],
+        isBold: end < 0,
+      });
+      running = end;
+    }
+    return {
+      title: `Year ${year + 1} Monthly Cash Flow Summary`,
+      headers: ["Month", "Beginning", "Inflows", "Outflows", "Net Cash Flow", "Ending"],
+      rows: monthRows,
+    };
+  });
 
   const tables: PacketTable[] = [
     { title: "Cumulative Cash Position", headers: ["Year", "Cumulative Net Income", "Reserve Months"], rows },
+    ...monthlyTables,
   ];
-  if (monthlyTable) tables.push(monthlyTable);
+
+  const troughLabel = trough
+    ? `Year ${(trough.yearIndex ?? 0) + 1} — ${trough.monthLabel}`
+    : "";
 
   return {
     ...s,
-    narrative: `${runwayText}${openingNote}${troughY1 ? ` Lowest cash month: ${troughY1.monthLabel} at ${fmt(troughY1.amount)}.` : ""}`,
+    narrative: `${runwayText}${openingNote}${trough ? ` Lowest cash month across the 5-year forecast: ${troughLabel} at ${fmt(trough.amount)}.` : ""}`,
     linkedMetrics: [
       { label: "Cash Runway", value: co.cashRunwayMonths >= 60 ? "60+ months" : `${co.cashRunwayMonths} months`, sourceEngine: "consultant" },
-      ...(troughY1
-        ? [{ label: "Lowest Cash Month (Y1)", value: `${troughY1.monthLabel} (${fmt(troughY1.amount)})`, sourceEngine: "consultant" as const }]
+      ...(trough
+        ? [{ label: "Lowest Cash Month", value: `${troughLabel} (${fmt(trough.amount)})`, sourceEngine: "consultant" as const }]
         : []),
     ],
     tables,

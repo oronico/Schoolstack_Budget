@@ -6,6 +6,7 @@ import {
   distributeOpexMonthly,
   distributeDebtMonthly,
   findLowestCashMonth,
+  findLowestCashMonthAcrossYears,
   computeCashRunwayMonths,
   type MonthlyCashFlowSeries,
   type LowestCashMonth,
@@ -54,9 +55,21 @@ export interface ScenarioMetrics {
    */
   monthlyCashFlowY1?: MonthlyCashFlowSeries;
   /**
-   * The month inside Year 1 with the lowest cumulative cash position.
-   * Surfaced on the founder dashboard so they can see which month they're
-   * closest to running out of cash. Task #609.
+   * Per-stream monthly cash flow series for each of the 5 modeled years.
+   * Index 0 is the same series as {@link monthlyCashFlowY1}; indices 1-4
+   * use real per-stream timing for revenue + op-month-aware spreads for
+   * expenses, with each year's `cumulative` chained off the prior year's
+   * ending cash. Annual sums are scaled to reconcile to `revenue[y]` /
+   * `totalExpenses[y]`. Powers the multi-year monthly cash flow tables in
+   * the lender pro-forma + packet PDF (Task #636).
+   */
+  monthlyCashFlowByYear?: MonthlyCashFlowSeries[];
+  /**
+   * The month with the lowest cumulative cash position across all 5
+   * modeled years. `yearIndex` indicates which forecast year the trough
+   * falls in. Surfaced on the founder dashboard, lender pro-forma, and
+   * packet PDF so the trough callout reflects the full enrollment-ramp
+   * trajectory, not just Year 1 (Task #609 → multi-year in #636).
    */
   lowestCashMonth?: LowestCashMonth | null;
   /**
@@ -494,32 +507,64 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
   const startingCash = data.openingBalances?.cash || 0;
   const opMonths = sp?.isPartialFirstYear ? (sp.year1OperatingMonths || 10) : 12;
 
-  // Year 1: build the real per-stream monthly cash flow series. Annual totals
-  // remain identical to revenue[0] / totalExpenses[0]; only the *shape*
-  // across months reflects real timing (tuition billing months, ESA
-  // disbursements, public-funding lag, payroll across op months only).
-  const monthlyCashFlowY1 = computeYear1MonthlyCashFlow({
-    revenueRows: revenueRows as MonthlyRevenueRowLike[],
-    yearIndex: 0,
-    students: enrollment[0],
-    annualPersonnel: staffingCost[0],
-    annualOpex: facilityCost[0] + opex[0],
-    annualDebt: loanDS[0],
-    openingCash: startingCash,
-    opMonths,
-  });
-
-  // Years 2-5: even spread is acceptable for runway/trough — these years
-  // are still informative because Y1 already used real timing.
-  const monthlyNetByYear: number[][] = [monthlyCashFlowY1.net];
-  for (let y = 1; y < 5; y++) {
-    const niMonth = netIncome[y] / 12;
-    monthlyNetByYear.push(new Array(12).fill(niMonth));
+  // Years 1-5: build per-stream monthly cash flow series for every
+  // modeled year (Task #636). Y1 uses partial-year op months when
+  // configured; Y2-Y5 always use 12. Each year's inflow is rescaled to
+  // match the engine's `revenue[y]` so escalation, tier discounts, and
+  // collection-rate adjustments flow through to the monthly view; outflow
+  // is built directly off the engine's per-year staffing/opex/debt
+  // totals so it sums to `staffingCost[y] + facilityCost[y] + opex[y] +
+  // loanDS[y]` — the same components that go into totalExpenses[y].
+  const monthlyCashFlowByYear: MonthlyCashFlowSeries[] = [];
+  let runningOpening = startingCash;
+  for (let y = 0; y < 5; y++) {
+    const yOpMonths = y === 0 ? opMonths : 12;
+    const raw = computeYear1MonthlyCashFlow({
+      revenueRows: revenueRows as MonthlyRevenueRowLike[],
+      yearIndex: y,
+      students: enrollment[y],
+      annualPersonnel: staffingCost[y],
+      annualOpex: facilityCost[y] + opex[y],
+      annualDebt: loanDS[y],
+      openingCash: runningOpening,
+      opMonths: yOpMonths,
+    });
+    // Rescale inflow so its annual sum matches the engine's revenue[y].
+    // The helper computes per-row driver values without escalation / tier
+    // math, so for Y2-Y5 (and Y1 when tiers are present) the raw monthly
+    // sum can drift from the engine total. Preserving the *shape* and
+    // scaling to the engine total gives a monthly view that reconciles
+    // exactly to the headline P&L.
+    const rawInflowSum = raw.inflow.reduce((a, b) => a + b, 0);
+    let inflow = raw.inflow;
+    if (rawInflowSum > 0 && Math.abs(rawInflowSum - revenue[y]) > 1e-6) {
+      const r = revenue[y] / rawInflowSum;
+      inflow = raw.inflow.map((v) => v * r);
+    } else if (rawInflowSum === 0 && revenue[y] !== 0) {
+      // Engine sees revenue but the row-level helper produced no inflow
+      // (e.g. all percent_of_base rows referenced a base the helper
+      // dropped). Fall back to even spread across operating months so
+      // the cumulative still reconciles.
+      const months = Math.max(1, Math.min(yOpMonths, 12));
+      const per = revenue[y] / months;
+      inflow = new Array(12).fill(0).map((_, i) => (i < months ? per : 0));
+    }
+    const outflow = raw.outflow;
+    const net = inflow.map((v, i) => v - outflow[i]);
+    const cumulative: number[] = [];
+    let running = runningOpening;
+    for (const v of net) {
+      running += v;
+      cumulative.push(running);
+    }
+    monthlyCashFlowByYear.push({ inflow, outflow, net, cumulative });
+    runningOpening = cumulative[cumulative.length - 1];
   }
+  const monthlyCashFlowY1 = monthlyCashFlowByYear[0];
 
   const cashRunwayMonths = computeCashRunwayMonths(
     startingCash,
-    monthlyNetByYear,
+    monthlyCashFlowByYear.map((s) => s.net),
     60,
   );
 
@@ -530,7 +575,10 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
     cashPosition.push(cumCash);
   }
 
-  const lowestCashMonth = findLowestCashMonth(monthlyCashFlowY1.cumulative, 7);
+  const lowestCashMonth = findLowestCashMonthAcrossYears(
+    monthlyCashFlowByYear.map((s) => s.cumulative),
+    7,
+  );
 
   const baseShape = {
     enrollment,
@@ -549,6 +597,7 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
     cashPosition,
     loanDebtService: loanDS,
     monthlyCashFlowY1,
+    monthlyCashFlowByYear,
     lowestCashMonth,
     fixedOpex,
     variableOpex,
@@ -680,39 +729,49 @@ function applyAdjustments(
   const monthlyExp = totalExpenses[4] / 12;
   const reserveMonths = monthlyExp > 0 && cumNI > 0 ? cumNI / monthlyExp : 0;
 
-  // Rescale Y1 monthly cash flow by the adjustment ratios so the
-  // per-stream timing shape established in base is preserved while the
-  // amounts move with the lever. Outflow rescales against the *total*
-  // base outflow so the shape (op-month payroll, monthly debt) carries
-  // through. Annual sums match revenue[0] / totalExpenses[0] within
-  // floating-point error.
-  const baseY1 = base.monthlyCashFlowY1;
-  let monthlyCashFlowY1: MonthlyCashFlowSeries | undefined;
-  if (baseY1) {
-    const baseRev = base.revenue[0] || 0;
-    const baseExp = base.totalExpenses[0] || 0;
-    const revRatio = baseRev > 0 ? revenue[0] / baseRev : 0;
-    const expRatio = baseExp > 0 ? totalExpenses[0] / baseExp : 0;
-    const inflow = baseY1.inflow.map((v) => v * revRatio);
-    const outflow = baseY1.outflow.map((v) => v * expRatio);
-    const net = inflow.map((v, i) => v - outflow[i]);
-    const cumulative: number[] = [];
-    let running = startingCash;
-    for (const v of net) {
-      running += v;
-      cumulative.push(running);
+  // Rescale every year's monthly cash flow by the adjustment ratios so
+  // the per-stream timing shape established in base is preserved while
+  // the amounts move with the lever. Outflow rescales against the
+  // *total* base outflow so the shape (op-month payroll, monthly debt)
+  // carries through. Annual sums match revenue[y] / totalExpenses[y]
+  // within floating-point error. Task #636 — extends Y1-only rescaling
+  // to all 5 modeled years so lever previews update the multi-year
+  // monthly tables and trough callout consistently.
+  const baseByYear = base.monthlyCashFlowByYear;
+  let monthlyCashFlowByYear: MonthlyCashFlowSeries[] | undefined;
+  if (baseByYear && baseByYear.length === 5) {
+    monthlyCashFlowByYear = [];
+    let runningOpening = startingCash;
+    for (let y = 0; y < 5; y++) {
+      const baseRevY = base.revenue[y] || 0;
+      const baseExpY = base.totalExpenses[y] || 0;
+      const revRatio = baseRevY > 0 ? revenue[y] / baseRevY : 0;
+      const expRatio = baseExpY > 0 ? totalExpenses[y] / baseExpY : 0;
+      const inflow = baseByYear[y].inflow.map((v) => v * revRatio);
+      const outflow = baseByYear[y].outflow.map((v) => v * expRatio);
+      const net = inflow.map((v, i) => v - outflow[i]);
+      const cumulative: number[] = [];
+      let running = runningOpening;
+      for (const v of net) {
+        running += v;
+        cumulative.push(running);
+      }
+      monthlyCashFlowByYear.push({ inflow, outflow, net, cumulative });
+      runningOpening = cumulative[cumulative.length - 1];
     }
-    monthlyCashFlowY1 = { inflow, outflow, net, cumulative };
   }
+  const monthlyCashFlowY1 = monthlyCashFlowByYear
+    ? monthlyCashFlowByYear[0]
+    : undefined;
 
   const monthlyNetByYear: number[][] = [];
-  if (monthlyCashFlowY1) {
-    monthlyNetByYear.push(monthlyCashFlowY1.net);
-  } else {
-    monthlyNetByYear.push(new Array(12).fill(netIncome[0] / 12));
-  }
-  for (let y = 1; y < 5; y++) {
-    monthlyNetByYear.push(new Array(12).fill(netIncome[y] / 12));
+  for (let y = 0; y < 5; y++) {
+    const series = monthlyCashFlowByYear?.[y]?.net;
+    monthlyNetByYear.push(
+      series && series.length === 12
+        ? series
+        : new Array(12).fill(netIncome[y] / 12),
+    );
   }
   const cashRunwayMonths = computeCashRunwayMonths(
     startingCash,
@@ -727,8 +786,11 @@ function applyAdjustments(
     cashPosition.push(cumCash);
   }
 
-  const lowestCashMonth = monthlyCashFlowY1
-    ? findLowestCashMonth(monthlyCashFlowY1.cumulative, 7)
+  const lowestCashMonth = monthlyCashFlowByYear
+    ? findLowestCashMonthAcrossYears(
+        monthlyCashFlowByYear.map((s) => s.cumulative),
+        7,
+      )
     : null;
 
   const adjShape = {
@@ -748,6 +810,7 @@ function applyAdjustments(
     cashPosition,
     loanDebtService: baseLoanDS,
     monthlyCashFlowY1,
+    monthlyCashFlowByYear,
     lowestCashMonth,
     fixedOpex,
     variableOpex,

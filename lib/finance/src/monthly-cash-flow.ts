@@ -324,6 +324,13 @@ export interface LowestCashMonth {
   amount: number;
   /** True when the trough is below zero — the school runs out of cash. */
   isNegative: boolean;
+  /**
+   * 0-indexed forecast year the trough falls in. Defaults to 0 when the
+   * caller passes a single 12-month series. Surfaced in PDFs / packets so
+   * a Year-3 trough reads as "Year 3 — Aug" rather than just "Aug".
+   * Task #636.
+   */
+  yearIndex?: number;
 }
 
 const MONTH_LABELS = [
@@ -365,7 +372,30 @@ export function findLowestCashMonth(
     monthLabel: MONTH_LABELS[calendarIdx],
     amount: minVal,
     isNegative: minVal < 0,
+    yearIndex: 0,
   };
+}
+
+/**
+ * Find the lowest-cash month across multiple fiscal years' cumulative
+ * series. Each entry in `cumulativeByYear` is a 12-element cumulative
+ * series for that year (already chained off prior-year ending cash).
+ * Returns the global trough with `yearIndex` populated so callers can
+ * render "Year 3 — Aug" copy. Task #636.
+ */
+export function findLowestCashMonthAcrossYears(
+  cumulativeByYear: readonly (readonly number[])[],
+  fyStart: number = 7,
+): LowestCashMonth | null {
+  let best: LowestCashMonth | null = null;
+  for (let y = 0; y < cumulativeByYear.length; y++) {
+    const t = findLowestCashMonth(cumulativeByYear[y], fyStart);
+    if (!t) continue;
+    if (best === null || t.amount < best.amount) {
+      best = { ...t, yearIndex: y };
+    }
+  }
+  return best;
 }
 
 /**

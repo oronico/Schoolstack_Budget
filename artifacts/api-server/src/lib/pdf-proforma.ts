@@ -8,7 +8,7 @@ import {
   computeAnnualDebt,
   defaultCollectionRateForMethod,
   computeYear1MonthlyCashFlow,
-  findLowestCashMonth,
+  findLowestCashMonthAcrossYears,
   type MonthlyRevenueRowLike,
 } from "@workspace/finance";
 import { computeMonthlyCashInflow } from "./workbook-helpers.js";
@@ -745,26 +745,35 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
   }
 
   if (revenueRows.length > 0 && enrollment[0] > 0) {
-    ensureSpace(doc, 300);
-    sectionTitle(doc, "Year 1 Monthly Cash Flow");
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const fyStart = (sp.fiscalYearStartMonth || 7) - 1;
+    const fyStartIdx = (sp.fiscalYearStartMonth || 7) - 1;
+    const fyStart = sp.fiscalYearStartMonth || 7;
     const startingCash = (data.openingBalances?.cash ?? 0);
-    // Task #609 — full per-stream timing for both inflows AND outflows so
-    // the lender sees the real cash trough (staff paid 12 mo / tuition
-    // billed 10 mo). Personnel & opex spread over operating months only;
-    // debt service is monthly.
-    const opMonths = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 10) : 12;
-    const series = computeYear1MonthlyCashFlow({
-      revenueRows: (data.revenueRows || []) as unknown as MonthlyRevenueRowLike[],
-      yearIndex: 0,
-      students: enrollment[0],
-      annualPersonnel: staffTotals[0] || 0,
-      annualOpex: opexTotals[0] || 0,
-      annualDebt: capDebtTotals[0] || 0,
-      openingCash: startingCash,
-      opMonths,
-    });
+    // Task #609 → #636 — full per-stream timing for inflows AND outflows
+    // across all 5 modeled years so the lender sees the real cash trough
+    // (staff paid 12 mo / tuition billed 10 mo) and watches the
+    // enrollment-ramp years bear out. Personnel & opex spread over
+    // operating months only; debt service is monthly. Each year's
+    // opening cash chains off the prior year's ending cash.
+    const baseOpMonths = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 10) : 12;
+    const seriesByYear: { year: number; series: ReturnType<typeof computeYear1MonthlyCashFlow>; opening: number }[] = [];
+    let runningOpening = startingCash;
+    for (let y = 0; y < 5; y++) {
+      if ((enrollment[y] || 0) <= 0) break;
+      const yOpMonths = y === 0 ? baseOpMonths : 12;
+      const series = computeYear1MonthlyCashFlow({
+        revenueRows: (data.revenueRows || []) as unknown as MonthlyRevenueRowLike[],
+        yearIndex: y,
+        students: enrollment[y],
+        annualPersonnel: staffTotals[y] || 0,
+        annualOpex: opexTotals[y] || 0,
+        annualDebt: capDebtTotals[y] || 0,
+        openingCash: runningOpening,
+        opMonths: yOpMonths,
+      });
+      seriesByYear.push({ year: y, series, opening: runningOpening });
+      runningOpening = series.cumulative[series.cumulative.length - 1];
+    }
 
     const cfCols: TableColumn[] = [
       { header: "Month", width: 55 },
@@ -774,29 +783,38 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
       { header: "Net Cash Flow", width: 72, align: "right" },
       { header: "Ending", width: 72, align: "right" },
     ];
-    const cfRows: string[][] = [];
-    let anyNegativeMonth = false;
-    let running = startingCash;
-    for (let i = 0; i < 12; i++) {
-      const mIdx = (fyStart + i) % 12;
-      const label = monthNames[mIdx];
-      const inflow = series.inflow[i];
-      const outflow = series.outflow[i];
-      const begin = running;
-      const netCash = series.net[i];
-      const end = begin + netCash;
-      if (end < 0) anyNegativeMonth = true;
-      cfRows.push([label, fmtCurrency(begin), fmtCurrency(inflow), `(${fmtCurrency(outflow)})`, fmtCurrency(netCash), fmtCurrency(end)]);
-      running = end;
-    }
-    drawTable(doc, cfCols, cfRows, { zebra: true });
 
-    const trough = findLowestCashMonth(series.cumulative, sp.fiscalYearStartMonth || 7);
+    let anyNegativeMonth = false;
+    for (const { year, series, opening } of seriesByYear) {
+      ensureSpace(doc, 280);
+      sectionTitle(doc, `Year ${year + 1} Monthly Cash Flow`);
+      const cfRows: string[][] = [];
+      let running = opening;
+      for (let i = 0; i < 12; i++) {
+        const mIdx = (fyStartIdx + i) % 12;
+        const label = monthNames[mIdx];
+        const inflow = series.inflow[i];
+        const outflow = series.outflow[i];
+        const begin = running;
+        const netCash = series.net[i];
+        const end = begin + netCash;
+        if (end < 0) anyNegativeMonth = true;
+        cfRows.push([label, fmtCurrency(begin), fmtCurrency(inflow), `(${fmtCurrency(outflow)})`, fmtCurrency(netCash), fmtCurrency(end)]);
+        running = end;
+      }
+      drawTable(doc, cfCols, cfRows, { zebra: true });
+    }
+
+    const trough = findLowestCashMonthAcrossYears(
+      seriesByYear.map((s) => s.series.cumulative),
+      fyStart,
+    );
     if (trough) {
-      bodyText(doc, `Lowest cash month: ${trough.monthLabel} at ${fmtCurrency(trough.amount)}.`);
+      const yLabel = `Year ${(trough.yearIndex ?? 0) + 1}`;
+      bodyText(doc, `Lowest cash month across the 5-year forecast: ${yLabel} — ${trough.monthLabel} at ${fmtCurrency(trough.amount)}.`);
     }
     if (anyNegativeMonth) {
-      bodyText(doc, "⚠ Cash position turns negative during Year 1. Consider adjusting revenue timing or securing a line of credit.");
+      bodyText(doc, "⚠ Cash position turns negative during the forecast. Consider adjusting revenue timing or securing a line of credit.");
     }
   }
 
