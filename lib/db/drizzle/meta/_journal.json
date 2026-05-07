@@ -36,6 +36,13 @@
       "when": 1777919718407,
       "tag": "0004_pending_signups",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1778159217707,
+      "tag": "0005_simple_mysterio",
+      "breakpoints": true
     }
   ]
 }
