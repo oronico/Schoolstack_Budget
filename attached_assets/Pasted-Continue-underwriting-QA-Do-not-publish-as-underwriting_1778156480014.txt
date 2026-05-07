@@ -1,0 +1,60 @@
+Continue underwriting QA. Do not publish as underwriting-ready yet.
+
+Fix these remaining items:
+
+1. Debt and DSCR
+Current guest debt rows use isLoan: false. Confirm whether canonical DSCR includes these rows. If not, either:
+- model requested loan debt as isLoan: true with loanPrincipal, loanRate, and loanTermYears, or
+- keep annual debt service as a manual row but label the UI DSCR as “Guest readiness DSCR” and compute it independently from total annual debt service.
+
+Acceptance:
+When requestedLoanAnnualDebtService is entered, the Review panel must show a DSCR value that changes correctly.
+
+2. Founder compensation
+Founder comp must be modeled in the year it begins.
+If founderCompensationBeginsYear = 2, 3, 4, or 5, it must affect that year and later years.
+Do not drop deferred founder salary.
+
+Acceptance:
+A model with founder comp beginning in Year 2 shows higher staffing expense in Year 2+.
+
+3. Tuition collection rate
+Confirm whether collectionRate affects:
+- annual revenue,
+- cash flow only,
+- or neither.
+
+If it does not reduce annual revenue, revise UI copy to say:
+“Collection rate affects cash timing and lender caution. It does not reduce annual earned revenue in this simplified guest model.”
+
+Or intentionally apply it to guest revenue math and document that decision.
+
+4. Proof pack
+Create:
+docs/UNDERWRITING_GUEST_WIZARD_PROOF_PACK_2026-05-06.md
+
+Include a corrected 30-student microschool test:
+- Y1 students
+- Y5 students
+- Y1 revenue
+- Y5 revenue
+- Y1 expenses
+- Y5 expenses
+- Y1 and Y5 net income
+- staffing ratio
+- facility ratio
+- DSCR with and without debt
+- top readiness flags
+
+Acceptance:
+30 students at $12,000 tuition must not produce fantasy revenue.
+
+5. Re-run:
+pnpm run typecheck
+pnpm --filter @workspace/school-financial-model run build
+pnpm --filter @workspace/api-server run build
+pnpm --filter @workspace/api-server run qa:excel
+pnpm --filter @workspace/api-server run qa:formula-results
+pnpm --filter @workspace/api-server run qa:smoke-arithmetic
+
+Return GO / GO WITH WATCH ITEMS / NO GO with evidence.

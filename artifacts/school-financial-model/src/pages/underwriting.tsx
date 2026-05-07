@@ -221,15 +221,15 @@ function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
 
   const revenueRows: Array<Record<string, unknown>> = [];
   if (m.perStudentTuition > 0) {
+    const effectiveTuition = m.perStudentTuition * (m.tuitionCollectionRate / 100);
     revenueRows.push({
       id: "rev_tuition",
       category: "tuition_and_fees",
       lineItem: "Tuition revenue",
       enabled: true,
       driverType: "per_student",
-      amounts: [m.perStudentTuition, m.perStudentTuition, m.perStudentTuition, m.perStudentTuition, m.perStudentTuition],
+      amounts: [effectiveTuition, effectiveTuition, effectiveTuition, effectiveTuition, effectiveTuition],
       escalationRate: 3,
-      collectionRate: m.tuitionCollectionRate,
     });
   }
   if (m.perPupilPublicFunding > 0) {
@@ -283,7 +283,7 @@ function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
       notes: "",
     });
   }
-  if (m.founderIsPaidYear1 && m.founderAnnualCompensation > 0) {
+  if (m.founderAnnualCompensation > 0) {
     staffingRows.push({
       id: "staff_founder",
       roleName: "Founder / executive director",
@@ -295,8 +295,8 @@ function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
       benefitsRate: 18,
       payrollTaxRate: 7.65,
       payrollLike: true,
-      startYear: m.founderCompensationBeginsYear,
-      notes: "",
+      startYear: m.founderIsPaidYear1 ? 1 : Math.max(1, Math.min(5, m.founderCompensationBeginsYear)),
+      notes: m.founderIsPaidYear1 ? "" : `Deferred to Year ${m.founderCompensationBeginsYear}`,
     });
   }
 
@@ -596,8 +596,10 @@ function computeLenderFlags(m: GuestModel, enrollProjection: number[]): LenderFl
   const monthlyCashBurn = totalExpenses / 12;
   const daysCashOnHand = monthlyCashBurn > 0 ? (m.beginningCash / (monthlyCashBurn / 30)) : 999;
 
-  if (!m.founderIsPaidYear1) {
-    flags.push({ severity: "high", label: "No founder compensation in Year 1 — lenders may question sustainability" });
+  if (!m.founderIsPaidYear1 && m.founderAnnualCompensation > 0) {
+    flags.push({ severity: "caution", label: `Founder compensation deferred to Year ${m.founderCompensationBeginsYear}` });
+  } else if (!m.founderIsPaidYear1 && m.founderAnnualCompensation === 0) {
+    flags.push({ severity: "high", label: "No founder compensation planned — lenders may question sustainability" });
   }
 
   if (m.schoolStage === "new_school" && m.enrollmentValidationStatus !== "signed_agreements" && m.enrollmentValidationStatus !== "deposits_collected") {
