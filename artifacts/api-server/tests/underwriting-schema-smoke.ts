@@ -29,6 +29,7 @@ import {
   auditLogTable,
 } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
+import { recordAuditLog } from "../src/lib/audit-log.js";
 
 let passed = 0;
 let failed = 0;
@@ -150,7 +151,7 @@ async function main(): Promise<void> {
       .set({ status: "submitted", submittedAt: new Date(), updatedAt: new Date() })
       .where(eq(underwritingApplicationsTable.id, application.id));
 
-    await db.insert(auditLogTable).values({
+    await recordAuditLog({
       actorUserId: user.id,
       actorRole: "user",
       entityType: "underwriting_application",
