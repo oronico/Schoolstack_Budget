@@ -1038,28 +1038,52 @@ export function UnderwritingLandingPage() {
                   <FieldToggle
                     label="Founder is paid in Year 1"
                     checked={model.founderIsPaidYear1}
-                    onChange={(v) => update("founderIsPaidYear1", v)}
+                    onChange={(v) => {
+                      update("founderIsPaidYear1", v);
+                      if (v) {
+                        update("founderCompensationBeginsYear", 1);
+                      } else if (model.founderCompensationBeginsYear <= 1) {
+                        update("founderCompensationBeginsYear", 2);
+                      }
+                    }}
                     testId="toggle-founder-paid"
                     hint="Is the founder drawing a salary from the school?"
                   />
-                  {model.founderIsPaidYear1 ? (
-                    <div className="grid sm:grid-cols-2 gap-3 mt-3">
-                      <FieldText label="Founder annual compensation ($)" type="number" min={0} step={1000} value={String(model.founderAnnualCompensation)} onChange={(v) => updateNum("founderAnnualCompensation", v)} testId="input-founder-comp" />
-                      <FieldSelect
-                        label="Compensation begins"
-                        value={String(model.founderCompensationBeginsYear) as string}
-                        testId="select-founder-comp-year"
-                        onChange={(v) => updateNum("founderCompensationBeginsYear", v)}
-                        options={[
-                          { value: "1", label: "Year 1" },
-                          { value: "2", label: "Year 2" },
-                          { value: "3", label: "Year 3" },
-                          { value: "4", label: "Year 4" },
-                          { value: "5", label: "Year 5" },
-                        ]}
-                      />
-                    </div>
-                  ) : (
+                  <div className="grid sm:grid-cols-2 gap-3 mt-3">
+                    <FieldText
+                      label={model.founderIsPaidYear1 ? "Founder annual compensation ($)" : "Founder annual compensation ($, when it begins)"}
+                      type="number"
+                      min={0}
+                      step={1000}
+                      value={String(model.founderAnnualCompensation)}
+                      onChange={(v) => updateNum("founderAnnualCompensation", v)}
+                      testId="input-founder-comp"
+                      hint={model.founderIsPaidYear1 ? undefined : "What the founder will be paid once compensation kicks in. Leave at $0 if no founder pay is planned."}
+                    />
+                    <FieldSelect
+                      label="Compensation begins"
+                      value={String(model.founderCompensationBeginsYear) as string}
+                      testId="select-founder-comp-year"
+                      onChange={(v) => updateNum("founderCompensationBeginsYear", v)}
+                      options={
+                        model.founderIsPaidYear1
+                          ? [
+                              { value: "1", label: "Year 1" },
+                              { value: "2", label: "Year 2" },
+                              { value: "3", label: "Year 3" },
+                              { value: "4", label: "Year 4" },
+                              { value: "5", label: "Year 5" },
+                            ]
+                          : [
+                              { value: "2", label: "Year 2" },
+                              { value: "3", label: "Year 3" },
+                              { value: "4", label: "Year 4" },
+                              { value: "5", label: "Year 5" },
+                            ]
+                      }
+                    />
+                  </div>
+                  {!model.founderIsPaidYear1 ? (
                     <div className="mt-3">
                       <FieldText
                         label="Unpaid / volunteer labor description (optional)"
@@ -1069,7 +1093,7 @@ export function UnderwritingLandingPage() {
                         hint="Briefly describe who is doing unpaid work and their roles"
                       />
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             ) : null}
