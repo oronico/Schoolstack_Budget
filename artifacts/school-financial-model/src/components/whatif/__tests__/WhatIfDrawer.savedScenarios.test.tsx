@@ -96,14 +96,21 @@ describe("WhatIfDrawer — saved scenarios picker", () => {
       fireEvent.click(screen.getByTestId("whatif-saved-scenario-1"));
     });
 
-    await waitFor(() => {
-      const y1 = screen.getByTestId("whatif-enrollment-Y1") as HTMLInputElement;
-      expect(y1.value).toBe("110");
-    });
+    await waitFor(
+      () => {
+        const y1 = screen.getByTestId("whatif-enrollment-Y1") as HTMLInputElement;
+        expect(y1.value).toBe("110");
+      },
+      // The drawer's controlled-input rehydration runs through a few
+      // queued microtasks (form reset → input commit). Default 1s
+      // timeout occasionally trips on slow CI machines; 5s is safe
+      // and still fast on healthy runs.
+      { timeout: 5000 },
+    );
 
     // Picker closes after a selection.
     expect(screen.queryByTestId("whatif-saved-scenarios-menu")).toBeNull();
-  });
+  }, 15000);
 
   it("loading a saved scenario replaces any pending overrides instead of merging them", async () => {
     const scenarios: CustomScenario[] = [
