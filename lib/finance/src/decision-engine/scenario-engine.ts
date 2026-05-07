@@ -179,6 +179,14 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
       } else {
         val = driverVal(r.amounts, y, r.driverType, students, r.escalationRate, undefined, newStudentsY, returningStudentsY);
       }
+      // Engine-level collection-rate support: when a per_student revenue row
+      // declares a collectionRate (0-100), apply slippage here so every entry
+      // point (wizard, full builder, API) gets the same P&L treatment without
+      // pre-multiplying amounts upstream. Tier-based tuition flows through the
+      // same per_student branch above, so it picks up the multiplier too.
+      if (r.driverType === "per_student" && r.collectionRate !== undefined) {
+        val *= r.collectionRate / 100;
+      }
       val *= pf;
       revVals.set(r.id, val);
     }

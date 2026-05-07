@@ -80,6 +80,48 @@ describe("scenario-engine: driverVal — all driver types", () => {
     expect(m.revenue[4]).toBe(90000);
   });
 
+  it("per_student applies engine-level collectionRate slippage", () => {
+    // Task #599: collectionRate moved from wizard payload pre-multiplication
+    // into the scenario engine. With 90% collection on a $1,000/student row
+    // and 100 students Y1, revenue = 100 × 1000 × 0.90 = 90,000.
+    const m = run({
+      enrollment: { year1: 100, year2: 100, year3: 100, year4: 100, year5: 100, retentionRate: 100 },
+      revenueRows: [
+        { id: "r1", enabled: true, category: "tuition_and_fees", driverType: "per_student", amounts: [1000, 1000, 1000, 1000, 1000], collectionRate: 90 },
+      ],
+    });
+    expect(m.revenue[0]).toBe(90000);
+    expect(m.revenue[4]).toBe(90000);
+  });
+
+  it("collectionRate=100 (or undefined) is a no-op for per_student rows", () => {
+    const noField = run({
+      enrollment: { year1: 100, year2: 100, year3: 100, year4: 100, year5: 100, retentionRate: 100 },
+      revenueRows: [
+        { id: "r1", enabled: true, category: "tuition_and_fees", driverType: "per_student", amounts: [1000, 1000, 1000, 1000, 1000] },
+      ],
+    });
+    const at100 = run({
+      enrollment: { year1: 100, year2: 100, year3: 100, year4: 100, year5: 100, retentionRate: 100 },
+      revenueRows: [
+        { id: "r1", enabled: true, category: "tuition_and_fees", driverType: "per_student", amounts: [1000, 1000, 1000, 1000, 1000], collectionRate: 100 },
+      ],
+    });
+    expect(at100.revenue[0]).toBe(noField.revenue[0]);
+    expect(at100.revenue[0]).toBe(100000);
+  });
+
+  it("collectionRate is ignored on non-per_student driver types", () => {
+    // Engine scopes collectionRate to per_student per Task #599; an
+    // annual_fixed row should keep its full $50K even with a 50% rate set.
+    const m = run({
+      revenueRows: [
+        { id: "r1", enabled: true, category: "other_revenue", driverType: "annual_fixed", amounts: [50000, 50000, 50000, 50000, 50000], collectionRate: 50 },
+      ],
+    });
+    expect(m.revenue[0]).toBe(50000);
+  });
+
   it("per_new_student in revenue context multiplies by new students", () => {
     const m = run({
       enrollment: { year1: 100, year2: 120, year3: 140, year4: 160, year5: 180, retentionRate: 100 },

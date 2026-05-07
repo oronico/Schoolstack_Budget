@@ -18,6 +18,12 @@ export interface RevenueRowLike {
   percentBase?: string;
   lineItem?: string;
   note?: string;
+  /** Optional 0-100 percentage. When present and the row's driverType is
+   *  `per_student`, the engine multiplies the row's per-student value by
+   *  `collectionRate / 100` (i.e. 95 = 95% collection / 5% slippage).
+   *  Lets the engine apply collection slippage to P&L revenue instead of
+   *  callers (wizard / API) pre-multiplying tuition amounts themselves. */
+  collectionRate?: number;
 }
 
 export interface PayrollTaxComponentLike {

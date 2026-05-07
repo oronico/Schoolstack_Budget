@@ -221,15 +221,19 @@ export function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
 
   const revenueRows: Array<Record<string, unknown>> = [];
   if (m.perStudentTuition > 0) {
-    const effectiveTuition = m.perStudentTuition * (m.tuitionCollectionRate / 100);
+    // Pass raw sticker tuition + collectionRate; the scenario engine applies
+    // collection slippage (Task #599) so every entry point — wizard, full
+    // model builder, API — handles it the same way.
+    const tuition = m.perStudentTuition;
     revenueRows.push({
       id: "rev_tuition",
       category: "tuition_and_fees",
       lineItem: "Tuition revenue",
       enabled: true,
       driverType: "per_student",
-      amounts: [effectiveTuition, effectiveTuition, effectiveTuition, effectiveTuition, effectiveTuition],
+      amounts: [tuition, tuition, tuition, tuition, tuition],
       escalationRate: 3,
+      collectionRate: m.tuitionCollectionRate,
     });
   }
   if (m.perPupilPublicFunding > 0) {
