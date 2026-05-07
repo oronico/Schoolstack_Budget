@@ -24,6 +24,20 @@ export interface RevenueRowLike {
    *  Lets the engine apply collection slippage to P&L revenue instead of
    *  callers (wizard / API) pre-multiplying tuition amounts themselves. */
   collectionRate?: number;
+  /** Tuition billing schedule (months/year tuition is invoiced). Default 10. */
+  billingMonths?: number;
+  /** Days collections lag invoicing — used for the cash-flow shift. */
+  collectionDelayDays?: number;
+  /** Public-funding cadence: monthly | quarterly | semi_annual | annual. */
+  paymentFrequency?: string;
+  /** Public-funding timing: upfront | arrears. */
+  paymentTiming?: string;
+  /** School-choice / ESA disbursement type: direct | reimbursement. */
+  disbursementType?: string;
+  /** Months of lag before reimbursement programs pay out. Default 2. */
+  reimbursementLagMonths?: number;
+  /** Quarter (1-4) philanthropy / grants are received in. Default 1. */
+  receiptQuarter?: number;
 }
 
 export interface PayrollTaxComponentLike {

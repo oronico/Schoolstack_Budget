@@ -142,15 +142,23 @@ const [autopay, inv95, inv88] = results;
 // per student × enrollment, billed over 10 months, plus the registration fee
 // and scholarship discount rows (both autopay-equivalent in the cash engine):
 //   r2 (registration): +$350 × students per year
-//   r3 (scholarship):  −$1,050 → −$1,182 per student per year
+//   r3 (scholarship):  −$1,050 → −$1,182 per student per year (NEGATIVE)
 // Scenario rate scales the gross-tuition contribution only; the registration
 // and scholarship rows pass through at full annual amount.
+//
+// Task #609 — refreshed against the canonical `distributeRevenueMonthly`
+// helper. The legacy `computeMonthlyCashInflow` had a real timing bug where
+// `tuition_offsets` rows were double-negated (effectiveAmount = -annualAmount
+// when annualAmount was already negative), so scholarship discounts added
+// positive cash. The new helper applies `-Math.abs(annualAmount)` so
+// discounts correctly subtract from collected tuition cash. These goldens
+// reflect the corrected math.
 // =============================================================================
 
 const EXPECTED_TUITION_CASH = {
-  "autopay-100": [1190000, 1592110, 2016640, 2399635, 2670000],
-  "invoiced-95": [1137500, 1521813, 1927520, 2293501, 2551820],
-  "invoiced-88": [1064000, 1423396, 1802752, 2144912, 2386368],
+  "autopay-100": [980000, 1310790, 1660160, 1975245, 2197200],
+  "invoiced-95": [927500, 1240493, 1571040, 1869110, 2079020],
+  "invoiced-88": [854000, 1142076, 1446272, 1720522, 1913568],
 } as const;
 
 // Y1 cash-DSCR at $35K of debt service (per the persona's capital/debt rows)
@@ -158,9 +166,9 @@ const EXPECTED_TUITION_CASH = {
 // SHIFT between scenarios is. Even so we pin the values so a default drift
 // will trip this test.
 const EXPECTED_Y1_CASH_DSCR = {
-  "autopay-100": 31.083,
-  "invoiced-95": 29.542,
-  "invoiced-88": 27.384,
+  "autopay-100": 24.918,
+  "invoiced-95": 23.377,
+  "invoiced-88": 21.219,
 } as const;
 
 for (const r of results) {

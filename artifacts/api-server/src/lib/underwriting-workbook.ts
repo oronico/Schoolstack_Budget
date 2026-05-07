@@ -1,5 +1,13 @@
 import ExcelJS from "exceljs";
-import { computeStraightLineDepreciation, computeProjectedAR, computeBaseFinancials, computeRevenueQualityRollup, type RevenueQualityYearInputs } from "@workspace/finance";
+import {
+  computeStraightLineDepreciation,
+  computeProjectedAR,
+  computeBaseFinancials,
+  computeRevenueQualityRollup,
+  distributeRevenueMonthly,
+  type RevenueQualityYearInputs,
+  type MonthlyRevenueRowLike,
+} from "@workspace/finance";
 import {
   NAVY, WHITE, LIGHT_GRAY, GREEN_BG, EVERGREEN, CREAM, INPUT_CELL_FILL, DASHBOARD_GREEN,
   HEADER_FILL, HEADER_FONT, SECTION_FILL, SECTION_FONT, NF, BF,
@@ -1704,45 +1712,36 @@ function buildMonthlyCashFlowY1(wb: ExcelJS.Workbook, data: ModelData, enrollmen
   const monthlyOps = opex0 / (opMonths || 12);
   const monthlyDebt = cd0 / 12;
 
-  const computeMonthlyRev = (): number[] => {
-    const monthly = new Array(12).fill(0);
-    const rowValues = new Map<string, number>();
-    for (const rv of revenueRows) {
-      if (!rv.enabled || rv.driverType === "percent_of_base") continue;
+  // Task #609 — delegate per-stream monthly distribution to the canonical
+  // helper in @workspace/finance so the workbook's monthly rev cells match
+  // the lender packet PDF, the wizard cash-flow chart, and the underlying
+  // ScenarioMetrics. Tuition uses billingMonths + delay, ESA uses
+  // disbursementType (direct quarterly / reimbursement lag), public funding
+  // uses paymentFrequency + paymentTiming + lag, philanthropy lands in its
+  // receiptQuarter, other revenue spreads across opMonths. Annual total per
+  // stream is unchanged — only the monthly *shape* shifts to match real
+  // cash-arrival timing.
+  const monthlyRevArr = (() => {
+    // Tier-aware tuition needs to flow through the canonical helper. We
+    // pass per-row amounts unchanged but pre-resolve tier-tuition into the
+    // single gross_tuition row so the helper's per-student multiplier
+    // arrives at the same total.
+    const projectedRows = revenueRows.map((rv) => {
       if (rv.id === "gross_tuition" && rv.driverType === "per_student" && tiers.length > 0) {
-        rowValues.set(rv.id, tuitionWithTiers(rv.amounts?.[0] ?? 0, 0, students, tiers));
-      } else {
-        rowValues.set(rv.id, driverVal(rv.amounts, 0, rv.driverType, students, undefined, undefined, computeNewStudents(enrollment, mcfRR, 0), computeReturningStudents(enrollment, mcfRR, 0)));
+        const perStudentEffective = students > 0
+          ? tuitionWithTiers(rv.amounts?.[0] ?? 0, 0, students, tiers) / students
+          : 0;
+        return { ...rv, amounts: [perStudentEffective, ...(rv.amounts?.slice(1) ?? [])] };
       }
-    }
-    for (const rv of revenueRows) {
-      if (!rv.enabled || rv.driverType !== "percent_of_base") continue;
-      const baseVal = rowValues.get(rv.percentBase || "") || 0;
-      rowValues.set(rv.id, baseVal * ((rv.amounts?.[0] ?? 0) / 100));
-    }
-    for (const rv of revenueRows) {
-      if (!rv.enabled) continue;
-      const annualAmount = rowValues.get(rv.id) || 0;
-      if (annualAmount === 0) continue;
-      const collectionRate = (rv.collectionRate ?? 100) / 100;
-      const delayMonths = Math.ceil((rv.collectionDelayDays ?? 0) / 30);
-      if (rv.category === "tuition_and_fees" || rv.category === "tuition_offsets") {
-        const bm = rv.billingMonths ?? 10;
-        const effectiveAmount = rv.category === "tuition_offsets" ? -Math.abs(annualAmount) : annualAmount;
-        const adjustedAmount = effectiveAmount * collectionRate;
-        const perMonth = adjustedAmount / bm;
-        const startMonth = (bm >= 12 ? 0 : 1) + delayMonths;
-        for (let i = startMonth; i < startMonth + bm && i < 12; i++) monthly[i] += perMonth;
-      } else {
-        const adjustedAmount = annualAmount * collectionRate;
-        const perMonth = adjustedAmount / opMonths;
-        for (let m = delayMonths; m < opMonths + delayMonths && m < 12; m++) monthly[m] += perMonth;
-      }
-    }
-    return monthly;
-  };
-
-  const monthlyRevArr = computeMonthlyRev();
+      return rv;
+    });
+    return distributeRevenueMonthly(
+      projectedRows as unknown as MonthlyRevenueRowLike[],
+      0,
+      students,
+      opMonths,
+    );
+  })();
 
   r++;
   sec(ws, r, 14); ws.getCell(r, 1).value = "REVENUE";

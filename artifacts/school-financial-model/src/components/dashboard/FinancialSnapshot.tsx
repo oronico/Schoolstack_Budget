@@ -1,8 +1,13 @@
 import { useMemo } from "react";
 import { useGetModel } from "@workspace/api-client-react";
-import { DollarSign, TrendingUp, Shield, Wallet, Loader2 } from "lucide-react";
+import { DollarSign, TrendingUp, Shield, Wallet, Loader2, AlertTriangle } from "lucide-react";
 import { computeMetrics } from "@/lib/coaching/diagnostics-engine";
-import { computeAnnualDebt } from "@workspace/finance";
+import {
+  computeAnnualDebt,
+  computeYear1MonthlyCashFlow,
+  findLowestCashMonth,
+  type MonthlyRevenueRowLike,
+} from "@workspace/finance";
 import { formatCurrency } from "@/lib/utils";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { LENDER_LABELS } from "@/lib/coaching/lender-labels";
@@ -132,6 +137,29 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
         monthlyExpense > 0
           ? Math.max(0, startingCash + m.y1NetIncome) / monthlyExpense
           : 0;
+      // Task #609 — surface the lowest cash month so founders see when
+      // tuition gaps and payroll obligations actually trough their cash.
+      const sp = data.schoolProfile ?? {};
+      const opMonths = Math.max(
+        1,
+        Math.min((sp as { operatingMonthsPerYear?: number }).operatingMonthsPerYear ?? 12, 12),
+      );
+      const fyStart = (sp as { fiscalYearStartMonth?: number }).fiscalYearStartMonth ?? 7;
+      const annualOpex = Math.max(
+        0,
+        m.y1TotalExpenses - m.y1StaffingCost - loanDebtService,
+      );
+      const series = computeYear1MonthlyCashFlow({
+        revenueRows: (data.revenueRows ?? []) as unknown as MonthlyRevenueRowLike[],
+        yearIndex: 0,
+        students: m.enrollment?.[0] ?? 0,
+        annualPersonnel: m.y1StaffingCost,
+        annualOpex,
+        annualDebt: loanDebtService,
+        openingCash: startingCash,
+        opMonths,
+      });
+      const lowestCashMonth = findLowestCashMonth(series.cumulative, fyStart);
       return {
         operatingSurplus,
         netIncome: m.y1NetIncome,
@@ -140,6 +168,7 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
         loanDebtService,
         revenue: m.y1Revenue,
         hasNumbers: m.y1Revenue > 0 || m.y1TotalExpenses > 0,
+        lowestCashMonth,
       };
     } catch {
       return null;
@@ -196,6 +225,31 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
         </div>
       ) : (
         <>
+          {metrics?.lowestCashMonth && (
+            <div
+              data-testid="dashboard-lowest-cash-callout"
+              className={`flex items-start gap-3 mb-4 rounded-xl border p-3 ${
+                metrics.lowestCashMonth.isNegative
+                  ? "border-rose-200 bg-rose-50 text-rose-900"
+                  : "border-amber-200 bg-amber-50 text-amber-900"
+              }`}
+            >
+              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+              <div className="text-sm">
+                <span className="font-semibold">
+                  Lowest cash month: {metrics.lowestCashMonth.monthLabel}
+                </span>
+                <span className="ml-1">
+                  ({formatCurrency(metrics.lowestCashMonth.amount)})
+                </span>
+                <p className="text-xs opacity-80 mt-0.5">
+                  {metrics.lowestCashMonth.isNegative
+                    ? "Cash dips below zero — plan a reserve or line of credit before this month."
+                    : "This is the month lenders focus on. Plan reserves to cover the trough."}
+                </p>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <KpiTile
               labelId="operatingSurplus"

@@ -4,7 +4,13 @@ import {
   profitLabel, profitMarginLabel, entityTypeDisplay, schoolTypeDisplay,
   ensureSpace, type PDFDoc, type TableColumn,
 } from "./pdf-utils.js";
-import { computeAnnualDebt, defaultCollectionRateForMethod } from "@workspace/finance";
+import {
+  computeAnnualDebt,
+  defaultCollectionRateForMethod,
+  computeYear1MonthlyCashFlow,
+  findLowestCashMonth,
+  type MonthlyRevenueRowLike,
+} from "@workspace/finance";
 import { computeMonthlyCashInflow } from "./workbook-helpers.js";
 
 interface SchoolProfile {
@@ -743,14 +749,22 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
     sectionTitle(doc, "Year 1 Monthly Cash Flow");
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const fyStart = (sp.fiscalYearStartMonth || 7) - 1;
-    const monthlyInflows = computeMonthlyCashInflow(
-      (data.revenueRows || []) as Parameters<typeof computeMonthlyCashInflow>[0],
-      0,
-      enrollment[0],
-    );
-    const monthlyExpense = y1Exp / 12;
     const startingCash = (data.openingBalances?.cash ?? 0);
-    let running = startingCash;
+    // Task #609 — full per-stream timing for both inflows AND outflows so
+    // the lender sees the real cash trough (staff paid 12 mo / tuition
+    // billed 10 mo). Personnel & opex spread over operating months only;
+    // debt service is monthly.
+    const opMonths = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 10) : 12;
+    const series = computeYear1MonthlyCashFlow({
+      revenueRows: (data.revenueRows || []) as unknown as MonthlyRevenueRowLike[],
+      yearIndex: 0,
+      students: enrollment[0],
+      annualPersonnel: staffTotals[0] || 0,
+      annualOpex: opexTotals[0] || 0,
+      annualDebt: capDebtTotals[0] || 0,
+      openingCash: startingCash,
+      opMonths,
+    });
 
     const cfCols: TableColumn[] = [
       { header: "Month", width: 55 },
@@ -762,18 +776,25 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
     ];
     const cfRows: string[][] = [];
     let anyNegativeMonth = false;
+    let running = startingCash;
     for (let i = 0; i < 12; i++) {
       const mIdx = (fyStart + i) % 12;
       const label = monthNames[mIdx];
-      const inflow = monthlyInflows[i];
+      const inflow = series.inflow[i];
+      const outflow = series.outflow[i];
       const begin = running;
-      const netCash = inflow - monthlyExpense;
+      const netCash = series.net[i];
       const end = begin + netCash;
       if (end < 0) anyNegativeMonth = true;
-      cfRows.push([label, fmtCurrency(begin), fmtCurrency(inflow), `(${fmtCurrency(monthlyExpense)})`, fmtCurrency(netCash), fmtCurrency(end)]);
+      cfRows.push([label, fmtCurrency(begin), fmtCurrency(inflow), `(${fmtCurrency(outflow)})`, fmtCurrency(netCash), fmtCurrency(end)]);
       running = end;
     }
     drawTable(doc, cfCols, cfRows, { zebra: true });
+
+    const trough = findLowestCashMonth(series.cumulative, sp.fiscalYearStartMonth || 7);
+    if (trough) {
+      bodyText(doc, `Lowest cash month: ${trough.monthLabel} at ${fmtCurrency(trough.amount)}.`);
+    }
     if (anyNegativeMonth) {
       bodyText(doc, "⚠ Cash position turns negative during Year 1. Consider adjusting revenue timing or securing a line of credit.");
     }

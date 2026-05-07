@@ -1,7 +1,18 @@
 import { generateTopIssues } from "./decision-rules";
 import { generateHealthSignals, type HealthSignal } from "./financial-health";
 import { computeDaysCashOnHand, computeEffectiveFte as computeEffectiveFteShared, BENCHMARK_DCOH_GREEN, BENCHMARK_DCOH_AMBER, BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "./workbook-helpers.js";
-import { computeAnnualDebt, computeStraightLineDepreciation, computeProjectedAR, computeBaseFinancials, defaultCollectionRateForMethod, computeRevenueQualityRollup, type RevenueQualityYearRollup } from "@workspace/finance";
+import {
+  computeAnnualDebt,
+  computeStraightLineDepreciation,
+  computeProjectedAR,
+  computeBaseFinancials,
+  defaultCollectionRateForMethod,
+  computeRevenueQualityRollup,
+  computeYear1MonthlyCashFlow,
+  computeCashRunwayMonths,
+  type RevenueQualityYearRollup,
+  type MonthlyRevenueRowLike,
+} from "@workspace/finance";
 import { detectUnusualAssumptions } from "./assumption-flags";
 
 interface SchoolProfile {
@@ -2976,25 +2987,39 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     }
   }
 
+  // Task #609 — use the canonical per-stream monthly distribution for
+  // Year 1 (real cash-arrival timing) and even spread for out-years where
+  // we don't yet model month-by-month revenue. Without this, schools that
+  // bill tuition only 10 months/year and pay staff 12 months/year always
+  // looked solvent in months 1-2 even when reality showed they trough.
   let cashRunwayMonths = 0;
   {
     const startingCash = (data as Record<string, unknown>).priorYearSnapshot
       ? ((data as Record<string, unknown>).priorYearSnapshot as Record<string, number>)?.endingCash || 0
       : 0;
-    let runningCash = startingCash;
-    const totalMonths = yearCount * 12;
-    cashRunwayMonths = totalMonths;
-    for (let m = 0; m < totalMonths; m++) {
-      const yIdx = Math.floor(m / 12);
-      const yFin = yearFinancials[Math.min(yIdx, yearFinancials.length - 1)];
-      const monthlyRev = (yFin?.totalRevenue || 0) / 12;
-      const monthlyExp = (yFin?.totalExpenses || 0) / 12;
-      runningCash += monthlyRev - monthlyExp;
-      if (runningCash <= 0) {
-        cashRunwayMonths = m + 1;
-        break;
+    const opMonths = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 10) : 12;
+    const monthlyNetByYear: number[][] = [];
+    for (let y = 0; y < yearCount; y++) {
+      const yFin = yearFinancials[Math.min(y, yearFinancials.length - 1)];
+      if (y === 0) {
+        const series = computeYear1MonthlyCashFlow({
+          revenueRows: (data.revenueRows || []) as unknown as MonthlyRevenueRowLike[],
+          yearIndex: 0,
+          students: enrollmentByYear[0] || 0,
+          annualPersonnel: yFin?.totalStaffingCost || 0,
+          annualOpex: ((yFin?.totalExpenses || 0) - (yFin?.totalStaffingCost || 0) - (yFin?.debtService || 0)) || 0,
+          annualDebt: yFin?.debtService || 0,
+          openingCash: 0,
+          opMonths,
+        });
+        monthlyNetByYear.push(series.net);
+      } else {
+        const monthlyRev = (yFin?.totalRevenue || 0) / 12;
+        const monthlyExp = (yFin?.totalExpenses || 0) / 12;
+        monthlyNetByYear.push(new Array(12).fill(monthlyRev - monthlyExp));
       }
     }
+    cashRunwayMonths = computeCashRunwayMonths(startingCash, monthlyNetByYear, yearCount * 12);
   }
 
   const facilityCostPct = y1.totalRevenue > 0 ? y1.facilityCost / y1.totalRevenue : 0;

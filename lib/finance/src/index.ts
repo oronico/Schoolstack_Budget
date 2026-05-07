@@ -178,6 +178,22 @@ export {
 
 export type { AccountingExportLike, LiveSnapshotLike } from "./decision-engine/model-shape.js";
 
+export {
+  distributeRevenueMonthly,
+  distributePersonnelMonthly,
+  distributeOpexMonthly,
+  distributeDebtMonthly,
+  computeYear1MonthlyCashFlow,
+  findLowestCashMonth,
+  computeCashRunwayMonths,
+  type MonthlyRevenueRowLike,
+  type PayrollCadence,
+  type DebtCadence,
+  type MonthlyCashFlowSeries,
+  type ComputeYear1MonthlyCashFlowInput,
+  type LowestCashMonth,
+} from "./monthly-cash-flow.js";
+
 // Task #455: state-funding catalog + fragility detector. Re-exported here so
 // both the wizard (RevenueStep chip) and api-server (assumption flags +
 // lender/board PDF footnotes) read the same program-status table.

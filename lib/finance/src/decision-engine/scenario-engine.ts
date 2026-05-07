@@ -1,5 +1,16 @@
 import type { FullModelData } from "./model-shape.js";
 import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "../constants.js";
+import {
+  computeYear1MonthlyCashFlow,
+  distributePersonnelMonthly,
+  distributeOpexMonthly,
+  distributeDebtMonthly,
+  findLowestCashMonth,
+  computeCashRunwayMonths,
+  type MonthlyCashFlowSeries,
+  type LowestCashMonth,
+  type MonthlyRevenueRowLike,
+} from "../monthly-cash-flow.js";
 
 export interface ScenarioAdjustments {
   name: string;
@@ -32,6 +43,21 @@ export interface ScenarioMetrics {
    */
   cashPosition: number[];
   loanDebtService?: number[];
+  /**
+   * Year 1 monthly cash flow series built from real per-stream timing
+   * (tuition billing months, ESA disbursement quarters, public funding
+   * cadence + lag, philanthropy receipt month, payroll across operating
+   * months only, debt service across all 12 months). Annual totals
+   * reconcile to `revenue[0]` / `totalExpenses[0]` — only the *shape*
+   * across months reflects timing. Task #609.
+   */
+  monthlyCashFlowY1?: MonthlyCashFlowSeries;
+  /**
+   * The month inside Year 1 with the lowest cumulative cash position.
+   * Surfaced on the founder dashboard so they can see which month they're
+   * closest to running out of cash. Task #609.
+   */
+  lowestCashMonth?: LowestCashMonth | null;
 }
 
 export interface NudgeItem {
@@ -359,20 +385,37 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
   const monthlyExp = totalExpenses[4] / 12;
   const reserveMonths = monthlyExp > 0 && cumNI > 0 ? cumNI / monthlyExp : 0;
 
-  let cashRunwayMonths = 60;
   const startingCash = data.openingBalances?.cash || 0;
-  let runningCash = startingCash;
-  for (let y = 0; y < 5; y++) {
-    const monthlyNI = netIncome[y] / 12;
-    for (let m = 0; m < 12; m++) {
-      runningCash += monthlyNI;
-      if (runningCash <= 0) {
-        cashRunwayMonths = y * 12 + m + 1;
-        break;
-      }
-    }
-    if (runningCash <= 0) break;
+  const opMonths = sp?.isPartialFirstYear ? (sp.year1OperatingMonths || 10) : 12;
+
+  // Year 1: build the real per-stream monthly cash flow series. Annual totals
+  // remain identical to revenue[0] / totalExpenses[0]; only the *shape*
+  // across months reflects real timing (tuition billing months, ESA
+  // disbursements, public-funding lag, payroll across op months only).
+  const monthlyCashFlowY1 = computeYear1MonthlyCashFlow({
+    revenueRows: revenueRows as MonthlyRevenueRowLike[],
+    yearIndex: 0,
+    students: enrollment[0],
+    annualPersonnel: staffingCost[0],
+    annualOpex: facilityCost[0] + opex[0],
+    annualDebt: loanDS[0],
+    openingCash: startingCash,
+    opMonths,
+  });
+
+  // Years 2-5: even spread is acceptable for runway/trough — these years
+  // are still informative because Y1 already used real timing.
+  const monthlyNetByYear: number[][] = [monthlyCashFlowY1.net];
+  for (let y = 1; y < 5; y++) {
+    const niMonth = netIncome[y] / 12;
+    monthlyNetByYear.push(new Array(12).fill(niMonth));
   }
+
+  const cashRunwayMonths = computeCashRunwayMonths(
+    startingCash,
+    monthlyNetByYear,
+    60,
+  );
 
   const cashPosition: number[] = [];
   let cumCash = startingCash;
@@ -380,6 +423,8 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
     cumCash += netIncome[y];
     cashPosition.push(cumCash);
   }
+
+  const lowestCashMonth = findLowestCashMonth(monthlyCashFlowY1.cumulative, 7);
 
   return {
     enrollment,
@@ -397,6 +442,8 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
     reserveMonths: Math.round(reserveMonths * 10) / 10,
     cashPosition,
     loanDebtService: loanDS,
+    monthlyCashFlowY1,
+    lowestCashMonth,
   };
 }
 
@@ -437,19 +484,45 @@ function applyAdjustments(
   const monthlyExp = totalExpenses[4] / 12;
   const reserveMonths = monthlyExp > 0 && cumNI > 0 ? cumNI / monthlyExp : 0;
 
-  let cashRunwayMonths = 60;
-  let runningCash = startingCash;
-  for (let y = 0; y < 5; y++) {
-    const monthlyNI = netIncome[y] / 12;
-    for (let m = 0; m < 12; m++) {
-      runningCash += monthlyNI;
-      if (runningCash <= 0) {
-        cashRunwayMonths = y * 12 + m + 1;
-        break;
-      }
+  // Rescale Y1 monthly cash flow by the adjustment ratios so the
+  // per-stream timing shape established in base is preserved while the
+  // amounts move with the lever. Outflow rescales against the *total*
+  // base outflow so the shape (op-month payroll, monthly debt) carries
+  // through. Annual sums match revenue[0] / totalExpenses[0] within
+  // floating-point error.
+  const baseY1 = base.monthlyCashFlowY1;
+  let monthlyCashFlowY1: MonthlyCashFlowSeries | undefined;
+  if (baseY1) {
+    const baseRev = base.revenue[0] || 0;
+    const baseExp = base.totalExpenses[0] || 0;
+    const revRatio = baseRev > 0 ? revenue[0] / baseRev : 0;
+    const expRatio = baseExp > 0 ? totalExpenses[0] / baseExp : 0;
+    const inflow = baseY1.inflow.map((v) => v * revRatio);
+    const outflow = baseY1.outflow.map((v) => v * expRatio);
+    const net = inflow.map((v, i) => v - outflow[i]);
+    const cumulative: number[] = [];
+    let running = startingCash;
+    for (const v of net) {
+      running += v;
+      cumulative.push(running);
     }
-    if (runningCash <= 0) break;
+    monthlyCashFlowY1 = { inflow, outflow, net, cumulative };
   }
+
+  const monthlyNetByYear: number[][] = [];
+  if (monthlyCashFlowY1) {
+    monthlyNetByYear.push(monthlyCashFlowY1.net);
+  } else {
+    monthlyNetByYear.push(new Array(12).fill(netIncome[0] / 12));
+  }
+  for (let y = 1; y < 5; y++) {
+    monthlyNetByYear.push(new Array(12).fill(netIncome[y] / 12));
+  }
+  const cashRunwayMonths = computeCashRunwayMonths(
+    startingCash,
+    monthlyNetByYear,
+    60,
+  );
 
   const cashPosition: number[] = [];
   let cumCash = startingCash;
@@ -457,6 +530,10 @@ function applyAdjustments(
     cumCash += netIncome[y];
     cashPosition.push(cumCash);
   }
+
+  const lowestCashMonth = monthlyCashFlowY1
+    ? findLowestCashMonth(monthlyCashFlowY1.cumulative, 7)
+    : null;
 
   return {
     enrollment,
@@ -474,6 +551,8 @@ function applyAdjustments(
     reserveMonths: Math.round(reserveMonths * 10) / 10,
     cashPosition,
     loanDebtService: baseLoanDS,
+    monthlyCashFlowY1,
+    lowestCashMonth,
   };
 }
 
@@ -498,11 +577,30 @@ export interface QuickLever {
 function cashTrough(metrics: ScenarioMetrics, startingCash: number): number {
   let running = startingCash;
   let min = startingCash;
-  for (let y = 0; y < 5; y++) {
-    const monthlyNI = metrics.netIncome[y] / 12;
-    for (let m = 0; m < 12; m++) {
-      running += monthlyNI;
+  // Year 1 uses real per-stream timing when available — that's where the
+  // intra-year trough is most pronounced (tuition lands Aug-May while
+  // payroll runs every op month). Years 2-5 use even-spread netIncome
+  // since we don't recompute timing for projection years.
+  const y1 = metrics.monthlyCashFlowY1?.net;
+  if (y1 && y1.length === 12) {
+    for (const v of y1) {
+      running += v;
       if (running < min) min = running;
+    }
+    for (let y = 1; y < 5; y++) {
+      const monthlyNI = metrics.netIncome[y] / 12;
+      for (let m = 0; m < 12; m++) {
+        running += monthlyNI;
+        if (running < min) min = running;
+      }
+    }
+  } else {
+    for (let y = 0; y < 5; y++) {
+      const monthlyNI = metrics.netIncome[y] / 12;
+      for (let m = 0; m < 12; m++) {
+        running += monthlyNI;
+        if (running < min) min = running;
+      }
     }
   }
   return min;
