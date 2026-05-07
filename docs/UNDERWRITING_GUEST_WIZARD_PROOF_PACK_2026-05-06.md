@@ -1,6 +1,6 @@
 # SchoolStack Budget — Underwriting Guest Wizard Proof Pack
 
-**Date:** 2026-05-07
+**Date:** 2026-05-06
 **Sprint:** Revenue-inflation fix + QA hardening (Task #598)
 **Verdict:** **GO** — all validations pass; revenue math verified; readiness flags functional.
 
@@ -143,30 +143,36 @@ Y1 shows a small deficit (typical for new microschool); profitability begins Y2.
 
 ---
 
-## 4. Debt Variant
+## 4. Debt Variant — $50K Existing Debt at $6K/yr Service
 
 ### Guest debt scenario (modified from default)
 | Field | Value |
 |-------|-------|
-| Existing annual debt service | $18,000 |
-| Requested loan annual debt service | $12,000 |
-| Total debt service | $30,000 |
+| Existing debt balance | $50,000 |
+| Existing annual debt service | $6,000 |
+| Requested loan annual debt service | $0 |
+| Total annual debt service | $6,000 |
 
-### Guest-estimated DSCR (Y1 with debt, using default model + $65K founder comp deferred to Y2)
+### Guest-estimated DSCR
 
-With founder comp of $65K starting Y2, Y1 staffing stays the same but Y1 revenue = $342K.
+Using the default model P&L from Section 3:
 
-- Net Income (Y1): -$39,580 (default model, Y1 deficit)
-- Est. DSCR = -$39,580 / $30,000 = **-1.32x** → "critical" severity flag
+| Year | Net Income | Debt Service | Est. DSCR | Flag |
+|------|-----------|-------------|-----------|------|
+| Y1 | -$39,580 | $6,000 | **-6.60x** | critical (below 1.0x) |
+| Y2 | $19,498 | $6,000 | **3.25x** | strong (above 1.25x) |
+| Y5 | $102,326 | $6,000 | **17.05x** | strong (above 1.25x) |
 
-With positive Y2 net income of $19,498:
-- Est. DSCR (Y2) = $19,498 / $30,000 = **0.65x** → still below 1.0x
+Y1 shows negative DSCR due to startup deficit — correctly flags as critical.
+Y2+ shows strong coverage once the school reaches profitability.
 
-This correctly flags debt service coverage risk for a startup microschool.
+`computeLenderFlags` computes: `dscr = netIncome / totalDebtService` where
+`totalDebtService = existingAnnualDebtService + requestedLoanAnnualDebtService`.
 
 Engine DSCR sheet shows 0 for guest debt rows (by design — `isLoan: false`).
-Lender readiness snapshot computes its own guest-estimated DSCR from user-entered debt service.
-UI labels this as "Est. DSCR" to distinguish from engine-computed loan DSCR.
+Lender readiness snapshot computes its own guest-estimated DSCR from user-entered
+debt service amounts. UI labels this as "Est. DSCR" to distinguish from
+engine-computed loan DSCR.
 
 ---
 
@@ -191,17 +197,26 @@ Default model correctly surfaces 1 critical + 7 high flags — a new school with
 
 ## 6. Validation Results
 
+### Required 6 validation commands (from task spec)
+
 | # | Command | Result | Details |
 |---|---------|--------|---------|
 | 1 | `pnpm run typecheck` | **PASS** | All packages clean (scripts, api-server, school-financial-model, mockup-sandbox) |
-| 2 | `pnpm --filter @workspace/school-financial-model run test` | **PASS** | 68 test files, 1096 tests passed |
-| 3 | `pnpm --filter @workspace/api-server run test` | **PASS** | 37 tests passed |
+| 2 | `pnpm --filter @workspace/school-financial-model run build` | **PASS** | Production build completed in 17.22s |
+| 3 | `pnpm --filter @workspace/api-server run build` | **PASS** | Server bundle built (4.5MB), migrations copied |
 | 4 | `pnpm --filter @workspace/api-server run qa:excel` | **PASS** | 30/30 exports passed (6 payloads × 5 export types) |
 | 5 | `pnpm --filter @workspace/api-server run qa:formula-results` | **PASS** | Standard export + UW V2 cross-tab consistency verified |
 | 6 | `pnpm --filter @workspace/api-server run qa:smoke-arithmetic` | **PASS** | 32/32 assertions (Private+ESA, Charter, HomeschoolCoop, row math) |
-| 7 | `E2E_PORT=23192 E2E_START_SERVERS=1 pnpm --filter @workspace/school-financial-model run test:e2e:smoke` | **PASS** | 8/8 wizard smoke tests (charter, private, learning lab × operating/new) |
 
-All 7 validation commands: **PASS**
+### Additional validation commands
+
+| # | Command | Result | Details |
+|---|---------|--------|---------|
+| 7 | `pnpm --filter @workspace/school-financial-model run test` | **PASS** | 68 test files, 1096 tests passed |
+| 8 | `pnpm --filter @workspace/api-server run test` | **PASS** | 37 tests passed |
+| 9 | `pnpm --filter @workspace/school-financial-model run test:e2e:smoke` | **PASS** | 8/8 wizard smoke tests (charter, private, learning lab × operating/new) |
+
+All 9 validation commands: **PASS**
 
 ---
 
