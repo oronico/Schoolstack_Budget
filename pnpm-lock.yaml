@@ -771,7 +771,11 @@ importers:
         specifier: ^0.31.9
         version: 0.31.9
 
-  lib/finance: {}
+  lib/finance:
+    devDependencies:
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
 
   lib/tenant:
     devDependencies:
