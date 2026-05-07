@@ -30,7 +30,24 @@ export default defineConfig({
   workers: 1,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   timeout: 60_000,
-  expect: { timeout: 10_000 },
+  expect: {
+    timeout: 10_000,
+    // Screenshot snapshots (Task #570) compare against a committed baseline
+    // PNG. Anti-aliasing and font hinting can shift a few pixels between
+    // runs even on the same Chromium build, so we tolerate a small fraction
+    // of changed pixels — but the threshold is deliberately tight enough
+    // that a sparkline collapsing to a flat horizontal line (the regression
+    // we're guarding against) still trips the diff. We screenshot a small,
+    // tightly-cropped element (the trend cell), so even a partial flatline
+    // dominates the diff well above this ratio.
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0.05,
+      // Small per-pixel tolerance for anti-aliasing on stroked SVG paths.
+      threshold: 0.2,
+      animations: "disabled",
+      caret: "hide",
+    },
+  },
   use: {
     baseURL: BASE_URL,
     trace: "retain-on-failure",

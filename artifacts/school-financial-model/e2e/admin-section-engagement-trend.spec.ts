@@ -250,6 +250,54 @@ test("admin section engagement trend column renders sparklines for windowed rang
   expect(heroFirstPathD ?? "").toMatch(/M\s*[\d.]+/);
   expect(heroFirstPathD ?? "").toMatch(/L\s*[\d.]+/);
 
+  // --- Flatline guard (Task #570) --------------------------------------
+  // The previous SVG-presence + path-data assertions still pass when every
+  // bucket value is zero: MiniSparkline divides by `range = max(values, 1)`
+  // so a [0,0,0,…] series renders a path whose y-coordinate is the chart
+  // height for every point — visually a flat line glued to the bottom
+  // edge, structurally still a non-empty `M … L …` path. Walk the path's
+  // y-values directly and require at least two distinct values, which is
+  // the smallest possible signal that the sparkline actually rises or
+  // falls. Do this for both the impressions (first <path>) and clicks
+  // (second <path>) sparkline in each row.
+  async function uniqueYCount(pathD: string | null): Promise<number> {
+    if (!pathD) return 0;
+    // Path commands are emitted as "M x y" / "L x y" with single-space
+    // separators (see MiniSparkline in src/pages/admin.tsx).
+    const ys = new Set<string>();
+    const re = /[ML]\s+[\d.]+\s+([\d.]+)/g;
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(pathD)) !== null) {
+      ys.add(match[1]);
+    }
+    return ys.size;
+  }
+  for (const cell of [heroTrendCell, insideTrendCell]) {
+    const paths = cell.locator("svg path");
+    await expect(paths).toHaveCount(2);
+    const impressionsD = await paths.nth(0).getAttribute("d");
+    const clicksD = await paths.nth(1).getAttribute("d");
+    expect(
+      await uniqueYCount(impressionsD),
+      `expected impressions sparkline to have multiple distinct y-values, got d=${impressionsD}`,
+    ).toBeGreaterThan(1);
+    expect(
+      await uniqueYCount(clicksD),
+      `expected clicks sparkline to have multiple distinct y-values, got d=${clicksD}`,
+    ).toBeGreaterThan(1);
+  }
+
+  // Pixel-level baseline for the trend cell on the 30d range. We snapshot
+  // the trend cell itself (not the whole card) so the sparkline area
+  // dominates the diff: a flatlined sparkline changes ~30%+ of the cell's
+  // pixels, well above `maxDiffPixelRatio` in playwright.config.ts, while
+  // unrelated table churn elsewhere in the card cannot mask the failure.
+  // Screenshot file lives next to the spec under
+  // `admin-section-engagement-trend.spec.ts-snapshots/`.
+  await expect(heroTrendCell).toHaveScreenshot(
+    "section-engagement-trend-hero-30d.png",
+  );
+
   // --- 7d (also windowed) ----------------------------------------------
   // Switching ranges re-fetches /api/admin/cta-conversion?range=7d, and
   // the stub returns bucketUnit="day". The sparkline branch must hold.
