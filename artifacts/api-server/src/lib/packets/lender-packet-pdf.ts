@@ -6,7 +6,7 @@ import {
   renderPacketTable, renderPacketInsights, renderLinkedMetrics,
   type PDFDoc, BRAND,
 } from "../pdf-utils.js";
-import type { LenderPacket, RiskMitigant, BudgetNarrativeData, FlaggedAssumptionExport } from "./build-lender-packet";
+import type { LenderPacket, RiskMitigant, BudgetNarrativeData, FlaggedAssumptionExport, BreakEvenDownsideExport } from "./build-lender-packet";
 import type { PacketSection, LinkedMetric } from "./packet-types";
 import { renderForecastAccuracySection } from "./forecast-accuracy-pdf.js";
 import { renderCashRunwayTroughCallout } from "./cash-runway-pdf.js";
@@ -39,6 +39,8 @@ export async function generateLenderPacketPDF(packet: LenderPacket): Promise<Buf
   // title, no placeholder copy) when no Pursued saved scenarios with
   // realized actuals exist — first-time founders without a track record
   // shouldn't get a half-empty section in their lender packet.
+  renderBreakEvenDownsideSection(doc, packet.breakEvenDownside);
+
   renderForecastAccuracySection(
     doc,
     packet.forecastAccuracy,
@@ -311,6 +313,49 @@ function renderRiskMitigants(doc: PDFDoc, riskMitigants: RiskMitigant[]) {
     doc.text(rm.mitigant, { width: w - 60 });
 
     doc.moveDown(0.5);
+  }
+}
+
+function renderBreakEvenDownsideSection(doc: PDFDoc, bed: BreakEvenDownsideExport) {
+  ensureSpace(doc, 60);
+  sectionTitle(doc, "Break-Even & Downside Sensitivity");
+  bodyText(
+    doc,
+    bed.maxCapacity
+      ? `Break-even student counts assume current revenue and cost mix. Utilization compares break-even to the stated max capacity of ${bed.maxCapacity} students.`
+      : "Break-even student counts assume current revenue and cost mix. Set max capacity in the wizard to see utilization %.",
+  );
+  doc.moveDown(0.3);
+
+  subSection(doc, "Per-Year Break-Even");
+  for (let y = 0; y < 5; y++) {
+    const be = bed.breakEvenStudents[y];
+    const util = bed.breakEvenUtilization[y];
+    const planned = bed.enrollment[y] ?? 0;
+    const beStr = be === null ? "N/A" : `${be} students`;
+    const utilStr = util === null ? "" : ` · ${(util * 100).toFixed(0)}% of capacity`;
+    labelValue(doc, `Year ${y + 1} (planned ${planned}):`, `${beStr}${utilStr}`);
+  }
+  doc.moveDown(0.3);
+
+  subSection(doc, "Downside Enrollment Band");
+  for (const [label, ds] of [
+    ["If 10% fewer students enroll", bed.downsideBand.minus10] as const,
+    ["If 20% fewer students enroll", bed.downsideBand.minus20] as const,
+  ]) {
+    ensureSpace(doc, 30);
+    doc.font("Helvetica-Bold").fontSize(9).fillColor(BRAND.amber);
+    doc.text(label, doc.page.margins.left, doc.y);
+    doc.font("Helvetica").fontSize(9).fillColor(BRAND.black);
+    for (let y = 0; y < 5; y++) {
+      const dscrStr = ds.dscr[y] > 0 ? `${ds.dscr[y].toFixed(2)}x` : "N/A";
+      labelValue(
+        doc,
+        `  Year ${y + 1} (${ds.enrollment[y]} students):`,
+        `DSCR ${dscrStr} · Ending cash ${fmtCurrency(ds.endingCash[y])}`,
+      );
+    }
+    doc.moveDown(0.3);
   }
 }
 

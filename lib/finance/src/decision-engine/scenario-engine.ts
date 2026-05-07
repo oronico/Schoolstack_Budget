@@ -58,6 +58,77 @@ export interface ScenarioMetrics {
    * closest to running out of cash. Task #609.
    */
   lowestCashMonth?: LowestCashMonth | null;
+  /**
+   * Per-year opex split into fixed (annual_fixed, monthly, per_fte,
+   * percent_of_base) and variable (per_student, per_new_student,
+   * percent_of_revenue) buckets. Sum equals {@link ScenarioMetrics.opex}
+   * for that year. Used by break-even math (Task #612) so fixed opex
+   * correctly counts toward fixed costs instead of being amortized into
+   * the per-student contribution margin denominator.
+   */
+  fixedOpex: number[];
+  variableOpex: number[];
+  /**
+   * Per-year break-even student count: how many students each modeled year
+   * needs at the current revenue/cost mix to fully cover staffing, facility,
+   * loan debt service, and fixed opex. `null` when the math is undefined
+   * (zero enrollment that year, or contribution margin <= 0). Task #612.
+   */
+  breakEvenStudents: Array<number | null>;
+  /**
+   * Per-year break-even utilization vs `schoolProfile.maxCapacity`, i.e.
+   * `breakEvenStudents / maxCapacity` as a fraction in [0, +inf). `null`
+   * when capacity is missing/zero or break-even is undefined. Values > 1.0
+   * mean break-even cannot fit inside stated capacity that year. Task #612.
+   */
+  breakEvenUtilization: Array<number | null>;
+}
+
+/**
+ * Per-year break-even student count from a {@link ScenarioMetrics}. Returns
+ * `null` when the math is undefined (zero enrollment or non-positive
+ * contribution margin). Exported so callers (workbook, lender packet) can
+ * recompute break-even off pre-computed metrics without re-running the
+ * full engine.
+ */
+export function computeBreakEvenStudentsForYear(m: ScenarioMetrics, y: number): number | null {
+  const students = m.enrollment[y] || 0;
+  if (students <= 0) return null;
+  const revenuePerStudent = m.revenue[y] / students;
+  // Fixed = staffing + facility + loan debt service + fixed-driver opex
+  // (annual_fixed, monthly, per_fte, percent_of_base). Variable = the
+  // per-student / per-new-student / percent_of_revenue slice of opex.
+  // Falls back to "all opex variable" when the split isn't populated so
+  // older callers don't break (Task #612 review).
+  const fixedOpex = m.fixedOpex?.[y] ?? 0;
+  const variableOpex = m.variableOpex?.[y] ?? (m.fixedOpex ? 0 : (m.opex[y] ?? 0));
+  const fixedCosts =
+    m.staffingCost[y] +
+    (m.facilityCost?.[y] ?? 0) +
+    (m.loanDebtService?.[y] ?? 0) +
+    fixedOpex;
+  const variableCostPerStudent = variableOpex / students;
+  const contributionMargin = revenuePerStudent - variableCostPerStudent;
+  if (contributionMargin <= 0) return null;
+  return Math.ceil(fixedCosts / contributionMargin);
+}
+
+function buildBreakEvenArrays(
+  metrics: Omit<ScenarioMetrics, "breakEvenStudents" | "breakEvenUtilization">,
+  maxCapacity: number | undefined,
+): { breakEvenStudents: Array<number | null>; breakEvenUtilization: Array<number | null> } {
+  const breakEvenStudents: Array<number | null> = [];
+  const breakEvenUtilization: Array<number | null> = [];
+  for (let y = 0; y < (metrics.enrollment.length || 5); y++) {
+    const be = computeBreakEvenStudentsForYear(metrics as ScenarioMetrics, y);
+    breakEvenStudents.push(be);
+    if (be === null || !maxCapacity || maxCapacity <= 0) {
+      breakEvenUtilization.push(null);
+    } else {
+      breakEvenUtilization.push(be / maxCapacity);
+    }
+  }
+  return { breakEvenStudents, breakEvenUtilization };
 }
 
 export interface NudgeItem {
@@ -71,6 +142,12 @@ export interface ScenarioResult {
   adjustments: ScenarioAdjustments;
   metrics: ScenarioMetrics;
   nudges: NudgeItem[];
+  /**
+   * Downside enrollment sensitivity band (-10% / -20%) computed off the
+   * base data. Only attached to the `base` result returned by
+   * {@link computeScenarios} (Task #612).
+   */
+  downsideBand?: DownsideBand;
 }
 
 function seNewStudents(enrollment: number[], retentionRate: number, y: number): number {
@@ -153,6 +230,8 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
   const staffingCost: number[] = [];
   const facilityCost: number[] = [];
   const opex: number[] = [];
+  const fixedOpex: number[] = [];
+  const variableOpex: number[] = [];
   const totalExpenses: number[] = [];
   const netIncome: number[] = [];
   const netMargin: number[] = [];
@@ -304,6 +383,11 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
 
     let facTotal = 0;
     let opexTotal = 0;
+    // Fixed-vs-variable opex split for break-even math (Task #612). Variable
+    // drivers scale with enrollment or revenue; everything else is fixed.
+    let opexFixedTotal = 0;
+    let opexVariableTotal = 0;
+    const VARIABLE_DRIVERS = new Set(["per_student", "per_new_student", "percent_of_revenue"]);
     for (const r of expenseRows) {
       let val: number;
       if (r.driverType === "percent_of_revenue") {
@@ -326,6 +410,11 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
         facTotal += val;
       } else {
         opexTotal += val;
+        if (VARIABLE_DRIVERS.has(r.driverType)) {
+          opexVariableTotal += val;
+        } else {
+          opexFixedTotal += val;
+        }
       }
     }
 
@@ -364,6 +453,8 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
     staffingCost.push(persTotal);
     facilityCost.push(facTotal);
     opex.push(opexTotal);
+    fixedOpex.push(opexFixedTotal);
+    variableOpex.push(opexVariableTotal);
     totalExpenses.push(totalExp);
     netIncome.push(ni);
     netMargin.push(revTotal > 0 ? ni / revTotal : 0);
@@ -426,7 +517,7 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
 
   const lowestCashMonth = findLowestCashMonth(monthlyCashFlowY1.cumulative, 7);
 
-  return {
+  const baseShape = {
     enrollment,
     revenue,
     staffingCost,
@@ -444,13 +535,20 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
     loanDebtService: loanDS,
     monthlyCashFlowY1,
     lowestCashMonth,
+    fixedOpex,
+    variableOpex,
   };
+  const maxCapacityRaw = (sp as Record<string, unknown> | undefined)?.maxCapacity;
+  const maxCapacity = typeof maxCapacityRaw === "number" ? maxCapacityRaw : undefined;
+  const beArrays = buildBreakEvenArrays(baseShape, maxCapacity);
+  return { ...baseShape, ...beArrays };
 }
 
 function applyAdjustments(
   base: ScenarioMetrics,
   adj: ScenarioAdjustments,
-  startingCash: number
+  startingCash: number,
+  maxCapacity?: number,
 ): ScenarioMetrics {
   const enrollFactor = 1 + adj.enrollmentAdjustment / 100;
   const revFactor = 1 + adj.tuitionAdjustment / 100;
@@ -463,6 +561,8 @@ function applyAdjustments(
   const staffingCost = base.staffingCost.map((s) => s * staffFactor);
   const facilityCost = base.facilityCost.map((f) => f * facFactor);
   const opex = base.opex.map((o) => o * expFactor);
+  const fixedOpex = (base.fixedOpex ?? base.opex.map(() => 0)).map((o) => o * expFactor);
+  const variableOpex = (base.variableOpex ?? base.opex).map((o) => o * expFactor);
   const baseLoanDS = base.loanDebtService || base.enrollment.map(() => 0);
   const capNonLoan = base.totalExpenses.map((te, i) => te - base.staffingCost[i] - base.facilityCost[i] - base.opex[i] - baseLoanDS[i]);
   const totalExpenses = staffingCost.map((s, i) => s + facilityCost[i] + opex[i] + baseLoanDS[i] + capNonLoan[i]);
@@ -535,7 +635,7 @@ function applyAdjustments(
     ? findLowestCashMonth(monthlyCashFlowY1.cumulative, 7)
     : null;
 
-  return {
+  const adjShape = {
     enrollment,
     revenue,
     staffingCost,
@@ -553,7 +653,11 @@ function applyAdjustments(
     loanDebtService: baseLoanDS,
     monthlyCashFlowY1,
     lowestCashMonth,
+    fixedOpex,
+    variableOpex,
   };
+  const beArrays = buildBreakEvenArrays(adjShape, maxCapacity);
+  return { ...adjShape, ...beArrays };
 }
 
 export interface LeverMetrics {
@@ -607,15 +711,56 @@ function cashTrough(metrics: ScenarioMetrics, startingCash: number): number {
 }
 
 function computeBreakEvenEnrollment(m: ScenarioMetrics): number {
-  const y1Students = m.enrollment[0] || 0;
-  if (y1Students <= 0) return -1;
-  const revenuePerStudent = m.revenue[0] / y1Students;
-  const fixedCosts = m.staffingCost[0] + (m.facilityCost?.[0] ?? 0) + (m.loanDebtService?.[0] ?? 0);
-  const variableOpex = m.opex[0] ?? 0;
-  const variableCostPerStudent = y1Students > 0 ? variableOpex / y1Students : 0;
-  const contributionMargin = revenuePerStudent - variableCostPerStudent;
-  if (contributionMargin <= 0) return -1;
-  return Math.ceil(fixedCosts / contributionMargin);
+  const be = computeBreakEvenStudentsForYear(m, 0);
+  return be === null ? -1 : be;
+}
+
+function readMaxCapacity(data: FullModelData): number | undefined {
+  const sp = data.schoolProfile as Record<string, unknown> | undefined;
+  const v = sp?.maxCapacity;
+  return typeof v === "number" && v > 0 ? v : undefined;
+}
+
+/**
+ * Downside enrollment sensitivity band. Re-runs the canonical engine with
+ * each year's enrollment scaled by the given delta (-10% / -20%) so the
+ * caller sees how DSCR and ending cash respond when fewer students than
+ * planned actually show up. Used by the dashboard "Break-even & downside"
+ * card, the lender packet, and the underwriting workbook (Task #612).
+ */
+export interface DownsideScenario {
+  /** Negative percent applied to all 5 enrollment years (e.g. -10, -20). */
+  enrollmentDelta: number;
+  enrollment: number[];
+  /** Per-year DSCR (0 when no debt service modeled). */
+  dscr: number[];
+  /** Per-year ending cash (opening cash + cumulative net income). */
+  endingCash: number[];
+  /** Per-year break-even student count under the downside enrollment. */
+  breakEvenStudents: Array<number | null>;
+  /** Per-year net income under the downside enrollment. */
+  netIncome: number[];
+}
+
+export interface DownsideBand {
+  minus10: DownsideScenario;
+  minus20: DownsideScenario;
+}
+
+export function computeDownsideBand(data: FullModelData): DownsideBand {
+  function run(delta: number): DownsideScenario {
+    const adjusted = cloneDataWithEnrollmentAdjustment(data, delta);
+    const m = computeBaseFinancials(adjusted);
+    return {
+      enrollmentDelta: delta,
+      enrollment: m.enrollment,
+      dscr: m.dscr,
+      endingCash: m.cashPosition,
+      breakEvenStudents: m.breakEvenStudents,
+      netIncome: m.netIncome,
+    };
+  }
+  return { minus10: run(-10), minus20: run(-20) };
 }
 
 function metricsToLever(m: ScenarioMetrics, startingCash: number): LeverMetrics {
@@ -629,6 +774,7 @@ function metricsToLever(m: ScenarioMetrics, startingCash: number): LeverMetrics 
 
 function computeLeverNudges(data: FullModelData, baseMetrics: ScenarioMetrics): QuickLever[] {
   const startingCash = data.openingBalances?.cash || 0;
+  const maxCapacity = readMaxCapacity(data);
   const staffingRows = data.staffingRows || [];
   const levers: QuickLever[] = [];
 
@@ -682,7 +828,7 @@ function computeLeverNudges(data: FullModelData, baseMetrics: ScenarioMetrics): 
       const totalStaffCost = staffingRows.reduce((s, r) => s + (r.fte || 0) * (r.annualizedRate || 0), 0);
       const pctReduction = totalStaffCost > 0 ? -(savingsBase / totalStaffCost) * 100 : 0;
       const adj: ScenarioAdjustments = { name: "-1 FTE", enrollmentAdjustment: 0, tuitionAdjustment: 0, expenseAdjustment: 0, staffingAdjustment: Math.round(pctReduction * 10) / 10, facilityAdjustment: 0 };
-      const m = applyAdjustments(baseMetrics, adj, startingCash);
+      const m = applyAdjustments(baseMetrics, adj, startingCash, maxCapacity);
       const afterLM = metricsToLever(m, startingCash);
       levers.push({
         id: "staff_minus_1",
@@ -699,7 +845,7 @@ function computeLeverNudges(data: FullModelData, baseMetrics: ScenarioMetrics): 
 
   if (baseMetrics.revenue[0] > 0) {
     const adj: ScenarioAdjustments = { name: "+5% Tuition", enrollmentAdjustment: 0, tuitionAdjustment: 5, expenseAdjustment: 0, staffingAdjustment: 0, facilityAdjustment: 0 };
-    const m = applyAdjustments(baseMetrics, adj, startingCash);
+    const m = applyAdjustments(baseMetrics, adj, startingCash, maxCapacity);
     const afterLM = metricsToLever(m, startingCash);
     levers.push({
       id: "tuition_up_5",
@@ -796,6 +942,7 @@ export function computeScenarios(
 ): { base: ScenarioResult; scenarios: ScenarioResult[]; leverNudges: QuickLever[] } {
   const baseMetrics = computeBaseFinancials(data);
   const startingCash = data.openingBalances?.cash || 0;
+  const maxCapacity = readMaxCapacity(data);
   const leverNudges = computeLeverNudges(data, baseMetrics);
   const baseResult: ScenarioResult = {
     name: "Base Model",
@@ -809,15 +956,42 @@ export function computeScenarios(
     },
     metrics: baseMetrics,
     nudges: generateNudges(baseMetrics, "Your base model", leverNudges),
+    downsideBand: computeDownsideBand(data),
   };
 
+  // Per-scenario downside band — Task #612 review feedback. We stack an
+  // additional -10% / -20% enrollment delta on top of the scenario's own
+  // adjustments so the planner can show "what if this scenario also misses
+  // its enrollment target". Compose multiplicatively so a scenario already
+  // at +5% enrollment still ends up at the right effective enrollment.
+  function downsideForScenario(adj: ScenarioAdjustments): DownsideBand {
+    function run(delta: number): DownsideScenario {
+      const stacked: ScenarioAdjustments = {
+        ...adj,
+        enrollmentAdjustment:
+          ((1 + adj.enrollmentAdjustment / 100) * (1 + delta / 100) - 1) * 100,
+      };
+      const m = applyAdjustments(baseMetrics, stacked, startingCash, maxCapacity);
+      return {
+        enrollmentDelta: delta,
+        enrollment: m.enrollment,
+        dscr: m.dscr,
+        endingCash: m.cashPosition,
+        breakEvenStudents: m.breakEvenStudents,
+        netIncome: m.netIncome,
+      };
+    }
+    return { minus10: run(-10), minus20: run(-20) };
+  }
+
   const scenarioResults = scenarios.map((adj) => {
-    const adjusted = applyAdjustments(baseMetrics, adj, startingCash);
+    const adjusted = applyAdjustments(baseMetrics, adj, startingCash, maxCapacity);
     return {
       name: adj.name,
       adjustments: adj,
       metrics: adjusted,
       nudges: generateNudges(adjusted, adj.name),
+      downsideBand: downsideForScenario(adj),
     };
   });
 

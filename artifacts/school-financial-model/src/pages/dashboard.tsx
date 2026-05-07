@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { FounderPersonaPrompt } from "@/components/coaching/FounderPersonaPrompt";
 import { DecisionLauncher, ThingsHaveChangedBanner } from "@/components/decision-flow/DecisionLauncher";
 import { FinancialSnapshot } from "@/components/dashboard/FinancialSnapshot";
+import { BreakEvenDownsideCard } from "@/components/dashboard/BreakEvenDownsideCard";
 import { getPersonaTone, hasCompletePersona, isYetToLaunch } from "@/lib/coaching/founder-persona";
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -169,10 +170,16 @@ export function DashboardPage() {
           </div>
 
           {!isLoading && snapshotModel && (
-            <FinancialSnapshot
-              modelId={snapshotModel.id}
-              modelName={snapshotModel.name || "Untitled Model"}
-            />
+            <>
+              <FinancialSnapshot
+                modelId={snapshotModel.id}
+                modelName={snapshotModel.name || "Untitled Model"}
+              />
+              <BreakEvenDownsideCard
+                modelId={snapshotModel.id}
+                modelName={snapshotModel.name || "Untitled Model"}
+              />
+            </>
           )}
 
           {!isLoading && models && models.length > 0 && (

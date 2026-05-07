@@ -897,3 +897,142 @@ describe("scenario-engine: lever nudges", () => {
     expect(lever).toBeDefined();
   });
 });
+
+describe("scenario-engine: break-even students & utilization (Task #612)", () => {
+  it("computes Y1 break-even students from contribution margin", () => {
+    // Revenue = $200k (annual_fixed), staffing = $50k, opex = $40k annual_fixed
+    // (fixed driver). Per Task #612, fixed opex must contribute to fixed
+    // costs, not be amortized into variable cost/student.
+    // fixed = staffing 50000 + facility 0 + debt 0 + fixedOpex 40000 = 90000
+    // variable opex = 0 → variableCostPerStudent = 0
+    // revPerStudent = 200000/100 = 2000 → CM = 2000
+    // BE = ceil(90000 / 2000) = 45
+    const m = run({
+      enrollment: { year1: 100, year2: 100, year3: 100, year4: 100, year5: 100, retentionRate: 85 },
+      revenueRows: [
+        { id: "r1", enabled: true, category: "other_revenue", driverType: "annual_fixed", amounts: [200000, 200000, 200000, 200000, 200000] },
+      ],
+      staffingRows: [
+        { id: "s1", enabled: true, fte: 1, annualizedRate: 50000, role: "Teacher" },
+      ],
+      expenseRows: [
+        { id: "e1", enabled: true, category: "administrative_general", driverType: "annual_fixed", amounts: [40000, 40000, 40000, 40000, 40000] },
+      ],
+    });
+    expect(m.breakEvenStudents[0]).toBe(45);
+  });
+
+  it("treats per_student opex as variable in contribution margin", () => {
+    // Revenue = $2000/student × 100 = $200000. staffing = $50000 fixed.
+    // opex = $400/student (variable driver) → variableCostPerStudent = 400.
+    // CM/student = 2000 - 400 = 1600
+    // fixed = 50000, BE = ceil(50000/1600) = 32
+    const m = run({
+      enrollment: { year1: 100, year2: 100, year3: 100, year4: 100, year5: 100, retentionRate: 85 },
+      revenueRows: [
+        { id: "r1", enabled: true, category: "other_revenue", driverType: "per_student", amounts: [2000, 2000, 2000, 2000, 2000] },
+      ],
+      staffingRows: [
+        { id: "s1", enabled: true, fte: 1, annualizedRate: 50000, role: "Teacher" },
+      ],
+      expenseRows: [
+        { id: "e1", enabled: true, category: "administrative_general", driverType: "per_student", amounts: [400, 400, 400, 400, 400] },
+      ],
+    });
+    expect(m.breakEvenStudents[0]).toBe(32);
+  });
+
+  it("returns null break-even when contribution margin <= 0", () => {
+    // Per-student costs exceed per-student revenue
+    const m = run({
+      enrollment: { year1: 100, year2: 100, year3: 100, year4: 100, year5: 100, retentionRate: 85 },
+      revenueRows: [
+        { id: "r1", enabled: true, category: "other_revenue", driverType: "per_student", amounts: [500, 500, 500, 500, 500] },
+      ],
+      expenseRows: [
+        { id: "e1", enabled: true, category: "administrative_general", driverType: "per_student", amounts: [800, 800, 800, 800, 800] },
+      ],
+    });
+    expect(m.breakEvenStudents[0]).toBeNull();
+  });
+
+  it("returns null break-even when enrollment is 0", () => {
+    const m = run({
+      enrollment: { year1: 0, year2: 0, year3: 0, year4: 0, year5: 0, retentionRate: 85 },
+      revenueRows: [
+        { id: "r1", enabled: true, category: "other_revenue", driverType: "annual_fixed", amounts: [100000, 100000, 100000, 100000, 100000] },
+      ],
+    });
+    expect(m.breakEvenStudents[0]).toBeNull();
+  });
+
+  it("returns null utilization when maxCapacity is unset/zero", () => {
+    const m = run({
+      enrollment: { year1: 100, year2: 100, year3: 100, year4: 100, year5: 100, retentionRate: 85 },
+      revenueRows: [
+        { id: "r1", enabled: true, category: "other_revenue", driverType: "annual_fixed", amounts: [200000, 200000, 200000, 200000, 200000] },
+      ],
+      staffingRows: [
+        { id: "s1", enabled: true, fte: 1, annualizedRate: 50000, role: "Teacher" },
+      ],
+    });
+    expect(m.breakEvenUtilization[0]).toBeNull();
+  });
+
+  it("computes utilization as breakEvenStudents / maxCapacity when capacity set", () => {
+    const m = run({
+      schoolProfile: { maxCapacity: 200, isPartialFirstYear: false, year1OperatingMonths: 12, debtIncluded: true },
+      enrollment: { year1: 100, year2: 100, year3: 100, year4: 100, year5: 100, retentionRate: 85 },
+      revenueRows: [
+        { id: "r1", enabled: true, category: "other_revenue", driverType: "annual_fixed", amounts: [200000, 200000, 200000, 200000, 200000] },
+      ],
+      staffingRows: [
+        { id: "s1", enabled: true, fte: 1, annualizedRate: 50000, role: "Teacher" },
+      ],
+      expenseRows: [
+        { id: "e1", enabled: true, category: "administrative_general", driverType: "annual_fixed", amounts: [40000, 40000, 40000, 40000, 40000] },
+      ],
+    });
+    // 45 break-even students / 200 capacity = 0.225
+    expect(m.breakEvenStudents[0]).toBe(45);
+    expect(m.breakEvenUtilization[0]).toBeCloseTo(45 / 200, 5);
+  });
+});
+
+describe("scenario-engine: downside band (Task #612)", () => {
+  it("attaches -10% / -20% downside band to base result", () => {
+    const result = runWithScenarios({
+      enrollment: { year1: 100, year2: 110, year3: 120, year4: 130, year5: 140, retentionRate: 85 },
+      revenueRows: [
+        { id: "r1", enabled: true, category: "other_revenue", driverType: "per_student", amounts: [10000, 10000, 10000, 10000, 10000] },
+      ],
+      staffingRows: [
+        { id: "s1", enabled: true, fte: 1, annualizedRate: 100000, role: "Teacher" },
+      ],
+    }, []);
+    expect(result.base.downsideBand).toBeDefined();
+    const ds = result.base.downsideBand!;
+    expect(ds.minus10.enrollmentDelta).toBe(-10);
+    expect(ds.minus20.enrollmentDelta).toBe(-20);
+    // -10% of 100 = 90, -20% = 80
+    expect(ds.minus10.enrollment[0]).toBe(90);
+    expect(ds.minus20.enrollment[0]).toBe(80);
+    // Net income drops as enrollment drops
+    expect(ds.minus10.netIncome[0]).toBeGreaterThan(ds.minus20.netIncome[0]);
+  });
+
+  it("downside DSCR reflects reduced enrollment when debt present", () => {
+    const result = runWithScenarios({
+      enrollment: { year1: 100, year2: 100, year3: 100, year4: 100, year5: 100, retentionRate: 85 },
+      revenueRows: [
+        { id: "r1", enabled: true, category: "other_revenue", driverType: "per_student", amounts: [5000, 5000, 5000, 5000, 5000] },
+      ],
+      capitalAndDebtRows: [
+        { id: "cd1", enabled: true, isLoan: true, loanPrincipal: 100000, loanRate: 5, loanTermYears: 10, driverType: "annual_fixed", amounts: [0, 0, 0, 0, 0] },
+      ],
+    }, []);
+    const ds = result.base.downsideBand!;
+    // Lower enrollment => lower revenue => lower DSCR
+    expect(ds.minus20.dscr[0]).toBeLessThanOrEqual(ds.minus10.dscr[0]);
+  });
+});

@@ -5,9 +5,12 @@ import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "../benchmark-thresho
 import {
   computeForecastAccuracy,
   filterForecastAccuracy,
+  computeBaseFinancials,
+  computeDownsideBand,
   type ForecastAccuracyFilter,
   type ForecastAccuracyRollup,
   type DecisionEngineModelData,
+  type DownsideBand,
 } from "@workspace/finance";
 import { buildPacketData } from "./build-packet-data";
 import { buildCashRunway, type CashRunwayView } from "./build-cash-runway";
@@ -77,6 +80,21 @@ export interface LenderPacket extends PacketData {
   // the renderer to print "(N of M scenarios)" so the reader can tell at a
   // glance how aggressive the slice was.
   forecastAccuracyUnfilteredCount: number;
+  /**
+   * Break-even & downside sensitivity (Task #612). Per-year break-even
+   * students + utilization vs `schoolProfile.maxCapacity`, plus a -10% /
+   * -20% enrollment downside band showing DSCR and ending cash impact.
+   * The PDF renderer surfaces this as the "Break-even & Downside" section.
+   */
+  breakEvenDownside: BreakEvenDownsideExport;
+}
+
+export interface BreakEvenDownsideExport {
+  breakEvenStudents: Array<number | null>;
+  breakEvenUtilization: Array<number | null>;
+  maxCapacity: number | null;
+  enrollment: number[];
+  downsideBand: DownsideBand;
 }
 
 export interface DSCRSummary {
@@ -163,6 +181,23 @@ export function buildLenderPacket(
     ? filterForecastAccuracy(fullForecastAccuracy, normalizedFilter)
     : fullForecastAccuracy;
 
+  // Break-even & downside sensitivity — Task #612. Computed from the same
+  // canonical engine that powers the dashboard card and scenario planner so
+  // every surface shows identical numbers.
+  const engineData = modelData as unknown as DecisionEngineModelData;
+  const baseMetrics = computeBaseFinancials(engineData);
+  const downsideBand = computeDownsideBand(engineData);
+  const spRaw = (modelData as unknown as Record<string, unknown>).schoolProfile as Record<string, unknown> | undefined;
+  const maxCapRaw = spRaw?.maxCapacity;
+  const maxCapacity = typeof maxCapRaw === "number" && maxCapRaw > 0 ? maxCapRaw : null;
+  const breakEvenDownside: BreakEvenDownsideExport = {
+    breakEvenStudents: baseMetrics.breakEvenStudents,
+    breakEvenUtilization: baseMetrics.breakEvenUtilization,
+    maxCapacity,
+    enrollment: baseMetrics.enrollment,
+    downsideBand,
+  };
+
   return {
     ...basePacket,
     sections: enrichedSections,
@@ -179,6 +214,7 @@ export function buildLenderPacket(
     forecastAccuracy,
     forecastAccuracyFilter: normalizedFilter,
     forecastAccuracyUnfilteredCount: fullForecastAccuracy.entries.length,
+    breakEvenDownside,
   };
 }
 

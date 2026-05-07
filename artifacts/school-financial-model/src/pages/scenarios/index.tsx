@@ -2867,6 +2867,80 @@ export function ScenarioPage() {
                         )}
                       />
                       <MetricRow
+                        label="Break-Even Students (Yr 1)"
+                        base={results.base.metrics.breakEvenStudents[0] ?? "N/A"}
+                        scenarios={results.scenarios.map((s) =>
+                          s.metrics.breakEvenStudents[0] !== null
+                            ? s.metrics.breakEvenStudents[0]!.toString()
+                            : "N/A"
+                        )}
+                        highlightBetter="lower"
+                      />
+                      <MetricRow
+                        label="Break-Even Utilization (Yr 1)"
+                        base={
+                          results.base.metrics.breakEvenUtilization[0] !== null
+                            ? `${(results.base.metrics.breakEvenUtilization[0]! * 100).toFixed(0)}%`
+                            : "N/A"
+                        }
+                        scenarios={results.scenarios.map((s) =>
+                          s.metrics.breakEvenUtilization[0] !== null
+                            ? `${(s.metrics.breakEvenUtilization[0]! * 100).toFixed(0)}%`
+                            : "N/A"
+                        )}
+                      />
+                      {results.base.downsideBand && (
+                        <>
+                          <tr className="border-b border-border/40">
+                            <td
+                              colSpan={2 + results.scenarios.length}
+                              className="py-2 px-4 text-xs font-bold text-amber-700 uppercase tracking-wider bg-amber-50"
+                            >
+                              Downside enrollment band — Yr 1 DSCR · ending cash (per scenario)
+                            </td>
+                          </tr>
+                          {([
+                            ["minus10", "If 10% fewer Yr 1 students"] as const,
+                            ["minus20", "If 20% fewer Yr 1 students"] as const,
+                          ]).map(([key, label]) => (
+                            <tr
+                              key={key}
+                              className="border-b border-border/40"
+                              data-testid={`scenario-downside-${key}`}
+                            >
+                              <td className="py-3 pr-4 text-sm font-medium text-foreground whitespace-nowrap">
+                                {label}
+                              </td>
+                              <td className="py-3 px-4 text-sm text-center font-mono bg-muted/30">
+                                {results.base.downsideBand![key].dscr[0] > 0
+                                  ? `${results.base.downsideBand![key].dscr[0].toFixed(2)}x`
+                                  : "N/A"}
+                                {" · "}
+                                {fmt(results.base.downsideBand![key].endingCash[0])}
+                              </td>
+                              {results.scenarios.map((s, i) => (
+                                <td
+                                  key={i}
+                                  className="py-3 px-4 text-sm text-center font-mono"
+                                >
+                                  {s.downsideBand
+                                    ? (
+                                        <>
+                                          {s.downsideBand[key].dscr[0] > 0
+                                            ? `${s.downsideBand[key].dscr[0].toFixed(2)}x`
+                                            : "N/A"}
+                                          {" · "}
+                                          {fmt(s.downsideBand[key].endingCash[0])}
+                                        </>
+                                      )
+                                    : "—"}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </>
+                      )}
+                      <MetricRow
                         label="Staffing % of Revenue (Avg)"
                         base={
                           results.base.metrics.staffingPctOfRevenue.reduce((a, b) => a + b, 0) / 5

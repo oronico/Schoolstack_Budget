@@ -4,9 +4,11 @@ import {
   computeProjectedAR,
   computeBaseFinancials,
   computeRevenueQualityRollup,
+  computeDownsideBand,
   distributeRevenueMonthly,
   type RevenueQualityYearInputs,
   type MonthlyRevenueRowLike,
+  type DecisionEngineModelData,
 } from "@workspace/finance";
 import {
   NAVY, WHITE, LIGHT_GRAY, GREEN_BG, EVERGREEN, CREAM, INPUT_CELL_FILL, DASHBOARD_GREEN,
@@ -2894,6 +2896,59 @@ function buildUnderwritingSnapshot(wb: ExcelJS.Workbook, data: ModelData, enroll
   ws.getCell(r, 1).value = "Enrollment"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 4).value = enrollment[y]; ws.getCell(r, y + 4).numFmt = NUM; dc(ws.getCell(r, y + 4));
+  }
+
+  // Break-even & downside (Task #612). Mirrors the dashboard card and lender
+  // packet section so the underwriter sees the same numbers in their offline
+  // workbook. Uses the canonical engine on the model data — same path the
+  // dashboard / lender PDF use, so any compute failure here would already
+  // surface in those surfaces. We let it throw so we don't ship a workbook
+  // with a silently-missing lender section.
+  {
+    const engineData = data as unknown as DecisionEngineModelData;
+    const baseM = computeBaseFinancials(engineData);
+    const downside = computeDownsideBand(engineData);
+
+    r += 2;
+    sec(ws, r, yc + 3); ws.getCell(r, 1).value = "BREAK-EVEN & DOWNSIDE";
+    r++;
+    ws.getRow(r).values = ["", "", "", ...yLabels];
+    for (let c = 4; c <= yc + 3; c++) { ws.getCell(r, c).font = HEADER_FONT; ws.getCell(r, c).fill = HEADER_FILL; ws.getCell(r, c).border = BORDER; ws.getCell(r, c).alignment = { horizontal: "center" }; }
+
+    r++;
+    ws.getCell(r, 1).value = "Break-Even Students"; dc(ws.getCell(r, 1));
+    for (let y = 0; y < yc; y++) {
+      const v = baseM.breakEvenStudents[y];
+      ws.getCell(r, y + 4).value = v === null ? "N/A" : v;
+      ws.getCell(r, y + 4).numFmt = NUM; dc(ws.getCell(r, y + 4));
+    }
+    r++;
+    ws.getCell(r, 1).value = "Break-Even Utilization %"; dc(ws.getCell(r, 1));
+    for (let y = 0; y < yc; y++) {
+      const v = baseM.breakEvenUtilization[y];
+      ws.getCell(r, y + 4).value = v === null ? "N/A" : v;
+      ws.getCell(r, y + 4).numFmt = PCT; dc(ws.getCell(r, y + 4));
+    }
+    for (const [label, ds] of [
+      ["-10% Enrollment: DSCR", downside.minus10] as const,
+      ["-10% Enrollment: Ending Cash", downside.minus10] as const,
+      ["-20% Enrollment: DSCR", downside.minus20] as const,
+      ["-20% Enrollment: Ending Cash", downside.minus20] as const,
+    ]) {
+      r++;
+      ws.getCell(r, 1).value = label; dc(ws.getCell(r, 1));
+      const isDscr = label.endsWith("DSCR");
+      for (let y = 0; y < yc; y++) {
+        if (isDscr) {
+          ws.getCell(r, y + 4).value = ds.dscr[y] > 0 ? Math.round(ds.dscr[y] * 100) / 100 : "N/A";
+          ws.getCell(r, y + 4).numFmt = "0.00x";
+        } else {
+          ws.getCell(r, y + 4).value = Math.round(ds.endingCash[y]);
+          ws.getCell(r, y + 4).numFmt = CUR;
+        }
+        dc(ws.getCell(r, y + 4));
+      }
+    }
   }
 
   r += 2;

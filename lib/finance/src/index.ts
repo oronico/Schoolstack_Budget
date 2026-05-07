@@ -91,12 +91,16 @@ export {
   computeBaseFinancials,
   computeScenarios,
   computeQuickLevers,
+  computeBreakEvenStudentsForYear,
+  computeDownsideBand,
   type ScenarioAdjustments,
   type ScenarioMetrics,
   type ScenarioResult,
   type NudgeItem,
   type LeverMetrics,
   type QuickLever,
+  type DownsideBand,
+  type DownsideScenario,
 } from "./decision-engine/scenario-engine.js";
 
 export {
