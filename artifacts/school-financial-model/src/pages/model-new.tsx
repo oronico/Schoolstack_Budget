@@ -262,7 +262,7 @@ export function NewModelPage() {
                 5-Year Projection
               </h2>
               <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-                The full pro-forma. Required for lender packets, board summaries, and any
+                The full pro-forma. Required for the Lender Conversation Snapshot, the Board and Funder Summary, and any
                 multi-year scenario planning.
               </p>
               <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary group-hover:gap-2.5 transition-all">

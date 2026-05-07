@@ -201,7 +201,7 @@ function FounderCompPanel({
             choice — but lenders and boards underwrite to the <span className="font-semibold">market</span>{" "}
             cost of running the school. Enter both numbers per year so we can show your{" "}
             <span className="font-semibold">as-planned</span> view on your dashboard and the{" "}
-            <span className="font-semibold">normalized</span> view on lender / board packets.
+            <span className="font-semibold">normalized</span> view on the Lender Conversation Snapshot and Board and Funder Summary.
           </p>
         </div>
       </div>

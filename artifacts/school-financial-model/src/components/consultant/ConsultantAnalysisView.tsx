@@ -421,7 +421,7 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
                 Lenders underwrite to the <span className="font-semibold">market</span> cost of
                 running your school, not the discount you take as the founder. The numbers below
                 show what changes when founder comp is set to market rate. Your founder dashboard
-                stays on as-planned; lender and board packets show the normalized view.
+                stays on as-planned; the Lender Conversation Snapshot and Board and Funder Summary show the normalized view.
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-2">
                 {data.normalizedView.founderComp.delta.map((d, i) => (
