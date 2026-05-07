@@ -91,6 +91,17 @@ function drawCoverPage(doc: PDFDoc, packet: LenderPacket) {
   doc.text("5-Year Financial Model", { align: "center" });
   doc.moveDown(0.3);
   doc.text(`Prepared ${new Date(packet.generatedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, { align: "center" });
+  // Task #657 — provenance label so a lender immediately knows whether
+  // they're reviewing a model built from the school's actuals or from
+  // forward-looking assumptions. Defaults to "assumptions" for older
+  // packets that pre-date the wizardPathway field.
+  doc.moveDown(0.3);
+  doc.font("Helvetica-Oblique").fontSize(11).fillColor(BRAND.darkGray);
+  doc.text(
+    packet.provenance === "actuals" ? "Built from actuals" : "Built from assumptions",
+    { align: "center" },
+  );
+  doc.font("Helvetica").fillColor(BRAND.darkGray);
   doc.moveDown(2);
 
   statusBadge(doc, `Lender Readiness: ${packet.lenderReadiness.status}`, packet.lenderReadiness.status);

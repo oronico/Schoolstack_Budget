@@ -1,9 +1,9 @@
 import { useEffect, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
-import { Sparkles, BookOpen, CheckCircle2, Lightbulb, GraduationCap } from "lucide-react";
+import { Sparkles, BookOpen, CheckCircle2, Lightbulb, GraduationCap, ClipboardCheck, Compass } from "lucide-react";
 import { FormInput, FormSelect } from "@/components/ui/form-inputs";
 import { cn } from "@/lib/utils";
-import { SCHOOL_TYPE_LABELS } from "../schema";
+import { SCHOOL_TYPE_LABELS, getWizardPathway, type WizardPathway } from "../schema";
 import { useAuth } from "@/lib/auth-context";
 import { isYetToLaunch, getFounderPersona } from "@/lib/coaching/founder-persona";
 // Task #594 note: structural input framing in this step (Y1 vs current,
@@ -81,6 +81,25 @@ export function StoryStep() {
   // must see "Y1 students" / "opening year" language.
   const isOperating = watch("schoolProfile.schoolStage") === "operating_school";
   const isPlanning = !isOperating;
+  // Task #657 — explicit pathway choice. Falls back to schoolStage-mapped
+  // default for older models so they don't lose the framing.
+  const formSnapshot = { schoolProfile: { wizardPathway: watch("schoolProfile.wizardPathway") as string | undefined, schoolStage: watch("schoolProfile.schoolStage") as string | undefined } };
+  const explicitPathway = watch("schoolProfile.wizardPathway") as WizardPathway | undefined;
+  const effectivePathway = getWizardPathway(formSnapshot);
+  const choosePathway = (p: WizardPathway) => {
+    setValue("schoolProfile.wizardPathway", p, { shouldDirty: true });
+    // Sync schoolStage so the rest of the wizard (which still keys
+    // existing copy off schoolStage) reads the matching default. Founder
+    // can still override stage independently on the School Details step.
+    const currentStage = watch("schoolProfile.schoolStage") as string | undefined;
+    if (!currentStage) {
+      setValue(
+        "schoolProfile.schoolStage",
+        p === "actuals" ? "operating_school" : "new_school",
+        { shouldDirty: true },
+      );
+    }
+  };
   // Single-year mode hides the Y5 column on both the age-band and grade
   // matrices below — single-year founders shouldn't be asked for Y5
   // numbers they explicitly opted out of on the duration picker.
@@ -328,6 +347,85 @@ export function StoryStep() {
             Lenders, authorizers, and board members read your story before they read your numbers. Putting it down in plain words now makes every number you enter later make sense - to them and to you.
           </p>
         </div>
+      </div>
+
+      {/* Task #657 — pathway prompt. Required before Continue. Drives the
+          conditional Actuals Intake step + the persistent provenance
+          badge in the wizard header + the dashboard / export covers. */}
+      <div data-testid="pathway-prompt" className="space-y-3">
+        <div>
+          <label className="text-sm font-semibold text-foreground">
+            Is your school already operating, or are you launching?
+          </label>
+          <p className="text-xs text-muted-foreground mt-1">
+            We branch the wizard around this so you start from the strongest possible footing - either last year's books or a clean planning model.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <button
+            type="button"
+            data-testid="pathway-option-actuals"
+            aria-pressed={effectivePathway === "actuals"}
+            onClick={() => choosePathway("actuals")}
+            className={cn(
+              "text-left rounded-2xl border-2 p-4 transition-all",
+              effectivePathway === "actuals"
+                ? "border-emerald-400 bg-emerald-50 shadow-sm"
+                : "border-border bg-card hover:border-emerald-300",
+            )}
+          >
+            <div className="flex items-start gap-3">
+              <div className="shrink-0 w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center">
+                <ClipboardCheck className="h-4 w-4 text-emerald-700" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground text-sm">We're already operating</p>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  Start from last year's books. We'll ask six headline numbers next and use them to seed your Year-1 projection.
+                </p>
+              </div>
+            </div>
+          </button>
+          <button
+            type="button"
+            data-testid="pathway-option-assumptions"
+            aria-pressed={effectivePathway === "assumptions"}
+            onClick={() => choosePathway("assumptions")}
+            className={cn(
+              "text-left rounded-2xl border-2 p-4 transition-all",
+              effectivePathway === "assumptions"
+                ? "border-sky-400 bg-sky-50 shadow-sm"
+                : "border-border bg-card hover:border-sky-300",
+            )}
+          >
+            <div className="flex items-start gap-3">
+              <div className="shrink-0 w-9 h-9 rounded-xl bg-sky-100 flex items-center justify-center">
+                <Compass className="h-4 w-4 text-sky-700" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground text-sm">We're launching</p>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  Build a planning model from assumptions. We'll guide you through the inputs lenders and boards expect to see.
+                </p>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {explicitPathway === "assumptions" && (
+          <div
+            data-testid="assumptions-framing-block"
+            className="rounded-xl border border-sky-200 bg-sky-50/60 p-4 flex items-start gap-3"
+          >
+            <Compass className="h-4 w-4 text-sky-700 mt-0.5 shrink-0" />
+            <div className="text-sm">
+              <p className="font-semibold text-sky-900">Building a planning model from assumptions</p>
+              <p className="text-sky-800/90 mt-1 leading-relaxed">
+                You don't have last year's books to start from - that's normal for new schools. Every input from here on is an assumption, and the consultant and lender narrative steps will help you stress-test the ones that matter most. Your dashboard and exports will be tagged "Built from assumptions" so reviewers know the framing.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

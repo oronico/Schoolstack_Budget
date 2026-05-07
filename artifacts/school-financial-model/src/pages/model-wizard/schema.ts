@@ -307,6 +307,14 @@ export const schoolProfileSchema = z.object({
   hasFiscalSponsor: z.boolean().optional(),
   fiscalSponsorName: z.string().optional(),
   fiscalSponsorInterest: z.boolean().optional(),
+  // Task #657 — explicit pathway choice. Operating-school founders default
+  // to "actuals" (an Actuals Intake step is inserted right after Story and
+  // those numbers seed Y1 projections). Launching founders default to
+  // "assumptions" (a planning-from-assumptions framing block + persistent
+  // "Built from assumptions" badge). Stored separately from `schoolStage`
+  // so a founder can override the default mapping with the path-switcher
+  // without flipping their stage.
+  wizardPathway: z.enum(["actuals", "assumptions"]).optional(),
 });
 
 export const priorYearSnapshotSchema = z.object({
@@ -1019,6 +1027,33 @@ export const MODEL_DURATION_LABELS: Record<ModelDuration, string> = {
   single_year: "Single-Year Budget (Year 1 only)",
   five_year: "5-Year Projection (recommended for lenders & boards)",
 };
+
+// Task #657 — pathway helpers.
+//
+// `wizardPathway` is the explicit founder choice ("actuals" | "assumptions");
+// when missing we fall back to the schoolStage default so older models keep
+// behaving as they did before the pathway prompt shipped:
+//   • operating_school    → actuals  (we have last year's books to seed Y1)
+//   • new_school / unset  → assumptions (no actuals to seed from)
+export type WizardPathway = "actuals" | "assumptions";
+
+export function getWizardPathway(
+  data?: { schoolProfile?: { wizardPathway?: string; schoolStage?: string } } | null,
+): WizardPathway {
+  const sp = data?.schoolProfile;
+  if (sp?.wizardPathway === "actuals" || sp?.wizardPathway === "assumptions") {
+    return sp.wizardPathway;
+  }
+  return sp?.schoolStage === "operating_school" ? "actuals" : "assumptions";
+}
+
+export function getProvenanceLabel(
+  data?: { schoolProfile?: { wizardPathway?: string; schoolStage?: string } } | null,
+): "Built from actuals" | "Built from assumptions" {
+  return getWizardPathway(data) === "actuals"
+    ? "Built from actuals"
+    : "Built from assumptions";
+}
 
 export function getDefaultTuitionTiers(yearCount: number): TuitionTier[] {
   return [

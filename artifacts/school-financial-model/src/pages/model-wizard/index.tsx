@@ -31,6 +31,9 @@ import { ToastAction } from "@/components/ui/toast";
 import { SchoolProfileStep } from "./steps/SchoolProfileStep";
 import { EnrollmentStep } from "./steps/EnrollmentStep";
 import { StoryStep } from "./steps/StoryStep";
+import { ActualsIntakeStep } from "./steps/ActualsIntakeStep";
+import { seedY1FromActuals, hasActualsSeedData } from "@/lib/seed-from-actuals";
+import { getWizardPathway, getProvenanceLabel, type WizardPathway } from "./schema";
 
 const AssumptionsStep = lazy(() => import("./steps/AssumptionsStep").then(m => ({ default: m.AssumptionsStep })));
 const RevenueStep = lazy(() => import("./steps/RevenueStep").then(m => ({ default: m.RevenueStep })));
@@ -165,22 +168,40 @@ const CHESTERTON_STEPS: StepDef[] = buildChestertonSteps();
 
 // Exported for unit tests. Mirrors the visibleSteps memo in the wizard so
 // the filtering rules (Chesterton variant + single-year hides Lender
-// Narrative) can be asserted without rendering the whole wizard.
+// Narrative + actuals-pathway inserts Actuals Intake after Story) can be
+// asserted without rendering the whole wizard.
 export function computeVisibleSteps(
   schoolType: string | undefined,
   isSingleYear: boolean,
+  wizardPathway?: WizardPathway,
 ): StepDef[] {
-  const base = schoolType === "chesterton_academy" ? CHESTERTON_STEPS : STEPS;
-  if (!isSingleYear) return base;
+  let base = schoolType === "chesterton_academy" ? CHESTERTON_STEPS : STEPS;
+  // Task #657 — Actuals Intake step. Only surfaces on the operating-school
+  // ("actuals") pathway and lives directly after the Story step so the
+  // numbers it captures can seed Y1 before the founder hits Enrollment /
+  // Revenue / Expenses. Inserted positionally so both standard + Chesterton
+  // step lists pick it up.
+  if (wizardPathway === "actuals") {
+    const storyIdx = base.findIndex(s => s.title === "Story");
+    const insertAt = storyIdx >= 0 ? storyIdx + 1 : 1;
+    const actualsStep: StepDef = {
+      id: 0,
+      title: "Actuals Intake",
+      component: ActualsIntakeStep as ComponentType<StepProps>,
+    };
+    base = [...base.slice(0, insertAt), actualsStep, ...base.slice(insertAt)];
+  }
+  let filtered = base;
+  if (isSingleYear) {
+    filtered = filtered.filter(s => s.title !== "Lender Narrative");
+  }
   // The wizard rail uses `step.id` as identity (`isCurrent = currentStep === step.id`)
   // and `currentStep` is also a 1-based positional index into this list. After
-  // filtering Lender Narrative out, IDs MUST be reassigned contiguously so the
-  // two coordinate systems stay aligned — otherwise the final step renders as
+  // any insertion / filtering, IDs MUST be reassigned contiguously so the two
+  // coordinate systems stay aligned — otherwise the final step renders as
   // "step 12" of 11 and clicking the export rail node sets currentStep to an
   // out-of-bounds index.
-  return base
-    .filter(s => s.title !== "Lender Narrative")
-    .map((s, i) => ({ ...s, id: i + 1 }));
+  return filtered.map((s, i) => ({ ...s, id: i + 1 }));
 }
 
 // Clamps a 1-based step index into the valid range for the current visible
@@ -706,13 +727,25 @@ export function ModelWizardPage() {
   const watchedSchoolType = (formValues?.schoolProfile as Record<string, unknown> | undefined)?.schoolType as string | undefined;
   const watchedModelDuration = (formValues?.schoolProfile as Record<string, unknown> | undefined)?.modelDuration as string | undefined;
   const watchedIsSingleYear = isSingleYearModel({ schoolProfile: { modelDuration: watchedModelDuration } });
+  // Task #657 — provenance label is derived (with schoolStage fallback)
+  // so the badge stays meaningful for older models. The conditional
+  // Actuals Intake step insertion, however, keys ONLY off the *explicit*
+  // wizardPathway choice — otherwise pre-#657 operating-school models
+  // would silently gain a step they didn't ask for and shift every
+  // step-index-based test downstream by one.
+  const watchedWizardPathway = getWizardPathway(formValues as { schoolProfile?: { wizardPathway?: string; schoolStage?: string } });
+  const explicitWizardPathway = (formValues?.schoolProfile as { wizardPathway?: string } | undefined)?.wizardPathway;
+  const explicitPathwayForSteps: WizardPathway | undefined =
+    explicitWizardPathway === "actuals" || explicitWizardPathway === "assumptions"
+      ? explicitWizardPathway
+      : undefined;
   // The Lender Narrative step writes copy for the lender packet export,
   // which is gated to 5-year mode. Hiding the step (instead of just
   // greying it out) keeps single-year founders from walking into a step
   // they cannot complete. Reappears the moment they extend to 5 years.
   const visibleSteps = useMemo(
-    () => computeVisibleSteps(watchedSchoolType, watchedIsSingleYear),
-    [watchedSchoolType, watchedIsSingleYear],
+    () => computeVisibleSteps(watchedSchoolType, watchedIsSingleYear, explicitPathwayForSteps),
+    [watchedSchoolType, watchedIsSingleYear, explicitPathwayForSteps],
   );
   const stepIdByTitle = useCallback(
     (title: string) => {
@@ -1026,9 +1059,24 @@ export function ModelWizardPage() {
           const missing: string[] = [];
           if (!profile?.schoolName || !(profile.schoolName as string).trim()) missing.push("School name");
           if (!profile?.schoolType) missing.push("School type");
+          // Task #657 — pathway prompt is *not* required to continue. If
+          // the founder skips it we let getWizardPathway derive a default
+          // from schoolStage so the wizard never wedges on the first step.
           if (missing.length > 0) {
             alert(`Before we go further, please tell us:\n\n• ${missing.join("\n• ")}\n\nEverything else on this page is optional - you can come back any time.`);
             return false;
+          }
+          return true;
+        }
+        case "Actuals Intake": {
+          // Task #657 — seed Y1 projections from the snapshot the founder
+          // just filled in. The seeder is pure + idempotent, so re-visits
+          // never overwrite numbers the founder later edited downstream.
+          const snapshot = methods.getValues("priorYearSnapshot") as Record<string, unknown> | undefined;
+          if (hasActualsSeedData(snapshot as never)) {
+            const current = methods.getValues() as FullModelData;
+            const seeded = seedY1FromActuals(current);
+            methods.reset(seeded, { keepDirty: true, keepTouched: true });
           }
           return true;
         }
@@ -1416,9 +1464,26 @@ export function ModelWizardPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="font-display font-bold text-lg text-foreground">
-                {initialData?.name || "Untitled Model"}
-              </h2>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="font-display font-bold text-lg text-foreground">
+                  {initialData?.name || "Untitled Model"}
+                </h2>
+                {/* Task #657 — persistent provenance badge so a founder
+                    always knows whether their model is being built from
+                    last year's books or planning assumptions. */}
+                <span
+                  data-testid="wizard-provenance-badge"
+                  data-pathway={watchedWizardPathway}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold border",
+                    watchedWizardPathway === "actuals"
+                      ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                      : "bg-sky-50 border-sky-200 text-sky-800",
+                  )}
+                >
+                  {getProvenanceLabel(formValues as { schoolProfile?: { wizardPathway?: string; schoolStage?: string } })}
+                </span>
+              </div>
               <p className="text-xs text-muted-foreground mt-0.5 md:hidden">
                 Step {safeStep} of {visibleSteps.length}: {visibleSteps[safeStep - 1]?.title}
               </p>

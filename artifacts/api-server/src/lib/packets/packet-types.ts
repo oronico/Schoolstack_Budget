@@ -122,6 +122,15 @@ export interface PacketData {
   narrative: NarrativeSummary;
   sections: PacketSection[];
   formatRules: FormatRules;
+  /**
+   * Task #657 — provenance flag derived from `schoolProfile.wizardPathway`
+   * (falling back to `schoolStage` for older models). Drives the "Built
+   * from actuals" / "Built from assumptions" badge on the cover page of
+   * the Lender + Board PDFs and the in-app preview headers, so reviewers
+   * always know whether they're looking at last year's books or a
+   * forward-looking planning model.
+   */
+  provenance?: "actuals" | "assumptions";
 }
 
 export interface FormatRules {

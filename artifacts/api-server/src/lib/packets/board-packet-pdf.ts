@@ -97,6 +97,14 @@ export function drawCoverPage(doc: PDFDoc, packet: BoardPacket) {
   doc.text("5-Year Financial Overview for Board Review", { align: "center" });
   doc.moveDown(0.3);
   doc.text(`Prepared ${new Date(packet.generatedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, { align: "center" });
+  // Task #657 — provenance label (see lender-packet-pdf.ts).
+  doc.moveDown(0.3);
+  doc.font("Helvetica-Oblique").fontSize(11).fillColor(BRAND.darkGray);
+  doc.text(
+    packet.provenance === "actuals" ? "Built from actuals" : "Built from assumptions",
+    { align: "center" },
+  );
+  doc.font("Helvetica").fillColor(BRAND.darkGray);
   doc.moveDown(2);
 
   statusBadge(

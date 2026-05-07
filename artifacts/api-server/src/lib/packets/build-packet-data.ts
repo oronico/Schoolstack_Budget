@@ -99,6 +99,16 @@ export function buildPacketData(input: PacketInput): PacketData {
     pageBreakAfterSections: ["executive_summary", "five_year_projection", "stress_tests"],
   };
 
+  // Task #657 — provenance flag for the cover page. Explicit
+  // `wizardPathway` wins; falls back to `schoolStage` for older models so
+  // pre-#657 packets still surface a sensible label.
+  const provenance: PacketData["provenance"] =
+    sp.wizardPathway === "actuals" || sp.wizardPathway === "assumptions"
+      ? sp.wizardPathway
+      : sp.schoolStage === "operating_school"
+        ? "actuals"
+        : "assumptions";
+
   return {
     packetType,
     schoolName,
@@ -107,6 +117,7 @@ export function buildPacketData(input: PacketInput): PacketData {
     narrative,
     sections,
     formatRules,
+    provenance,
   };
 }
 

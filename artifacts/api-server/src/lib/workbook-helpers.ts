@@ -342,6 +342,10 @@ export interface SchoolProfile {
   ein?: string;
   website?: string;
   schoolStage?: string;
+  // Task #657 — explicit founder pathway choice ("actuals" for operating
+  // schools starting from last year's books, "assumptions" for launching
+  // schools building a planning model). Optional for backward compat.
+  wizardPathway?: "actuals" | "assumptions";
   openingYear?: number;
   plannedOpeningYear?: string;
   operatingYear?: string;

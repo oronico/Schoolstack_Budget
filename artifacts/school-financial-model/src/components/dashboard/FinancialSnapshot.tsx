@@ -322,9 +322,31 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
-          <h2 className="font-display text-lg font-bold text-foreground">
-            Financial snapshot
-          </h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="font-display text-lg font-bold text-foreground">
+              Financial snapshot
+            </h2>
+            {/* Task #657 — provenance pill so a founder always sees, on
+                their dashboard, whether the headline numbers came from
+                last year's actuals or from planning assumptions. */}
+            {(() => {
+              const sp = (model?.data as { schoolProfile?: { wizardPathway?: string; schoolStage?: string } } | undefined)?.schoolProfile;
+              const isActuals = sp?.wizardPathway === "actuals" || (sp?.wizardPathway == null && sp?.schoolStage === "operating_school");
+              return (
+                <span
+                  data-testid="dashboard-provenance-pill"
+                  data-provenance={isActuals ? "actuals" : "assumptions"}
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold border ${
+                    isActuals
+                      ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                      : "bg-sky-50 border-sky-200 text-sky-800"
+                  }`}
+                >
+                  {isActuals ? "Built from actuals" : "Built from assumptions"}
+                </span>
+              );
+            })()}
+          </div>
           <p className="text-sm text-muted-foreground mt-0.5">
             From <span className="font-medium text-foreground">{modelName}</span>
             {" "}- the last model you touched.

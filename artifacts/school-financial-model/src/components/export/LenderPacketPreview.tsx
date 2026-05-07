@@ -69,6 +69,9 @@ interface LenderPacket {
   schoolName: string;
   generatedAt: string;
   modelId: number;
+  // Task #657 — provenance flag from buildPacketData. Optional so older
+  // cached responses keep rendering.
+  provenance?: "actuals" | "assumptions";
   narrative: NarrativeSummary;
   sections: PacketSection[];
   riskMitigants: RiskMitigant[];
@@ -229,6 +232,14 @@ function PacketHeader({
         <div>
           <h2 className="text-white font-bold text-lg">{packet.schoolName}</h2>
           <p className="text-white/60 text-sm">Lender Conversation Snapshot</p>
+          {/* Task #657 — provenance pill on the in-app preview header. */}
+          <span
+            data-testid="packet-provenance-pill"
+            data-provenance={packet.provenance ?? "assumptions"}
+            className="inline-flex items-center mt-1.5 rounded-full bg-white/10 border border-white/20 px-2 py-0.5 text-[11px] font-semibold text-white/90"
+          >
+            {packet.provenance === "actuals" ? "Built from actuals" : "Built from assumptions"}
+          </span>
         </div>
       </div>
       <div className="flex items-center gap-2">
