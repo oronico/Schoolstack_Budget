@@ -26,7 +26,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { useYearCount } from "@/lib/use-model-duration";
-import { getFounderPersona, isYetToLaunch } from "@/lib/coaching/founder-persona";
+import { getFounderPersona } from "@/lib/coaching/founder-persona";
 import type { FounderComfort } from "@/lib/coaching/founder-persona";
 import {
   type StaffingRowData,
@@ -95,7 +95,8 @@ export function StaffingStep() {
   const modelIdParam = routeParams?.id ?? null;
   const { user } = useAuth();
   const personaComfort = getFounderPersona(user).comfort;
-  const yetToLaunch = isYetToLaunch(user);
+  // Task #595: yetToLaunch persona check removed — all stage-vs-tone copy
+  // on this step now keys off the model's schoolStage (see line ~426/434).
   // Task #416 / #499: shared coach-gate hook keeps every wizard step in sync.
   const { showCoach } = useShowCoach();
   const schoolStage = (watch("schoolProfile.schoolStage") || "new_school") as SchoolStage;
@@ -416,7 +417,11 @@ export function StaffingStep() {
         </>}
       >
         <p className="text-sm text-foreground">
-          {yetToLaunch
+          {/* Task #595: framing follows the *model's* schoolStage, not the
+              founder persona. A yet_to_launch founder running an
+              already-operating model has a real Year 1 team, so we must
+              not call it "the team you plan to open with". */}
+          {schoolStage === "new_school"
             ? "This is the team you plan to open with, but your enrollment is projected to grow to "
             : "This is your Year 1 team, but your enrollment grows to "}
           <span className="font-semibold">{y5Students || "?"} students</span> by Year 5.
@@ -424,7 +429,7 @@ export function StaffingStep() {
           The COLA rate you set in Assumptions will increase these salaries automatically each year.
         </p>
         <p className="text-sm text-muted-foreground">
-          {yetToLaunch ? "Typical" : "Current"} staffing benchmark for {schoolType.replace(/_/g, " ")}: {benchmark.staff}.
+          {schoolStage === "new_school" ? "Typical" : "Current"} staffing benchmark for {schoolType.replace(/_/g, " ")}: {benchmark.staff}.
         </p>
       </CollapsibleCallout>
 

@@ -45,9 +45,7 @@ import {
 } from "@/lib/staffing-defaults";
 import { GUIDED_EXPENSE_QUESTIONS } from "@/lib/expense-guided-questions";
 import { getSchoolTypeTrack } from "@/lib/coaching/explainers";
-import { useAuth } from "@/lib/auth-context";
 import { useShowCoach } from "@/lib/coaching/use-show-coach";
-import { isYetToLaunch as personaIsYetToLaunch } from "@/lib/coaching/founder-persona";
 import { useYearCount } from "@/lib/use-model-duration";
 
 const CATEGORY_ICONS: Record<string, typeof DollarSign> = {
@@ -364,11 +362,10 @@ function ForgottenCostsPrompt({
 
 export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => void; modelId?: number | null }) {
   const { watch, setValue, getValues } = useFormContext();
-  // Yet-to-launch founders never see the QuickBooks/Xero name-drop in the
-  // Chart of Accounts callout — Task #302 keeps accounting-software framing
-  // out of the pre-opening flow.
-  const { user: authUser } = useAuth();
-  const yetToLaunch = personaIsYetToLaunch(authUser);
+  // Task #302 / #595: New-school models never see the QuickBooks/Xero
+  // name-drop in the Chart of Accounts callout — the accounting-software
+  // framing is gated on the model's schoolStage (not on founder persona)
+  // at the callout site below (see ~line 1636/1643).
   // Task #416 / #499: shared coach-gate hook keeps every wizard step in sync.
   const { showCoach } = useShowCoach();
   const schoolStage = (watch("schoolProfile.schoolStage") || "new_school") as SchoolStage;
@@ -1633,14 +1630,17 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         summary={<>
           <span className="font-semibold">Chart of Accounts</span>
           <span className="text-muted-foreground">
-            {yetToLaunch
+            {/* Task #595: bookkeeper/QuickBooks framing follows the model's
+                schoolStage, not the founder persona. An operating-school
+                model already has live books regardless of who's editing. */}
+            {schoolStage === "new_school"
               ? " - Pre-filled account codes you can hand to a bookkeeper later"
               : " - Pre-filled account codes align with QuickBooks/Xero"}
           </span>
         </>}
       >
         <p className="text-sm text-foreground">
-          {yetToLaunch
+          {schoolStage === "new_school"
             ? <>Each expense line has an optional account code (<Hash className="h-3 w-3 inline text-muted-foreground" /> field). Once you're ready to start tracking the books, you can hand these codes to whoever is keeping your books so your budget and bookkeeping line up from day one.</>
             : <>Each expense line has an optional account code (<Hash className="h-3 w-3 inline text-muted-foreground" /> field). Customize codes to match your accounting software - your budget will align with bookkeeping from day one.</>}
         </p>

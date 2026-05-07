@@ -510,6 +510,12 @@ export function AssumptionsStep() {
     <div className="space-y-8">
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Assumptions &amp; Sensitivity</h2>
+        {/* Task #595: kept persona-gated as *tone*. The wording here only
+            differs by softness ("plans are in" vs "decisions are already
+            in", "shape your opening" vs "stress-test"); both phrasings work
+            for either schoolStage and the structural panels on this step
+            (prior-year ADM/ADA inputs at line 644+) already gate on
+            schoolStage. Reviewed in Task #595 — no migration needed. */}
         <p className="text-muted-foreground text-lg">
           {isSingleYear
             ? (yetToLaunch

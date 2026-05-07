@@ -68,6 +68,8 @@ export function StoryStep() {
   const { user } = useAuth();
   const persona = getFounderPersona(user);
   const newComfort = persona.comfort === "new_to_budgeting";
+  // Task #595 audit: kept as tone-only persona check (reviewed and confirmed
+  // non-structural — see line ~1060 "what happens next" onboarding blurb).
   // Tone-only persona check, used for the generic onboarding blurb at
   // the bottom of this step. Structural framing uses `isPlanning`.
   const yetToLaunch = isYetToLaunch(user);

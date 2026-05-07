@@ -43,9 +43,7 @@ import {
 import { type TuitionTier, getDefaultTuitionTiers } from "@/pages/model-wizard/schema";
 import { getStateFundingConfig, type StateFundingConfig, type SchoolType, type CharterPerPupilRange, type ProgramInfo } from "@/lib/state-funding-data";
 import { detectFragileFunding, type FragileProgramMatch } from "@workspace/finance";
-import { useAuth } from "@/lib/auth-context";
 import { useShowCoach } from "@/lib/coaching/use-show-coach";
-import { isYetToLaunch } from "@/lib/coaching/founder-persona";
 import { useYearCount } from "@/lib/use-model-duration";
 
 const CATEGORY_ICONS: Record<RevenueCategory, React.ComponentType<{ className?: string }>> = {
@@ -189,8 +187,8 @@ const MONTH_LABELS = ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "M
 
 export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => void; modelId?: number | null }) {
   const { watch, setValue, getValues, formState: { errors } } = useFormContext();
-  const { user } = useAuth();
-  const yetToLaunch = isYetToLaunch(user);
+  // Task #595: yetToLaunch persona check removed — opening-year framing on
+  // this step now keys off the model's schoolStage.
   // Task #416 / #499: shared coach-gate hook keeps every wizard step in sync.
   const { showCoach } = useShowCoach();
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
@@ -735,11 +733,14 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
     return (
       <div className="space-y-8">
         <div>
+          {/* Task #595: source-picker framing ("opening year" vs ongoing
+              "school") describes the *model's* timeframe, so it must follow
+              schoolStage, not the founder's account-wide persona. */}
           <h2 className="font-display text-3xl font-bold text-foreground mb-3">
-            {yetToLaunch ? "Where will your opening-year money come from?" : "Where Does Your Money Come From?"}
+            {schoolStage !== "operating_school" ? "Where will your opening-year money come from?" : "Where Does Your Money Come From?"}
           </h2>
           <p className="text-muted-foreground text-lg">
-            {yetToLaunch
+            {schoolStage !== "operating_school"
               ? "Check every revenue source you expect in your opening year. We'll set up the right line items and starting points for your plan. Most founders begin with just one or two sources - you can always add more as you firm up commitments."
               : "Check every revenue source that applies to your school. We'll set up the right line items and defaults for your budget. Most founders start with just one or two sources - you can always add more as your school grows."}
           </p>
@@ -748,12 +749,12 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         {showCoach && (
           <WhyThisMatters
             why={
-              yetToLaunch
+              schoolStage !== "operating_school"
                 ? "Naming every source up front - even the small ones - keeps your opening plan honest. Lenders and grant reviewers want to see realistic, diversified revenue, not just tuition magically scaling."
                 : "Naming every source up front - even the small ones - keeps your model honest. Lenders and grant reviewers want to see realistic, diversified revenue, not just tuition magically scaling."
             }
             revisit={
-              yetToLaunch
+              schoolStage !== "operating_school"
                 ? "Add new sources as you confirm grants, sponsors, or signed family commitments."
                 : "Add new sources as you confirm grants, sponsors, or new program lines."
             }
@@ -841,11 +842,15 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
   return (
     <div className="space-y-6">
       <div>
+        {/* Task #595: "Opening 5 Years" / "opening plan" describes the
+            model's timeframe, not the founder. Migrated from yetToLaunch
+            persona to schoolStage so an operating-school model never gets
+            opening-plan framing even if the founder hasn't launched yet. */}
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">
-          {yetToLaunch ? "Revenue by Source - Opening 5 Years" : "Revenue by Source"}
+          {schoolStage !== "operating_school" ? "Revenue by Source - Opening 5 Years" : "Revenue by Source"}
         </h2>
         <p className="text-muted-foreground text-lg">
-          {yetToLaunch
+          {schoolStage !== "operating_school"
             ? "Enter the amounts you expect for each year of your opening plan. We've pre-filled typical starting points for a school like yours - adjust them to match your concept."
             : "Enter your expected amounts for each year. We've filled in smart defaults - adjust them to match your school."}
         </p>

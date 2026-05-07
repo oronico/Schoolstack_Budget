@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, waitFor } from "@testing-library/react";
+import { fireEvent, render, waitFor } from "@testing-library/react";
 import { Router } from "wouter";
 import { memoryLocation } from "wouter/memory-location";
 
@@ -178,6 +178,21 @@ vi.mock("@workspace/api-client-react", () => {
           year5: 0,
         },
       ],
+      // Seed at least one expense row so ExpenseStep skips its initial
+      // category-picker view and renders the main category list (which
+      // is where the Chart-of-Accounts callout copy under audit lives).
+      expenseRows: [
+        {
+          id: "exp_seed",
+          category: "facility",
+          subcategory: "rent",
+          label: "Rent",
+          lineItem: "Rent",
+          enabled: true,
+          amounts: [0, 0, 0, 0, 0],
+          accountCode: "",
+        },
+      ],
     },
   });
   const getModel = () => {
@@ -339,5 +354,83 @@ describe("ModelWizardPage — yet_to_launch founder with an operating-school mod
     // showCurrentYear are true. Those gates now follow schoolStage.
     expect(text).toMatch(/\(Prior\)/);
     expect(text).toMatch(/\(Current\)/);
+  });
+
+  // Task #595: copy in steps 4/5/6/9 used to flip on the founder persona,
+  // but it actually describes the *model's* timeframe (opening-year vs
+  // ongoing) and the books that exist (or don't). When the model is
+  // operating_school, even a yet_to_launch founder must see the
+  // operating-school framing.
+  it("step 4 (Revenue) uses operating-school framing when the model is operating_school", async () => {
+    const container = await renderWizardAtStep(4);
+    // Wait for the lazy RevenueStep to fully mount — the rail above
+    // reaches the >200-char threshold immediately while the step body
+    // is still in Suspense fallback.
+    await waitFor(
+      () => {
+        expect(container.textContent || "").toMatch(/Revenue by Source|Where Does Your Money Come From/);
+      },
+      { timeout: 4000 },
+    );
+    const text = container.textContent || "";
+    // Operating-school framing: no "opening-year" / "Opening 5 Years"
+    // suffix anywhere on the Revenue step.
+    expect(text).not.toMatch(/Where will your opening-year money come from/);
+    expect(text).not.toMatch(/Opening 5 Years/);
+    expect(text).not.toMatch(/each year of your opening plan/);
+  });
+
+  it("step 5 (Staffing) uses 'Year 1 team' / 'Current' framing when the model is operating_school", async () => {
+    const container = await renderWizardAtStep(5);
+    await waitFor(
+      () => {
+        expect(container.textContent || "").toMatch(/Year 1 roster/);
+      },
+      { timeout: 4000 },
+    );
+    // The schoolStage-gated copy lives inside a CollapsibleCallout whose
+    // body only renders when expanded — find the "Year 1 roster" toggle
+    // and click it so the body markup mounts before we assert.
+    const toggle = Array.from(
+      container.querySelectorAll<HTMLElement>('[role="button"]'),
+    ).find((el) => /Year 1 roster/.test(el.textContent || ""));
+    expect(toggle, 'expected to find the "Year 1 roster" toggle').toBeTruthy();
+    fireEvent.click(toggle!);
+    await waitFor(() => {
+      expect(container.textContent || "").toMatch(/This is your Year 1 team/);
+    });
+    const text = container.textContent || "";
+    expect(text).not.toMatch(/the team you plan to open with/);
+    expect(text).toMatch(/Current staffing benchmark/);
+    expect(text).not.toMatch(/Typical staffing benchmark/);
+  });
+
+  it("step 6 (Expenses) keeps the QuickBooks/Xero Chart-of-Accounts copy when the model is operating_school", async () => {
+    const container = await renderWizardAtStep(6);
+    await waitFor(
+      () => {
+        expect(container.textContent || "").toMatch(/Chart of Accounts/);
+      },
+      { timeout: 4000 },
+    );
+    const text = container.textContent || "";
+    // The model has live books, so the operating-school CoA copy is
+    // appropriate even though the founder is yet_to_launch.
+    expect(text).toMatch(/QuickBooks\/Xero/);
+    expect(text).not.toMatch(/hand to a bookkeeper later/);
+  });
+
+  it("step 9 (Review) renders the budget-to-books / variance lesson when the model is operating_school", async () => {
+    const container = await renderWizardAtStep(9);
+    await waitFor(
+      () => {
+        expect(container.querySelector('[data-testid="budget-to-books-lesson"]')).not.toBeNull();
+      },
+      { timeout: 4000 },
+    );
+    const text = container.textContent || "";
+    // The variance prompt at the bottom of the lesson should also be
+    // present in operating-school mode.
+    expect(text).toMatch(/variance analysis/i);
   });
 });
