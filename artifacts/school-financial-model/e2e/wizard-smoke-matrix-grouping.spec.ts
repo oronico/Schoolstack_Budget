@@ -255,7 +255,9 @@ function trackPageHealth(page: Page): { consoleErrors: string[]; dialogs: string
   return { consoleErrors, dialogs };
 }
 
-test("wizard matrix + grouping: pick 'both', flip on K + 1st + k5, type into matrix, then 'Didn't offer'", async ({
+// The @smoke tag opts this test into the curated `test:e2e:smoke`
+// subset used by the validation `e2e` workflow (Task #586).
+test("@smoke wizard matrix + grouping: pick 'both', flip on K + 1st + k5, type into matrix, then 'Didn't offer'", async ({
   page,
   request,
 }) => {
@@ -506,7 +508,7 @@ test("wizard matrix + grouping: pick 'both', flip on K + 1st + k5, type into mat
 // catching it. Column totals at the bottom of each year card are computed
 // independently (see EnrollmentStep.tsx ~line 1136), so we assert them
 // separately rather than as a sum of the per-row totals.
-test("wizard matrix + grouping: two programs fan out to per-row year1 and column totals roll up independently", async ({
+test("@smoke wizard matrix + grouping: two programs fan out to per-row year1 and column totals roll up independently", async ({
   page,
   request,
 }) => {

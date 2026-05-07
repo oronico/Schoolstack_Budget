@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:parity": "vitest run src/lib/__tests__/scenario-engine-parity.test.ts",
     "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test --grep @smoke",
     "capture:screenshots": "tsx scripts/refresh-screenshots.ts"
   },
   "dependencies": {

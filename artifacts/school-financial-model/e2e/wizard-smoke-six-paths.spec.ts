@@ -404,7 +404,10 @@ async function expectStepHeader(page: Page, stepNum: number): Promise<void> {
 }
 
 for (const spec of PATHS) {
-  test(`wizard smoke: ${spec.label} walks all 12 steps without crashing`, async ({
+  // The @smoke tag opts this test into the curated `test:e2e:smoke`
+  // subset used by the validation `e2e` workflow (Task #586). Removing
+  // the tag here drops these wizard paths out of CI smoke coverage.
+  test(`@smoke wizard smoke: ${spec.label} walks all 12 steps without crashing`, async ({
     page,
     request,
   }) => {
