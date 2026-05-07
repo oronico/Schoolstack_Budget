@@ -3,6 +3,8 @@ import {
   findFounderRow,
   getSuggestedFounderComp,
   getFounderCompBenchmark,
+  getFounderCompBenchmarkPerYear,
+  getFounderCompBandTransitions,
   getReportedFounderCompYears,
   getNormalizedFounderCompYears,
   computeFounderCompNormalization,
@@ -199,6 +201,95 @@ describe("getNormalizedFounderCompYears (defaulting + override)", () => {
     const ys = getNormalizedFounderCompYears(m, 5);
     // private_school m band ($230k) × medium COL (1.0) × experienced (1.0) = 230_000
     expect(ys[0]).toBe(230_000);
+  });
+});
+
+describe("getFounderCompBenchmarkPerYear (Task #650: per-year size band)", () => {
+  it("resolves a benchmark per year using each year's projected enrollment band", () => {
+    // private_school NAIS bands: xs (<150), s (150–300), m (300–500)
+    // Y1 100 → xs ($140k); Y3 200 → s ($180k); Y5 350 → m ($230k).
+    // 0% COLA so escalatedAmount equals the base amount.
+    const m = baseModel({
+      schoolProfile: { schoolType: "private_school", state: "OH" } as never,
+      enrollment: { year1: 100, year2: 140, year3: 200, year4: 280, year5: 350 } as never,
+      facilities: { ...baseModel().facilities, annualSalaryIncrease: 0 } as never,
+    });
+    const series = getFounderCompBenchmarkPerYear(m, 5);
+    expect(series.map((s) => s?.benchmark.sizeBand.key)).toEqual([
+      "xs",
+      "xs",
+      "s",
+      "s",
+      "m",
+    ]);
+    expect(series.map((s) => s?.escalatedAmount)).toEqual([
+      140_000,
+      140_000,
+      180_000,
+      180_000,
+      230_000,
+    ]);
+  });
+
+  it("forward-fills enrollment when later years are missing", () => {
+    const m = baseModel({
+      schoolProfile: { schoolType: "private_school", state: "OH" } as never,
+      enrollment: { year1: 100 } as never,
+      facilities: { ...baseModel().facilities, annualSalaryIncrease: 0 } as never,
+    });
+    const series = getFounderCompBenchmarkPerYear(m, 5);
+    expect(series.every((s) => s?.benchmark.sizeBand.key === "xs")).toBe(true);
+  });
+
+  it("escalates each year's benchmark by COLA from year 1", () => {
+    const m = baseModel({
+      schoolProfile: { schoolType: "private_school", state: "OH" } as never,
+      enrollment: { year1: 100, year2: 100, year3: 100, year4: 100, year5: 100 } as never,
+      facilities: { ...baseModel().facilities, annualSalaryIncrease: 3 } as never,
+    });
+    const series = getFounderCompBenchmarkPerYear(m, 5);
+    // Y5: 140k * 1.03^4 ≈ 157,576 → rounded to nearest $1k = 158_000.
+    expect(series[0]?.escalatedAmount).toBe(140_000);
+    expect(series[4]?.escalatedAmount).toBe(Math.round((140_000 * Math.pow(1.03, 4)) / 1000) * 1000);
+  });
+
+  it("returns undefined entries when schoolType is missing", () => {
+    const m = baseModel({ schoolProfile: {} as never });
+    expect(getFounderCompBenchmarkPerYear(m, 5).every((s) => s === undefined)).toBe(true);
+  });
+});
+
+describe("getFounderCompBandTransitions", () => {
+  it("flags the year a school crosses into a new NAIS / NACSA band", () => {
+    const m = baseModel({
+      schoolProfile: { schoolType: "private_school", state: "OH" } as never,
+      enrollment: { year1: 100, year2: 140, year3: 200, year4: 280, year5: 350 } as never,
+      facilities: { ...baseModel().facilities, annualSalaryIncrease: 0 } as never,
+    });
+    const transitions = getFounderCompBandTransitions(getFounderCompBenchmarkPerYear(m, 5));
+    expect(transitions.map((t) => ({ year: t.year, from: t.fromBand.key, to: t.toBand.key }))).toEqual([
+      { year: 3, from: "xs", to: "s" },
+      { year: 5, from: "s", to: "m" },
+    ]);
+  });
+
+  it("returns no transitions when the band stays the same all 5 years", () => {
+    const m = baseModel({
+      schoolProfile: { schoolType: "private_school", state: "OH" } as never,
+      enrollment: { year1: 60, year2: 70, year3: 80, year4: 90, year5: 100 } as never,
+    });
+    expect(getFounderCompBandTransitions(getFounderCompBenchmarkPerYear(m, 5))).toEqual([]);
+  });
+});
+
+describe("getNormalizedFounderCompYears (per-year band defaults — Task #650)", () => {
+  it("uses per-year benchmarks (not a Y1 broadcast) when there's no override", () => {
+    const m = baseModel({
+      schoolProfile: { schoolType: "private_school", state: "OH" } as never,
+      enrollment: { year1: 100, year2: 140, year3: 200, year4: 280, year5: 350 } as never,
+      facilities: { ...baseModel().facilities, annualSalaryIncrease: 0 } as never,
+    });
+    expect(getNormalizedFounderCompYears(m, 5)).toEqual([140_000, 140_000, 180_000, 180_000, 230_000]);
   });
 });
 

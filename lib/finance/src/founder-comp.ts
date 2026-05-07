@@ -10,9 +10,9 @@
 // The delta (normalized - reported) is the "founder-comp normalization
 // adjustment" lenders apply to DSCR and net income.
 
-import type { FullModelData, StaffingRowLike, PayrollTaxComponentLike } from "./decision-engine/model-shape.js";
+import type { FullModelData, StaffingRowLike, PayrollTaxComponentLike, EnrollmentLike } from "./decision-engine/model-shape.js";
 import { YEAR_COUNT, DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE } from "./constants.js";
-import { getFounderCompBenchmark } from "./founder-comp-benchmarks.js";
+import { getFounderCompBenchmark, type FounderCompBenchmark, type SizeBandDef } from "./founder-comp-benchmarks.js";
 
 export {
   getFounderCompBenchmark,
@@ -133,36 +133,118 @@ export function getReportedFounderCompYears(
   return Array.from({ length: yearCount }, () => 0);
 }
 
+/** Per-year founder-comp benchmark resolved against that year's projected
+ *  enrollment. Used by the wizard to show the suggested market rate sliding
+ *  up as the school grows across NAIS / NACSA size-band thresholds (e.g.
+ *  crossing 150 students bumps a private school from xs into the s band).
+ *
+ *  Each entry includes:
+ *   - `year` (1-indexed)
+ *   - `enrollment` (the value used to pick the size band — last-known
+ *     forward-fill when a future year is missing)
+ *   - `benchmark` (the full {@link FounderCompBenchmark} for that year's
+ *     band, with citation + explanation)
+ *   - `escalatedAmount` (the benchmark's base amount escalated by COLA from
+ *     year 1; this is the number the wizard fills into the per-year
+ *     normalized array when the founder clicks "use suggested market rate")
+ *
+ *  Returns `undefined` for any year that lacks enough info to resolve a
+ *  benchmark (chiefly: missing `schoolType`). */
+export interface FounderCompYearBenchmark {
+  year: number;
+  enrollment: number;
+  benchmark: FounderCompBenchmark;
+  escalatedAmount: number;
+}
+
+function enrollmentForYear(e: EnrollmentLike | undefined, yIdx: number): number | undefined {
+  if (!e) return undefined;
+  const key = `year${yIdx + 1}` as keyof EnrollmentLike;
+  const v = (e as Record<string, unknown>)[key as string];
+  return typeof v === "number" && Number.isFinite(v) ? v : undefined;
+}
+
+export function getFounderCompBenchmarkPerYear(
+  data: FullModelData,
+  yearCount: number = YEAR_COUNT,
+): (FounderCompYearBenchmark | undefined)[] {
+  const sp = data.schoolProfile as
+    | { schoolType?: string; state?: string; founderTenureYears?: number }
+    | undefined;
+  const out: (FounderCompYearBenchmark | undefined)[] = [];
+  if (!sp?.schoolType) {
+    for (let y = 0; y < yearCount; y++) out.push(undefined);
+    return out;
+  }
+  const colaPct = data.facilities?.annualSalaryIncrease ?? 0;
+  const colaFactor = 1 + colaPct / 100;
+  let lastEnrollment = 0;
+  for (let y = 0; y < yearCount; y++) {
+    const raw = enrollmentForYear(data.enrollment, y);
+    const enrollment = typeof raw === "number" && raw > 0 ? raw : lastEnrollment;
+    lastEnrollment = enrollment;
+    const bench = getFounderCompBenchmark({
+      schoolType: sp.schoolType,
+      stateCode: sp.state,
+      enrollmentY1: enrollment,
+      founderTenureYears: sp.founderTenureYears,
+    });
+    if (!bench) {
+      out.push(undefined);
+      continue;
+    }
+    const escalated = Math.round((bench.amount * Math.pow(colaFactor, y)) / 1000) * 1000;
+    out.push({ year: y + 1, enrollment, benchmark: bench, escalatedAmount: escalated });
+  }
+  return out;
+}
+
+/** A size-band crossing across consecutive years (e.g. xs → s in year 3
+ *  because projected enrollment crossed 150). Surfaced in the wizard so
+ *  the founder sees exactly which year their suggested market rate steps
+ *  up and why. */
+export interface SizeBandTransition {
+  /** 1-indexed year the new band first applies. */
+  year: number;
+  fromBand: SizeBandDef;
+  toBand: SizeBandDef;
+}
+
+export function getFounderCompBandTransitions(
+  perYear: (FounderCompYearBenchmark | undefined)[],
+): SizeBandTransition[] {
+  const out: SizeBandTransition[] = [];
+  for (let i = 1; i < perYear.length; i++) {
+    const prev = perYear[i - 1]?.benchmark.sizeBand;
+    const cur = perYear[i]?.benchmark.sizeBand;
+    if (prev && cur && prev.key !== cur.key) {
+      out.push({ year: i + 1, fromBand: prev, toBand: cur });
+    }
+  }
+  return out;
+}
+
 /** Resolves the per-year normalized (market-rate) founder comp series.
  *  Falls back, in order, to:
  *   1. `staffing.normalizedFounderComp[]` (per-year input)
- *   2. `getSuggestedFounderComp(schoolType, state)` broadcast w/ COLA
+ *   2. The per-year benchmark series (each year resolved against that
+ *      year's projected enrollment band, escalated by COLA from year 1).
+ *      This makes the lender-side market rate slide up as the school
+ *      grows across NAIS / NACSA size-band thresholds.
  *   3. the reported series (no normalization adjustment) */
 export function getNormalizedFounderCompYears(
   data: FullModelData,
   yearCount: number = YEAR_COUNT,
 ): number[] {
   const st = data.staffing || {};
-  const colaPct = data.facilities?.annualSalaryIncrease ?? 0;
-  const colaFactor = 1 + colaPct / 100;
 
   const normalized = st.normalizedFounderComp;
   if (Array.isArray(normalized) && normalized.length > 0) {
     return padYears(normalized, yearCount, normalized[0] ?? 0);
   }
-  const sp = data.schoolProfile as
-    | { schoolType?: string; state?: string; founderTenureYears?: number }
-    | undefined;
-  const enrollmentY1 =
-    typeof data.enrollment?.year1 === "number" ? data.enrollment.year1 : undefined;
-  const suggested = getSuggestedFounderComp(
-    sp?.schoolType,
-    sp?.state,
-    enrollmentY1,
-    sp?.founderTenureYears,
-  );
-  if (suggested && suggested > 0) {
-    return Array.from({ length: yearCount }, (_, y) => Math.round(suggested * Math.pow(colaFactor, y)));
+  const perYear = getFounderCompBenchmarkPerYear(data, yearCount);
+  if (perYear.some((b) => b && b.escalatedAmount > 0)) {
+    return perYear.map((b) => (b ? b.escalatedAmount : 0));
   }
   return getReportedFounderCompYears(data, yearCount);
 }

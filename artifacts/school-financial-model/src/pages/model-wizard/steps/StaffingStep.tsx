@@ -16,6 +16,8 @@ import {
   buildCapInsightText,
   CAP_INSIGHT_MIN_SAVINGS,
   getFounderCompBenchmark,
+  getFounderCompBenchmarkPerYear,
+  getFounderCompBandTransitions,
 } from "@workspace/finance";
 import {
   getStatePayrollTaxEntry,
@@ -112,12 +114,12 @@ function FounderCompPanel({
   schoolType,
   stateCode,
   colaRate,
-  enrollmentY1,
+  enrollmentArr,
 }: {
   schoolType: string;
   stateCode: string;
   colaRate: number;
-  enrollmentY1: number;
+  enrollmentArr: number[];
 }) {
   const { watch, setValue } = useFormContext();
   const yearCount = useYearCount();
@@ -125,9 +127,12 @@ function FounderCompPanel({
   const normalized = (watch("staffing.normalizedFounderComp") as number[] | undefined) || [];
   const legacy = (watch("staffing.founderSalary") as number | undefined) || 0;
   const founderTenureYears = (watch("schoolProfile.founderTenureYears") as number | undefined) ?? null;
-  // Task #633: benchmark now resolves school type × size band × COL tier ×
-  // founder tenure against NAIS / NACSA / BLS medians. We surface the
-  // citation inline so the founder understands where the number came from.
+  const enrollmentY1 = enrollmentArr[0] ?? 0;
+  // Task #633: benchmark resolves school type × size band × COL tier ×
+  // founder tenure against NAIS / NACSA / BLS medians. The y1 benchmark
+  // backs the static citation block; per-year benchmarks (Task #650) drive
+  // the per-year suggested column and band-transition callouts so founders
+  // see the suggested rate slide up as they cross size-band thresholds.
   const benchmark = useMemo(
     () =>
       getFounderCompBenchmark({
@@ -139,6 +144,29 @@ function FounderCompPanel({
     [schoolType, stateCode, enrollmentY1, founderTenureYears],
   );
   const suggested = benchmark?.amount;
+
+  // Task #650: per-year benchmark series. Each entry is the suggested
+  // market rate for that year using that year's projected enrollment band,
+  // escalated by COLA from year 1.
+  const perYearBenchmarks = useMemo(() => {
+    const fakeModel = {
+      schoolProfile: { schoolType, state: stateCode, founderTenureYears: founderTenureYears ?? undefined },
+      enrollment: {
+        year1: enrollmentArr[0] ?? 0,
+        year2: enrollmentArr[1] ?? 0,
+        year3: enrollmentArr[2] ?? 0,
+        year4: enrollmentArr[3] ?? 0,
+        year5: enrollmentArr[4] ?? 0,
+      },
+      facilities: { annualSalaryIncrease: colaRate },
+    } as never;
+    return getFounderCompBenchmarkPerYear(fakeModel, yearCount);
+  }, [schoolType, stateCode, founderTenureYears, enrollmentArr, colaRate, yearCount]);
+
+  const bandTransitions = useMemo(
+    () => getFounderCompBandTransitions(perYearBenchmarks),
+    [perYearBenchmarks],
+  );
 
   const setReportedYear = useCallback(
     (yIdx: number, value: number) => {
@@ -166,13 +194,25 @@ function FounderCompPanel({
     [normalized, yearCount, setValue],
   );
 
+  // Task #650: fill the normalized array using each year's per-year
+  // benchmark (which already accounts for that year's projected enrollment
+  // band AND COLA escalation). Falls back to the y1-broadcast behavior
+  // when the per-year series is unavailable.
   const applySuggested = useCallback(() => {
+    const hasPerYear = perYearBenchmarks.some((b) => b && b.escalatedAmount > 0);
+    if (hasPerYear) {
+      const next = Array.from({ length: yearCount }, (_, i) =>
+        perYearBenchmarks[i]?.escalatedAmount ?? 0,
+      );
+      setValue("staffing.normalizedFounderComp", next, { shouldDirty: true });
+      return;
+    }
     if (!suggested || suggested <= 0) return;
     const next = Array.from({ length: yearCount }, (_, i) =>
       Math.round(suggested * Math.pow(1 + colaRate / 100, i)),
     );
     setValue("staffing.normalizedFounderComp", next, { shouldDirty: true });
-  }, [suggested, yearCount, colaRate, setValue]);
+  }, [perYearBenchmarks, suggested, yearCount, colaRate, setValue]);
 
   // Show the y1 reported placeholder from legacy if no per-year value yet.
   const reportedDisplay = (i: number): number | "" => {
@@ -264,11 +304,86 @@ function FounderCompPanel({
               </label>
             ))}
           </div>
+          {perYearBenchmarks.some((b) => b && b.escalatedAmount > 0) && (
+            <div
+              className="mt-2 grid grid-cols-5 gap-1.5"
+              data-testid="founder-suggested-per-year"
+            >
+              {Array.from({ length: yearCount }).map((_, i) => {
+                const b = perYearBenchmarks[i];
+                const isTransition =
+                  i > 0 &&
+                  b?.benchmark.sizeBand.key !==
+                    perYearBenchmarks[i - 1]?.benchmark.sizeBand.key;
+                return (
+                  <div
+                    key={i}
+                    className={cn(
+                      "rounded px-1.5 py-1 text-[10.5px] leading-tight border",
+                      isTransition
+                        ? "border-amber-400 bg-amber-100/70 text-amber-900"
+                        : "border-amber-200/60 bg-amber-50/60 text-amber-900/80",
+                    )}
+                    data-testid={`founder-suggested-y${i + 1}`}
+                    title={
+                      b
+                        ? `${b.benchmark.sizeBand.label} (${b.enrollment} students). ${b.benchmark.explanation}`
+                        : undefined
+                    }
+                  >
+                    <div className="text-[9px] uppercase tracking-wider text-amber-900/60">
+                      Y{i + 1} suggested
+                    </div>
+                    <div className="font-semibold tabular-nums">
+                      {b ? formatCurrency(b.escalatedAmount) : "—"}
+                    </div>
+                    {b && (
+                      <div className="text-[9.5px] text-amber-900/70">
+                        {b.benchmark.sizeBand.label.replace(" students", "")}
+                        {isTransition && (
+                          <span
+                            className="ml-1 font-semibold text-amber-900"
+                            data-testid={`founder-band-transition-y${i + 1}`}
+                          >
+                            ↑ new band
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {bandTransitions.length > 0 && (
+            <div
+              className="mt-2 rounded-md border border-amber-300/70 bg-amber-100/60 px-2.5 py-1.5"
+              data-testid="founder-band-transitions"
+            >
+              <p className="text-[11px] text-amber-900 leading-snug">
+                <span className="font-semibold">Heads up — your projected growth crosses NAIS / NACSA size bands:</span>
+              </p>
+              <ul className="mt-0.5 space-y-0.5 text-[11px] text-amber-900/85 leading-snug list-disc pl-5">
+                {bandTransitions.map((t) => (
+                  <li
+                    key={t.year}
+                    data-testid={`founder-band-transition-msg-y${t.year}`}
+                  >
+                    Year {t.year}: {t.fromBand.label.toLowerCase()} → {t.toBand.label.toLowerCase()} — suggested market rate steps up to{" "}
+                    <span className="font-semibold tabular-nums">
+                      {formatCurrency(perYearBenchmarks[t.year - 1]?.escalatedAmount ?? 0)}
+                    </span>
+                    .
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {suggested && suggested > 0 && benchmark && (
             <div className="mt-2 space-y-1" data-testid="founder-benchmark-source">
               <p className="text-[11px] text-amber-900/80 leading-snug">
                 Suggested benchmark: <span className="font-semibold">{formatCurrency(suggested)}</span> Y1
-                {stateCode ? ` in ${stateCode}` : ""}, escalated by your {colaRate}% COLA.
+                {stateCode ? ` in ${stateCode}` : ""}, escalated by your {colaRate}% COLA and your year-over-year enrollment band.
               </p>
               <p className="text-[11px] text-amber-900/70 leading-snug">
                 <span
@@ -891,7 +1006,7 @@ export function StaffingStep() {
                 schoolType={schoolType}
                 stateCode={stateCode}
                 colaRate={colaRate}
-                enrollmentY1={y1Students}
+                enrollmentArr={enrollmentArr}
               />
             )}
             <div className="flex items-baseline justify-between mb-2 gap-3">
