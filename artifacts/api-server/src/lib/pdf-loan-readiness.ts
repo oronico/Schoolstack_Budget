@@ -111,17 +111,26 @@ export async function generateLoanReadinessPDF(consultantData: ConsultantOutput,
   if (consultantData.stressTests.length > 0) {
     const niLabel = entityType === "nonprofit_501c3" ? "Net Income" : "Profit";
     sectionTitle(doc, "Stress Test Scenarios");
+    // Task #630 — surface reserve months / DSCR / runway alongside the
+    // existing net-income trajectory so lenders can see resilience under
+    // each stress (especially "Hard revenue only").
     const stressCols: TableColumn[] = [
-      { header: "Scenario", width: 170 },
-      { header: `Year 1 ${niLabel}`, width: 120, align: "right" },
-      { header: `Final Year ${niLabel}`, width: 120, align: "right" },
-      { header: "Break-Even Year", width: 100, align: "center" },
+      { header: "Scenario", width: 130 },
+      { header: `Y1 ${niLabel}`, width: 80, align: "right" },
+      { header: `Final ${niLabel}`, width: 80, align: "right" },
+      { header: "Break-Even", width: 60, align: "center" },
+      { header: "Reserve (mo)", width: 60, align: "right" },
+      { header: "Y1 DSCR", width: 50, align: "right" },
+      { header: "Runway (mo)", width: 60, align: "right" },
     ];
     const stressRows = consultantData.stressTests.map((s: StressScenario) => [
       s.scenario,
       fmtCurrency(s.y1NetIncome),
       fmtCurrency(s.y5NetIncome),
-      s.breakEvenYear ? `Year ${s.breakEvenYear}` : "None",
+      s.breakEvenYear ? `Y${s.breakEvenYear}` : "None",
+      s.reserveMonths !== undefined ? s.reserveMonths.toFixed(1) : "—",
+      s.dscr === null || s.dscr === undefined ? "N/A" : `${s.dscr.toFixed(2)}x`,
+      s.runwayMonths !== undefined ? (s.runwayMonths >= 60 ? "60+" : s.runwayMonths.toString()) : "—",
     ]);
     drawTable(doc, stressCols, stressRows, { zebra: true });
   }

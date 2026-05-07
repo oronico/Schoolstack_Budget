@@ -1137,9 +1137,19 @@ function buildStressTests(s: PacketSection, co: ConsultantOutput): PacketSection
     ? `All ${co.stressTests.length} stress scenarios maintain positive Year 5 net income, indicating financial resilience.`
     : `${failedTests.length} of ${co.stressTests.length} stress scenarios result in negative Year 5 net income, suggesting the model has limited cushion against adverse conditions.`;
 
+  // Task #630 — include reserve months / Y1 DSCR / runway alongside
+  // the headline net-income trajectory so the lender packet shows
+  // resilience under each stress (especially "Hard revenue only").
   const rows: PacketTableRow[] = co.stressTests.map((st) => ({
     label: st.scenario,
-    values: [fmt(st.y1NetIncome), fmt(st.y5NetIncome), st.breakEvenYear !== null ? `Year ${st.breakEvenYear}` : "Never"],
+    values: [
+      fmt(st.y1NetIncome),
+      fmt(st.y5NetIncome),
+      st.breakEvenYear !== null ? `Year ${st.breakEvenYear}` : "Never",
+      st.reserveMonths !== undefined ? st.reserveMonths.toFixed(1) : "—",
+      st.dscr === null || st.dscr === undefined ? "N/A" : `${st.dscr.toFixed(2)}x`,
+      st.runwayMonths !== undefined ? (st.runwayMonths >= 60 ? "60+" : String(st.runwayMonths)) : "—",
+    ],
   }));
 
   return {
@@ -1147,7 +1157,7 @@ function buildStressTests(s: PacketSection, co: ConsultantOutput): PacketSection
     narrative,
     tables: [{
       title: "Stress Test Results",
-      headers: ["Scenario", "Y1 Net Income", "Y5 Net Income", "Break-Even"],
+      headers: ["Scenario", "Y1 Net Income", "Y5 Net Income", "Break-Even", "Reserve (mo)", "Y1 DSCR", "Runway (mo)"],
       rows,
     }],
   };

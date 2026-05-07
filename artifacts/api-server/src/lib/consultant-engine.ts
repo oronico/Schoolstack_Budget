@@ -12,6 +12,7 @@ import {
   computeYear1MonthlyCashFlow,
   computeCashRunwayMonths,
   computeNormalizedFinancials,
+  inferRevenueQuality,
   type RevenueQualityYearRollup,
   type MonthlyRevenueRowLike,
   type NormalizedFinancialsView,
@@ -332,6 +333,16 @@ export interface StressScenario {
   y1NetIncome: number;
   y5NetIncome: number;
   breakEvenYear: number | null;
+  // Task #630 — surface lender-grade resilience metrics alongside the
+  // headline net-income trajectory. Optional so legacy consumers keep
+  // working; populated by `runStressScenarioFromRows` for row-based
+  // models. Reserve = final-year cumulative reserve months; DSCR = Y1
+  // (NetIncome + DebtService) / DebtService (null when no debt);
+  // runwayMonths = months until starting cash + cumulative monthly net
+  // hits zero (capped at 60).
+  reserveMonths?: number;
+  dscr?: number | null;
+  runwayMonths?: number;
 }
 
 export interface SensitivityCell {
@@ -967,11 +978,13 @@ function runStressScenarioFromRows(
     modifyRevenueRows?: (r: RevenueRow[]) => RevenueRow[];
     modifyExpenseRows?: (e: ExpenseRow[]) => ExpenseRow[];
     modifyStaffingRows?: (s: StaffingRow[]) => StaffingRow[];
+    modifyCapDebtRows?: (c: CapitalDebtRow[]) => CapitalDebtRow[];
     tuitionTiers?: TuitionTier[];
   },
   costInflationPct?: number,
   schoolProfile?: SchoolProfile,
   retentionRate?: number,
+  startingCash: number = 0,
 ): StressScenario {
   const adjEnrollment = mods.modifyEnrollment ? mods.modifyEnrollment([...enrollmentByYear]) : enrollmentByYear;
   const adjRevRows = mods.modifyRevenueRows
@@ -983,15 +996,47 @@ function runStressScenarioFromRows(
   const adjStaffRows = mods.modifyStaffingRows
     ? mods.modifyStaffingRows(staffingRows.map(r => ({ ...r })))
     : staffingRows;
+  const adjCapDebtRows = mods.modifyCapDebtRows
+    ? mods.modifyCapDebtRows(capDebtRows.map(r => ({ ...r, amounts: r.amounts ? [...r.amounts] : [] })))
+    : capDebtRows;
 
-  const financials = computeAllYearsFromRows(adjEnrollment, adjRevRows, adjStaffRows, adjExpRows, capDebtRows, salaryEscRate, prorationFactor, mods.tuitionTiers, costInflationPct, schoolProfile, retentionRate, true);
+  const financials = computeAllYearsFromRows(adjEnrollment, adjRevRows, adjStaffRows, adjExpRows, adjCapDebtRows, salaryEscRate, prorationFactor, mods.tuitionTiers, costInflationPct, schoolProfile, retentionRate, true);
   const beIdx = financials.findIndex(yf => yf.netIncome >= 0);
+
+  // Task #630 — resilience metrics. Final-year reserve months from
+  // cumulative net income / monthly expenses (matches main-flow formula
+  // at line 1799). DSCR is the Y1 (NetIncome + DebtService) / DebtService
+  // (matches main-flow at line 1746). Runway uses a simple monthly
+  // approximation: starting cash plus cumulative monthly net (assumed
+  // even within a year) until the balance hits zero, capped at 60 months.
+  let cumNet = 0;
+  for (const yf of financials) cumNet += yf.netIncome;
+  const lastYf = financials[financials.length - 1];
+  const monthlyExpensesLast = lastYf && lastYf.totalExpenses > 0 ? lastYf.totalExpenses / 12 : 0;
+  const reserveMonths = monthlyExpensesLast > 0 && cumNet > 0
+    ? Math.round((cumNet / monthlyExpensesLast) * 10) / 10
+    : 0;
+
+  const y1Fin = financials[0];
+  const y1LoanDS = y1Fin?.loanDebtService ?? y1Fin?.debtService ?? 0;
+  const dscr: number | null = y1Fin && y1LoanDS > 0
+    ? Math.round(((y1Fin.netIncome + y1LoanDS) / y1LoanDS) * 100) / 100
+    : null;
+
+  const monthlyNetByYear: number[][] = financials.map(yf => {
+    const m = (yf.totalRevenue - yf.totalExpenses) / 12;
+    return new Array(12).fill(m);
+  });
+  const runwayMonths = computeCashRunwayMonths(startingCash, monthlyNetByYear, 60);
 
   return {
     scenario: label,
     y1NetIncome: financials[0]?.netIncome || 0,
     y5NetIncome: financials[financials.length - 1]?.netIncome || 0,
     breakEvenYear: beIdx >= 0 ? beIdx + 1 : null,
+    reserveMonths,
+    dscr,
+    runwayMonths,
   };
 }
 
@@ -1839,15 +1884,36 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     const salaryEscRate = (data.facilities?.annualSalaryIncrease ?? 0) / 100;
     const stressCostInflation = data.facilities?.generalCostInflation ?? 0;
 
+    // Task #630 — starting cash for runway calc, mirroring main flow.
+    const stressPriorSnapshot = (data as Record<string, unknown>).priorYearSnapshot as Record<string, number> | undefined;
+    const stressStartCash = stressPriorSnapshot?.endingCash
+      || (data.openingBalances as Record<string, number> | undefined)?.cash
+      || ((data as Record<string, unknown>).startingCash as number | undefined)
+      || 0;
+
     stressTests = [
       runStressScenarioFromRows("Enrollment 20% Below Plan", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
         modifyEnrollment: e => e.map(s => Math.round(s * 0.8)),
         tuitionTiers,
-      }, stressCostInflation, sp, ceRR),
+      }, stressCostInflation, sp, ceRR, stressStartCash),
       runStressScenarioFromRows("Loss of Philanthropy", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
         modifyRevenueRows: rows => rows.map(r => (r.category === "grants_contributions" || r.category === "philanthropy") ? { ...r, enabled: false } : r),
         tuitionTiers,
-      }, stressCostInflation, sp, ceRR),
+      }, stressCostInflation, sp, ceRR, stressStartCash),
+      // Task #630 — "Hard revenue only" stresses the model down to its
+      // contracted revenue (and contracted offsets). Donor-dependent and
+      // policy-dependent rows are zeroed by disabling them entirely, so
+      // lenders can see what cash + DSCR + runway look like when both
+      // philanthropy and per-pupil/voucher funding evaporate.
+      runStressScenarioFromRows("Hard revenue only", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
+        modifyRevenueRows: rows => rows.map(r => {
+          const q = inferRevenueQuality(r);
+          return q === "donor_dependent" || q === "policy_dependent"
+            ? { ...r, enabled: false }
+            : r;
+        }),
+        tuitionTiers,
+      }, stressCostInflation, sp, ceRR, stressStartCash),
       runStressScenarioFromRows("Occupancy +15%, Personnel +5%", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
         modifyExpenseRows: rows => rows.map(r =>
           r.category === "occupancy_facility"
@@ -1856,17 +1922,17 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
         ),
         modifyStaffingRows: rows => rows.map(r => ({ ...r, annualizedRate: r.annualizedRate * 1.05 })),
         tuitionTiers,
-      }, stressCostInflation, sp, ceRR),
+      }, stressCostInflation, sp, ceRR, stressStartCash),
       runStressScenarioFromRows("Revenue Delayed 3 Months", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
         modifyRevenueRows: rows => rows.map(r => ({
           ...r,
           amounts: r.amounts.map((a, i) => i === 0 ? a * 0.75 : a),
         })),
         tuitionTiers,
-      }, stressCostInflation, sp, ceRR),
+      }, stressCostInflation, sp, ceRR, stressStartCash),
       runStressScenarioFromRows("Interest Rate +2%", enrollmentByYear, revenueRows, staffingRows, expenseRows,
         capDebtRows.map(r => r.isLoan ? { ...r, loanRate: (r.loanRate || 0) + 2 } : r),
-        salaryEscRate, prorationFactor, { tuitionTiers }, stressCostInflation, sp, ceRR),
+        salaryEscRate, prorationFactor, { tuitionTiers }, stressCostInflation, sp, ceRR, stressStartCash),
     ];
   } else {
     const rev = data.revenue || {};

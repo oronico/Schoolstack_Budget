@@ -3393,6 +3393,22 @@ export const GetConsultantAnalysisResponse = zod.object({
       y1NetIncome: zod.number(),
       y5NetIncome: zod.number(),
       breakEvenYear: zod.number().nullable(),
+      reserveMonths: zod
+        .number()
+        .optional()
+        .describe(
+          "Task #630 — final-year cumulative reserve months under the stress.",
+        ),
+      dscr: zod
+        .number()
+        .nullish()
+        .describe("Task #630 — Y1 DSCR under the stress; null when no debt."),
+      runwayMonths: zod
+        .number()
+        .optional()
+        .describe(
+          "Task #630 — months of cash runway under the stress, capped at 60.",
+        ),
     }),
   ),
   sensitivityMatrix: zod.array(
@@ -3659,6 +3675,22 @@ export const PublicConsultantAnalysisResponse = zod.object({
       y1NetIncome: zod.number(),
       y5NetIncome: zod.number(),
       breakEvenYear: zod.number().nullable(),
+      reserveMonths: zod
+        .number()
+        .optional()
+        .describe(
+          "Task #630 — final-year cumulative reserve months under the stress.",
+        ),
+      dscr: zod
+        .number()
+        .nullish()
+        .describe("Task #630 — Y1 DSCR under the stress; null when no debt."),
+      runwayMonths: zod
+        .number()
+        .optional()
+        .describe(
+          "Task #630 — months of cash runway under the stress, capped at 60.",
+        ),
     }),
   ),
   sensitivityMatrix: zod.array(

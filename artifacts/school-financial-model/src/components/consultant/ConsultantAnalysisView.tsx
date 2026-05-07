@@ -962,6 +962,10 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
                     <th className="text-right px-4 py-2.5 font-semibold text-muted-foreground text-xs">Year 1 {niLabel}</th>
                     <th className="text-right px-4 py-2.5 font-semibold text-muted-foreground text-xs">Final Year {niLabel}</th>
                     <th className="text-right px-4 py-2.5 font-semibold text-muted-foreground text-xs">Break-Even</th>
+                    {/* Task #630 — surface lender-grade resilience metrics */}
+                    <th className="text-right px-4 py-2.5 font-semibold text-muted-foreground text-xs">Reserve (mo)</th>
+                    <th className="text-right px-4 py-2.5 font-semibold text-muted-foreground text-xs">Y1 DSCR</th>
+                    <th className="text-right px-4 py-2.5 font-semibold text-muted-foreground text-xs">Runway (mo)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -976,6 +980,15 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
                       </td>
                       <td className="text-right px-4 py-2 font-semibold text-xs">
                         {st.breakEvenYear ? `Year ${st.breakEvenYear}` : "Never"}
+                      </td>
+                      <td className={cn("text-right px-4 py-2 font-semibold text-xs", (st.reserveMonths ?? 0) >= 3 ? "text-green-700" : (st.reserveMonths ?? 0) >= 1 ? "text-amber-700" : "text-rose-700")}>
+                        {st.reserveMonths !== undefined && st.reserveMonths !== null ? st.reserveMonths.toFixed(1) : "—"}
+                      </td>
+                      <td className="text-right px-4 py-2 font-semibold text-xs">
+                        {st.dscr === null || st.dscr === undefined ? "N/A" : `${st.dscr.toFixed(2)}x`}
+                      </td>
+                      <td className={cn("text-right px-4 py-2 font-semibold text-xs", (st.runwayMonths ?? 0) >= 12 ? "text-green-700" : (st.runwayMonths ?? 0) >= 6 ? "text-amber-700" : "text-rose-700")}>
+                        {st.runwayMonths !== undefined && st.runwayMonths !== null ? (st.runwayMonths >= 60 ? "60+" : st.runwayMonths.toString()) : "—"}
                       </td>
                     </tr>
                   ))}

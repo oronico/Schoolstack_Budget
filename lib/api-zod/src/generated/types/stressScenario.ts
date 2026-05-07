@@ -11,4 +11,10 @@ export interface StressScenario {
   y1NetIncome: number;
   y5NetIncome: number;
   breakEvenYear: number | null;
+  /** Task #630 — final-year cumulative reserve months under the stress. */
+  reserveMonths?: number;
+  /** Task #630 — Y1 DSCR under the stress; null when no debt. */
+  dscr?: number | null;
+  /** Task #630 — months of cash runway under the stress, capped at 60. */
+  runwayMonths?: number;
 }
