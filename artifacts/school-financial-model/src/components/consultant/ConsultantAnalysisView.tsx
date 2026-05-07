@@ -262,6 +262,10 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
   const costComp = data.costComposition;
   const cumFin = data.cumulativeFinancials;
   const stressTests = data.stressTests;
+  // Task #616 — fixed lender stress-test battery. Surfaced just below the
+  // existing stress-tests chart so founders see the same scenario set the
+  // lender packet PDF and pro-forma workbook publish.
+  const lenderStressTests = data.lenderStressTests;
 
   const revChartData = revComp?.map((rc, i) => ({
     year: `Year ${i + 1}`,
@@ -996,6 +1000,138 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
               </table>
             </div>
           </CollapsibleTable>
+        </div>
+      )}
+
+      {lenderStressTests && lenderStressTests.scenarios.length > 0 && (
+        <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <Activity className="h-5 w-5 text-amber-700" />
+            <h3 className="font-display font-bold text-lg text-foreground">Standard Lender Stress Tests</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Five fixed downside scenarios lenders run on every loan readiness review. Identical figures appear on the lender-ready PDF and the lender pro-forma workbook.
+          </p>
+          {(() => {
+            // True minimum DSCR: drop only the engine sentinel (0 = "no debt
+            // service modeled"). Negative DSCR — debt service exists, NOI is
+            // negative — is the worst case and MUST be surfaced, not hidden.
+            const baseStructural = lenderStressTests.base.dscr.filter((d) => d !== 0);
+            const baseMin = baseStructural.length ? Math.min(...baseStructural) : null;
+            return (
+              <div className="mb-4 px-4 py-3 rounded-xl bg-secondary/40 border border-border/50">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Base Case</div>
+                <div className="text-sm text-foreground">
+                  Min DSCR <span className="font-semibold">{baseMin === null ? "N/A" : `${baseMin.toFixed(2)}x`}</span>
+                  {" · "}Min ending cash <span className="font-semibold">{fmtCurrency(Math.min(...lenderStressTests.base.endingCash))}</span>
+                  {" · "}Runway <span className="font-semibold">{lenderStressTests.base.cashRunwayMonths.toFixed(1)} mo</span>
+                </div>
+              </div>
+            );
+          })()}
+          <div className="overflow-hidden rounded-xl border border-border/60">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-secondary/50">
+                  <th className="text-left px-4 py-2.5 font-semibold text-muted-foreground text-xs">Scenario</th>
+                  <th className="text-center px-4 py-2.5 font-semibold text-muted-foreground text-xs">Status</th>
+                  <th className="text-right px-4 py-2.5 font-semibold text-muted-foreground text-xs">Min DSCR</th>
+                  <th className="text-right px-4 py-2.5 font-semibold text-muted-foreground text-xs">Min Ending Cash</th>
+                  <th className="text-right px-4 py-2.5 font-semibold text-muted-foreground text-xs">Runway</th>
+                  <th className="text-right px-4 py-2.5 font-semibold text-muted-foreground text-xs">Y1 NI Δ vs Base</th>
+                  <th className="text-right px-4 py-2.5 font-semibold text-muted-foreground text-xs">Break-Even</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lenderStressTests.scenarios.map((sc) => {
+                  // See base-case note above: drop only DSCR=0 (engine
+                  // sentinel for "no debt service"); keep negatives.
+                  const structural = sc.dscr.filter((d) => d !== 0);
+                  const minDscr = structural.length ? Math.min(...structural) : null;
+                  const dscrTone: "green" | "amber" | "red" | "na" =
+                    minDscr === null
+                      ? "na"
+                      : minDscr >= 1.25
+                        ? "green"
+                        : minDscr >= 1.1
+                          ? "amber"
+                          : "red";
+                  const runwayTone: "green" | "amber" | "red" =
+                    sc.cashRunwayMonths >= 6 ? "green" : sc.cashRunwayMonths >= 3 ? "amber" : "red";
+                  const minEndCash = Math.min(...sc.endingCash);
+                  const cashTone: "green" | "amber" | "red" =
+                    minEndCash >= 0 ? "green" : minEndCash >= -50_000 ? "amber" : "red";
+                  // Worst-of among the three benchmarked metrics binds the
+                  // scenario badge — matches the founder dashboard semantics.
+                  const order = { green: 0, amber: 1, red: 2 } as const;
+                  const overall: "green" | "amber" | "red" = (
+                    [dscrTone === "na" ? "green" : dscrTone, runwayTone, cashTone] as Array<"green" | "amber" | "red">
+                  ).reduce((worst, t) => (order[t] > order[worst] ? t : worst), "green");
+                  const dscrCls =
+                    dscrTone === "na"
+                      ? "text-muted-foreground"
+                      : dscrTone === "green"
+                        ? "text-green-700"
+                        : dscrTone === "amber"
+                          ? "text-amber-700"
+                          : "text-rose-700";
+                  const badgeCls =
+                    overall === "red"
+                      ? "bg-rose-100 text-rose-900 border border-rose-200"
+                      : overall === "amber"
+                        ? "bg-amber-100 text-amber-900 border border-amber-200"
+                        : "bg-emerald-100 text-emerald-800 border border-emerald-200";
+                  const dotCls =
+                    overall === "red" ? "bg-rose-600" : overall === "amber" ? "bg-amber-500" : "bg-emerald-600";
+                  const overallLabel =
+                    overall === "red" ? "At risk" : overall === "amber" ? "Watch" : "Healthy";
+                  const niDelta = sc.deltaVsBase.y1NetIncome;
+                  return (
+                    <tr
+                      key={sc.id}
+                      data-testid={`consultant-stress-row-${sc.id}`}
+                      data-status={overall}
+                      className="border-t border-border/40 align-top"
+                    >
+                      <td className="px-4 py-2.5">
+                        <div className="font-semibold text-xs text-foreground">{sc.name}</div>
+                        <div className="text-[11px] text-muted-foreground leading-snug mt-0.5">{sc.description}</div>
+                      </td>
+                      <td className="text-center px-4 py-2.5 whitespace-nowrap">
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide",
+                            badgeCls,
+                          )}
+                          title={overallLabel}
+                        >
+                          <span className={cn("inline-block w-1.5 h-1.5 rounded-full", dotCls)} />
+                          {overallLabel}
+                        </span>
+                      </td>
+                      <td className={cn("text-right px-4 py-2.5 font-semibold text-xs whitespace-nowrap", dscrCls)}>
+                        {minDscr === null ? "N/A" : `${minDscr.toFixed(2)}x`}
+                      </td>
+                      <td className="text-right px-4 py-2.5 font-semibold text-xs whitespace-nowrap">
+                        {fmtCurrency(Math.min(...sc.endingCash))}
+                      </td>
+                      <td className="text-right px-4 py-2.5 font-semibold text-xs whitespace-nowrap">
+                        {sc.cashRunwayMonths.toFixed(1)} mo
+                      </td>
+                      <td className={cn("text-right px-4 py-2.5 font-semibold text-xs whitespace-nowrap", niDelta < 0 ? "text-rose-700" : "text-green-700")}>
+                        {niDelta >= 0 ? "+" : ""}{fmtCurrency(niDelta)}
+                      </td>
+                      <td className="text-right px-4 py-2.5 font-semibold text-xs whitespace-nowrap">
+                        {sc.breakEvenYear === null
+                          ? "Never"
+                          : `Year ${sc.breakEvenYear}${sc.deltaVsBase.breakEvenYearShift && sc.deltaVsBase.breakEvenYearShift !== 0 ? ` (${sc.deltaVsBase.breakEvenYearShift > 0 ? "+" : ""}${sc.deltaVsBase.breakEvenYearShift}y)` : ""}`}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

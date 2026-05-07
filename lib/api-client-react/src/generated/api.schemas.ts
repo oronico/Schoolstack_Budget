@@ -1063,6 +1063,64 @@ export interface NormalizedFinancialsView {
   founderComp: FounderCompNormalization;
 }
 
+/**
+ * Per-year baseline metrics that every stress scenario is measured
+against. `endingCash` and `cashRunwayMonths` are computed off the
+scenario engine's *unrestricted* cash position — restricted
+philanthropy / grant balances are stripped because they cannot
+legally service debt or fund payroll.
+
+ */
+export interface LenderStressTestBaseline {
+  dscr: number[];
+  /** Year-end unrestricted cash for each modeled year. */
+  endingCash: number[];
+  /** Months of operating runway computed from unrestricted cash only. */
+  cashRunwayMonths: number;
+  breakEvenStudents: (number | null)[];
+  netIncome: number[];
+  breakEvenYear: number | null;
+}
+
+export type LenderStressScenarioResultId =
+  (typeof LenderStressScenarioResultId)[keyof typeof LenderStressScenarioResultId];
+
+export const LenderStressScenarioResultId = {
+  enrollment_minus_10: "enrollment_minus_10",
+  enrollment_minus_20: "enrollment_minus_20",
+  esa_delay_3mo: "esa_delay_3mo",
+  rent_shock_25: "rent_shock_25",
+  founder_normalization: "founder_normalization",
+} as const;
+
+export interface LenderStressScenarioDelta {
+  y1NetIncome: number;
+  y5NetIncome: number;
+  y1Dscr: number;
+  minDscr: number;
+  minEndingCash: number;
+  cashRunwayMonths: number;
+  breakEvenYearShift: number | null;
+}
+
+export interface LenderStressScenarioResult {
+  id: LenderStressScenarioResultId;
+  name: string;
+  description: string;
+  dscr: number[];
+  endingCash: number[];
+  cashRunwayMonths: number;
+  breakEvenStudents: (number | null)[];
+  netIncome: number[];
+  breakEvenYear: number | null;
+  deltaVsBase: LenderStressScenarioDelta;
+}
+
+export interface LenderStressTestResults {
+  base: LenderStressTestBaseline;
+  scenarios: LenderStressScenarioResult[];
+}
+
 export interface ConsultantOutput {
   executiveSummary: string;
   biggestStrength: string;
@@ -1084,6 +1142,7 @@ export interface ConsultantOutput {
   healthSignals: HealthSignal[];
   lendingLabAssessment: LendingLabAssessment;
   normalizedView?: NormalizedFinancialsView;
+  lenderStressTests: LenderStressTestResults;
   generatedAt: string;
 }
 

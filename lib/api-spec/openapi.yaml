@@ -1854,6 +1854,12 @@ components:
           $ref: "#/components/schemas/LendingLabAssessment"
         normalizedView:
           $ref: "#/components/schemas/NormalizedFinancialsView"
+        # Task #616 — fixed lender stress-test battery (enrollment -10/-20%,
+        # ESA delay, rent shock, founder normalization). Computed from the
+        # canonical engine and surfaced on the founder dashboard, consultant
+        # view, lender packet PDF, and lender pro-forma workbook.
+        lenderStressTests:
+          $ref: "#/components/schemas/LenderStressTestResults"
         generatedAt:
           type: string
           format: date-time
@@ -1877,7 +1883,140 @@ components:
         - topIssues
         - healthSignals
         - lendingLabAssessment
+        - lenderStressTests
         - generatedAt
+    # Task #616 — fixed lender stress-test battery. Each scenario re-runs the
+    # canonical engine on a cloned model and reports per-year DSCR, ending
+    # cash, break-even, and net income, plus a `deltaVsBase` summary the
+    # lender skim view shows first.
+    LenderStressTestBaseline:
+      type: object
+      description: |
+        Per-year baseline metrics that every stress scenario is measured
+        against. `endingCash` and `cashRunwayMonths` are computed off the
+        scenario engine's *unrestricted* cash position — restricted
+        philanthropy / grant balances are stripped because they cannot
+        legally service debt or fund payroll.
+      properties:
+        dscr:
+          type: array
+          items:
+            type: number
+        endingCash:
+          type: array
+          description: Year-end unrestricted cash for each modeled year.
+          items:
+            type: number
+        cashRunwayMonths:
+          type: number
+          description: Months of operating runway computed from unrestricted cash only.
+        breakEvenStudents:
+          type: array
+          items:
+            type: integer
+            nullable: true
+        netIncome:
+          type: array
+          items:
+            type: number
+        breakEvenYear:
+          type: integer
+          nullable: true
+      required:
+        - dscr
+        - endingCash
+        - cashRunwayMonths
+        - breakEvenStudents
+        - netIncome
+        - breakEvenYear
+    LenderStressScenarioDelta:
+      type: object
+      properties:
+        y1NetIncome:
+          type: number
+        y5NetIncome:
+          type: number
+        y1Dscr:
+          type: number
+        minDscr:
+          type: number
+        minEndingCash:
+          type: number
+        cashRunwayMonths:
+          type: number
+        breakEvenYearShift:
+          type: integer
+          nullable: true
+      required:
+        - y1NetIncome
+        - y5NetIncome
+        - y1Dscr
+        - minDscr
+        - minEndingCash
+        - cashRunwayMonths
+        - breakEvenYearShift
+    LenderStressScenarioResult:
+      type: object
+      properties:
+        id:
+          type: string
+          enum:
+            - enrollment_minus_10
+            - enrollment_minus_20
+            - esa_delay_3mo
+            - rent_shock_25
+            - founder_normalization
+        name:
+          type: string
+        description:
+          type: string
+        dscr:
+          type: array
+          items:
+            type: number
+        endingCash:
+          type: array
+          items:
+            type: number
+        cashRunwayMonths:
+          type: number
+        breakEvenStudents:
+          type: array
+          items:
+            type: integer
+            nullable: true
+        netIncome:
+          type: array
+          items:
+            type: number
+        breakEvenYear:
+          type: integer
+          nullable: true
+        deltaVsBase:
+          $ref: "#/components/schemas/LenderStressScenarioDelta"
+      required:
+        - id
+        - name
+        - description
+        - dscr
+        - endingCash
+        - cashRunwayMonths
+        - breakEvenStudents
+        - netIncome
+        - breakEvenYear
+        - deltaVsBase
+    LenderStressTestResults:
+      type: object
+      properties:
+        base:
+          $ref: "#/components/schemas/LenderStressTestBaseline"
+        scenarios:
+          type: array
+          items:
+            $ref: "#/components/schemas/LenderStressScenarioResult"
+      required:
+        - base
+        - scenarios
     # Task #611: parallel as-planned vs market-rate-normalized financials.
     # Founder dashboard surfaces `reported`; lender / board packets surface
     # `normalized`; `founderComp.delta` is the per-year adjustment.

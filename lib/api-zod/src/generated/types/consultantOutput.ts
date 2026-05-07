@@ -13,6 +13,7 @@ import type { CumulativeYear } from "./cumulativeYear";
 import type { DecisionIssue } from "./decisionIssue";
 import type { ExpenseSensitivityCell } from "./expenseSensitivityCell";
 import type { HealthSignal } from "./healthSignal";
+import type { LenderStressTestResults } from "./lenderStressTestResults";
 import type { LendingLabAssessment } from "./lendingLabAssessment";
 import type { NormalizedFinancialsView } from "./normalizedFinancialsView";
 import type { RevenueComposition } from "./revenueComposition";
@@ -41,5 +42,6 @@ export interface ConsultantOutput {
   healthSignals: HealthSignal[];
   lendingLabAssessment: LendingLabAssessment;
   normalizedView?: NormalizedFinancialsView;
+  lenderStressTests: LenderStressTestResults;
   generatedAt: Date;
 }

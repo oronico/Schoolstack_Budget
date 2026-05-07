@@ -7,6 +7,8 @@ import {
   type PDFDoc, BRAND,
 } from "../pdf-utils.js";
 import type { LenderPacket, RiskMitigant, BudgetNarrativeData, FlaggedAssumptionExport, BreakEvenDownsideExport } from "./build-lender-packet";
+import type { LenderStressTestResults } from "@workspace/finance";
+import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "../benchmark-thresholds";
 import type { PacketSection, LinkedMetric } from "./packet-types";
 import { renderForecastAccuracySection } from "./forecast-accuracy-pdf.js";
 import { renderCashRunwayTroughCallout } from "./cash-runway-pdf.js";
@@ -54,6 +56,11 @@ export async function generateLenderPacketPDF(
   // realized actuals exist — first-time founders without a track record
   // shouldn't get a half-empty section in their lender packet.
   renderBreakEvenDownsideSection(doc, packet.breakEvenDownside);
+
+  // Task #616 — fixed lender stress-test battery. Identical numbers appear
+  // on the founder dashboard, consultant view, and lender pro-forma
+  // workbook because every surface pulls from the same canonical helper.
+  renderLenderStressTestsSection(doc, packet.lenderStressTests);
 
   renderForecastAccuracySection(
     doc,
@@ -381,6 +388,64 @@ function renderBreakEvenDownsideSection(doc: PDFDoc, bed: BreakEvenDownsideExpor
       );
     }
     doc.moveDown(0.3);
+  }
+}
+
+function renderLenderStressTestsSection(doc: PDFDoc, stress: LenderStressTestResults) {
+  ensureSpace(doc, 80);
+  sectionTitle(doc, "Standard Lender Stress Tests");
+  bodyText(
+    doc,
+    "Five fixed downside scenarios re-run against the canonical model. Each row shows the worst-year DSCR, ending-cash trough, and Year-1 net-income delta vs base. Identical figures appear on the founder dashboard and in the lender pro-forma workbook.",
+  );
+  doc.moveDown(0.3);
+
+  // True minimum DSCR: drop only the engine sentinel (0 = "no debt service
+  // modeled"). Negative DSCR — debt service exists, NOI is negative — is the
+  // worst case and MUST be surfaced to the lender, not hidden.
+  const baseStructural = stress.base.dscr.filter((d) => d !== 0);
+  const baseMinDscr: number | null = baseStructural.length ? Math.min(...baseStructural) : null;
+  labelValue(
+    doc,
+    "Base case:",
+    `Min DSCR ${baseMinDscr === null ? "N/A" : baseMinDscr.toFixed(2) + "x"} · Min ending cash ${fmtCurrency(Math.min(...stress.base.endingCash))} · Runway ${stress.base.cashRunwayMonths.toFixed(1)} mo`,
+  );
+  doc.moveDown(0.4);
+
+  for (const sc of stress.scenarios) {
+    ensureSpace(doc, 50);
+    const structural = sc.dscr.filter((d) => d !== 0);
+    const minDscr: number | null = structural.length ? Math.min(...structural) : null;
+    const dscrColor =
+      minDscr === null
+        ? BRAND.darkGray
+        : minDscr >= BENCHMARK_DSCR_GREEN
+          ? "#15803d"
+          : minDscr >= BENCHMARK_DSCR_AMBER
+            ? BRAND.amber
+            : "#b91c1c";
+
+    doc.font("Helvetica-Bold").fontSize(10).fillColor(BRAND.navy);
+    doc.text(sc.name, doc.page.margins.left, doc.y);
+    doc.font("Helvetica").fontSize(8.5).fillColor(BRAND.gray);
+    doc.text(sc.description, { width: doc.page.width - doc.page.margins.left - doc.page.margins.right });
+    doc.moveDown(0.15);
+
+    doc.font("Helvetica").fontSize(9).fillColor(BRAND.black);
+    const minDscrStr = minDscr === null ? "N/A" : `${minDscr.toFixed(2)}x`;
+    const beStr =
+      sc.breakEvenYear === null
+        ? "Never"
+        : `Year ${sc.breakEvenYear}${sc.deltaVsBase.breakEvenYearShift && sc.deltaVsBase.breakEvenYearShift !== 0 ? ` (${sc.deltaVsBase.breakEvenYearShift > 0 ? "+" : ""}${sc.deltaVsBase.breakEvenYearShift}y vs base)` : ""}`;
+    doc.fillColor(dscrColor);
+    doc.text(`  Min DSCR: ${minDscrStr}`, doc.page.margins.left, doc.y, { continued: true });
+    doc.fillColor(BRAND.black);
+    doc.text(`   ·   Min ending cash: ${fmtCurrency(Math.min(...sc.endingCash))}   ·   Runway: ${sc.cashRunwayMonths.toFixed(1)} mo   ·   Break-even: ${beStr}`);
+    const y1 = sc.deltaVsBase.y1NetIncome;
+    doc.fillColor(y1 < 0 ? "#b91c1c" : "#15803d");
+    doc.text(`  Year-1 net income vs base: ${y1 >= 0 ? "+" : ""}${fmtCurrency(y1)}`, doc.page.margins.left, doc.y);
+    doc.fillColor(BRAND.black);
+    doc.moveDown(0.5);
   }
 }
 

@@ -11,6 +11,7 @@ import {
   type ForecastAccuracyRollup,
   type DecisionEngineModelData,
   type DownsideBand,
+  type LenderStressTestResults,
 } from "@workspace/finance";
 import { buildPacketData } from "./build-packet-data";
 import { buildCashRunway, type CashRunwayView } from "./build-cash-runway";
@@ -87,6 +88,13 @@ export interface LenderPacket extends PacketData {
    * The PDF renderer surfaces this as the "Break-even & Downside" section.
    */
   breakEvenDownside: BreakEvenDownsideExport;
+  /**
+   * Task #616 — fixed lender stress-test battery (-10/-20% enrollment, ESA
+   * delay, rent shock, founder normalization). Pulled straight off
+   * `consultantOutput.lenderStressTests` so the packet, dashboard, and
+   * workbook all show identical numbers.
+   */
+  lenderStressTests: LenderStressTestResults;
 }
 
 export interface BreakEvenDownsideExport {
@@ -223,6 +231,11 @@ export function buildLenderPacket(
     forecastAccuracyFilter: normalizedFilter,
     forecastAccuracyUnfilteredCount: fullForecastAccuracy.entries.length,
     breakEvenDownside,
+    // Task #616 — pull-through from the consultant output. The engine
+    // already ran the stress battery off the same canonical model the rest
+    // of the packet is built from, so reusing that result keeps every
+    // surface (dashboard, PDF, workbook) reconciled.
+    lenderStressTests: consultantOutput.lenderStressTests,
   };
 }
 

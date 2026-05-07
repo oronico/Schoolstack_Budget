@@ -108,6 +108,20 @@ export {
 } from "./decision-engine/scenario-engine.js";
 
 export {
+  LENDER_STRESS_SCENARIOS,
+  DEFAULT_ESA_DELAY_MONTHS,
+  DEFAULT_RENT_SHOCK_PCT,
+  computeLenderStressTests,
+  minStructuralDscr,
+  type LenderStressScenarioId,
+  type LenderStressScenarioMeta,
+  type LenderStressScenarioResult,
+  type LenderStressTestBaseline,
+  type LenderStressTestResults,
+  type LenderStressTestOptions,
+} from "./decision-engine/lender-stress-tests.js";
+
+export {
   findFounderRow,
   getSuggestedFounderComp,
   getReportedFounderCompYears,

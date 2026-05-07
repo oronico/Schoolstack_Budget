@@ -17,7 +17,13 @@ import {
   type SchoolProfile as SharedSchoolProfile,
   type RevenueRow as SharedRevenueRow,
 } from "./workbook-helpers.js";
-import { computeInterestPortion, defaultCollectionRateForMethod } from "@workspace/finance";
+import {
+  computeInterestPortion,
+  defaultCollectionRateForMethod,
+  computeLenderStressTests,
+  type DecisionEngineModelData,
+  type LenderStressTestResults,
+} from "@workspace/finance";
 import { addDecisionHistorySheet } from "./packets/build-decision-history.js";
 import {
   buildLenderSummary,
@@ -1843,6 +1849,199 @@ function buildSummary(wb: ExcelJS.Workbook, input: Record<string, string | numbe
   ws.mergeCells("B21:C21");
 }
 
+/**
+ * Task #616 — render the canonical lender stress-test battery as its own
+ * workbook tab. The shape (one row per scenario × per metric, with deltas
+ * vs base) mirrors what lenders see in the packet PDF and on the founder
+ * dashboard, so this is a paste-into-credit-memo reference, not a parallel
+ * model.
+ */
+function addLenderStressTestsSheet(wb: ExcelJS.Workbook, stress: LenderStressTestResults) {
+  const ws = wb.addWorksheet("Stress Tests", { properties: { tabColor: { argb: "FFD97706" } } });
+  ws.columns = [
+    { width: 38 }, { width: 18 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 14 },
+  ];
+  printSetup(ws);
+
+  ws.mergeCells("A1:H1");
+  const title = ws.getCell("A1");
+  title.value = "Standard Lender Stress Tests";
+  title.font = { ...HEADER_FONT, size: 14 };
+  title.fill = HEADER_FILL;
+  title.alignment = { horizontal: "left", vertical: "middle", indent: 1 };
+  ws.getRow(1).height = 24;
+
+  ws.mergeCells("A2:H2");
+  const sub = ws.getCell("A2");
+  sub.value = "Five fixed downside scenarios re-run on the canonical engine. Identical figures appear on the founder dashboard, consultant view, and lender packet PDF.";
+  sub.font = { name: "Calibri", size: 10, italic: true, color: { argb: "FF6B7280" } };
+  sub.alignment = { wrapText: true, vertical: "middle" };
+  ws.getRow(2).height = 28;
+
+  // Header row
+  const headerRow = 4;
+  const headers = ["Scenario", "Metric", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Δ vs Base (Y1)"];
+  headers.forEach((h, i) => {
+    const c = ws.getCell(headerRow, i + 1);
+    c.value = h;
+    c.font = HEADER_FONT;
+    c.fill = HEADER_FILL;
+    c.border = BORDER;
+    c.alignment = { horizontal: i === 0 || i === 1 ? "left" : "right", vertical: "middle" };
+  });
+
+  let r = headerRow + 1;
+
+  function writeMetricRow(
+    label: string,
+    metric: string,
+    values: Array<number | null>,
+    numFmt: string,
+    deltaY1: number | null,
+    rag?: { value: number; green: number; amber: number; higherBetter: boolean },
+  ) {
+    ws.getCell(r, 1).value = label;
+    ws.getCell(r, 1).font = label ? BF : NF;
+    ws.getCell(r, 1).border = BORDER;
+    ws.getCell(r, 2).value = metric;
+    ws.getCell(r, 2).font = NF;
+    ws.getCell(r, 2).border = BORDER;
+    for (let y = 0; y < 5; y++) {
+      const c = ws.getCell(r, 3 + y);
+      const v = values[y];
+      c.value = v === null ? "N/A" : v;
+      c.font = NF;
+      c.border = BORDER;
+      c.alignment = { horizontal: "right" };
+      if (typeof v === "number") c.numFmt = numFmt;
+    }
+    const dc = ws.getCell(r, 8);
+    if (deltaY1 === null) {
+      dc.value = "—";
+    } else {
+      dc.value = deltaY1;
+      dc.numFmt = numFmt;
+    }
+    dc.font = BF;
+    dc.border = BORDER;
+    dc.alignment = { horizontal: "right" };
+    if (rag && rag.value > 0) {
+      const isGreen = rag.higherBetter ? rag.value >= rag.green : rag.value <= rag.green;
+      const isAmber = rag.higherBetter
+        ? rag.value >= rag.amber
+        : rag.value <= rag.amber;
+      const argb = isGreen ? GREEN_BG : isAmber ? AMBER_BG : RED_BG;
+      ws.getCell(r, 3).fill = { type: "pattern", pattern: "solid", fgColor: { argb } };
+    }
+    r++;
+  }
+
+  function writeBlock(name: string, description: string, m: {
+    netIncome: number[];
+    dscr: number[];
+    endingCash: number[];
+    breakEvenStudents: Array<number | null>;
+    cashRunwayMonths: number;
+    breakEvenYear: number | null;
+  }, baseM: typeof m | null) {
+    // Block header
+    ws.mergeCells(r, 1, r, 8);
+    const hc = ws.getCell(r, 1);
+    hc.value = name;
+    hc.font = SECTION_FONT;
+    hc.fill = SECTION_FILL;
+    hc.border = BORDER;
+    hc.alignment = { horizontal: "left", vertical: "middle", indent: 1 };
+    ws.getRow(r).height = 18;
+    r++;
+    if (description) {
+      ws.mergeCells(r, 1, r, 8);
+      const dc2 = ws.getCell(r, 1);
+      dc2.value = description;
+      dc2.font = { name: "Calibri", size: 9, italic: true, color: { argb: "FF6B7280" } };
+      dc2.alignment = { wrapText: true, vertical: "top", indent: 1 };
+      ws.getRow(r).height = 24;
+      r++;
+    }
+    const niDelta = baseM ? m.netIncome[0] - baseM.netIncome[0] : null;
+    const dscrDelta = baseM ? m.dscr[0] - baseM.dscr[0] : null;
+    const cashDelta = baseM ? m.endingCash[0] - baseM.endingCash[0] : null;
+    const beDelta = baseM
+      ? (m.breakEvenStudents[0] ?? 0) - (baseM.breakEvenStudents[0] ?? 0)
+      : null;
+    writeMetricRow("", "Net Income", m.netIncome, CUR, niDelta);
+    // True minimum DSCR: drop only the engine sentinel (0 = "no debt service
+    // modeled"). Negative DSCR — debt service exists, NOI is negative — is
+    // the worst case and MUST be highlighted to the lender, not hidden.
+    const structural = m.dscr.filter((d) => d !== 0);
+    const minDscr = structural.length ? Math.min(...structural) : null;
+    writeMetricRow(
+      "",
+      "DSCR",
+      m.dscr.map((d) => (d === 0 ? null : d)),
+      NUM,
+      dscrDelta,
+      minDscr === null
+        ? undefined
+        : { value: minDscr, green: BENCHMARK_DSCR_GREEN, amber: BENCHMARK_DSCR_AMBER, higherBetter: true },
+    );
+    writeMetricRow("", "Ending Cash", m.endingCash, CUR, cashDelta);
+    writeMetricRow("", "Break-Even Students", m.breakEvenStudents, NUM, beDelta);
+    // Single-value rows (runway, break-even year)
+    ws.getCell(r, 1).value = "";
+    ws.getCell(r, 1).border = BORDER;
+    ws.getCell(r, 2).value = "Cash Runway (mo)";
+    ws.getCell(r, 2).font = NF;
+    ws.getCell(r, 2).border = BORDER;
+    ws.getCell(r, 3).value = m.cashRunwayMonths;
+    ws.getCell(r, 3).numFmt = NUM;
+    ws.getCell(r, 3).font = NF;
+    ws.getCell(r, 3).border = BORDER;
+    ws.getCell(r, 3).alignment = { horizontal: "right" };
+    for (let y = 1; y < 5; y++) {
+      ws.getCell(r, 3 + y).value = "";
+      ws.getCell(r, 3 + y).border = BORDER;
+    }
+    ws.getCell(r, 8).value = baseM ? m.cashRunwayMonths - baseM.cashRunwayMonths : "—";
+    ws.getCell(r, 8).font = BF;
+    ws.getCell(r, 8).border = BORDER;
+    ws.getCell(r, 8).alignment = { horizontal: "right" };
+    ws.getCell(r, 8).numFmt = NUM;
+    r++;
+    ws.getCell(r, 1).value = "";
+    ws.getCell(r, 1).border = BORDER;
+    ws.getCell(r, 2).value = "Break-Even Year";
+    ws.getCell(r, 2).font = NF;
+    ws.getCell(r, 2).border = BORDER;
+    ws.getCell(r, 3).value = m.breakEvenYear === null ? "Never" : `Year ${m.breakEvenYear}`;
+    ws.getCell(r, 3).font = NF;
+    ws.getCell(r, 3).border = BORDER;
+    ws.getCell(r, 3).alignment = { horizontal: "right" };
+    for (let y = 1; y < 5; y++) {
+      ws.getCell(r, 3 + y).value = "";
+      ws.getCell(r, 3 + y).border = BORDER;
+    }
+    if (baseM && m.breakEvenYear !== null && baseM.breakEvenYear !== null) {
+      const shift = m.breakEvenYear - baseM.breakEvenYear;
+      ws.getCell(r, 8).value = `${shift > 0 ? "+" : ""}${shift}y`;
+    } else {
+      ws.getCell(r, 8).value = "—";
+    }
+    ws.getCell(r, 8).font = BF;
+    ws.getCell(r, 8).border = BORDER;
+    ws.getCell(r, 8).alignment = { horizontal: "right" };
+    r++;
+    r++;
+  }
+
+  writeBlock("Base Case", "Canonical engine output. All scenarios below are deltas vs this row.", stress.base, null);
+  for (const sc of stress.scenarios) {
+    writeBlock(sc.name, sc.description, sc, stress.base);
+  }
+
+  ws.getRow(headerRow).height = 18;
+}
+
 export async function generateLenderProFormaWorkbook(
   rawData: Record<string, unknown>,
   consultantOutput?: ConsultantOutput,
@@ -1880,6 +2079,13 @@ export async function generateLenderProFormaWorkbook(
   buildStaffing(wb, res);
   buildLoanSnapshot(wb, input, res);
   buildSummary(wb, input, res);
+  // Task #616 — Standard Lender Stress Tests tab. Reuses the canonical
+  // engine (`computeLenderStressTests`) so this workbook, the lender packet
+  // PDF, the founder dashboard, and the consultant view all show the same
+  // numbers — no parallel math.
+  const stress = computeLenderStressTests(rawData as unknown as DecisionEngineModelData);
+  addLenderStressTestsSheet(wb, stress);
+
   addDecisionHistorySheet(wb, rawData as Parameters<typeof addDecisionHistorySheet>[1]);
 
   const lenderRevCats: Record<string, number[]> = {};

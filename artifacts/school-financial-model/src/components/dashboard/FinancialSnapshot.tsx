@@ -17,13 +17,18 @@ import {
 } from "recharts";
 import { computeMetrics } from "@/lib/coaching/diagnostics-engine";
 import {
+  BENCHMARK_DSCR_AMBER,
+  BENCHMARK_DSCR_GREEN,
   computeAnnualDebt,
+  computeLenderStressTests,
   computeYear1MonthlyCashFlow,
   findLowestCashMonth,
   computeRevenueQualityRollup,
   computeRevenueRowAmountsForYear,
   REVENUE_QUALITY_DEFINITIONS,
   REVENUE_QUALITY_LABELS,
+  type LenderStressScenarioResult,
+  type LenderStressTestResults,
   type MonthlyRevenueRowLike,
   type RevenueQuality,
   type RevenueRowAmountsRowLike,
@@ -90,6 +95,72 @@ const RQ_BUCKET_ORDER: readonly RevenueQuality[] = [
   "projected",
   "donor_dependent",
 ] as const;
+
+type StressRagTone = "green" | "amber" | "red";
+
+interface StressRagStatus {
+  tone: StressRagTone;
+  label: string;
+  badgeClass: string;
+  dotClass: string;
+  dscrClass: string;
+  runwayClass: string;
+  cashClass: string;
+}
+
+/**
+ * Task #616 — benchmark a stress-test scenario against lender thresholds.
+ * Worst metric wins so the badge reflects the binding constraint:
+ *   • DSCR (canonical {@link BENCHMARK_DSCR_GREEN}/{@link BENCHMARK_DSCR_AMBER})
+ *   • Unrestricted runway (≥6mo green / ≥3mo amber / <3mo red)
+ *   • Min ending cash (≥0 green / ≥-50k amber / <-50k red)
+ */
+function computeStressRagStatus(s: LenderStressScenarioResult): StressRagStatus {
+  // Treat DSCR as a true minimum across modeled years. DSCR=0 is the engine
+  // sentinel for "no debt service modeled" (structurally unavailable) — drop
+  // only those zeros. Negative DSCR (debt service exists, NOI negative) is
+  // the worst case and MUST count toward the badge.
+  const structuralDscr = s.dscr.filter((d) => d !== 0);
+  const minDscr = structuralDscr.length ? Math.min(...structuralDscr) : null;
+  const minEndCash = Math.min(...s.endingCash);
+  const runway = s.cashRunwayMonths;
+
+  const dscrTone: StressRagTone =
+    minDscr === null
+      ? "green" // no debt service modeled → DSCR doesn't bind
+      : minDscr >= BENCHMARK_DSCR_GREEN ? "green" : minDscr >= BENCHMARK_DSCR_AMBER ? "amber" : "red";
+  const runwayTone: StressRagTone = runway >= 6 ? "green" : runway >= 3 ? "amber" : "red";
+  const cashTone: StressRagTone = minEndCash >= 0 ? "green" : minEndCash >= -50_000 ? "amber" : "red";
+
+  const order: Record<StressRagTone, number> = { green: 0, amber: 1, red: 2 };
+  const overall: StressRagTone = ([dscrTone, runwayTone, cashTone] as StressRagTone[]).reduce(
+    (worst, t) => (order[t] > order[worst] ? t : worst),
+    "green",
+  );
+
+  const toneClass = (t: StressRagTone) =>
+    t === "red" ? "text-rose-700 font-medium" : t === "amber" ? "text-amber-700" : "text-emerald-700";
+  const labelMap: Record<StressRagTone, string> = { green: "Healthy", amber: "Watch", red: "At risk" };
+  const badgeMap: Record<StressRagTone, string> = {
+    green: "bg-emerald-100 text-emerald-800 border border-emerald-200",
+    amber: "bg-amber-100 text-amber-900 border border-amber-200",
+    red: "bg-rose-100 text-rose-900 border border-rose-200",
+  };
+  const dotMap: Record<StressRagTone, string> = {
+    green: "bg-emerald-600",
+    amber: "bg-amber-500",
+    red: "bg-rose-600",
+  };
+  return {
+    tone: overall,
+    label: labelMap[overall],
+    badgeClass: badgeMap[overall],
+    dotClass: dotMap[overall],
+    dscrClass: toneClass(dscrTone),
+    runwayClass: toneClass(runwayTone),
+    cashClass: toneClass(cashTone),
+  };
+}
 
 interface KpiTileProps {
   labelId: string;
@@ -288,6 +359,18 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
         expensesByYear: m.expensesByYear,
         revenueQualityY1,
       };
+    } catch {
+      return null;
+    }
+  }, [model]);
+
+  // Task #616 — fixed lender stress-test battery. Reuses the canonical
+  // engine so the dashboard matches the consultant view, lender packet
+  // PDF, and lender pro-forma workbook exactly (no parallel math).
+  const stressTests = useMemo<LenderStressTestResults | null>(() => {
+    if (!model?.data) return null;
+    try {
+      return computeLenderStressTests(model.data as unknown as Parameters<typeof computeLenderStressTests>[0]);
     } catch {
       return null;
     }
@@ -730,6 +813,93 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
               data={model.data as unknown as FullModelData}
               className="mt-4"
             />
+          )}
+          {stressTests && metrics?.hasNumbers && (
+            <div
+              data-testid="dashboard-lender-stress-tests"
+              className="mt-5 rounded-xl border border-border/60 bg-secondary/20 p-4"
+            >
+              <h3 className="font-display text-sm font-semibold text-foreground mb-1">
+                Lender stress tests
+              </h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Standard downside scenarios lenders run on every plan. Status is benchmarked against a healthy DSCR ({BENCHMARK_DSCR_GREEN.toFixed(2)}x green, {BENCHMARK_DSCR_AMBER.toFixed(2)}x amber) and a 6-month operating reserve.
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-muted-foreground border-b border-border/60">
+                      <th className="py-1.5 pr-3 font-medium">Scenario</th>
+                      <th className="py-1.5 px-2 font-medium text-center">Status</th>
+                      <th className="py-1.5 px-2 font-medium text-right">Min DSCR (Δ)</th>
+                      <th className="py-1.5 px-2 font-medium text-right">Runway (Δ mo)</th>
+                      <th className="py-1.5 px-2 font-medium text-right">Min Ending Cash (Δ)</th>
+                      <th className="py-1.5 pl-2 font-medium text-right">Y1 Net Income Δ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stressTests.scenarios.map((s) => {
+                      const status = computeStressRagStatus(s);
+                      // True minimum across modeled years; DSCR=0 is the
+                      // engine sentinel for "no debt service modeled" so
+                      // we drop only zeros and keep negatives.
+                      const structuralDscr = s.dscr.filter((d) => d !== 0);
+                      const minDscr = structuralDscr.length ? Math.min(...structuralDscr) : null;
+                      const minEndCash = Math.min(...s.endingCash);
+                      const d = s.deltaVsBase;
+                      return (
+                        <tr
+                          key={s.id}
+                          data-testid={`dashboard-stress-row-${s.id}`}
+                          data-status={status.tone}
+                          className="border-b border-border/40 last:border-b-0"
+                        >
+                          <td className="py-1.5 pr-3 text-foreground">{s.name}</td>
+                          <td className="py-1.5 px-2 text-center">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${status.badgeClass}`}
+                              title={status.label}
+                            >
+                              <span className={`inline-block w-1.5 h-1.5 rounded-full ${status.dotClass}`} />
+                              {status.label}
+                            </span>
+                          </td>
+                          <td className="py-1.5 px-2 text-right tabular-nums">
+                            <span className={status.dscrClass}>{minDscr === null ? "n/a" : `${minDscr.toFixed(2)}x`}</span>
+                            <span className="text-muted-foreground ml-1">
+                              ({d.minDscr >= 0 ? "+" : ""}
+                              {d.minDscr.toFixed(2)})
+                            </span>
+                          </td>
+                          <td className="py-1.5 px-2 text-right tabular-nums">
+                            <span className={status.runwayClass}>{s.cashRunwayMonths.toFixed(1)}</span>
+                            <span className="text-muted-foreground ml-1">
+                              ({d.cashRunwayMonths >= 0 ? "+" : ""}
+                              {d.cashRunwayMonths.toFixed(1)})
+                            </span>
+                          </td>
+                          <td className="py-1.5 px-2 text-right tabular-nums">
+                            <span className={status.cashClass}>{formatCurrency(minEndCash)}</span>
+                            <span className="text-muted-foreground ml-1">
+                              ({d.minEndingCash >= 0 ? "+" : ""}
+                              {formatCurrency(d.minEndingCash)})
+                            </span>
+                          </td>
+                          <td
+                            className={`py-1.5 pl-2 text-right tabular-nums ${
+                              d.y1NetIncome < -0.5 ? "text-rose-700 font-medium" : d.y1NetIncome > 0.5 ? "text-emerald-700" : "text-foreground"
+                            }`}
+                          >
+                            {d.y1NetIncome >= 0 ? "+" : ""}
+                            {formatCurrency(d.y1NetIncome)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </>
       )}

@@ -3529,6 +3529,54 @@ export const GetConsultantAnalysisResponse = zod.object({
       }),
     })
     .optional(),
+  lenderStressTests: zod.object({
+    base: zod
+      .object({
+        dscr: zod.array(zod.number()),
+        endingCash: zod
+          .array(zod.number())
+          .describe("Year-end unrestricted cash for each modeled year."),
+        cashRunwayMonths: zod
+          .number()
+          .describe(
+            "Months of operating runway computed from unrestricted cash only.",
+          ),
+        breakEvenStudents: zod.array(zod.number().nullable()),
+        netIncome: zod.array(zod.number()),
+        breakEvenYear: zod.number().nullable(),
+      })
+      .describe(
+        "Per-year baseline metrics that every stress scenario is measured\nagainst. `endingCash` and `cashRunwayMonths` are computed off the\nscenario engine's \*unrestricted\* cash position — restricted\nphilanthropy \/ grant balances are stripped because they cannot\nlegally service debt or fund payroll.\n",
+      ),
+    scenarios: zod.array(
+      zod.object({
+        id: zod.enum([
+          "enrollment_minus_10",
+          "enrollment_minus_20",
+          "esa_delay_3mo",
+          "rent_shock_25",
+          "founder_normalization",
+        ]),
+        name: zod.string(),
+        description: zod.string(),
+        dscr: zod.array(zod.number()),
+        endingCash: zod.array(zod.number()),
+        cashRunwayMonths: zod.number(),
+        breakEvenStudents: zod.array(zod.number().nullable()),
+        netIncome: zod.array(zod.number()),
+        breakEvenYear: zod.number().nullable(),
+        deltaVsBase: zod.object({
+          y1NetIncome: zod.number(),
+          y5NetIncome: zod.number(),
+          y1Dscr: zod.number(),
+          minDscr: zod.number(),
+          minEndingCash: zod.number(),
+          cashRunwayMonths: zod.number(),
+          breakEvenYearShift: zod.number().nullable(),
+        }),
+      }),
+    ),
+  }),
   generatedAt: zod.date(),
 });
 
@@ -3811,5 +3859,53 @@ export const PublicConsultantAnalysisResponse = zod.object({
       }),
     })
     .optional(),
+  lenderStressTests: zod.object({
+    base: zod
+      .object({
+        dscr: zod.array(zod.number()),
+        endingCash: zod
+          .array(zod.number())
+          .describe("Year-end unrestricted cash for each modeled year."),
+        cashRunwayMonths: zod
+          .number()
+          .describe(
+            "Months of operating runway computed from unrestricted cash only.",
+          ),
+        breakEvenStudents: zod.array(zod.number().nullable()),
+        netIncome: zod.array(zod.number()),
+        breakEvenYear: zod.number().nullable(),
+      })
+      .describe(
+        "Per-year baseline metrics that every stress scenario is measured\nagainst. `endingCash` and `cashRunwayMonths` are computed off the\nscenario engine's \*unrestricted\* cash position — restricted\nphilanthropy \/ grant balances are stripped because they cannot\nlegally service debt or fund payroll.\n",
+      ),
+    scenarios: zod.array(
+      zod.object({
+        id: zod.enum([
+          "enrollment_minus_10",
+          "enrollment_minus_20",
+          "esa_delay_3mo",
+          "rent_shock_25",
+          "founder_normalization",
+        ]),
+        name: zod.string(),
+        description: zod.string(),
+        dscr: zod.array(zod.number()),
+        endingCash: zod.array(zod.number()),
+        cashRunwayMonths: zod.number(),
+        breakEvenStudents: zod.array(zod.number().nullable()),
+        netIncome: zod.array(zod.number()),
+        breakEvenYear: zod.number().nullable(),
+        deltaVsBase: zod.object({
+          y1NetIncome: zod.number(),
+          y5NetIncome: zod.number(),
+          y1Dscr: zod.number(),
+          minDscr: zod.number(),
+          minEndingCash: zod.number(),
+          cashRunwayMonths: zod.number(),
+          breakEvenYearShift: zod.number().nullable(),
+        }),
+      }),
+    ),
+  }),
   generatedAt: zod.date(),
 });

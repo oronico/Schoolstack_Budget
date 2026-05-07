@@ -13,9 +13,11 @@ import {
   computeCashRunwayMonths,
   computeNormalizedFinancials,
   inferRevenueQuality,
+  computeLenderStressTests,
   type RevenueQualityYearRollup,
   type MonthlyRevenueRowLike,
   type NormalizedFinancialsView,
+  type LenderStressTestResults,
   type DecisionEngineModelData,
 } from "@workspace/finance";
 import { detectUnusualAssumptions } from "./assumption-flags";
@@ -421,6 +423,14 @@ export interface ConsultantOutput {
    * tab and on consultant analysis.
    */
   normalizedView: NormalizedFinancialsView;
+  /**
+   * Task #616 — fixed lender stress-test battery (-10/-20% enrollment, ESA
+   * delay, rent shock, founder normalization). Surfaced on the founder
+   * dashboard, consultant view, lender packet PDF, and lender pro-forma
+   * workbook. All four surfaces pull from this single canonical helper so
+   * the numbers reconcile exactly.
+   */
+  lenderStressTests: LenderStressTestResults;
   generatedAt: string;
 }
 
@@ -3100,6 +3110,11 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
   // FullModelData, matching the convention used elsewhere in this file.
   const normalizedView = computeNormalizedFinancials(data as unknown as DecisionEngineModelData);
 
+  // Task #616 — canonical lender stress-test battery. Surfaced on founder
+  // dashboard, consultant view, lender packet PDF, and lender pro-forma
+  // workbook. Same cast convention as `normalizedView` above.
+  const lenderStressTests = computeLenderStressTests(data as unknown as DecisionEngineModelData);
+
   return {
     executiveSummary,
     biggestStrength,
@@ -3122,6 +3137,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     lendingLabAssessment,
     assumptionFlags,
     normalizedView,
+    lenderStressTests,
     generatedAt: new Date().toISOString(),
   };
 }
