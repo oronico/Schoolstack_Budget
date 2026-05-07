@@ -70,12 +70,12 @@ async function exportModel(modelData: Record<string, unknown>, slug: string, out
 
   const lenderPacket = buildLenderPacket(typedData, consultantOutput, modelId);
   const lenderPdf = await generateLenderPacketPDF(lenderPacket);
-  fs.writeFileSync(path.join(outDir, `${slug}_Lender_Packet.pdf`), lenderPdf);
+  fs.writeFileSync(path.join(outDir, `${slug}_Lender_Conversation_Snapshot.pdf`), lenderPdf);
   console.log(`  ✓ Lender Packet PDF (${lenderPdf.length} bytes)`);
 
   const boardPacket = buildBoardPacket(typedData, consultantOutput, modelId);
   const boardPdf = await generateBoardPacketPDF(boardPacket);
-  fs.writeFileSync(path.join(outDir, `${slug}_Board_Summary.pdf`), boardPdf);
+  fs.writeFileSync(path.join(outDir, `${slug}_Board_and_Funder_Summary.pdf`), boardPdf);
   console.log(`  ✓ Board Summary PDF (${boardPdf.length} bytes)`);
 }
 

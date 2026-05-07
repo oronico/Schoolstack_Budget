@@ -23,7 +23,7 @@ describe("ExtendToFiveYearModal", () => {
     expect(screen.getByText(/Extend to a 5-year projection/i)).toBeInTheDocument();
     expect(screen.getByText(/Year 1 numbers stay exactly as you entered them/i)).toBeInTheDocument();
     expect(screen.getByText(/seed Years 2.5 from your Year 1 inputs/i)).toBeInTheDocument();
-    expect(screen.getByText(/Lender Packet, Board Summary/i)).toBeInTheDocument();
+    expect(screen.getByText(/Lender Conversation Snapshot, Board and Funder Summary/i)).toBeInTheDocument();
   });
 
   it("calls onConfirm with the (default) rates when the primary button is clicked", () => {

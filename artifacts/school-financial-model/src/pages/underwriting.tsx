@@ -631,7 +631,7 @@ export function computeLenderFlags(m: GuestModel, enrollProjection: number[]): L
   }
 
   if (m.facilityType === "residential") {
-    flags.push({ severity: "high", label: "Residential facility — may be ineligible for some lending programs" });
+    flags.push({ severity: "high", label: "Residential facility — may not qualify for some lending programs" });
   }
 
   if (!m.leaseSigned && m.monthlyRent > 0) {
@@ -843,7 +843,7 @@ export function UnderwritingLandingPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <p className="text-xs font-bold tracking-widest text-[#328555] uppercase mb-1">
-                Public Underwriting Wizard
+                Founder Quick-Start Wizard
               </p>
               <h1 className="font-display text-2xl md:text-3xl font-bold text-[#1E293B]">
                 Build your school's financial model
@@ -1274,7 +1274,7 @@ export function UnderwritingLandingPage() {
                 <div className="border-2 rounded-xl p-5" style={{ borderColor: `${readiness.color}30` }} data-testid="lender-readiness-snapshot">
                   <h3 className="font-display text-base font-bold text-[#1E293B] mb-4 flex items-center gap-2">
                     <readiness.Icon className="w-5 h-5" style={{ color: readiness.color }} />
-                    Lender Readiness Snapshot
+                    Loan Readiness Snapshot
                   </h3>
 
                   <div className="flex items-center gap-2 mb-4">
@@ -1300,7 +1300,7 @@ export function UnderwritingLandingPage() {
 
                   {concerns.length > 0 ? (
                     <div className="mb-4">
-                      <p className="text-xs font-bold text-[#D97706] uppercase tracking-wide mb-2">Lender concerns</p>
+                      <p className="text-xs font-bold text-[#D97706] uppercase tracking-wide mb-2">Things to address before talking to a lender</p>
                       <ul className="space-y-1">
                         {concerns.map((f, i) => (
                           <li key={i} className="flex items-start gap-2 text-sm text-[#1E293B]/80">
@@ -1319,7 +1319,7 @@ export function UnderwritingLandingPage() {
                     </div>
                   ) : null}
 
-                  <p className="text-xs text-[#1E293B]/40 mt-3" data-testid="dscr-disclaimer">Estimated DSCR based on guest-entered annual debt service. The full underwriting workbook computes DSCR from modeled loan terms.</p>
+                  <p className="text-xs text-[#1E293B]/40 mt-3" data-testid="dscr-disclaimer">Estimated DSCR based on the annual debt service you entered. The full Founder Planning Workbook computes DSCR from modeled loan terms.</p>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-3">
@@ -1370,7 +1370,7 @@ export function UnderwritingLandingPage() {
                   <h3 className="font-display text-base font-bold text-[#1E293B] mb-2">Save your model online</h3>
                   <p className="text-sm text-[#1E293B]/70 mb-4">
                     Create a free account to save your model server-side, return on any device, share it with
-                    your board, and unlock the full multi-step wizard with scenario planning, lender packets,
+                    your board, and unlock the full multi-step wizard with scenario planning, the Lender Conversation Snapshot,
                     and PDF reports.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-2">

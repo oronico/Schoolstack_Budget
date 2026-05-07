@@ -57,7 +57,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
     subheadline:
       "Walk through enrollment, revenue, staffing, and expenses step by step. SchoolStack Budget assembles a Year 1 income statement and current-year tab you can hand to a board, lender, or co-founder the same day.",
     audience:
-      "Founders building their opening-year budget, schools refreshing their current operating year, and operators preparing a board packet for a single fiscal year.",
+      "Founders building their opening-year budget, schools refreshing their current operating year, and operators preparing a board handout for a single fiscal year.",
     primaryCta: { label: "Start My Year 1 Budget", href: "/register" },
     visuals: <SingleYearScreenshots />,
     steps: [
@@ -84,7 +84,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
       {
         title: "Export and share.",
         description:
-          "Download a current-year workbook tab, a one-page board summary, or a shareable read-only link - no login required for the people you send it to.",
+          "Download a current-year workbook tab, a one-page Board and Funder Summary, or a shareable read-only link - no login required for the people you send it to.",
       },
     ],
     faqs: [
@@ -101,7 +101,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
       {
         question: "Can I export just the current-year numbers?",
         answer:
-          "Yes. The export workbook has a dedicated current-year tab that mirrors the in-app review, plus a board summary PDF that fits on one page.",
+          "Yes. The export workbook has a dedicated current-year tab that mirrors the in-app review, plus a Board and Funder Summary PDF that fits on one page.",
       },
       {
         question: "What if I'm already operating and want to budget the next school year?",
@@ -118,7 +118,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
     slug: "five-year-pro-forma",
     seoTitle: "Five Year Pro Forma for Schools",
     seoDescription:
-      "Build a lender-ready 5-year financial projection for your school. Revenue ramp, staffing growth, expense scaling, and a 23-tab Underwriting Package.",
+      "Build a lender-grade 5-year financial projection for your school. Revenue ramp, staffing growth, expense scaling, and a 23-tab Founder Planning Workbook.",
     badge: "FIVE YEAR PRO FORMA",
     Icon: CalendarRange,
     headline: "Five years of financial story,",
@@ -153,7 +153,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
       {
         title: "Review and export the full 5-year package.",
         description:
-          "Year-by-year income statement, cash flow, and key ratios. Export the Lender-Ready Packet PDF or 23-tab Excel workbook with live formulas.",
+          "Year-by-year income statement, cash flow, and key ratios. Export the Lender Conversation Snapshot PDF or 23-tab Founder Planning Workbook with live formulas.",
       },
     ],
     faqs: [
@@ -175,7 +175,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
       {
         question: "Can I export the underlying formulas?",
         answer:
-          "Yes. The Formula Workbook export ships with live Excel formulas - your CFO, lender, or accountant can audit every line.",
+          "Yes. The 5-Year Financial Model export ships with live Excel formulas - your CFO, lender, or accountant can audit every line.",
       },
     ],
     closingHeadline: "A 5-year story, told in numbers.",
@@ -244,7 +244,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
       {
         question: "Can I share a scenario with my board or lender?",
         answer:
-          "Yes. Generate a read-only link to your model that includes the saved scenarios, or include the comparison in the Lender-Ready Packet export.",
+          "Yes. Generate a read-only link to your model that includes the saved scenarios, or include the comparison in the Lender Conversation Snapshot export.",
       },
     ],
     closingHeadline: "Find the cracks before someone else does.",
@@ -256,7 +256,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
     slug: "debt-analysis",
     seoTitle: "School Debt Analysis & DSCR Modeling",
     seoDescription:
-      "Model facility loans and lines of credit for your school. DSCR, debt service coverage, and a Lender-Ready Packet that gives underwriters everything they need.",
+      "Model facility loans and lines of credit for your school. DSCR, debt service coverage, and a Lender Conversation Snapshot that gives lenders everything they need.",
     badge: "DEBT ANALYSIS",
     Icon: Landmark,
     headline: "Know your debt service before",
@@ -265,7 +265,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
       "Model a facility loan, line of credit, or fit-out financing inside your full 5-year plan. See DSCR, monthly debt service, and how much room you really have - then export a packet underwriters know how to read.",
     audience:
       "Founders raising facility financing, schools refinancing existing debt, and CDFIs and lenders evaluating school borrowers.",
-    primaryCta: { label: "Build a Lender-Ready Plan", href: "/register" },
+    primaryCta: { label: "Build a Lender-Grade Plan", href: "/register" },
     visuals: <DebtScreenshots />,
     steps: [
       {
@@ -289,9 +289,9 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
           "Run rate sensitivity, payment shock, and revenue stress scenarios on the loan. See whether DSCR holds up under conditions a lender would reasonably test.",
       },
       {
-        title: "Export the Lender-Ready Packet.",
+        title: "Export the Lender Conversation Snapshot.",
         description:
-          "A PDF that bundles 5-year projections, DSCR table, assumptions, and a board summary - the structure underwriters expect, without you formatting a thing.",
+          "A PDF that bundles 5-year projections, DSCR table, assumptions, and a Board and Funder Summary - the structure underwriters expect, without you formatting a thing.",
       },
     ],
     faqs: [
@@ -311,15 +311,15 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
           "Yes. CDFI structures with variable rates, deferred payments, or grant-paired financing can all be modeled. The DSCR and cash flow updates accordingly.",
       },
       {
-        question: "What does the Lender-Ready Packet actually include?",
+        question: "What does the Lender Conversation Snapshot actually include?",
         answer:
-          "5-year P&L and cash flow, DSCR table, assumptions documentation, sensitivity analysis, and a board summary - bundled as a single PDF underwriters can review in one sitting.",
+          "5-year P&L and cash flow, DSCR table, assumptions documentation, sensitivity analysis, and a Board and Funder Summary - bundled as a single PDF underwriters can review in one sitting.",
       },
     ],
     closingHeadline: "Walk into your loan meeting prepared.",
     closingText:
       "DSCR, payment shock, sensitivity - all calculated, all in a packet a lender already knows how to read. Free during beta.",
-    closingCta: { label: "Build a Lender-Ready Plan", href: "/register" },
+    closingCta: { label: "Build a Lender-Grade Plan", href: "/register" },
   },
   {
     slug: "budgeting-accounting-guidance",

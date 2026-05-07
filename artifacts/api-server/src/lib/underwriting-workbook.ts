@@ -85,7 +85,7 @@ function buildCover(wb: ExcelJS.Workbook, data: ModelData) {
 
   r += 2;
   ws.mergeCells(r, 2, r, 3);
-  ws.getCell(r, 2).value = yc === 1 ? "Year 1 Financial Model & Underwriting Workbook" : "5-Year Financial Model & Underwriting Workbook";
+  ws.getCell(r, 2).value = yc === 1 ? "1-Year Operating Budget — Founder Planning Workbook" : "5-Year Financial Model — Founder Planning Workbook";
   ws.getCell(r, 2).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
   ws.getCell(r, 2).alignment = { horizontal: "center" };
 

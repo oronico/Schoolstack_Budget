@@ -293,7 +293,7 @@ export function LendingLabCard({ assessment, jumpToStep }: LendingLabCardProps) 
   const subtitle = isPerfect
     ? "Your model meets all Lending Lab criteria with no flags. You're in strong shape to apply."
     : isReady
-      ? "This model meets the underwriting requirements for a Building Hope Impact Fund loan application."
+      ? "This model meets the loan-readiness criteria for a Building Hope Impact Fund loan application."
       : `${assessment.failCount} area${assessment.failCount > 1 ? "s" : ""} need attention before applying.`;
 
   return (

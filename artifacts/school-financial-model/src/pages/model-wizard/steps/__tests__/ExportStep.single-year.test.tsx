@@ -73,7 +73,7 @@ describe("ExportStep — single-year gating across all four lender-grade cards",
 
     // Banner copy lists only the gated exports.
     expect(
-      screen.getByText(/Lender Packet and Board Summary/i),
+      screen.getByText(/Lender Conversation Snapshot and Board and Funder Summary/i),
     ).toBeInTheDocument();
   });
 
@@ -85,9 +85,9 @@ describe("ExportStep — single-year gating across all four lender-grade cards",
     expect(screen.queryByTestId("underwriting-card-extend-cta")).toBeNull();
     expect(screen.queryByTestId("formula-card-extend-cta")).toBeNull();
 
-    expect(screen.getByRole("button", { name: /Lender-Ready Packet/i })).not.toBeDisabled();
-    expect(screen.getByRole("button", { name: /Board Summary/i })).not.toBeDisabled();
-    expect(screen.getByRole("button", { name: /Underwriting Package/i })).not.toBeDisabled();
-    expect(screen.getByRole("button", { name: /Formula Workbook/i })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /Lender Conversation Snapshot/i })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /Board and Funder Summary/i })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /Founder Planning Workbook/i })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /5-Year Financial Model/i })).not.toBeDisabled();
   });
 });

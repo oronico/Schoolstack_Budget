@@ -84,7 +84,7 @@ export function drawCoverPage(doc: PDFDoc, packet: BoardPacket) {
   doc.font("Helvetica-Bold").fontSize(22).fillColor(BRAND.white);
   doc.text("SchoolStack Budget", margin, 25, { width: contentW });
   doc.font("Helvetica").fontSize(11).fillColor(BRAND.gray);
-  doc.text("Board Financial Summary", margin, 52);
+  doc.text("Board and Funder Summary", margin, 52);
   doc.restore();
 
   doc.y = 130;

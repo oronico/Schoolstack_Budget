@@ -883,7 +883,7 @@ router.get("/models/:id/export/lender-packet", authMiddleware, async (req: AuthR
     res.json(packet);
   } catch (err) {
     console.error("Lender packet JSON error:", err);
-    res.status(500).json({ error: "Something went wrong generating the lender packet." });
+    res.status(500).json({ error: "Something went wrong generating the Lender Conversation Snapshot." });
   }
 });
 
@@ -959,10 +959,10 @@ router.get("/models/:id/export/lender-packet-pdf", authMiddleware, async (req: A
 
     await trackEvent("exported_lender_packet_pdf", req.userId, { modelId: model.id });
 
-    sendBinary(res, buffer, "application/pdf", `${safeName}_Lender_Packet.pdf`);
+    sendBinary(res, buffer, "application/pdf", `${safeName}_Lender_Conversation_Snapshot.pdf`);
   } catch (err) {
     console.error("Lender packet PDF error:", err);
-    res.status(500).json({ error: "Something went wrong generating the Lender Packet PDF." });
+    res.status(500).json({ error: "Something went wrong generating the Lender Conversation Snapshot PDF." });
   }
 });
 
@@ -1087,10 +1087,10 @@ router.get("/models/:id/export/board-packet-pdf", authMiddleware, async (req: Au
 
     await trackEvent("exported_board_packet_pdf", req.userId, { modelId: model.id });
 
-    sendBinary(res, buffer, "application/pdf", `${safeName}_Board_Summary.pdf`);
+    sendBinary(res, buffer, "application/pdf", `${safeName}_Board_and_Funder_Summary.pdf`);
   } catch (err) {
     console.error("Board packet PDF error:", err);
-    res.status(500).json({ error: "Something went wrong generating the Board Summary PDF." });
+    res.status(500).json({ error: "Something went wrong generating the Board and Funder Summary PDF." });
   }
 });
 
@@ -1293,7 +1293,7 @@ router.get("/models/:id/export/underwriting-v2", authMiddleware, async (req: Aut
 
     await trackEvent("exported_underwriting_v2", req.userId, { modelId: model.id });
 
-    sendBinary(res, buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", `${safeName}_Underwriting_Model.xlsx`);
+    sendBinary(res, buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", `${safeName}_Founder_Planning_Workbook.xlsx`);
   } catch (err) {
     console.error("Underwriting V2 export error:", err);
     res.status(500).json({ error: "Something went wrong generating the Underwriting Model workbook." });
@@ -1446,7 +1446,10 @@ router.get("/models/:id/export", authMiddleware, async (req: AuthRequest, res) =
     const yearCount = hasRevenueRows
       ? ((data.revenueRows as Array<{ amounts: number[] }>)[0]?.amounts?.length || 3)
       : 5;
-    const fileName = `${schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_")}_${yearCount}-Year_Financial_Model.xlsx`;
+    const safeSchool = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
+    const fileName = yearCount === 1
+      ? `${safeSchool}_Operating_Budget.xlsx`
+      : `${safeSchool}_5-Year_Financial_Model.xlsx`;
 
     const consultantOutput = await runConsultantEngine(data);
 

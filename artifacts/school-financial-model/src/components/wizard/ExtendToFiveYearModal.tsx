@@ -310,7 +310,7 @@ export function ExtendToFiveYearModal({
           </li>
           <li className="flex items-start gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
-            <span>Lender Packet, Board Summary, and 5-year exports become available.</span>
+            <span>Lender Conversation Snapshot, Board and Funder Summary, and 5-Year Financial Model exports become available.</span>
           </li>
         </ul>
         <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">

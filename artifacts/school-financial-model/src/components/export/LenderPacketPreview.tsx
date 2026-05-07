@@ -134,7 +134,7 @@ export function LenderPacketPreview({
       const blob = await res.blob();
       const disposition = res.headers.get("content-disposition") || "";
       const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
-      const filename = filenameMatch?.[1] || `Lender_Packet_${modelId}.pdf`;
+      const filename = filenameMatch?.[1] || `Lender_Conversation_Snapshot_${modelId}.pdf`;
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -165,7 +165,7 @@ export function LenderPacketPreview({
       <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
         <div className="bg-white rounded-2xl p-12 flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Generating lender packet...</p>
+          <p className="text-muted-foreground">Generating Lender Conversation Snapshot...</p>
         </div>
       </div>
     );
@@ -228,7 +228,7 @@ function PacketHeader({
         </div>
         <div>
           <h2 className="text-white font-bold text-lg">{packet.schoolName}</h2>
-          <p className="text-white/60 text-sm">Lender-Ready Financial Packet</p>
+          <p className="text-white/60 text-sm">Lender Conversation Snapshot</p>
         </div>
       </div>
       <div className="flex items-center gap-2">

@@ -68,10 +68,10 @@ describe("ExportStep — CSN Operating Manual live-formulas badge", () => {
     render(<Harness schoolType="chesterton_academy" />);
 
     for (const cardName of [
-      /Lender-Ready Packet/i,
-      /Board Summary/i,
-      /Underwriting Package/i,
-      /Formula Workbook/i,
+      /Lender Conversation Snapshot/i,
+      /Board and Funder Summary/i,
+      /Founder Planning Workbook/i,
+      /5-Year Financial Model/i,
     ]) {
       const card = screen.getByRole("button", { name: cardName });
       expect(within(card).queryByText(badgeMatcher)).toBeNull();

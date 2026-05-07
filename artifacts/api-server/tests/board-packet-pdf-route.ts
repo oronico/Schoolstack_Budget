@@ -179,8 +179,8 @@ async function testHappyPath(server: BootedServer) {
       `got ${JSON.stringify(cd)}`,
     );
     check(
-      "filename is suffixed with _Board_Summary.pdf (sanitised school name)",
-      /_Board_Summary\.pdf/.test(cd),
+      "filename is suffixed with _Board_and_Funder_Summary.pdf (sanitised school name)",
+      /_Board_and_Funder_Summary\.pdf/.test(cd),
       `got ${JSON.stringify(cd)}`,
     );
 

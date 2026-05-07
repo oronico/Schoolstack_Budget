@@ -249,10 +249,10 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
       const disposition = res.headers.get("content-disposition") || "";
       const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
       const fallbackNames: Record<ExportType, string> = {
-        formula: `School_Budget_Formulas_${modelId}.xlsx`,
-        underwritingV2: `Underwriting_Package_${modelId}.xlsx`,
-        lenderPacketPdf: `Lender_Packet_${modelId}.pdf`,
-        boardPacketPdf: `Board_Summary_${modelId}.pdf`,
+        formula: isSingleYear ? `Operating_Budget_${modelId}.xlsx` : `5_Year_Financial_Model_${modelId}.xlsx`,
+        underwritingV2: `Founder_Planning_Workbook_${modelId}.xlsx`,
+        lenderPacketPdf: `Lender_Conversation_Snapshot_${modelId}.pdf`,
+        boardPacketPdf: `Board_and_Funder_Summary_${modelId}.pdf`,
         chestertonOperatingManual: `Chesterton_CSN_Operating_Manual_${modelId}.xlsx`,
       };
       const filename = filenameMatch?.[1] || fallbackNames[type];
@@ -331,7 +331,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
 
       <p className="text-xl text-muted-foreground mb-10 max-w-lg mx-auto">
         {anyExported
-          ? "Check your downloads folder. All documents are lender-ready and fully formatted."
+          ? "Check your downloads folder. Every document is lender-grade and fully formatted."
           : "Before you download, let our team review your numbers."}
       </p>
 
@@ -370,7 +370,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
           <div className="flex-1">
             <p className="text-sm font-semibold text-emerald-900 mb-0.5">You're on Single-Year mode</p>
             <p className="text-xs text-emerald-800 leading-relaxed">
-              Lender-grade PDF exports - Lender Packet and Board Summary - need a full
+              Lender-grade PDF exports - Lender Conversation Snapshot and Board and Funder Summary - need a full
               5-year projection. <button
                 type="button"
                 data-testid="single-year-banner-extend"
@@ -385,8 +385,8 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         <div className="relative" data-testid="lender-packet-card-wrapper">
           <ExportCard
             icon={<FileText className="h-7 w-7" />}
-            title="Lender-Ready Packet"
-            description={isSingleYear ? "Requires 5-year projection. Extend your model to enable lender-ready exports." : "Executive summary, 5-year forecast, DSCR analysis, risk/mitigant assessment & supporting exhibits as PDF"}
+            title="Lender Conversation Snapshot"
+            description={isSingleYear ? "Requires 5-year projection. Extend your model to share with a lender." : "Plain-English summary, 5-year forecast, DSCR view, what to watch & supporting exhibits as PDF — designed to start a productive lender conversation"}
             isLoading={loading === "lenderPacketPdf"}
             isExported={exported.has("lenderPacketPdf")}
             disabled={isSingleYear || (loading !== null && loading !== "lenderPacketPdf")}
@@ -399,7 +399,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
               data-testid="lender-card-extend-cta"
               onClick={() => setShowExtendModal(true)}
               className="absolute inset-0 w-full h-full rounded-2xl flex items-end justify-center pb-4 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
-              aria-label="Extend to 5-year to enable Lender Packet"
+              aria-label="Extend to 5-year to enable Lender Conversation Snapshot"
             >
               <span className="text-[11px] font-semibold text-primary bg-white px-2.5 py-1 rounded-full shadow border border-primary/30">
                 Extend to 5-year
@@ -410,8 +410,8 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         <div className="relative" data-testid="board-packet-card-wrapper">
           <ExportCard
             icon={<BarChart3 className="h-7 w-7" />}
-            title="Board Summary"
-            description={isSingleYear ? "Requires 5-year projection. Extend your model to enable board-ready exports." : "Financial outlook, top risks, cash runway, scenario comparison & next steps for board review"}
+            title="Board and Funder Summary"
+            description={isSingleYear ? "Requires 5-year projection. Extend your model to enable a board-ready summary." : "Financial outlook, top things to watch, cash runway, scenario comparison & next steps — written for board members and funders"}
             isLoading={loading === "boardPacketPdf"}
             isExported={exported.has("boardPacketPdf")}
             disabled={isSingleYear || (loading !== null && loading !== "boardPacketPdf")}
@@ -424,7 +424,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
               data-testid="board-card-extend-cta"
               onClick={() => setShowExtendModal(true)}
               className="absolute inset-0 w-full h-full rounded-2xl flex items-end justify-center pb-4 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
-              aria-label="Extend to 5-year to enable Board Summary"
+              aria-label="Extend to 5-year to enable Board and Funder Summary"
             >
               <span className="text-[11px] font-semibold text-primary bg-white px-2.5 py-1 rounded-full shadow border border-primary/30">
                 Extend to 5-year
@@ -435,8 +435,8 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         <div className="relative" data-testid="underwriting-card-wrapper">
           <ExportCard
             icon={<ClipboardCheck className="h-7 w-7" />}
-            title="Underwriting Package"
-            description={isSingleYear ? "Year 1 workbook with DSCR, covenants, balance sheet, debt schedule & full formulas" : "23-tab workbook with DSCR, covenants, balance sheet, debt schedule & full formulas"}
+            title="Founder Planning Workbook"
+            description={isSingleYear ? "Year 1 workbook with DSCR, covenants, balance sheet, debt schedule & full formulas — your in-depth planning tool" : "23-tab workbook with DSCR, covenants, balance sheet, debt schedule & full formulas — your in-depth planning tool"}
             isLoading={loading === "underwritingV2"}
             isExported={exported.has("underwritingV2")}
             disabled={loading !== null && loading !== "underwritingV2"}
@@ -446,8 +446,8 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         <div className="relative" data-testid="formula-card-wrapper">
           <ExportCard
             icon={<FileSpreadsheet className="h-7 w-7" />}
-            title="Formula Workbook"
-            description="Assumptions page with live formulas - lenders can test the math"
+            title={isSingleYear ? "1-Year Operating Budget" : "5-Year Financial Model"}
+            description="Assumptions page with live Excel formulas — anyone reviewing can test the math"
             isLoading={loading === "formula"}
             isExported={exported.has("formula")}
             disabled={loading !== null && loading !== "formula"}

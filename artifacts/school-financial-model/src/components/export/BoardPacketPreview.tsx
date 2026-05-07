@@ -137,7 +137,7 @@ export function BoardPacketPreview({
       const blob = await res.blob();
       const disposition = res.headers.get("content-disposition") || "";
       const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
-      const filename = filenameMatch?.[1] || `Board_Summary_${modelId}.pdf`;
+      const filename = filenameMatch?.[1] || `Board_and_Funder_Summary_${modelId}.pdf`;
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -168,7 +168,7 @@ export function BoardPacketPreview({
       <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
         <div className="bg-white rounded-2xl p-12 flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Preparing board summary...</p>
+          <p className="text-muted-foreground">Preparing your Board and Funder Summary...</p>
         </div>
       </div>
     );
@@ -232,7 +232,7 @@ function Header({
         </div>
         <div>
           <h2 className="text-white font-bold text-lg">{packet.schoolName}</h2>
-          <p className="text-white/60 text-sm">Board Financial Summary</p>
+          <p className="text-white/60 text-sm">Board and Funder Summary</p>
         </div>
       </div>
       <div className="flex items-center gap-2">

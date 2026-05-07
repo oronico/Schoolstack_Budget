@@ -15,7 +15,7 @@ export function Footer() {
               />
             </div>
             <p className="text-sm text-white/60 leading-relaxed max-w-xs">
-              Build a simple 5-year financial model for your school, save your work, and export a lender-ready workbook.
+              Build a simple 5-year financial model for your school, save your work, and export a lender-grade workbook.
             </p>
           </div>
 

@@ -440,7 +440,7 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
                   {data.normalizedView.founderComp.totalDelta >= 0 ? "+" : ""}
                   {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(data.normalizedView.founderComp.totalDelta)}
                 </span>
-                . This flows through to net income, DSCR, and runway on the lender packet.
+                . This flows through to net income, DSCR, and runway on your Lender Conversation Snapshot.
               </p>
               <p
                 className="text-[12px] text-amber-900 leading-snug mt-2 font-medium"

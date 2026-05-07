@@ -76,7 +76,7 @@ export const USE_CASE_PAGES: UseCasePageData[] = [
         icon: <Download className="w-7 h-7 text-[#328555]" />,
         title: "Authorizer-ready exports",
         description:
-          "Export a Lender-Ready Packet PDF, Board Summary, 23-tab Underwriting Package, and Formula Workbook with live Excel math. Everything your authorizer needs in one click.",
+          "Export a Lender Conversation Snapshot PDF, Board and Funder Summary, 23-tab Founder Planning Workbook, and 5-Year Financial Model with live Excel math. Everything your authorizer needs in one click.",
       },
     ],
     audienceBenefits: [
@@ -164,7 +164,7 @@ export const USE_CASE_PAGES: UseCasePageData[] = [
         icon: <FileText className="w-7 h-7 text-[#D97706]" />,
         title: "Lender-ready financial packages",
         description:
-          "Export everything a lender needs: 5-year projections, staffing plans, cash flow analysis, DSCR calculations, and a Formula Workbook with live Excel formulas.",
+          "Export everything a lender needs: 5-year projections, staffing plans, cash flow analysis, DSCR calculations, and a 5-Year Financial Model with live Excel formulas.",
       },
       {
         icon: <TrendingUp className="w-7 h-7 text-[#0D9488]" />,
@@ -268,9 +268,9 @@ export const USE_CASE_PAGES: UseCasePageData[] = [
       },
       {
         icon: <Download className="w-7 h-7 text-[#0D9488]" />,
-        title: "Lender-Ready Packet exports",
+        title: "Lender Conversation Snapshot exports",
         description:
-          "Borrowers export a complete underwriting package: Lender-Ready Packet PDF, 23-tab Excel workbook with live formulas, Board Summary, and documented assumptions.",
+          "Borrowers export a complete planning package: Lender Conversation Snapshot PDF, 23-tab Founder Planning Workbook with live formulas, Board and Funder Summary, and documented assumptions.",
       },
       {
         icon: <Handshake className="w-7 h-7 text-[#328555]" />,

@@ -414,7 +414,7 @@ A strong loan application tells a complete financial story. At minimum, include:
 
 ## How SchoolStack Budget helps
 
-SchoolStack Budget generates a complete Lender-Ready Packet with all the components above - including formatted PDFs, a 23-tab underwriting workbook with live Excel formulas, and a board summary. The platform also calculates DSCR, break-even enrollment, and cash reserves automatically, so you can see exactly what a lender will see before you submit your application.
+SchoolStack Budget generates a complete Lender Conversation Snapshot with all the components above - including formatted PDFs, a 23-tab Founder Planning Workbook with live Excel formulas, and a Board and Funder Summary. The platform also calculates DSCR, break-even enrollment, and cash reserves automatically, so you can see exactly what a lender will see before you submit your application.
 `,
   },
   {
@@ -813,7 +813,7 @@ The most important step? Start. Open the tool, enter what you know, and let the 
     content: `
 ## Three reports, one school
 
-Your school's books produce three financial statements every month. They look intimidating in a board packet, but each one answers a single question:
+Your school's books produce three financial statements every month. They look intimidating in a board handout, but each one answers a single question:
 
 - **The P&L** - Did we make or lose money this month?
 - **The Balance Sheet** - What do we own and owe right now?

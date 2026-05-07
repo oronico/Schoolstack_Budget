@@ -911,7 +911,7 @@ function welcomeCopyFor(track: WelcomeTrack): WelcomeCopy {
     ctaLabel: "Start my financial model",
     headline: "Your account is ready to go.",
     body:
-      "SchoolStack Budget helps founders build a 5-year financial model, generate board-ready and lender-ready packets, and request a free advisor review when the model is ready. The first step is starting your model — we'll ask whether it's for a planned or operating school and tailor the wizard from there.",
+      "SchoolStack Budget helps founders build a 5-year financial model, generate a Board and Funder Summary and a Lender Conversation Snapshot, and request a free advisor review when the model is ready. The first step is starting your model — we'll ask whether it's for a planned or operating school and tailor the wizard from there.",
   };
 }
 
@@ -952,7 +952,7 @@ export async function sendWelcomeEmail(
       copy.body,
       "",
       "Once your first model is in, you can also:",
-      "  • Generate board-ready and lender-ready packets",
+      "  • Generate a Board and Funder Summary and a Lender Conversation Snapshot",
       "  • Request a free advisor review of your projections",
       ctaText,
       "If you have questions or want to talk through your plan, just reply to this email — we read every one.",
@@ -970,9 +970,9 @@ export async function sendWelcomeEmail(
         </p>
         ${ctaButton}
         <p style="color:#475569;line-height:1.6;">
-          Once your first model is in, you can also generate board-ready and
-          lender-ready packets and request a free advisor review of your
-          projections.
+          Once your first model is in, you can also generate a Board and Funder
+          Summary and a Lender Conversation Snapshot, and request a free advisor
+          review of your projections.
         </p>
         <p style="color:#475569;line-height:1.6;">
           If you have questions or want to talk through your plan, just reply to

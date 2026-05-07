@@ -64,7 +64,7 @@ function drawCoverPage(doc: PDFDoc, packet: LenderPacket) {
   doc.font("Helvetica-Bold").fontSize(24).fillColor(BRAND.white);
   doc.text("SchoolStack Budget", margin, 30, { width: contentW });
   doc.font("Helvetica").fontSize(11).fillColor(BRAND.gray);
-  doc.text("Lender-Ready Financial Packet", margin, 60);
+  doc.text("Lender Conversation Snapshot", margin, 60);
   doc.restore();
 
   doc.y = 150;

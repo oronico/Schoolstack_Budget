@@ -68,7 +68,7 @@ const HOW_IT_WORKS = [
   {
     icon: <Download className="w-6 h-6" />,
     title: "Export and share.",
-    desc: "Lender-Ready Packet PDF, Board Summary PDF, a 23-tab Underwriting Package, and a Formula Workbook with live Excel math. Or generate a shareable read-only link so your lender or board can view the model online - no login required.",
+    desc: "Lender Conversation Snapshot PDF, Board and Funder Summary PDF, a 23-tab Founder Planning Workbook, and a 5-Year Financial Model with live Excel math. Or generate a shareable read-only link so your lender or board can view the model online - no login required.",
   },
 ];
 
@@ -119,7 +119,7 @@ const LANDING_JSON_LD = [
         name: "What can I export from SchoolStack Budget?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "You can export a Lender-Ready Packet PDF, Board Summary PDF, a 23-tab Underwriting Package, and a Formula Workbook with live Excel formulas. You can also generate a shareable read-only link.",
+          text: "You can export a Lender Conversation Snapshot PDF, Board and Funder Summary PDF, a 23-tab Founder Planning Workbook, and a 5-Year Financial Model with live Excel formulas. You can also generate a shareable read-only link.",
         },
       },
       {

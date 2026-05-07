@@ -155,7 +155,7 @@ export function FiveYearScreenshots() {
     <div className="grid lg:grid-cols-2 gap-6">
       <ScreenshotFrame
         title="Wizard · 5-Year Output"
-        subtitle="Lender-ready packet"
+        subtitle="Lender Conversation Snapshot"
         src={`${SCREENSHOT_BASE}/five-year-lender-packet.png`}
         alt="Five-year output step of the wizard with revenue, expenses, net income, DSCR, and cash flow rolled up year by year."
         tall

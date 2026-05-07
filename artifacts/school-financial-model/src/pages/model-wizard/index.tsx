@@ -1570,7 +1570,7 @@ export function ModelWizardPage() {
                     Looking for the Lender Narrative step?
                   </p>
                   <p className="text-xs text-emerald-700 mt-1">
-                    The lender packet is built from a 5-year projection, so the Lender Narrative step appears once you extend this model to 5 years.
+                    The Lender Conversation Snapshot is built from a 5-year projection, so the Lender Narrative step appears once you extend this model to 5 years.
                   </p>
                 </div>
                 <button

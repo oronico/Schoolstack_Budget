@@ -63,7 +63,7 @@ afterEach(() => {
 });
 
 describe("ExportStep — single-year gating for Lender + Board packets", () => {
-  it("disables Lender Packet + Board Summary cards in single-year mode", () => {
+  it("disables Lender Conversation Snapshot + Board and Funder Summary cards in single-year mode", () => {
     render(<Harness duration="single_year" />);
     // Both extend-CTA overlays are present (one per gated card).
     expect(screen.getByTestId("lender-card-extend-cta")).toBeInTheDocument();
@@ -93,8 +93,8 @@ describe("ExportStep — single-year gating for Lender + Board packets", () => {
     expect(screen.queryByTestId("board-card-extend-cta")).not.toBeInTheDocument();
     expect(screen.queryByText(/You're on Single-Year mode/i)).not.toBeInTheDocument();
     // The cards themselves are present (and clickable in 5-year mode).
-    expect(screen.getByText(/Lender-Ready Packet/i)).toBeInTheDocument();
-    expect(screen.getByText(/Board Summary/i)).toBeInTheDocument();
+    expect(screen.getByText(/Lender Conversation Snapshot/i)).toBeInTheDocument();
+    expect(screen.getByText(/Board and Funder Summary/i)).toBeInTheDocument();
   });
 
   // Task #485 — the Chesterton CSN Operating Manual export pulls from its
