@@ -135,7 +135,7 @@ const KNOWN_VIOLATIONS: AllowlistEntry[] = [
   {
     file: "artifacts/api-server/src/routes/models.ts",
     pattern: "local-dscr-formula",
-    line: 1782,
+    line: 1834,
     reason: "Internal /models response field used by the dashboard; reconciles with canonical via cross-engine + parity tests. Refactor follow-up tracked separately (Task #618).",
   },
   {
