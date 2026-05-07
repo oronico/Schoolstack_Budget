@@ -179,12 +179,18 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
       } else {
         val = driverVal(r.amounts, y, r.driverType, students, r.escalationRate, undefined, newStudentsY, returningStudentsY);
       }
-      // Engine-level collection-rate support: when a per_student revenue row
-      // declares a collectionRate (0-100), apply slippage here so every entry
-      // point (wizard, full builder, API) gets the same P&L treatment without
-      // pre-multiplying amounts upstream. Tier-based tuition flows through the
-      // same per_student branch above, so it picks up the multiplier too.
-      if (r.driverType === "per_student" && r.collectionRate !== undefined) {
+      // Engine-level collection-rate support: when a revenue row declares a
+      // collectionRate (0-100), apply slippage here so every entry point
+      // (wizard, full builder, API) gets the same P&L treatment without
+      // pre-multiplying amounts upstream. Applied to *all* driver types
+      // (per_student, annual_fixed, monthly, per_new_student,
+      // per_returning_student) so a public-funding row or fixed grant with
+      // 90% collection is discounted in P&L the same way it already is in
+      // the cash-flow workbook helpers and lender pro forma. Tier-based
+      // tuition flows through the per_student branch above, so it also
+      // picks up the multiplier. percent_of_base rows are handled in a
+      // second pass below.
+      if (r.collectionRate !== undefined) {
         val *= r.collectionRate / 100;
       }
       val *= pf;
@@ -197,7 +203,15 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
       if (r.escalationRate && r.escalationRate !== 0 && y > 0) {
         pctVal = (r.amounts?.[0] ?? 0) * Math.pow(1 + r.escalationRate / 100, y);
       }
-      revVals.set(r.id, baseVal * (pctVal / 100));
+      let val = baseVal * (pctVal / 100);
+      // Apply collectionRate to percent_of_base rows too. The base it points
+      // at is already collection-discounted (first pass), so this only kicks
+      // in when the offset row itself declares its own collectionRate (e.g.
+      // a fee/discount with a different collection profile than its base).
+      if (r.collectionRate !== undefined) {
+        val *= r.collectionRate / 100;
+      }
+      revVals.set(r.id, val);
     }
     for (const r of revenueRows) {
       const v = revVals.get(r.id) || 0;

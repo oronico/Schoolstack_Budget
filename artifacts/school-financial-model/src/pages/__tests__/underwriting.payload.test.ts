@@ -16,12 +16,17 @@ function defaultModel(overrides: Partial<GuestModel> = {}): GuestModel {
 }
 
 describe("buildModelDataPayload — tuition collection rate", () => {
-  it("passes raw sticker tuition + collectionRate so the scenario engine can apply the slippage", () => {
+  it("emits raw tuition amount + collectionRate so the engine applies slippage (Task #599/#603)", () => {
+    // The wizard now passes the sticker tuition unchanged and tags the row
+    // with collectionRate. The scenario engine multiplies by collectionRate
+    // for every revenue driver type (Task #603), so every entry point
+    // (wizard, full builder, API) sees identical P&L treatment without the
+    // payload doing any pre-multiplication.
     const m = defaultModel({ year1Students: 30, perStudentTuition: 12000, tuitionCollectionRate: 95 });
     const payload = buildModelDataPayload(m) as { revenueRows: RevRow[] };
     const tuition = payload.revenueRows.find((r) => r.id === "rev_tuition");
     expect(tuition).toBeDefined();
-    expect(tuition!.amounts[0]).toBeCloseTo(12000, 5);
+    expect(tuition!.amounts[0]).toBe(12000);
     expect(tuition!.collectionRate).toBe(95);
   });
 

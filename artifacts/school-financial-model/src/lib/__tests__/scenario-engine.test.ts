@@ -111,15 +111,39 @@ describe("scenario-engine: driverVal — all driver types", () => {
     expect(at100.revenue[0]).toBe(100000);
   });
 
-  it("collectionRate is ignored on non-per_student driver types", () => {
-    // Engine scopes collectionRate to per_student per Task #599; an
-    // annual_fixed row should keep its full $50K even with a 50% rate set.
-    const m = run({
+  it("collectionRate applies to all revenue driver types (Task #603)", () => {
+    // Task #603: collectionRate now applies to every revenue driver type
+    // (annual_fixed, monthly, per_new_student, per_returning_student, and
+    // percent_of_base via slippage on its own rate or the base it points at)
+    // — not just per_student. This closes the inconsistency where a
+    // public-funding row with collectionRate=90 was fully recognized in P&L
+    // but already discounted in cash-flow workbook helpers.
+    const annualFixed = run({
       revenueRows: [
         { id: "r1", enabled: true, category: "other_revenue", driverType: "annual_fixed", amounts: [50000, 50000, 50000, 50000, 50000], collectionRate: 50 },
       ],
     });
-    expect(m.revenue[0]).toBe(50000);
+    expect(annualFixed.revenue[0]).toBe(25000);
+
+    const monthly = run({
+      revenueRows: [
+        { id: "r1", enabled: true, category: "other_revenue", driverType: "monthly", amounts: [1000, 1000, 1000, 1000, 1000], collectionRate: 80 },
+      ],
+    });
+    // monthly: 1000 × 12 × 0.80 = 9600
+    expect(monthly.revenue[0]).toBe(9600);
+
+    // percent_of_base: base ($1000/student × 100 students × 0.90 = 90,000),
+    // offset row pulls 10% of base = 9,000 (no own collectionRate set).
+    const pctOfBase = run({
+      enrollment: { year1: 100, year2: 100, year3: 100, year4: 100, year5: 100, retentionRate: 100 },
+      revenueRows: [
+        { id: "r1", enabled: true, category: "tuition_and_fees", driverType: "per_student", amounts: [1000, 1000, 1000, 1000, 1000], collectionRate: 90 },
+        { id: "r2", enabled: true, category: "other_revenue", driverType: "percent_of_base", amounts: [10, 10, 10, 10, 10], percentBase: "r1" },
+      ],
+    });
+    // base = 90,000; offset = 9,000; total revenue = 99,000
+    expect(pctOfBase.revenue[0]).toBe(99000);
   });
 
   it("per_new_student in revenue context multiplies by new students", () => {
