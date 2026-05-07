@@ -194,13 +194,25 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+// A minimally-shaped Pursued saved scenario so CustomScenarioCard's
+// `showActualsSurface` branch turns on (it requires either a Pursued
+// outcomeStatus or pre-existing actuals). Used to assert the page
+// propagates `hideActualsForStage` down as `hideActualsSurfaces`.
+const pursuedCustomScenario = {
+  name: "Signed lease",
+  createdAt: "2024-01-01T00:00:00.000Z",
+  overrides: {},
+  outcomeStatus: "pursued" as const,
+};
+
 describe("ScenarioPage — actuals / forecast-accuracy gate follows schoolStage (Task #597)", () => {
-  it("renders the Forecast Accuracy roll-up for an operating_school model even when the founder persona is yet_to_launch", async () => {
+  it("renders the Forecast Accuracy roll-up and CustomScenarioCard actuals surface for an operating_school model even when the founder persona is yet_to_launch", async () => {
     modelDataRef.current = {
       schoolProfile: {
         modelDuration: "five_year",
         schoolStage: "operating_school",
       },
+      customScenarios: [pursuedCustomScenario],
     };
 
     renderPage();
@@ -208,24 +220,33 @@ describe("ScenarioPage — actuals / forecast-accuracy gate follows schoolStage 
     await waitFor(() =>
       expect(screen.getByTestId("forecast-accuracy-view")).toBeInTheDocument(),
     );
+    // CustomScenarioCard renders its actuals snapshot block when
+    // hideActualsSurfaces is falsy AND the scenario is Pursued. The
+    // first card on the page uses index 0.
+    expect(screen.getByTestId("custom-scenario-actuals-0")).toBeInTheDocument();
   });
 
-  it("hides the Forecast Accuracy roll-up for a new_school model even with non-empty forecast entries", async () => {
+  it("hides the Forecast Accuracy roll-up and propagates hideActualsSurfaces to CustomScenarioCard for a new_school model", async () => {
     modelDataRef.current = {
       schoolProfile: {
         modelDuration: "five_year",
         schoolStage: "new_school",
       },
+      customScenarios: [pursuedCustomScenario],
     };
 
     renderPage();
 
     // The page's Side-by-Side comparison block always renders, so wait on
-    // it before asserting absence of the gated section.
+    // it before asserting absence of the gated sections.
     await waitFor(() =>
       expect(screen.getByText(/Side-by-Side Comparison/i)).toBeInTheDocument(),
     );
     expect(screen.queryByTestId("forecast-accuracy-view")).toBeNull();
+    // hideActualsSurfaces={hideActualsForStage} propagates down so the
+    // CustomScenarioCard suppresses its actuals snapshot block even
+    // though the scenario is Pursued.
+    expect(screen.queryByTestId("custom-scenario-actuals-0")).toBeNull();
   });
 
   it("renders the Forecast Accuracy roll-up for legacy models with no schoolStage (default to operating-school behaviour)", async () => {
