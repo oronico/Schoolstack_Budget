@@ -45,6 +45,17 @@ function metrics(overrides: Partial<ScenarioMetricsLike> = {}): ScenarioMetricsL
     cashRunwayMonths: 18,
     reserveMonths: 6,
     cashPosition: [100000, 80000, 60000, 90000, 130000],
+    // Task #610: cash-reality fields default to revenue / cashPosition so the
+    // accrual headline matches cash and the unrestricted runway equals the
+    // total runway when fixtures don't override them explicitly.
+    contractedRevenue: [500000, 600000, 700000, 800000, 900000],
+    badDebt: [0, 0, 0, 0, 0],
+    arBalance: [0, 0, 0, 0, 0],
+    restrictedRevenue: [0, 0, 0, 0, 0],
+    restrictedCash: [0, 0, 0, 0, 0],
+    unrestrictedCash: [100000, 80000, 60000, 90000, 130000],
+    unrestrictedCashRunwayMonths: 18,
+    tuitionDelinquencyRateApplied: 0,
     ...overrides,
   };
 }

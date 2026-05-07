@@ -125,3 +125,40 @@ export function enrollmentBenchmarkFor(schoolType?: string): EnrollmentBenchmark
   if (!schoolType) return null;
   return ENROLLMENT_BENCHMARKS[schoolType] ?? null;
 }
+
+// Task #610: tuition delinquency benchmarks (% of billed tuition the
+// school typically ends up writing off). Calibrated from school-type
+// finance research:
+//   - Autopay-heavy private/Catholic/Chesterton schools: ~1-3%
+//   - Invoiced K-8 microschools / pods / co-ops: ~5-8%
+//   - Charter schools: 0% (publicly funded, no tuition AR)
+//   - Tutoring centers (session-billed): ~3-5%
+// The wizard uses these as defaults on the Assumptions step; founders can
+// always override on a per-school basis. Restated as basis points to make
+// the rendering in the UI obvious.
+export interface TuitionDelinquencyBenchmark {
+  /** Default percent (0-100) used to seed the wizard input. */
+  defaultPct: number;
+  /** Display range string surfaced under the input. */
+  rangeLabel: string;
+}
+
+export const TUITION_DELINQUENCY_BENCHMARKS: Record<string, TuitionDelinquencyBenchmark> = {
+  catholic_school:    { defaultPct: 2, rangeLabel: "1-3% typical for parish-supported families" },
+  chesterton_academy: { defaultPct: 2, rangeLabel: "1-3% typical for autopay tuition models" },
+  private_school:     { defaultPct: 2, rangeLabel: "1-3% typical when most families are on autopay" },
+  microschool:        { defaultPct: 5, rangeLabel: "3-7% typical for invoiced K-8 microschools" },
+  learning_pod:       { defaultPct: 5, rangeLabel: "3-7% typical for invoiced small-cohort pods" },
+  homeschool_coop:    { defaultPct: 5, rangeLabel: "3-7% typical for member-paid co-ops" },
+  charter_school:     { defaultPct: 0, rangeLabel: "0% — charters have no tuition AR" },
+  tutoring_center:    { defaultPct: 4, rangeLabel: "3-5% typical for session-billed storefronts" },
+  other:              { defaultPct: 3, rangeLabel: "3-5% if billing model unknown" },
+};
+
+/** Convenience lookup that returns the tuition delinquency benchmark or null. */
+export function tuitionDelinquencyBenchmarkFor(
+  schoolType?: string,
+): TuitionDelinquencyBenchmark | null {
+  if (!schoolType) return null;
+  return TUITION_DELINQUENCY_BENCHMARKS[schoolType] ?? null;
+}

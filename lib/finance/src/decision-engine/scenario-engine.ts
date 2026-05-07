@@ -8,11 +8,13 @@ import {
   findLowestCashMonth,
   findLowestCashMonthAcrossYears,
   computeCashRunwayMonths,
+  distributeRevenueMonthly,
   type MonthlyCashFlowSeries,
   type LowestCashMonth,
   type MonthlyRevenueRowLike,
 } from "../monthly-cash-flow.js";
 import { computeFounderCompNormalization, type FounderCompNormalization } from "../founder-comp.js";
+import { isRestrictedRevenueRow } from "../restricted-revenue.js";
 
 export interface ScenarioAdjustments {
   name: string;
@@ -96,6 +98,40 @@ export interface ScenarioMetrics {
    * mean break-even cannot fit inside stated capacity that year. Task #612.
    */
   breakEvenUtilization: Array<number | null>;
+
+  // ── Task #610: Cash-reality layer ───────────────────────────────────────
+  /** Contracted/billed revenue per year — what the school *would* recognize
+   *  if every family paid in full and on time. This is the "accrual headline"
+   *  founders compare against the cash-reality `revenue` figure. */
+  contractedRevenue: number[];
+  /** Tuition that the engine writes off as bad debt each year. Equals
+   *  contracted tuition × (1 - effective collection rate) where the
+   *  effective rate folds row-level `collectionRate` and the model-wide
+   *  `revenueDefaults.tuitionDelinquencyRate` benchmark together. */
+  badDebt: number[];
+  /** Estimated end-of-year accounts-receivable balance (collected revenue ×
+   *  weighted collection-delay days / 365). Surfaced on the lender pro-forma
+   *  AR Schedule and underwriting workbook. */
+  arBalance: number[];
+  /** Restricted philanthropy/grants recognized this year (capital, program-
+   *  restricted, scholarship-restricted, etc.). These are still part of
+   *  total `revenue[]` but get carved out of cash availability so DSCR /
+   *  runway aren't propped up by money the school can't legally spend. */
+  restrictedRevenue: number[];
+  /** Cumulative restricted cash held through year Y. */
+  restrictedCash: number[];
+  /** Year-end unrestricted cash position = cashPosition[y] - restrictedCash[y].
+   *  This is the headline figure the dashboard, scenario planner, and lender
+   *  packet show by default; the "vs accrual" toggle reveals cashPosition[]. */
+  unrestrictedCash: number[];
+  /** Months of runway computed from unrestricted cash only (restricted
+   *  inflows pulled out of every year's monthly net). Lenders use this to
+   *  size operating reserves; restricted gifts can't service debt. */
+  unrestrictedCashRunwayMonths: number;
+  /** Tuition delinquency rate (0-100%) actually applied this run, after
+   *  layering school-type benchmarks + the founder's wizard input. Echoed
+   *  back so the UI can display "Applied: 5% delinquency assumption". */
+  tuitionDelinquencyRateApplied: number;
 }
 
 /**
@@ -267,6 +303,34 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
   const staffingPctOfRevenue: number[] = [];
   const loanDS: number[] = [];
 
+  // Task #610: cash-reality accumulators.
+  const contractedRevenue: number[] = [];
+  const badDebt: number[] = [];
+  const arBalance: number[] = [];
+  const restrictedRevenue: number[] = [];
+  // Per-year tuition revenue for AR roll-forward (post-collection-rate but
+  // pre-delinquency). `weightedDelayDaysByYear` tracks the revenue-weighted
+  // average collection delay across tuition rows so AR shrinks/grows
+  // realistically when row mixes change year over year.
+  const tuitionRevenueByYear: number[] = [];
+  const weightedDelayDaysByYear: number[] = [];
+
+  // Wizard-defaulted tuition delinquency assumption — fed in as
+  // `revenueDefaults.tuitionDelinquencyRate` from the AssumptionsStep, with
+  // school-type benchmark defaults pre-stamped on the form. Applied as an
+  // additional multiplicative haircut on tuition rows on top of any
+  // row-level `collectionRate`. Units: percent (0-100). The engine clamps
+  // out-of-range values defensively.
+  const rd = (data as Record<string, unknown>).revenueDefaults as
+    | { tuitionDelinquencyRate?: number }
+    | undefined;
+  const rawDelinquency = rd?.tuitionDelinquencyRate ?? 0;
+  const tuitionDelinquencyRateApplied = Math.min(
+    50,
+    Math.max(0, Number.isFinite(rawDelinquency) ? rawDelinquency : 0),
+  );
+  const delinquencyMultiplier = 1 - tuitionDelinquencyRateApplied / 100;
+
   for (let y = 0; y < 5; y++) {
     const students = enrollment[y];
     const pf = y === 0 ? prorationFactor : 1;
@@ -346,11 +410,70 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
       }
       revVals.set(r.id, val);
     }
+    // Task #610: apply the model-wide tuition delinquency haircut on top of
+    // any row-level `collectionRate` slippage. Only tuition rows are
+    // affected — public funding, philanthropy, and ESA all flow through
+    // their own collection mechanics and benchmarks. Tuition offsets
+    // (scholarships) are applied to the *post-delinquency* tuition base,
+    // matching how schools actually book tuition net of aid.
+    if (delinquencyMultiplier < 1) {
+      for (const r of revenueRows) {
+        if (r.category === "tuition_and_fees") {
+          const v = revVals.get(r.id) || 0;
+          revVals.set(r.id, v * delinquencyMultiplier);
+        }
+      }
+    }
+
+    // Cash-reality accumulators: contracted (pre-slippage) tuition, AR
+    // weighted-average delay, and restricted-vs-unrestricted carve-out.
+    let contractedTotal = 0;
+    let restrictedTotal = 0;
+    let tuitionPostCollection = 0;
+    let weightedDelayNumerator = 0;
+    let weightedDelayDenominator = 0;
+    for (const r of revenueRows) {
+      const collected = revVals.get(r.id) || 0;
+      const collectionRatePct = r.collectionRate ?? 100;
+      const isTuition = r.category === "tuition_and_fees";
+      const effectiveRate = isTuition
+        ? (collectionRatePct / 100) * delinquencyMultiplier
+        : collectionRatePct / 100;
+      const contracted = effectiveRate > 0 ? collected / effectiveRate : collected;
+      if (r.category === "tuition_offsets") {
+        contractedTotal -= Math.abs(contracted);
+      } else {
+        contractedTotal += contracted;
+      }
+      if (isRestrictedRevenueRow(r)) {
+        restrictedTotal += collected;
+      }
+      if (isTuition) {
+        tuitionPostCollection += collected;
+        const delay = r.collectionDelayDays ?? 0;
+        if (collected > 0) {
+          weightedDelayNumerator += delay * collected;
+          weightedDelayDenominator += collected;
+        }
+      }
+    }
+    const weightedDelayDays = weightedDelayDenominator > 0
+      ? weightedDelayNumerator / weightedDelayDenominator
+      : 0;
+    contractedRevenue.push(contractedTotal);
+    badDebt.push(Math.max(0, contractedTotal - revVals.size > 0 ? 0 : 0)); // placeholder, set below
+    restrictedRevenue.push(restrictedTotal);
+    tuitionRevenueByYear.push(tuitionPostCollection);
+    weightedDelayDaysByYear.push(weightedDelayDays);
+    arBalance.push(tuitionPostCollection * (weightedDelayDays / 365));
+
     for (const r of revenueRows) {
       const v = revVals.get(r.id) || 0;
       if (r.category === "tuition_offsets") revTotal -= Math.abs(v);
       else revTotal += v;
     }
+    // Bad debt = contracted minus realized (engine-recognized) revenue.
+    badDebt[badDebt.length - 1] = Math.max(0, contractedTotal - revTotal);
 
     // Apply salary escalation INSIDE the row loop so wage-base caps are
     // re-applied against the escalated salary each year. The flat-rate path is
@@ -580,6 +703,46 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
     7,
   );
 
+  // Task #610: restricted/unrestricted cash split + unrestricted-only runway.
+  // Restricted gifts are assumed not spent on operations, so they accumulate
+  // year over year and are subtracted from the headline cash position to get
+  // the unrestricted (truly available) cash. The unrestricted runway nets the
+  // restricted inflow out of every year's monthly cash so the headline number
+  // founders show lenders excludes money that legally can't service debt.
+  const restrictedCash: number[] = [];
+  const unrestrictedCash: number[] = [];
+  let cumulativeRestricted = 0;
+  for (let y = 0; y < 5; y++) {
+    cumulativeRestricted += restrictedRevenue[y];
+    restrictedCash.push(cumulativeRestricted);
+    unrestrictedCash.push(cashPosition[y] - cumulativeRestricted);
+  }
+
+  // Build a parallel monthly net stream that strips restricted inflows out of
+  // each year (Y1 carved month-by-month using the same distribution helper
+  // that drives `monthlyCashFlowY1`; Y2-5 spread evenly to match the engine's
+  // existing convention for projection years).
+  const restrictedRows = revenueRows.filter((r) =>
+    isRestrictedRevenueRow(r as { id?: string; isRestricted?: boolean }),
+  );
+  const restrictedY1Monthly = distributeRevenueMonthly(
+    restrictedRows as MonthlyRevenueRowLike[],
+    0,
+    enrollment[0],
+  );
+  const unrestrictedNetByYear: number[][] = [
+    monthlyCashFlowY1.net.map((v, m) => v - (restrictedY1Monthly[m] ?? 0)),
+  ];
+  for (let y = 1; y < 5; y++) {
+    const niMonth = (netIncome[y] - restrictedRevenue[y]) / 12;
+    unrestrictedNetByYear.push(new Array(12).fill(niMonth));
+  }
+  const unrestrictedCashRunwayMonths = computeCashRunwayMonths(
+    startingCash,
+    unrestrictedNetByYear,
+    60,
+  );
+
   const baseShape = {
     enrollment,
     revenue,
@@ -601,6 +764,14 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
     lowestCashMonth,
     fixedOpex,
     variableOpex,
+    contractedRevenue,
+    badDebt,
+    arBalance,
+    restrictedRevenue,
+    restrictedCash,
+    unrestrictedCash,
+    unrestrictedCashRunwayMonths: Math.round(unrestrictedCashRunwayMonths * 10) / 10,
+    tuitionDelinquencyRateApplied,
   };
   const maxCapacityRaw = (sp as Record<string, unknown> | undefined)?.maxCapacity;
   const maxCapacity = typeof maxCapacityRaw === "number" ? maxCapacityRaw : undefined;
@@ -793,6 +964,46 @@ function applyAdjustments(
       )
     : null;
 
+  // Task #610: scale cash-reality fields by the same lever ratios used for
+  // revenue / expenses so scenarios surface the unrestricted-cash and AR
+  // implications, not just accrual P&L. Bad debt and AR scale with revenue
+  // (more billed → more written off → more outstanding); restricted gifts
+  // and the delinquency assumption itself are baseline pass-throughs since
+  // the lever doesn't move them.
+  const contractedRevenue = base.contractedRevenue.map((c) => c * revFactor);
+  const badDebt = base.badDebt.map((b) => b * revFactor);
+  const arBalance = base.arBalance.map((a) => a * revFactor);
+  const restrictedRevenue = [...base.restrictedRevenue];
+  const restrictedCash: number[] = [];
+  const unrestrictedCash: number[] = [];
+  let cumulativeRestricted = 0;
+  for (let y = 0; y < 5; y++) {
+    cumulativeRestricted += restrictedRevenue[y];
+    restrictedCash.push(cumulativeRestricted);
+    unrestrictedCash.push(cashPosition[y] - cumulativeRestricted);
+  }
+
+  // Unrestricted runway: re-net the restricted slice out of each year's
+  // monthly net (Y1 spread proportionally to the rescaled monthly net,
+  // Y2-5 spread evenly — same convention as the base path).
+  const baseY1Net = base.monthlyCashFlowY1?.net;
+  const unrestrictedNetByYear: number[][] = [];
+  if (monthlyCashFlowY1 && baseY1Net) {
+    const baseRestrictedTotal = base.restrictedRevenue[0] || 0;
+    const restrictedY1Monthly = baseY1Net.map(() => baseRestrictedTotal / 12);
+    unrestrictedNetByYear.push(monthlyCashFlowY1.net.map((v, m) => v - restrictedY1Monthly[m]));
+  } else {
+    unrestrictedNetByYear.push(new Array(12).fill((netIncome[0] - restrictedRevenue[0]) / 12));
+  }
+  for (let y = 1; y < 5; y++) {
+    unrestrictedNetByYear.push(new Array(12).fill((netIncome[y] - restrictedRevenue[y]) / 12));
+  }
+  const unrestrictedCashRunwayMonths = computeCashRunwayMonths(
+    startingCash,
+    unrestrictedNetByYear,
+    60,
+  );
+
   const adjShape = {
     enrollment,
     revenue,
@@ -814,6 +1025,14 @@ function applyAdjustments(
     lowestCashMonth,
     fixedOpex,
     variableOpex,
+    contractedRevenue,
+    badDebt,
+    arBalance,
+    restrictedRevenue,
+    restrictedCash,
+    unrestrictedCash,
+    unrestrictedCashRunwayMonths: Math.round(unrestrictedCashRunwayMonths * 10) / 10,
+    tuitionDelinquencyRateApplied: base.tuitionDelinquencyRateApplied,
   };
   const beArrays = buildBreakEvenArrays(adjShape, maxCapacity);
   return { ...adjShape, ...beArrays };

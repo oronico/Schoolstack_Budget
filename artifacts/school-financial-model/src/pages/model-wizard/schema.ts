@@ -431,6 +431,12 @@ export const revenueRowSchema = z.object({
   // dropdown so founders can override.
   revenueQuality: z.enum(["contracted", "projected", "donor_dependent", "policy_dependent"]).optional(),
   revenueQualityOverridden: z.boolean().optional(),
+  // Task #610: marks gifts/grants the school cannot legally spend on general
+  // operations (capital campaigns, program-restricted, scholarship-restricted,
+  // etc.). When undefined the engine infers from the row id — any line item
+  // whose id starts with `restricted_` is treated as restricted by default
+  // so legacy models migrate without surprises.
+  isRestricted: z.boolean().optional(),
 });
 
 export const revenueDefaultsSchema = z.object({
@@ -438,6 +444,12 @@ export const revenueDefaultsSchema = z.object({
   collectionMethod: z.enum(["autopay", "invoiced", "mixed"]).optional().default("autopay"),
   collectionRate: z.coerce.number().min(0).max(100).optional().default(100),
   collectionDelayDays: z.coerce.number().min(0).max(90).optional().default(0),
+  // Task #610: tuition delinquency assumption (% of tuition that ultimately
+  // goes uncollected on top of the row-level collectionRate slippage).
+  // Defaulted from the school-type benchmark in the wizard but always
+  // overridable. 0 means no incremental delinquency above row-level
+  // collection rates.
+  tuitionDelinquencyRate: z.coerce.number().min(0).max(50).optional().default(0),
 });
 
 export const revenueSchema = z.object({

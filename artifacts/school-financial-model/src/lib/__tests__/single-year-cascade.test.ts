@@ -38,6 +38,14 @@ function makeMetrics(over: Partial<ScenarioMetrics> = {}): ScenarioMetrics {
     cashRunwayMonths: 60,
     reserveMonths: 3,
     cashPosition: [200_000, 0, 0, 0, 0],
+    contractedRevenue: [1_000_000, 0, 0, 0, 0],
+    badDebt: [0, 0, 0, 0, 0],
+    arBalance: [0, 0, 0, 0, 0],
+    restrictedRevenue: [0, 0, 0, 0, 0],
+    restrictedCash: [0, 0, 0, 0, 0],
+    unrestrictedCash: [200_000, 0, 0, 0, 0],
+    unrestrictedCashRunwayMonths: 60,
+    tuitionDelinquencyRateApplied: 0,
     ...over,
   };
 }

@@ -1458,6 +1458,139 @@ function buildCashFlow(wb: ExcelJS.Workbook, res: LenderResults) {
   ws.views = [{ state: "frozen", xSplit: 2, ySplit: 3 }];
 }
 
+/**
+ * Task #610 — AR Schedule + Restricted/Unrestricted cash recon.
+ *
+ * Lenders specifically asked for two things to land in the pro-forma:
+ *   1. An accounts-receivable view that shows the gap between what the
+ *      school *bills* (gross tuition) and what it actually *collects* —
+ *      because a 95% collection rate on $2M tuition means $100K of bad
+ *      debt and ~$80K of permanent AR drag, neither of which shows up in
+ *      a straight P&L.
+ *   2. A restricted-vs-unrestricted cash recon so DSCR/runway aren't
+ *      propped up by capital-restricted gifts the school can't legally
+ *      use to service debt.
+ *
+ * The lender pro-forma uses its own simpler `computeLenderResults`
+ * (single-tuition-line model — not the full driver engine), so we derive
+ * the cash-reality figures from `tuitionRevNet - tuitionCollected`
+ * (= bad debt) and assume an industry-standard 30-day weighted collection
+ * delay for AR. Restricted revenue is not modeled in this simplified
+ * lender path, so the recon shows zero restricted by default and the
+ * full P&L revenue funnels into unrestricted cash.
+ */
+function buildARAndRestrictedRecon(wb: ExcelJS.Workbook, res: LenderResults) {
+  const ws = wb.addWorksheet("AR & Restricted Recon", { properties: { tabColor: { argb: "FF7C3AED" } } });
+  printSetup(ws);
+
+  ws.getColumn(1).width = 3;
+  ws.getColumn(2).width = 36;
+  for (let c = 3; c <= 7; c++) ws.getColumn(c).width = 16;
+
+  ws.getCell("B1").value = "AR Schedule & Restricted-vs-Unrestricted Cash Recon";
+  ws.getCell("B1").font = { name: "Calibri", size: 14, bold: true, color: { argb: "FF1E293B" } };
+  ws.mergeCells("B1:G1");
+
+  ws.getCell("B2").value =
+    "AR = year's collected tuition × 30-day weighted delay ÷ 365. Bad debt = contracted − collected.";
+  ws.getCell("B2").font = { name: "Calibri", size: 10, italic: true, color: { argb: "FF6B7280" } };
+  ws.mergeCells("B2:G2");
+
+  for (let c = 3; c <= 7; c++) {
+    const cell = ws.getCell(4, c);
+    cell.value = `Year ${c - 2}`;
+    cell.font = HEADER_FONT; cell.fill = HEADER_FILL;
+    cell.alignment = { horizontal: "center" }; cell.border = BORDER;
+  }
+  ws.getCell("B4").fill = HEADER_FILL; ws.getCell("B4").border = BORDER;
+  ws.getRow(4).height = 24;
+
+  const lbl = (r: number, text: string, bold = false) => {
+    const c = ws.getCell(`B${r}`);
+    c.value = text; c.font = bold ? BF : NF; c.border = BORDER;
+  };
+
+  // ── Section 1: AR Schedule ────────────────────────────────────────────
+  ws.getCell("B5").value = "Accounts Receivable Schedule";
+  ws.getCell("B5").font = SECTION_FONT; ws.getCell("B5").fill = SECTION_FILL;
+  ws.mergeCells("B5:G5");
+
+  lbl(6, "Contracted Tuition (gross)");
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(6, y + 3);
+    cell.value = res.tuitionRevNet[y];
+    cell.numFmt = CUR; cell.font = NF; cell.border = BORDER;
+    cell.alignment = { horizontal: "right" };
+  }
+
+  lbl(7, "Collected Tuition (cash-basis)");
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(7, y + 3);
+    cell.value = res.tuitionCollected[y];
+    cell.numFmt = CUR; cell.font = NF; cell.border = BORDER;
+    cell.alignment = { horizontal: "right" };
+  }
+
+  lbl(8, "Bad Debt (contracted − collected)", true);
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(8, y + 3);
+    const badDebt = Math.max(0, res.tuitionRevNet[y] - res.tuitionCollected[y]);
+    setFormula(cell, `${YEAR_COLS[y]}6-${YEAR_COLS[y]}7`, badDebt);
+    cell.numFmt = CUR; cell.font = BF; cell.border = SUBTOTAL_BORDER;
+    cell.alignment = { horizontal: "right" };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: badDebt > 0 ? AMBER_BG : GREEN_BG } };
+  }
+
+  lbl(9, "Year-end AR Balance (30-day delay)", true);
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(9, y + 3);
+    const ar = res.tuitionCollected[y] * (30 / 365);
+    setFormula(cell, `${YEAR_COLS[y]}7*30/365`, ar);
+    cell.numFmt = CUR; cell.font = BF; cell.border = SUBTOTAL_BORDER;
+    cell.alignment = { horizontal: "right" };
+  }
+
+  // ── Section 2: Restricted vs Unrestricted Cash Recon ──────────────────
+  ws.getCell("B11").value = "Restricted vs Unrestricted Cash";
+  ws.getCell("B11").font = SECTION_FONT; ws.getCell("B11").fill = SECTION_FILL;
+  ws.mergeCells("B11:G11");
+
+  lbl(12, "Total Cash Position (accrual)");
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(12, y + 3);
+    cell.value = res.cumulativeCash[y];
+    cell.numFmt = CUR; cell.font = NF; cell.border = BORDER;
+    cell.alignment = { horizontal: "right" };
+  }
+
+  lbl(13, "Restricted Cash (capital/program-restricted)");
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(13, y + 3);
+    cell.value = 0; // Simplified lender model: no restricted classification on grants line.
+    cell.numFmt = CUR; cell.font = NF; cell.border = BORDER;
+    cell.alignment = { horizontal: "right" };
+  }
+
+  lbl(14, "Unrestricted Cash (DSCR/runway basis)", true);
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(14, y + 3);
+    setFormula(cell, `${YEAR_COLS[y]}12-${YEAR_COLS[y]}13`, res.cumulativeCash[y]);
+    cell.numFmt = CUR; cell.font = BF; cell.border = SUBTOTAL_BORDER;
+    cell.alignment = { horizontal: "right" };
+    const v = res.cumulativeCash[y];
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: v >= 0 ? GREEN_BG : RED_BG } };
+  }
+
+  ws.getCell("B16").value =
+    "Note: DSCR and cash-runway covenants in this packet are computed off Unrestricted Cash (row 14). " +
+    "Restricted gifts cannot legally service debt and are excluded from coverage tests.";
+  ws.getCell("B16").font = { name: "Calibri", size: 10, italic: true, color: { argb: "FF6B7280" } };
+  ws.getCell("B16").alignment = { wrapText: true, vertical: "top" };
+  ws.mergeCells("B16:G17");
+
+  ws.views = [{ state: "frozen", xSplit: 2, ySplit: 4 }];
+}
+
 function buildStaffing(wb: ExcelJS.Workbook, res: LenderResults) {
   const ws = wb.addWorksheet("Staffing", { properties: { tabColor: { argb: "FF0D9488" } } });
   printSetup(ws);
@@ -1690,6 +1823,7 @@ export async function generateLenderProFormaWorkbook(rawData: Record<string, unk
   buildDrivers(wb, input, res);
   buildPnL(wb, res);
   buildCashFlow(wb, res);
+  buildARAndRestrictedRecon(wb, res);
   buildStaffing(wb, res);
   buildLoanSnapshot(wb, input, res);
   buildSummary(wb, input, res);

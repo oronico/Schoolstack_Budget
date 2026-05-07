@@ -37,6 +37,15 @@ const fiveYearMetrics = {
   cashRunwayMonths: 18,
   reserveMonths: 6,
   cashPosition: [100_000, 80_000, 60_000, 90_000, 130_000],
+  // Task #610: cash-reality fields default to revenue / cashPosition.
+  contractedRevenue: [500_000, 600_000, 700_000, 800_000, 900_000],
+  badDebt: [0, 0, 0, 0, 0],
+  arBalance: [0, 0, 0, 0, 0],
+  restrictedRevenue: [0, 0, 0, 0, 0],
+  restrictedCash: [0, 0, 0, 0, 0],
+  unrestrictedCash: [100_000, 80_000, 60_000, 90_000, 130_000],
+  unrestrictedCashRunwayMonths: 18,
+  tuitionDelinquencyRateApplied: 0,
 };
 
 const baseAdjustments = {

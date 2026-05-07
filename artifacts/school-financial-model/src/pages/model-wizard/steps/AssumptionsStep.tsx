@@ -20,6 +20,7 @@ import {
   DEFAULT_RETENTION_RATE,
 } from "@workspace/finance";
 import { getStateFundingConfig, type SchoolType } from "@/lib/state-funding-data";
+import { tuitionDelinquencyBenchmarkFor } from "@/lib/school-type-benchmarks";
 import { getStatePayrollTaxEntry, getStatePayrollTaxRate, getQuickPickOptions } from "@/lib/state-payroll-tax-data";
 import {
   ENROLLMENT_REVENUE_METHOD_LABELS,
@@ -497,11 +498,34 @@ export function AssumptionsStep() {
     setValue("tuitionEscalation.rate", DEFAULTS.tuitionEscalationRate, { shouldDirty: true });
   };
 
+  const delinquencyBenchmark = useMemo(
+    () => tuitionDelinquencyBenchmarkFor(schoolType ?? undefined),
+    [schoolType],
+  );
+  const delinquencyDefault = delinquencyBenchmark?.defaultPct ?? 0;
+
+  // Task #610: seed `revenueDefaults.tuitionDelinquencyRate` from the
+  // school-type benchmark exactly once per model (when undefined). Founders
+  // can always override on the field below; this only stamps the initial
+  // value so a brand-new wizard run shows the correct default for their
+  // billing model. Mirrors how `payrollTaxRate` is seeded from state data.
+  const seededDelinquencyRef = useRef(false);
+  useEffect(() => {
+    if (seededDelinquencyRef.current) return;
+    if (!schoolType) return;
+    const current = watch("revenueDefaults.tuitionDelinquencyRate");
+    if (current === undefined || current === null) {
+      setValue("revenueDefaults.tuitionDelinquencyRate", delinquencyDefault, { shouldDirty: false });
+    }
+    seededDelinquencyRef.current = true;
+  }, [schoolType, delinquencyDefault, setValue, watch]);
+
   const resetRevenueCollection = () => {
     setValue("revenueDefaults.billingMonths", 10, { shouldDirty: true });
     setValue("revenueDefaults.collectionMethod", "autopay", { shouldDirty: true });
     setValue("revenueDefaults.collectionRate", 100, { shouldDirty: true });
     setValue("revenueDefaults.collectionDelayDays", 0, { shouldDirty: true });
+    setValue("revenueDefaults.tuitionDelinquencyRate", delinquencyDefault, { shouldDirty: true });
   };
 
   const yetToLaunch = isYetToLaunch(user);
@@ -796,6 +820,34 @@ export function AssumptionsStep() {
                   min={0}
                   max={90}
                 />
+              </div>
+            )}
+
+            {/* Task #610: tuition delinquency assumption — surfaces the
+                school-type benchmark so founders can see (and override) the
+                rate of billed tuition that ultimately goes uncollected.
+                Routed through scenario-engine to compute bad debt, AR
+                balance, and the unrestricted-cash headline. */}
+            {isTuitionBased && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <AssumptionField
+                    label="Tuition Delinquency Rate"
+                    name="revenueDefaults.tuitionDelinquencyRate"
+                    suffix="%"
+                    defaultValue={delinquencyDefault}
+                    usageNote={
+                      <>
+                        Percent of billed tuition you expect to ultimately write off as uncollectible. Layered on top of any per-row collection rate to compute bad debt and accounts receivable. {delinquencyBenchmark?.rangeLabel ? <span className="block mt-1 text-foreground/70"><strong>Benchmark:</strong> {delinquencyBenchmark.rangeLabel}</span> : null}
+                      </>
+                    }
+                    placeholder={String(delinquencyDefault)}
+                    min={0}
+                    max={50}
+                    step={0.5}
+                  />
+                  <FinancingInsight text="Lenders separate cash you can spend from cash you can't. Routing this rate through bad debt + AR makes your runway and DSCR figures match what underwriters compute themselves." />
+                </div>
               </div>
             )}
 

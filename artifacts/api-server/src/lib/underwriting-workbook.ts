@@ -3096,8 +3096,17 @@ async function generateWorkbook(data: ModelData, computedFlags?: ComputedFlag[])
   for (let y = 0; y < yc; y++) {
     const depr = computeStraightLineDepreciation(openFA, usefulLife, y);
     depreciationByYear.push(depr.annualDepreciation);
-    const tuitionRev = tuitionByYear[y] > 0 ? tuitionByYear[y] : revByYear[y] * 0.7;
-    projectedARByYear.push(computeProjectedAR(tuitionRev, 30));
+    // Task #610: Use engine-computed AR balance (folds in row-level
+    // collectionDelay days + tuition delinquency benchmark) instead of the
+    // hardcoded 30-day fallback. Falls back to the legacy estimate only when
+    // the engine yields no signal (e.g. zero tuition row).
+    const engineAR = beMetrics.arBalance?.[y] ?? 0;
+    if (engineAR > 0) {
+      projectedARByYear.push(engineAR);
+    } else {
+      const tuitionRev = tuitionByYear[y] > 0 ? tuitionByYear[y] : revByYear[y] * 0.7;
+      projectedARByYear.push(computeProjectedAR(tuitionRev, 30));
+    }
   }
 
   const { endingCashY1, cumCashRow: cfCumCashRow } = buildMonthlyCashFlowY1(wb, effectiveData, enrollment, salaryEsc, costInflPct, prorationFactor, startingCash);

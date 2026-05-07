@@ -35,6 +35,7 @@ function buildBaseModel(overrides: Record<string, unknown> = {}): ModelInput {
       ...(overrides.openingBalances as Record<string, unknown> || {}),
     },
     tuitionEscalation: overrides.tuitionEscalation || undefined,
+    revenueDefaults: (overrides.revenueDefaults as Record<string, unknown>) || undefined,
   } as ModelInput;
 }
 
@@ -1034,5 +1035,187 @@ describe("scenario-engine: downside band (Task #612)", () => {
     const ds = result.base.downsideBand!;
     // Lower enrollment => lower revenue => lower DSCR
     expect(ds.minus20.dscr[0]).toBeLessThanOrEqual(ds.minus10.dscr[0]);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// Task #610: cash-reality layer tests (contracted vs collectible, AR,
+// restricted-vs-unrestricted cash, tuition delinquency).
+// ───────────────────────────────────────────────────────────────────────────
+
+describe("scenario-engine: cash-reality — contracted revenue & bad debt", () => {
+  it("collectionRate < 1 splits contracted from recognized revenue and writes the gap to badDebt", () => {
+    const m = run({
+      revenueRows: [
+        {
+          id: "tuition_main",
+          enabled: true,
+          category: "tuition_and_fees",
+          driverType: "annual_fixed",
+          amounts: [1_000_000, 1_000_000, 1_000_000, 1_000_000, 1_000_000],
+          // Engine treats collectionRate as percent (0-100).
+          collectionRate: 95,
+        },
+      ],
+    });
+    expect(m.contractedRevenue[0]).toBeCloseTo(1_000_000, 2);
+    // Recognized revenue reflects the 5% shortfall.
+    expect(m.revenue[0]).toBeCloseTo(950_000, 2);
+    expect(m.badDebt[0]).toBeCloseTo(50_000, 2);
+  });
+
+  it("100% collection + no delinquency leaves badDebt at zero", () => {
+    const m = run({
+      revenueRows: [
+        {
+          id: "tuition_main",
+          enabled: true,
+          category: "tuition_and_fees",
+          driverType: "annual_fixed",
+          amounts: [500_000, 500_000, 500_000, 500_000, 500_000],
+        },
+      ],
+    });
+    expect(m.contractedRevenue[0]).toBeCloseTo(500_000, 2);
+    expect(m.revenue[0]).toBeCloseTo(500_000, 2);
+    expect(m.badDebt[0]).toBeCloseTo(0, 2);
+  });
+});
+
+describe("scenario-engine: cash-reality — tuition delinquency benchmark", () => {
+  it("revenueDefaults.tuitionDelinquencyRate scales tuition revenue and is echoed back", () => {
+    const m = run({
+      revenueDefaults: { tuitionDelinquencyRate: 5 },
+      revenueRows: [
+        {
+          id: "tuition_main",
+          enabled: true,
+          category: "tuition_and_fees",
+          driverType: "annual_fixed",
+          amounts: [1_000_000, 1_000_000, 1_000_000, 1_000_000, 1_000_000],
+        },
+      ],
+    });
+    // 5% delinquency on top of the (default) 100% collection rate.
+    expect(m.tuitionDelinquencyRateApplied).toBe(5);
+    expect(m.revenue[0]).toBeCloseTo(950_000, 2);
+    // Bad debt captures the delinquency-driven shortfall.
+    expect(m.badDebt[0]).toBeCloseTo(50_000, 2);
+  });
+
+  it("does NOT touch non-tuition revenue lines", () => {
+    const m = run({
+      revenueDefaults: { tuitionDelinquencyRate: 10 },
+      revenueRows: [
+        {
+          id: "esa",
+          enabled: true,
+          category: "public_funding",
+          driverType: "annual_fixed",
+          amounts: [200_000, 200_000, 200_000, 200_000, 200_000],
+        },
+      ],
+    });
+    expect(m.revenue[0]).toBeCloseTo(200_000, 2);
+    expect(m.badDebt[0]).toBeCloseTo(0, 2);
+  });
+});
+
+describe("scenario-engine: cash-reality — accounts receivable balance", () => {
+  it("estimates year-end AR from collected tuition × weighted delay days / 365", () => {
+    const m = run({
+      revenueRows: [
+        {
+          id: "tuition_main",
+          enabled: true,
+          category: "tuition_and_fees",
+          driverType: "annual_fixed",
+          amounts: [365_000, 365_000, 365_000, 365_000, 365_000],
+          collectionDelayDays: 30,
+        },
+      ],
+    });
+    // 365K tuition × 30/365 = 30K of AR drag.
+    expect(m.arBalance[0]).toBeCloseTo(30_000, 0);
+  });
+
+  it("zero tuition leaves arBalance at zero", () => {
+    const m = run({
+      revenueRows: [
+        {
+          id: "esa",
+          enabled: true,
+          category: "public_funding",
+          driverType: "annual_fixed",
+          amounts: [200_000, 0, 0, 0, 0],
+        },
+      ],
+    });
+    expect(m.arBalance[0]).toBeCloseTo(0, 2);
+  });
+});
+
+describe("scenario-engine: cash-reality — restricted vs unrestricted cash", () => {
+  it("carves restricted philanthropy out of unrestricted cash", () => {
+    const m = run({
+      openingBalances: { cash: 100_000 },
+      revenueRows: [
+        {
+          id: "tuition_main",
+          enabled: true,
+          category: "tuition_and_fees",
+          driverType: "annual_fixed",
+          amounts: [500_000, 500_000, 500_000, 500_000, 500_000],
+        },
+        {
+          id: "restricted_capital_campaign",
+          enabled: true,
+          category: "grants_contributions",
+          driverType: "annual_fixed",
+          amounts: [200_000, 0, 0, 0, 0],
+          isRestricted: true,
+        },
+      ],
+    });
+    // Restricted gift counts toward total revenue + cash position…
+    expect(m.revenue[0]).toBeCloseTo(700_000, 2);
+    expect(m.restrictedRevenue[0]).toBeCloseTo(200_000, 2);
+    expect(m.restrictedCash[0]).toBeCloseTo(200_000, 2);
+    // …but unrestricted cash strips it out so DSCR/runway aren't propped up.
+    expect(m.unrestrictedCash[0]).toBeCloseTo(m.cashPosition[0] - 200_000, 2);
+    expect(m.unrestrictedCash[0]).toBeLessThan(m.cashPosition[0]);
+  });
+
+  it("unrestricted runway is shorter than total runway when restricted gifts are present", () => {
+    const m = run({
+      openingBalances: { cash: 100_000 },
+      revenueRows: [
+        {
+          id: "tuition_main",
+          enabled: true,
+          category: "tuition_and_fees",
+          driverType: "annual_fixed",
+          amounts: [400_000, 400_000, 400_000, 400_000, 400_000],
+        },
+        {
+          id: "restricted_capital_campaign",
+          enabled: true,
+          category: "grants_contributions",
+          driverType: "annual_fixed",
+          amounts: [120_000, 0, 0, 0, 0],
+          isRestricted: true,
+        },
+      ],
+      expenseRows: [
+        {
+          id: "ops",
+          enabled: true,
+          category: "general_admin",
+          driverType: "annual_fixed",
+          amounts: [600_000, 600_000, 600_000, 600_000, 600_000],
+        },
+      ],
+    });
+    expect(m.unrestrictedCashRunwayMonths).toBeLessThanOrEqual(m.cashRunwayMonths);
   });
 });

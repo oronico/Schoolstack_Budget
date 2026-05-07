@@ -38,6 +38,12 @@ export interface RevenueRowLike {
   reimbursementLagMonths?: number;
   /** Quarter (1-4) philanthropy / grants are received in. Default 1. */
   receiptQuarter?: number;
+  /** Task #610: when true the row's cash inflow is set aside as restricted
+   *  (capital campaigns, program-restricted gifts, scholarship funds) and
+   *  excluded from unrestricted cash, runway, and DSCR calculations. When
+   *  undefined the engine infers from the row id (anything prefixed
+   *  `restricted_` is treated as restricted). */
+  isRestricted?: boolean;
 }
 
 export interface PayrollTaxComponentLike {

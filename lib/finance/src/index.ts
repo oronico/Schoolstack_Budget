@@ -281,6 +281,8 @@ export {
   type MetricDriverInfo,
 } from "./assumption-registry.js";
 
+export { isRestrictedRevenueRow } from "./restricted-revenue.js";
+
 export function computeStraightLineDepreciation(
   fixedAssets: number,
   usefulLifeYears: number,
