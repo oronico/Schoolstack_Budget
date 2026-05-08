@@ -538,6 +538,26 @@ export const staffingSchema = z.object({
   founderCompAnnualAmount: z.coerce.number(numMsg("founder annual compensation")).min(0, "Please enter a positive amount").optional(),
   founderCompStartMonth: z.coerce.number().int().min(1).max(12).optional(),
   founderCompStartYear: z.coerce.number().int().min(1).max(5).optional(),
+  /** Task #693: named pay scenarios so a founder can compare two real
+   *  options side-by-side (e.g. "Start now at $40k" vs "Wait til Y2 at
+   *  $70k"). Up to 3 saved at once. The scenario marked active by
+   *  `activeFounderCompScenarioId` mirrors its values into the four
+   *  fields above on selection — so the rest of the wizard, engine, and
+   *  exports keep reading from a single source of truth. */
+  founderCompScenarios: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        name: z.string().min(1, "Give this scenario a name").max(60),
+        notPayingYet: z.boolean().optional(),
+        annualAmount: z.coerce.number().min(0).optional(),
+        startMonth: z.coerce.number().int().min(1).max(12).optional(),
+        startYear: z.coerce.number().int().min(1).max(5).optional(),
+      }),
+    )
+    .max(3)
+    .optional(),
+  activeFounderCompScenarioId: z.string().optional(),
   offersBenefits: z.boolean().optional(),
   benefitsRate: z.coerce.number(numMsg("benefits rate")).min(0, "Please enter a rate of 0% or higher").max(100, "Benefits rate can't exceed 100%").optional(),
   payrollTaxRate: z.coerce.number(numMsg("payroll tax rate")).min(0, "Please enter a rate of 0% or higher").max(100, "Payroll tax rate can't exceed 100%").optional(),

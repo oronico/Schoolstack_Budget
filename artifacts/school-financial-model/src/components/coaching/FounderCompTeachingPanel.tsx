@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
-import { HandCoins, TrendingDown, TrendingUp, Calendar } from "lucide-react";
+import {
+  HandCoins,
+  TrendingDown,
+  TrendingUp,
+  Calendar,
+  Bookmark,
+  Trash2,
+  Check,
+} from "lucide-react";
 import {
   computeBaseFinancials,
   computeCashRunwayMonths,
@@ -16,6 +24,22 @@ interface ComparisonMetrics {
   netIncome: number[];
   cashRunwayMonths: number;
   lowestCashMonth: LowestCashMonth | null;
+}
+
+interface FounderCompPlan {
+  notPayingYet?: boolean;
+  annualAmount?: number;
+  startMonth?: number;
+  startYear?: number;
+}
+
+interface SavedScenario {
+  id: string;
+  name: string;
+  notPayingYet?: boolean;
+  annualAmount?: number;
+  startMonth?: number;
+  startYear?: number;
 }
 
 interface FounderCompTeachingPanelProps {
@@ -38,22 +62,164 @@ const MONTH_LABELS = [
   "December",
 ];
 
+const MONTH_LABELS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+const MAX_SCENARIOS = 3;
+
+/**
+ * Compute the per-year founder pay cost (with benefits + payroll-tax
+ * multiplier applied) for a given plan. Returns an array of length
+ * `yearCount`. When the plan has no pay (notPayingYet, or zero amount,
+ * or no amount), every entry is 0.
+ */
+function computeFounderCostPerYear(
+  data: FullModelData,
+  plan: FounderCompPlan,
+  yearCount: number,
+  colaPct: number,
+): number[] {
+  if (plan.notPayingYet) return Array.from({ length: yearCount }, () => 0);
+  const amount = plan.annualAmount;
+  if (typeof amount !== "number" || amount <= 0) {
+    return Array.from({ length: yearCount }, () => 0);
+  }
+  const series = deriveReportedFounderCompFromStartDate({
+    annualAmount: amount,
+    startMonth: plan.startMonth,
+    startYear: plan.startYear,
+    yearCount,
+    colaPct,
+  });
+  if (!series) return Array.from({ length: yearCount }, () => 0);
+  const benefitsRate = (data.staffing?.benefitsRate ?? 0) / 100;
+  const payrollTaxRate = (data.staffing?.payrollTaxRate ?? 0) / 100;
+  const multiplier = 1 + benefitsRate + payrollTaxRate;
+  return series.map((s) => s * multiplier);
+}
+
+/**
+ * Project the engine baseline forward with a founder-comp delta applied
+ * each month. Re-derives net income, cash runway, and the lowest cash
+ * month so the comparison is honest. Returns `null` when the plan adds
+ * no founder cost in any year (so callers can render an empty state).
+ */
+function computePlanMetrics(
+  data: FullModelData,
+  baseline: ReturnType<typeof computeBaseFinancials>,
+  plan: FounderCompPlan,
+  yearCount: number,
+  colaPct: number,
+): { metrics: ComparisonMetrics | null; costPerYear: number[] } {
+  const costPerYear = computeFounderCostPerYear(data, plan, yearCount, colaPct);
+  if (!costPerYear.some((n) => n > 0)) {
+    return { metrics: null, costPerYear };
+  }
+
+  const netIncome = baseline.netIncome.map(
+    (n, i) => n - (costPerYear[i] || 0),
+  );
+
+  const startingCash = data.openingBalances?.cash || 0;
+  const baseByYear = baseline.monthlyCashFlowByYear;
+  let runwayMonths = baseline.cashRunwayMonths;
+  let trough: LowestCashMonth | null = baseline.lowestCashMonth ?? null;
+
+  const startMonth = Math.max(1, Math.min(12, plan.startMonth ?? 1));
+  const startYear = Math.max(1, Math.min(yearCount, plan.startYear ?? 1));
+
+  if (baseByYear && baseByYear.length > 0) {
+    const overlaidByYear = baseByYear.map((series, y) => {
+      const yearCost = costPerYear[y] || 0;
+      const monthly = new Array(12).fill(0);
+      if (yearCost > 0) {
+        if (y === startYear - 1) {
+          const monthsActive = Math.max(1, 12 - (startMonth - 1));
+          const perMonth = yearCost / monthsActive;
+          for (let m = startMonth - 1; m < 12; m++) monthly[m] = perMonth;
+        } else if (y > startYear - 1) {
+          const perMonth = yearCost / 12;
+          for (let m = 0; m < 12; m++) monthly[m] = perMonth;
+        }
+      }
+      const newOutflow = series.outflow.map((v, m) => v + monthly[m]);
+      const newNet = series.inflow.map((v, m) => v - newOutflow[m]);
+      return newNet;
+    });
+
+    const cumulativeByYear: number[][] = [];
+    let runningOpen = startingCash;
+    for (const netSeries of overlaidByYear) {
+      const cum: number[] = [];
+      let r = runningOpen;
+      for (const v of netSeries) {
+        r += v;
+        cum.push(r);
+      }
+      cumulativeByYear.push(cum);
+      runningOpen = cum[cum.length - 1];
+    }
+
+    runwayMonths = computeCashRunwayMonths(
+      startingCash,
+      overlaidByYear,
+      yearCount * 12,
+    );
+    trough = findLowestCashMonthAcrossYears(cumulativeByYear, 7);
+  }
+
+  return {
+    metrics: {
+      netIncome,
+      cashRunwayMonths: Math.round(runwayMonths * 10) / 10,
+      lowestCashMonth: trough,
+    },
+    costPerYear,
+  };
+}
+
+function plansEqual(a: FounderCompPlan, b: FounderCompPlan): boolean {
+  return (
+    !!a.notPayingYet === !!b.notPayingYet &&
+    (a.annualAmount ?? 0) === (b.annualAmount ?? 0) &&
+    (a.startMonth ?? 1) === (b.startMonth ?? 1) &&
+    (a.startYear ?? 1) === (b.startYear ?? 1)
+  );
+}
+
+function describeScenario(s: SavedScenario): string {
+  if (s.notPayingYet) return "Not paying yet";
+  const amt = typeof s.annualAmount === "number" ? s.annualAmount : 0;
+  if (amt <= 0) return "No amount set";
+  const month = MONTH_LABELS_SHORT[(s.startMonth ?? 1) - 1];
+  return `${formatCurrency(amt)}/yr • starts ${month} of Y${s.startYear ?? 1}`;
+}
+
 /**
  * Task #685: a focused teaching moment in the staffing step that
  *  (a) explains in plain English why paying yourself eventually matters,
- *  (b) lets the founder set when their own compensation begins (start
- *      month + start year + annual amount, or "I'm not paying myself yet"),
+ *  (b) lets the founder set when their own compensation begins,
  *  (c) shows the model side-by-side WITHOUT founder pay vs WITH founder
  *      pay, surfacing Y1 net income, runway months, and lowest cash month
  *      so the tradeoff is concrete.
  *
- *  This panel writes the founder's friendly inputs into both the
- *  `staffing.notPayingFounderYet/founderCompStartMonth/...` fields AND the
- *  derived `staffing.reportedFounderComp[]` array — so the rest of the
- *  engine (cash flow, P&L, exports) picks up the change with no extra
- *  wiring. The tone here is coaching, not judgmental: starting unpaid is
- *  framed as a real, often necessary choice — just one to make on purpose,
- *  not by accident.
+ * Task #693: founders can now save up to 3 named pay scenarios
+ *  (e.g. "Start now at $40k" vs "Wait til Y2 at $70k") and compare them
+ *  side-by-side. The active scenario writes back into the four staffing
+ *  fields so the rest of the wizard, engine, and exports keep reading
+ *  from a single source of truth.
  */
 export function FounderCompTeachingPanel({
   yearCount,
@@ -73,11 +239,20 @@ export function FounderCompTeachingPanel({
     (watch("staffing.founderCompStartMonth") as number | undefined) ?? 7;
   const startYear =
     (watch("staffing.founderCompStartYear") as number | undefined) ?? 1;
+  const savedScenarios =
+    (watch("staffing.founderCompScenarios") as SavedScenario[] | undefined) ??
+    [];
+  const activeScenarioId = watch("staffing.activeFounderCompScenarioId") as
+    | string
+    | undefined;
+
+  const currentPlan: FounderCompPlan = useMemo(
+    () => ({ notPayingYet, annualAmount, startMonth, startYear }),
+    [notPayingYet, annualAmount, startMonth, startYear],
+  );
 
   // Keep the derived per-year `reportedFounderComp` in sync with the
-  // friendly inputs. We only write when these inputs actively express
-  // intent (toggle on, or amount > 0) so we never clobber an existing
-  // hand-entered per-year array on first paint.
+  // friendly inputs.
   const lastWritten = useRef<string>("");
   useEffect(() => {
     const derived = deriveReportedFounderCompFromStartDate({
@@ -103,19 +278,6 @@ export function FounderCompTeachingPanel({
     setValue,
   ]);
 
-  // Side-by-side comparison.
-  //
-  //   - LEFT ("Your current model") = the user's TRUE current model from
-  //     the canonical engine, untouched. We do NOT zero out leadership
-  //     rows — leadership comp the user already entered must stay in the
-  //     baseline so the comparison reflects reality.
-  //   - RIGHT ("Your model with founder compensation included") = the
-  //     same baseline plus a founder-comp delta that respects the start
-  //     month + start year + COLA. The delta is applied to monthly cash
-  //     flow (Y1 starts at the chosen month so proration is real) and
-  //     re-derives net income, runway, and the lowest-cash month from
-  //     the canonical baseline. Benefits + payroll tax multiplier is
-  //     pulled from the model so the cost is honest.
   const plannedAnnualAmount = useMemo(() => {
     if (notPayingYet) return 0;
     if (typeof annualAmount === "number" && annualAmount > 0) return annualAmount;
@@ -139,128 +301,131 @@ export function FounderCompTeachingPanel({
     [baseline],
   );
 
-  // Per-year founder cost array (already prorated for Y1 start month
-  // because deriveReportedFounderCompFromStartDate scales annualAmount
-  // by months remaining in Y1).
-  const founderCostPerYear = useMemo(() => {
-    const targetAmount = plannedAnnualAmount > 0 ? plannedAnnualAmount : fallbackAnnualAmount;
-    if (targetAmount <= 0 || notPayingYet) {
-      return Array.from({ length: yearCount }, () => 0);
+  // Resolve the "with" plan: prefer the user's typed amount, otherwise
+  // fall back to the market-rate placeholder so the card still renders.
+  const withPlan: FounderCompPlan = useMemo(() => {
+    if (notPayingYet) return { notPayingYet: true };
+    if (plannedAnnualAmount > 0) {
+      return { annualAmount: plannedAnnualAmount, startMonth, startYear };
     }
-    const series = deriveReportedFounderCompFromStartDate({
-      annualAmount: targetAmount,
-      startMonth,
-      startYear,
-      yearCount,
-      colaPct: colaRate,
-    });
-    if (!series) return Array.from({ length: yearCount }, () => 0);
-    // Apply benefits + payroll tax multiplier so cost-to-school is honest.
-    const benefitsRate = (data.staffing?.benefitsRate ?? 0) / 100;
-    const payrollTaxRate = (data.staffing?.payrollTaxRate ?? 0) / 100;
-    const multiplier = 1 + benefitsRate + payrollTaxRate;
-    return series.map((s) => s * multiplier);
+    if (fallbackAnnualAmount > 0) {
+      return { annualAmount: fallbackAnnualAmount, startMonth, startYear };
+    }
+    return {};
   }, [
+    notPayingYet,
     plannedAnnualAmount,
     fallbackAnnualAmount,
-    notPayingYet,
     startMonth,
     startYear,
-    yearCount,
-    colaRate,
-    data,
   ]);
 
-  // Total founder pay (salary only, no benefits) over the modeled years.
+  const withResult = useMemo(
+    () => computePlanMetrics(data, baseline, withPlan, yearCount, colaRate),
+    [data, baseline, withPlan, yearCount, colaRate],
+  );
+
   const totalWithComp = useMemo(
-    () => founderCostPerYear.reduce((s, n) => s + n, 0),
-    [founderCostPerYear],
+    () => withResult.costPerYear.reduce((s, n) => s + n, 0),
+    [withResult],
   );
 
   const hasFounderPay = plannedAnnualAmount > 0 && !notPayingYet;
-  const showWithCard = founderCostPerYear.some((n) => n > 0);
-
-  const withMetricsForDisplay: ComparisonMetrics | null = useMemo(() => {
-    if (!showWithCard) return null;
-
-    // Net income: subtract per-year founder cost from baseline.
-    const newNetIncome = baseline.netIncome.map(
-      (n, i) => n - (founderCostPerYear[i] || 0),
-    );
-
-    // Monthly cash flow: spread each year's founder cost across the
-    // months it actually occurs. Y1 starts at startMonth (1-indexed FY
-    // month relative to the user's first FY); Y2+ spread across all 12.
-    const startingCash = data.openingBalances?.cash || 0;
-    const baseByYear = baseline.monthlyCashFlowByYear;
-    let runwayMonths = baseline.cashRunwayMonths;
-    let trough: LowestCashMonth | null = baseline.lowestCashMonth ?? null;
-
-    if (baseByYear && baseByYear.length > 0) {
-      const overlaidByYear = baseByYear.map((series, y) => {
-        const yearCost = founderCostPerYear[y] || 0;
-        const monthly = new Array(12).fill(0);
-        if (yearCost > 0) {
-          if (y === startYear - 1) {
-            // First year of pay: spread across the months from startMonth
-            // through end of year.
-            const monthsActive = Math.max(1, 12 - (startMonth - 1));
-            const perMonth = yearCost / monthsActive;
-            for (let m = startMonth - 1; m < 12; m++) monthly[m] = perMonth;
-          } else if (y > startYear - 1) {
-            // Later years: spread evenly.
-            const perMonth = yearCost / 12;
-            for (let m = 0; m < 12; m++) monthly[m] = perMonth;
-          }
-        }
-        const newOutflow = series.outflow.map((v, m) => v + monthly[m]);
-        const newNet = series.inflow.map((v, m) => v - newOutflow[m]);
-        return newNet;
-      });
-
-      // Re-chain cumulative cash year over year off the user's starting
-      // cash so runway + trough are honest.
-      const cumulativeByYear: number[][] = [];
-      let runningOpen = startingCash;
-      for (const netSeries of overlaidByYear) {
-        const cum: number[] = [];
-        let r = runningOpen;
-        for (const v of netSeries) {
-          r += v;
-          cum.push(r);
-        }
-        cumulativeByYear.push(cum);
-        runningOpen = cum[cum.length - 1];
-      }
-
-      runwayMonths = computeCashRunwayMonths(
-        startingCash,
-        overlaidByYear,
-        yearCount * 12,
-      );
-      trough = findLowestCashMonthAcrossYears(cumulativeByYear, 7);
-    }
-
-    return {
-      netIncome: newNetIncome,
-      cashRunwayMonths: Math.round(runwayMonths * 10) / 10,
-      lowestCashMonth: trough,
-    };
-  }, [
-    showWithCard,
-    baseline,
-    founderCostPerYear,
-    data,
-    startMonth,
-    startYear,
-    yearCount,
-  ]);
-
-  // Suggested years (used only in the no-amount-yet sublabel copy).
   const suggestedYears = useMemo(() => {
     if (hasFounderPay) return [] as number[];
     return getNormalizedFounderCompYears(data, yearCount);
   }, [hasFounderPay, data, yearCount]);
+
+  // Compute metrics per saved scenario for the side-by-side comparison.
+  const scenarioResults = useMemo(
+    () =>
+      savedScenarios.map((s) => {
+        const plan: FounderCompPlan = {
+          notPayingYet: s.notPayingYet,
+          annualAmount: s.annualAmount,
+          startMonth: s.startMonth,
+          startYear: s.startYear,
+        };
+        const result = computePlanMetrics(
+          data,
+          baseline,
+          plan,
+          yearCount,
+          colaRate,
+        );
+        return { scenario: s, plan, ...result };
+      }),
+    [savedScenarios, data, baseline, yearCount, colaRate],
+  );
+
+  const canSaveCurrent =
+    savedScenarios.length < MAX_SCENARIOS &&
+    (notPayingYet || (typeof annualAmount === "number" && annualAmount > 0));
+
+  function handleSaveCurrent() {
+    if (!canSaveCurrent) return;
+    const id =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `scn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const defaultName = notPayingYet
+      ? "Not paying yet"
+      : `${formatCurrency(annualAmount ?? 0)}/yr from ${MONTH_LABELS_SHORT[startMonth - 1]} Y${startYear}`;
+    const next: SavedScenario[] = [
+      ...savedScenarios,
+      {
+        id,
+        name: defaultName.slice(0, 60),
+        notPayingYet: !!notPayingYet,
+        annualAmount: notPayingYet ? undefined : annualAmount,
+        startMonth: notPayingYet ? undefined : startMonth,
+        startYear: notPayingYet ? undefined : startYear,
+      },
+    ];
+    setValue("staffing.founderCompScenarios", next, { shouldDirty: true });
+    setValue("staffing.activeFounderCompScenarioId", id, { shouldDirty: true });
+  }
+
+  function handleUseScenario(s: SavedScenario) {
+    setValue("staffing.notPayingFounderYet", !!s.notPayingYet, {
+      shouldDirty: true,
+    });
+    if (!s.notPayingYet) {
+      setValue("staffing.founderCompAnnualAmount", s.annualAmount, {
+        shouldDirty: true,
+      });
+      if (typeof s.startMonth === "number") {
+        setValue("staffing.founderCompStartMonth", s.startMonth, {
+          shouldDirty: true,
+        });
+      }
+      if (typeof s.startYear === "number") {
+        setValue("staffing.founderCompStartYear", s.startYear, {
+          shouldDirty: true,
+        });
+      }
+    }
+    setValue("staffing.activeFounderCompScenarioId", s.id, {
+      shouldDirty: true,
+    });
+  }
+
+  function handleDeleteScenario(id: string) {
+    const next = savedScenarios.filter((s) => s.id !== id);
+    setValue("staffing.founderCompScenarios", next, { shouldDirty: true });
+    if (activeScenarioId === id) {
+      setValue("staffing.activeFounderCompScenarioId", undefined, {
+        shouldDirty: true,
+      });
+    }
+  }
+
+  function handleRenameScenario(id: string, name: string) {
+    const next = savedScenarios.map((s) =>
+      s.id === id ? { ...s, name: name.slice(0, 60) } : s,
+    );
+    setValue("staffing.founderCompScenarios", next, { shouldDirty: true });
+  }
 
   return (
     <section
@@ -388,7 +553,7 @@ export function FounderCompTeachingPanel({
         )}
       </div>
 
-      {/* Side-by-side impact comparison. */}
+      {/* Side-by-side current-vs-with comparison. */}
       <div
         className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3"
         data-testid="founder-comp-comparison"
@@ -412,7 +577,7 @@ export function FounderCompTeachingPanel({
                 : "Add an amount above to see the tradeoff."
           }
           tone="with"
-          metrics={withMetricsForDisplay}
+          metrics={withResult.metrics}
           founderPay={
             hasFounderPay
               ? totalWithComp
@@ -421,6 +586,76 @@ export function FounderCompTeachingPanel({
           yearCount={yearCount}
           testId="founder-comp-with"
         />
+      </div>
+
+      {/* Saved pay scenarios — Task #693. */}
+      <div
+        className="mt-5 rounded-xl border border-amber-200/70 bg-white/80 p-3 sm:p-4"
+        data-testid="founder-comp-scenarios"
+      >
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <div>
+            <h4 className="font-display text-sm font-bold text-amber-900 flex items-center gap-1.5">
+              <Bookmark className="h-3.5 w-3.5 text-amber-700" />
+              Saved pay scenarios
+            </h4>
+            <p className="text-[12px] text-amber-900/75 leading-snug mt-0.5">
+              Save up to {MAX_SCENARIOS} options (e.g. "Start now at $40k" vs
+              "Wait til Y2 at $70k") and compare them side-by-side. The
+              scenario you pick flows into the rest of the wizard and your
+              exports.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleSaveCurrent}
+            disabled={!canSaveCurrent}
+            data-testid="founder-comp-save-scenario"
+            className={cn(
+              "shrink-0 inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-[12px] font-semibold transition-colors",
+              canSaveCurrent
+                ? "border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-200"
+                : "border-amber-200/60 bg-amber-50/60 text-amber-900/50 cursor-not-allowed",
+            )}
+          >
+            Save current as scenario
+          </button>
+        </div>
+
+        {savedScenarios.length === 0 ? (
+          <div
+            data-testid="founder-comp-scenarios-empty"
+            className="text-[12px] text-amber-900/70 italic mt-2"
+          >
+            No saved scenarios yet. Set an amount above and click "Save current
+            as scenario" to start comparing options.
+          </div>
+        ) : (
+          <div
+            className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
+            data-testid="founder-comp-scenario-list"
+          >
+            {scenarioResults.map(({ scenario, plan, metrics, costPerYear }) => {
+              const isActive =
+                activeScenarioId === scenario.id ||
+                (!activeScenarioId && plansEqual(plan, currentPlan));
+              const total = costPerYear.reduce((s, n) => s + n, 0);
+              return (
+                <ScenarioCard
+                  key={scenario.id}
+                  scenario={scenario}
+                  metrics={metrics}
+                  founderPay={total}
+                  yearCount={yearCount}
+                  isActive={isActive}
+                  onUse={() => handleUseScenario(scenario)}
+                  onDelete={() => handleDeleteScenario(scenario.id)}
+                  onRename={(name) => handleRenameScenario(scenario.id, name)}
+                />
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <p
@@ -555,6 +790,162 @@ function ImpactCard({
           />
         </div>
       )}
+    </div>
+  );
+}
+
+interface ScenarioCardProps {
+  scenario: SavedScenario;
+  metrics: ComparisonMetrics | null;
+  founderPay: number;
+  yearCount: number;
+  isActive: boolean;
+  onUse: () => void;
+  onDelete: () => void;
+  onRename: (name: string) => void;
+}
+
+function ScenarioCard({
+  scenario,
+  metrics,
+  founderPay,
+  yearCount,
+  isActive,
+  onUse,
+  onDelete,
+  onRename,
+}: ScenarioCardProps) {
+  const y1Net = metrics?.netIncome[0] ?? 0;
+  const lowest = metrics?.lowestCashMonth ?? null;
+  const runway = metrics?.cashRunwayMonths ?? 0;
+  const NetIcon = y1Net >= 0 ? TrendingUp : TrendingDown;
+  const netColor = y1Net >= 0 ? "text-emerald-700" : "text-rose-700";
+  const testId = `founder-comp-scenario-${scenario.id}`;
+
+  return (
+    <div
+      data-testid={testId}
+      className={cn(
+        "rounded-lg border p-3 flex flex-col gap-2",
+        isActive
+          ? "border-amber-400 bg-amber-100/50 ring-1 ring-amber-300"
+          : "border-amber-200/70 bg-white",
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <input
+          type="text"
+          value={scenario.name}
+          onChange={(e) => onRename(e.target.value)}
+          data-testid={`${testId}-name`}
+          aria-label="Scenario name"
+          className="flex-1 min-w-0 rounded-md border border-transparent bg-transparent px-1 py-0.5 text-[13px] font-semibold text-amber-950 outline-none hover:border-amber-200 focus:border-amber-300 focus:bg-white"
+        />
+        {isActive && (
+          <span
+            data-testid={`${testId}-active-badge`}
+            className="shrink-0 inline-flex items-center gap-0.5 rounded-full bg-amber-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-900"
+          >
+            <Check className="h-2.5 w-2.5" />
+            Active
+          </span>
+        )}
+      </div>
+
+      <div className="text-[11.5px] text-amber-900/75 leading-snug">
+        {describeScenario(scenario)}
+      </div>
+
+      {!metrics ? (
+        <div
+          data-testid={`${testId}-empty`}
+          className="text-[11.5px] text-amber-900/70 italic"
+        >
+          No founder pay in this scenario.
+        </div>
+      ) : (
+        <div className="space-y-1 text-[12px]">
+          <Stat
+            label="Y1 net income"
+            valueEl={
+              <span className={cn("inline-flex items-center gap-1", netColor)}>
+                <NetIcon className="h-3 w-3" />
+                <span className="tabular-nums font-semibold">
+                  {formatCurrency(Math.round(y1Net))}
+                </span>
+              </span>
+            }
+            testId={`${testId}-y1-net-income`}
+          />
+          <Stat
+            label="Cash runway"
+            valueEl={
+              <span className="tabular-nums font-semibold text-amber-950">
+                {runway >= yearCount * 12
+                  ? `${yearCount * 12}+ mo`
+                  : `${runway.toFixed(1)} mo`}
+              </span>
+            }
+            testId={`${testId}-runway`}
+          />
+          <Stat
+            label="Lowest cash month"
+            valueEl={
+              lowest ? (
+                <span
+                  className={cn(
+                    "tabular-nums font-semibold",
+                    lowest.isNegative ? "text-rose-700" : "text-amber-950",
+                  )}
+                >
+                  {formatCurrency(Math.round(lowest.amount))}{" "}
+                  <span className="font-normal text-[10.5px] text-amber-900/70">
+                    ({lowest.monthLabel} Y{(lowest.yearIndex ?? 0) + 1})
+                  </span>
+                </span>
+              ) : (
+                <span className="text-amber-900/60 text-[12px]">—</span>
+              )
+            }
+            testId={`${testId}-lowest-cash`}
+          />
+          <Stat
+            label="Total founder pay"
+            valueEl={
+              <span className="tabular-nums font-semibold text-amber-950">
+                {formatCurrency(Math.round(founderPay))}
+              </span>
+            }
+            testId={`${testId}-founder-pay-total`}
+          />
+        </div>
+      )}
+
+      <div className="mt-1 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onUse}
+          disabled={isActive}
+          data-testid={`${testId}-use`}
+          className={cn(
+            "flex-1 rounded-md px-2 py-1 text-[12px] font-semibold transition-colors",
+            isActive
+              ? "bg-amber-200/60 text-amber-900/70 cursor-default"
+              : "bg-primary text-primary-foreground hover:opacity-90",
+          )}
+        >
+          {isActive ? "In use" : "Use this scenario"}
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label={`Delete ${scenario.name}`}
+          data-testid={`${testId}-delete`}
+          className="rounded-md border border-amber-200 bg-white p-1.5 text-amber-900/70 hover:bg-amber-50 hover:text-rose-700"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
     </div>
   );
 }

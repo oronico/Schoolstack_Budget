@@ -116,3 +116,163 @@ describe("FounderCompTeachingPanel (Task #685)", () => {
     expect(note.toLowerCase()).toMatch(/right call|on purpose|sustainable|real/);
   });
 });
+
+describe("FounderCompTeachingPanel saved scenarios (Task #693)", () => {
+  it("renders the saved-scenarios section with an empty state and a disabled save button by default", () => {
+    render(<Harness initial={baseModel} />);
+    expect(screen.getByTestId("founder-comp-scenarios")).toBeInTheDocument();
+    expect(screen.getByTestId("founder-comp-scenarios-empty")).toBeInTheDocument();
+    const saveBtn = screen.getByTestId(
+      "founder-comp-save-scenario",
+    ) as HTMLButtonElement;
+    expect(saveBtn.disabled).toBe(true);
+  });
+
+  it("enables 'Save current as scenario' once an amount is set, and adds a scenario card on click", () => {
+    render(
+      <Harness
+        initial={{
+          ...baseModel,
+          staffing: {
+            ...baseModel.staffing,
+            founderCompAnnualAmount: 40_000,
+            founderCompStartMonth: 8,
+            founderCompStartYear: 1,
+          } as never,
+        }}
+      />,
+    );
+    const saveBtn = screen.getByTestId(
+      "founder-comp-save-scenario",
+    ) as HTMLButtonElement;
+    expect(saveBtn.disabled).toBe(false);
+    fireEvent.click(saveBtn);
+    const list = screen.getByTestId("founder-comp-scenario-list");
+    expect(list).toBeInTheDocument();
+    // Exactly one direct-child scenario card is rendered.
+    expect(list.children.length).toBe(1);
+    // And it carries an active badge since it mirrors the current inputs.
+    expect(
+      list.querySelector("[data-testid$='-active-badge']"),
+    ).not.toBeNull();
+  });
+
+  it("renders pre-saved scenarios side-by-side with their own metrics and lets the user switch between them", () => {
+    render(
+      <Harness
+        initial={{
+          ...baseModel,
+          staffing: {
+            ...baseModel.staffing,
+            founderCompScenarios: [
+              {
+                id: "scn-now",
+                name: "Start now at $40k",
+                annualAmount: 40_000,
+                startMonth: 1,
+                startYear: 1,
+              },
+              {
+                id: "scn-y2",
+                name: "Wait til Y2 at $70k",
+                annualAmount: 70_000,
+                startMonth: 1,
+                startYear: 2,
+              },
+            ],
+            activeFounderCompScenarioId: "scn-now",
+          } as never,
+        }}
+      />,
+    );
+    // Both saved scenarios render their own per-scenario metrics rows.
+    expect(
+      screen.getByTestId("founder-comp-scenario-scn-now-y1-net-income"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("founder-comp-scenario-scn-y2-y1-net-income"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("founder-comp-scenario-scn-now-runway"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("founder-comp-scenario-scn-y2-runway"),
+    ).toBeInTheDocument();
+    // The active scenario shows the active badge; the other does not.
+    expect(
+      screen.getByTestId("founder-comp-scenario-scn-now-active-badge"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("founder-comp-scenario-scn-y2-active-badge"),
+    ).not.toBeInTheDocument();
+    // Switching to the Y2 scenario marks it active.
+    fireEvent.click(screen.getByTestId("founder-comp-scenario-scn-y2-use"));
+    expect(
+      screen.getByTestId("founder-comp-scenario-scn-y2-active-badge"),
+    ).toBeInTheDocument();
+  });
+
+  it("removes a saved scenario when the delete button is clicked", () => {
+    render(
+      <Harness
+        initial={{
+          ...baseModel,
+          staffing: {
+            ...baseModel.staffing,
+            founderCompScenarios: [
+              {
+                id: "scn-keep",
+                name: "Keep me",
+                annualAmount: 50_000,
+                startMonth: 7,
+                startYear: 1,
+              },
+              {
+                id: "scn-drop",
+                name: "Drop me",
+                annualAmount: 80_000,
+                startMonth: 1,
+                startYear: 2,
+              },
+            ],
+          } as never,
+        }}
+      />,
+    );
+    expect(
+      screen.getByTestId("founder-comp-scenario-scn-drop"),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("founder-comp-scenario-scn-drop-delete"));
+    expect(
+      screen.queryByTestId("founder-comp-scenario-scn-drop"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("founder-comp-scenario-scn-keep"),
+    ).toBeInTheDocument();
+  });
+
+  it("disables the save button once 3 scenarios are already saved", () => {
+    render(
+      <Harness
+        initial={{
+          ...baseModel,
+          staffing: {
+            ...baseModel.staffing,
+            founderCompAnnualAmount: 50_000,
+            founderCompStartMonth: 7,
+            founderCompStartYear: 1,
+            founderCompScenarios: [
+              { id: "a", name: "A", annualAmount: 30_000, startMonth: 1, startYear: 1 },
+              { id: "b", name: "B", annualAmount: 50_000, startMonth: 1, startYear: 2 },
+              { id: "c", name: "C", annualAmount: 80_000, startMonth: 1, startYear: 3 },
+            ],
+          } as never,
+        }}
+      />,
+    );
+    const saveBtn = screen.getByTestId(
+      "founder-comp-save-scenario",
+    ) as HTMLButtonElement;
+    expect(saveBtn.disabled).toBe(true);
+  });
+});
