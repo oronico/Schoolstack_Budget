@@ -42,6 +42,7 @@ import {
   computeMetricDrivers,
   type DecisionEngineModelData as FullModelData,
   type HeadlineMetricKey,
+  breakEvenYearFromAnnual,
 } from "@workspace/finance";
 import {
   type PacketData,
@@ -708,9 +709,9 @@ function buildFiveYearProjection(
     values: [yd.students.toString(), fmt(yd.totalRevenue), fmt(yd.totalExpenses), fmt(yd.netIncome), pct(yd.netMargin)],
   }));
 
-  const breakEvenYear = yearlyData.findIndex((yd) => yd.netIncome >= 0);
-  const breakEvenText = breakEvenYear >= 0
-    ? `The model reaches break-even in Year ${breakEvenYear + 1}.`
+  const breakEvenYear = breakEvenYearFromAnnual(yearlyData);
+  const breakEvenText = breakEvenYear !== null
+    ? `The model reaches break-even in Year ${breakEvenYear}.`
     : "The model does not reach break-even within the 5-year projection.";
 
   const y1 = yearlyData[0];

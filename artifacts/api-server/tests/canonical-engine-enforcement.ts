@@ -50,7 +50,10 @@ interface ForbiddenPattern {
 const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
   {
     id: "local-break-even-year",
-    re: /\.findIndex\([^)]*\.netIncome\s*[><=]+\s*0/,
+    // Matches `.findIndex(yf => yf.netIncome >= 0)` AND the parenthesised
+    // arrow-callback shape `.findIndex((yd) => yd.netIncome >= 0)` where
+    // the first `(` belongs to the parameter list, not the comparison.
+    re: /\.findIndex\(\s*(?:\([^)]*\)|[^),]*)\s*=>[^.]*\.netIncome\s*[><=]+\s*0/,
     fix: "Read `breakEvenYear` off `computeBaseFinancials(model)` from @workspace/finance instead of deriving it locally with findIndex.",
   },
   {
