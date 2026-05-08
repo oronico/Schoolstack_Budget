@@ -53,7 +53,10 @@ interface GuidanceModeSelectorProps {
 export function GuidanceModeSelector({ compact }: GuidanceModeSelectorProps = {}) {
   const { user, refetchUser } = useAuth();
   const [saving, setSaving] = useState(false);
-  const current = user?.guidanceLevel || "basics";
+  // Default first-run users (no persisted preference) to Guided Builder at
+  // "extra" depth — the brief's stated default. Once the user clicks any
+  // option we PATCH /api/auth/guidance-level so the choice persists.
+  const current = user?.guidanceLevel || "extra";
   const currentMode =
     current === "advanced" ? "cfo" : "guided";
 

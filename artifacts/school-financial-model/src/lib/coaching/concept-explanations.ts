@@ -14,7 +14,9 @@ export type ConceptId =
   | "facility_cost_ratio"
   | "public_funding_timing"
   | "tuition_collection_rate"
-  | "assumption_confidence";
+  | "assumption_confidence"
+  | "dscr"
+  | "actuals_vs_projections";
 
 export interface ConceptExplanation {
   id: ConceptId;
@@ -118,5 +120,17 @@ export const CONCEPT_EXPLANATIONS: Record<ConceptId, ConceptExplanation> = {
     title: "What is assumption confidence?",
     body:
       "Every number in your model is either a fact (an actual you can prove) or an assumption (your best estimate). Assumption confidence is a quick read on how much evidence stands behind each estimate — actuals, a signed agreement, a quote, public guidance, research, or a working estimate. Marking each one honestly does not mean your plan is weak; it tells a board, funder, or lender exactly which parts of the model are rock-solid and which still need clarification.",
+  },
+  dscr: {
+    id: "dscr",
+    title: "What is DSCR (debt-payment cushion)?",
+    body:
+      "DSCR — Debt Service Coverage Ratio — is the cushion between your operating cash flow and the loan payment you owe in a year. A DSCR of 1.0x means you generate exactly enough cash to make the payment with nothing left over; 1.25x means you generate $1.25 of cash for every $1 of debt service, leaving a 25% safety margin. Lenders almost always require a minimum (commonly 1.10x to 1.25x for schools) so a slow enrollment year doesn't push you into default. Think of it as: how comfortably can the school keep paying the lender if revenue dips?",
+  },
+  actuals_vs_projections: {
+    id: "actuals_vs_projections",
+    title: "Actuals vs. projections — why both matter",
+    body:
+      "An actual is a number that already happened — last month's payroll, last year's tuition collected, a paid invoice — while a projection is your best estimate of what comes next. The strongest models clearly separate the two: lock the actuals down (they aren't up for debate) and stress-test the projections. Mixing them silently makes a forecast look more certain than it really is. Boards, funders, and lenders trust models that label which is which, because it shows exactly where the certainty ends and the planning begins.",
   },
 };

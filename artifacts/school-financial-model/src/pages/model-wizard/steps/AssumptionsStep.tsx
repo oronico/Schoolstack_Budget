@@ -552,6 +552,7 @@ export function AssumptionsStep() {
                 : "The dial-tuning step. Your enrollment, revenue, staffing, expense, and capital decisions are already in. Use this screen to adjust the rates, escalators, and structural settings that stress-test your 5-year model.")}
         </p>
         <ConceptExplainer concept="assumption_confidence" className="mt-3 max-w-2xl" />
+        <ConceptExplainer concept="actuals_vs_projections" className="mt-2 max-w-2xl" />
       </div>
 
       {showReassurance && (

@@ -202,6 +202,7 @@ export function CapitalFinancingStep() {
                   : "If you have debt, it's smart to plan for your coverage ratio to improve each year as enrollment grows. Set year-by-year targets.")
               : "These settings become relevant if you add loan details above."}
           />
+          <ConceptExplainer concept="dscr" className="mt-3 max-w-2xl" />
           {hasLoan ? (
             <div className="space-y-4">
               <div className={cn("grid gap-3", isSingleYear ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3" : "grid-cols-5")}>

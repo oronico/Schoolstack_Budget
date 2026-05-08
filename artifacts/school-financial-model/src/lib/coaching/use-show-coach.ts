@@ -9,12 +9,14 @@ export type GuidanceLevel = "advanced" | "basics" | "extra";
  * guidance tier or rename only has to be updated here — every coach-gated
  * surface stays consistent.
  *
- * Falls back to "basics" when the user isn't loaded or no AuthProvider
- * is mounted (mirrors `useOptionalAuth`) so leaf components rendered in
- * isolation by unit tests keep working without the full provider stack.
+ * Falls back to "extra" when the user isn't loaded or no AuthProvider
+ * is mounted (mirrors `useOptionalAuth`). Task #702 changed this default
+ * from "basics" → "extra" so first-run founders land in Guided Builder
+ * at full depth, matching the brief. `showCoach` is unaffected because
+ * both "basics" and "extra" enable coaching.
  */
 export function useShowCoach(): { guidanceLevel: GuidanceLevel; showCoach: boolean } {
   const user = useOptionalAuth()?.user ?? null;
-  const guidanceLevel = (user?.guidanceLevel as GuidanceLevel) || "basics";
+  const guidanceLevel = (user?.guidanceLevel as GuidanceLevel) || "extra";
   return { guidanceLevel, showCoach: guidanceLevel !== "advanced" };
 }

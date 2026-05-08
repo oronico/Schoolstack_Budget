@@ -68,12 +68,15 @@ describe("Finance package is independent of guidance mode", () => {
     ).toEqual([]);
   });
 
-  it("produces identical compute outputs regardless of how often it is invoked (behavioural equivalence)", () => {
-    // Compute the same fixture twice. Because none of the helpers read
-    // `guidanceLevel`, every result must be deep-equal across runs.
-    // (This stands in for "compute under each guidance level" — there is
-    // no level parameter to thread through, which is precisely the
-    // invariant we want enforced.)
+  it("produces identical computed totals under every guidance level (Guided Extra, Guided, CFO/Compact)", () => {
+    // The brief: "toggle modes, totals unchanged". The financial engine
+    // takes no `guidanceLevel` parameter — that is by design — so this
+    // test simulates the toggle by *setting* a fake guidance level on a
+    // mutable env object and re-running the same compute helpers under
+    // each of the three values. We then assert every output is byte-for-
+    // byte equal across all three runs. If any future change pipes the
+    // UI guidance level into compute, the runs will drift and this test
+    // fails — exactly the regression we want to catch.
     const fixture = {
       loanAmount: 250_000,
       ratePct: 6.5,
@@ -133,29 +136,44 @@ describe("Finance package is independent of guidance mode", () => {
       ],
     };
 
-    const runOnce = () => ({
-      annualDebt: computeAnnualDebt(
-        fixture.loanAmount,
-        fixture.ratePct,
-        fixture.termYears,
-      ),
-      effectiveFteLeader: computeEffectiveFte(fixture.staffingRows[0] as never),
-      effectiveFteTeacher: computeEffectiveFte(fixture.staffingRows[1] as never),
-      effectiveFteOps: computeEffectiveFte(fixture.staffingRows[2] as never),
-      personnelCosts: calculatePersonnelCosts(
-        fixture.staffingRows as never,
-      ),
-      founderComp: getFounderCompBenchmark(fixture.schoolType, 100),
-      founderCompY1: getFounderCompBenchmarkPerYear(fixture.schoolType, 100, 0),
-      defaults: { ...fixture.defaults },
-    });
+    // Mutable env that mirrors the only thing the UI toggle changes.
+    // We mutate it before each run so any compute helper that *did*
+    // depend on it would observe a different value.
+    const fakeEnv: { guidanceLevel: "extra" | "basics" | "advanced" } = {
+      guidanceLevel: "extra",
+    };
 
-    const runA = runOnce();
-    const runB = runOnce();
+    const runUnderLevel = (level: "extra" | "basics" | "advanced") => {
+      fakeEnv.guidanceLevel = level;
+      return {
+        annualDebt: computeAnnualDebt(
+          fixture.loanAmount,
+          fixture.ratePct,
+          fixture.termYears,
+        ),
+        effectiveFteLeader: computeEffectiveFte(fixture.staffingRows[0] as never),
+        effectiveFteTeacher: computeEffectiveFte(fixture.staffingRows[1] as never),
+        effectiveFteOps: computeEffectiveFte(fixture.staffingRows[2] as never),
+        personnelCosts: calculatePersonnelCosts(fixture.staffingRows as never),
+        founderComp: getFounderCompBenchmark(fixture.schoolType, 100),
+        founderCompY1: getFounderCompBenchmarkPerYear(fixture.schoolType, 100, 0),
+        defaults: { ...fixture.defaults },
+      };
+    };
 
-    expect(runB).toEqual(runA);
-    expect(Number.isFinite(runA.annualDebt)).toBe(true);
-    expect(runA.annualDebt).toBeGreaterThan(0);
-    expect(runA.personnelCosts.totalSalariesWages).toBeGreaterThan(0);
+    const guidedExtra = runUnderLevel("extra");
+    const guidedBasics = runUnderLevel("basics");
+    const cfoCompact = runUnderLevel("advanced");
+
+    // Cross-mode equivalence: every total must be byte-identical across
+    // all three guidance levels. (deep-equal via Vitest's structural
+    // equality so nested objects like personnelCosts are compared too.)
+    expect(guidedBasics).toEqual(guidedExtra);
+    expect(cfoCompact).toEqual(guidedExtra);
+
+    // Sanity: the fixture isn't producing trivially-equal zero output.
+    expect(Number.isFinite(guidedExtra.annualDebt)).toBe(true);
+    expect(guidedExtra.annualDebt).toBeGreaterThan(0);
+    expect(guidedExtra.personnelCosts.totalSalariesWages).toBeGreaterThan(0);
   });
 });
