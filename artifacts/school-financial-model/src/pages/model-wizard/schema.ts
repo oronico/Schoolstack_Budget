@@ -526,6 +526,18 @@ export const staffingSchema = z.object({
    *  reported is surfaced as a normalization adjustment to staffing cost,
    *  net income, and DSCR. Length up to 5. */
   normalizedFounderComp: z.array(z.coerce.number().min(0, "Please enter a positive amount")).max(5).optional(),
+  /** Task #685: founder-friendly "when do I start paying myself" inputs.
+   *  When `notPayingFounderYet` is true, the entire `reportedFounderComp[]`
+   *  series is zero. Otherwise, `founderCompAnnualAmount` paid starting at
+   *  `founderCompStartMonth` (1-12) of `founderCompStartYear` (1-N) drives
+   *  the per-year reported series — Y1 of the start year is prorated by the
+   *  number of months remaining in that year, subsequent years escalate by
+   *  the model's COLA. Lets founders see the tradeoff side-by-side without
+   *  filling out a per-year array by hand. */
+  notPayingFounderYet: z.boolean().optional(),
+  founderCompAnnualAmount: z.coerce.number(numMsg("founder annual compensation")).min(0, "Please enter a positive amount").optional(),
+  founderCompStartMonth: z.coerce.number().int().min(1).max(12).optional(),
+  founderCompStartYear: z.coerce.number().int().min(1).max(5).optional(),
   offersBenefits: z.boolean().optional(),
   benefitsRate: z.coerce.number(numMsg("benefits rate")).min(0, "Please enter a rate of 0% or higher").max(100, "Benefits rate can't exceed 100%").optional(),
   payrollTaxRate: z.coerce.number(numMsg("payroll tax rate")).min(0, "Please enter a rate of 0% or higher").max(100, "Payroll tax rate can't exceed 100%").optional(),

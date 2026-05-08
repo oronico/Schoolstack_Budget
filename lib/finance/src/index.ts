@@ -132,6 +132,7 @@ export {
   findFounderRow,
   getSuggestedFounderComp,
   getReportedFounderCompYears,
+  deriveReportedFounderCompFromStartDate,
   getNormalizedFounderCompYears,
   getFounderCompBenchmarkPerYear,
   getFounderCompBandTransitions,

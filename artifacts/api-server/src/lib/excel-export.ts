@@ -2405,7 +2405,23 @@ function buildLegacyPnLTab(
           const tc = spt > 0 ? Math.ceil(students / spt) : 0;
           const tp = tc * (st.teacherSalary || 0) * salEsc * pf;
           const ap = (st.adminStaffCount || 0) * (st.adminSalary || 0) * salEsc * pf;
-          const fs = (st.founderSalary || 0) * salEsc * pf;
+          // Task #685: prefer the per-year `reportedFounderComp[]` series so
+          // friendly start-date inputs (year-of-start proration + COLA across
+          // years) flow into the operating-budget export. Falls back to the
+          // legacy single-value `founderSalary` for older models.
+          const reportedArr = Array.isArray(st.reportedFounderComp)
+            ? (st.reportedFounderComp as number[])
+            : undefined;
+          const reportedY =
+            reportedArr && reportedArr.length > 0
+              ? (typeof reportedArr[y] === "number"
+                  ? reportedArr[y]
+                  : reportedArr[reportedArr.length - 1] || 0)
+              : undefined;
+          const fs =
+            reportedY !== undefined
+              ? reportedY * pf
+              : (st.founderSalary || 0) * salEsc * pf;
           const totalSal = tp + ap + fs;
           val = totalSal + totalSal * ((st.benefitsRate || 0) / 100);
           staffByYr[y] = Math.round(val);

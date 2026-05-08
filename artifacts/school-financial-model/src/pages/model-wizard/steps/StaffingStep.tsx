@@ -8,6 +8,7 @@ import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { RationaleField } from "@/components/coaching/RationaleField";
 import { AssumptionConfidenceCard } from "@/components/wizard/AssumptionConfidenceCard";
 import { PayingYourselfMatters } from "@/components/coaching/PayingYourselfMatters";
+import { FounderCompTeachingPanel } from "@/components/coaching/FounderCompTeachingPanel";
 import type { FullModelData } from "@/pages/model-wizard/schema";
 import { cn, formatCurrency } from "@/lib/utils";
 import { formatPerStudent, formatPerFte } from "@/lib/per-student-lens";
@@ -1006,6 +1007,12 @@ export function StaffingStep() {
           <div key={cat} id={`staffing-cat-${cat}`} className="scroll-mt-4">
             {cat === "school_leadership" && hasAnyLeader && (
               <>
+                {/* Task #685: teaching moment with start-date inputs +
+                    side-by-side without-vs-with founder pay impact. */}
+                <FounderCompTeachingPanel
+                  yearCount={yearCount}
+                  className="mb-4"
+                />
                 <PayingYourselfMatters
                   data={watch() as FullModelData}
                   yearCount={yearCount}

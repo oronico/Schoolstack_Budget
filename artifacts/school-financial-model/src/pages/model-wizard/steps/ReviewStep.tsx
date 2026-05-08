@@ -1041,7 +1041,18 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
               <Item label="Teacher Salary" value={formatCurrency(data.staffing?.teacherSalary)} />
               <Item label="Admin Staff" value={data.staffing?.adminStaffCount} />
               <Item label="Admin Salary" value={formatCurrency(data.staffing?.adminSalary)} />
-              <Item label="Founder Salary" value={formatCurrency(data.staffing?.founderSalary)} />
+              <Item
+                label="Founder Compensation"
+                value={
+                  data.staffing?.notPayingFounderYet
+                    ? "Not paying founder yet"
+                    : data.staffing?.founderCompAnnualAmount
+                      ? `${formatCurrency(data.staffing.founderCompAnnualAmount)}/yr · starts ${(["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"])[(data.staffing.founderCompStartMonth ?? 1) - 1]} of Year ${data.staffing.founderCompStartYear ?? 1}`
+                      : data.staffing?.reportedFounderComp?.[0] !== undefined
+                        ? `${formatCurrency(data.staffing.reportedFounderComp[0])} (Y1)`
+                        : formatCurrency(data.staffing?.founderSalary)
+                }
+              />
               <Item label="Benefits Rate" value={formatPercent(data.staffing?.benefitsRate)} />
             </div>
           </Section>

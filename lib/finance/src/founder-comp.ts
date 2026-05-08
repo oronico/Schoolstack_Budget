@@ -97,6 +97,56 @@ function padYears(arr: number[] | undefined, yearCount: number, fallback: number
   return out;
 }
 
+/** Task #685: derive a per-year reported-founder-comp series from the
+ *  founder-friendly "when do I start paying myself" inputs (start month +
+ *  start year + annual amount). Year 1 of the start year is prorated by the
+ *  number of months remaining in that year (e.g. start month 7 of year 1 →
+ *  6 months of pay, so Y1 = annualAmount * 6/12). Subsequent years are the
+ *  full annual amount escalated by COLA. Years before the start year are
+ *  zero. When `notPayingYet` is true the entire series is zero regardless
+ *  of the other inputs.
+ *
+ *  Returns `undefined` when there isn't enough info to derive a series
+ *  (no annual amount AND not explicitly "not paying yet"); callers should
+ *  fall back to whatever is already in `reportedFounderComp[]`. */
+export function deriveReportedFounderCompFromStartDate(opts: {
+  notPayingYet?: boolean;
+  annualAmount?: number;
+  startMonth?: number; // 1-12
+  startYear?: number; // 1-N
+  yearCount?: number;
+  colaPct?: number;
+}): number[] | undefined {
+  const yearCount = opts.yearCount ?? YEAR_COUNT;
+  if (opts.notPayingYet) {
+    return Array.from({ length: yearCount }, () => 0);
+  }
+  const amount = opts.annualAmount;
+  if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) {
+    return undefined;
+  }
+  const startMonthRaw = opts.startMonth ?? 1;
+  const startMonth = Math.max(1, Math.min(12, Math.round(startMonthRaw)));
+  const startYearRaw = opts.startYear ?? 1;
+  const startYear = Math.max(1, Math.min(yearCount, Math.round(startYearRaw)));
+  const colaFactor = 1 + (opts.colaPct ?? 0) / 100;
+  const out: number[] = [];
+  for (let y = 1; y <= yearCount; y++) {
+    if (y < startYear) {
+      out.push(0);
+      continue;
+    }
+    if (y === startYear) {
+      const monthsActive = 12 - (startMonth - 1);
+      out.push(Math.round(amount * (monthsActive / 12)));
+      continue;
+    }
+    const yearsSinceStart = y - startYear;
+    out.push(Math.round(amount * Math.pow(colaFactor, yearsSinceStart)));
+  }
+  return out;
+}
+
 /** Resolves the per-year reported (as-planned) founder comp series. Falls
  *  back, in order, to:
  *   1. `staffing.reportedFounderComp[]` (the new per-year field)
