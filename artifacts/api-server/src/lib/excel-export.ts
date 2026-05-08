@@ -1,5 +1,7 @@
 import ExcelJS from "exceljs";
-import { computeAnnualDebt } from "@workspace/finance";
+import { computeAnnualDebt, computeFounderCompNormalization } from "@workspace/finance";
+import type { DecisionEngineModelData } from "@workspace/finance";
+type FullModelData = DecisionEngineModelData;
 import { accountingBasisLabel, addDashboardSheet, computeFacilityCostByYear, computeInstructionalCostByYear, setFormula } from "./workbook-helpers.js";
 import { addDecisionHistorySheet } from "./packets/build-decision-history.js";
 
@@ -863,11 +865,11 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
     const summaryWs = wb.addWorksheet("Summary");
 
     const revTotalRow = buildRevenueScheduleTab(revenueWs, revenueRows, enrollmentByYear, yearCount, cols, yearHeaders, aRefs, data.tuitionTiers, precomputed);
-    const staffTotalRow = buildStaffingTab(staffingWs, staffingRows, salaryEscRate, prorationFactor, yearCount, cols, yearHeaders, aRefs);
+    const staffTotalRow = buildStaffingTab(staffingWs, staffingRows, salaryEscRate, prorationFactor, yearCount, cols, yearHeaders, aRefs, data);
     const expTotalRow = buildExpensesTab(expensesWs, expenseRows, enrollmentByYear, revTotalRow, yearCount, cols, yearHeaders, aRefs, precomputed, data.customCategoryLabels);
     const capTotalRow = buildCapitalDebtTab(capitalWs, capDebtRows, enrollmentByYear, yearCount, cols, yearHeaders, aRefs);
 
-    buildPnLTab(pnlWs, yearCount, cols, yearHeaders, revTotalRow, staffTotalRow, expTotalRow, capTotalRow, sp.entityType, precomputed, sp.hasManagementFee);
+    buildPnLTab(pnlWs, yearCount, cols, yearHeaders, revTotalRow, staffTotalRow, expTotalRow, capTotalRow, sp.entityType, precomputed, sp.hasManagementFee, data);
 
     const revenueMix = computeRevenueMixForExport(revenueRows, enrollmentByYear, yearCount, data.tuitionTiers);
     const mgmtOffset = sp.hasManagementFee ? 1 : 0;
@@ -1544,6 +1546,7 @@ function buildStaffingTab(
   cols: number,
   yearHeaders: string[],
   aRefs?: AssumptionRefs,
+  founderCompData?: ModelData,
 ): number {
   ws.columns = [
     { width: 30 }, { width: 18 }, { width: 14 }, { width: 10 },
@@ -1697,6 +1700,72 @@ function buildStaffingTab(
 
   const totalRow = r;
   styleSectionRow(ws, totalRow, cols);
+
+  // Task #692: dedicated, clearly labeled "Founder compensation" breakdown
+  // (reported vs market-rate normalized, with the lender adjustment delta
+  // and a per-year + N-year total). Numbers come from the same
+  // `computeFounderCompNormalization` helper the in-app dashboard uses.
+  if (founderCompData) {
+    const fc = computeFounderCompNormalization(founderCompData as FullModelData, yearCount);
+    const stRaw = (founderCompData.staffing || {}) as Record<string, unknown>;
+    const notPayingYet = stRaw.notPayingFounderYet === true;
+    const hasReported = fc.reported.some((v) => v > 0);
+
+    if (hasReported || notPayingYet || fc.hasAdjustment) {
+      // Extend the visible table by one column for an explicit "Total" so
+      // section styling, header, and per-row writes stay in sync (previously
+      // we wrote out-of-band into yearCount+2 with a tautological guard).
+      const totalColIdx = yearCount + 2;
+      ws.getColumn(totalColIdx).width = 18;
+      const fcCols = cols + 1;
+
+      r += 2;
+      const sectionRow = r;
+      styleSectionRow(ws, sectionRow, fcCols);
+      ws.getCell(sectionRow, 1).value = "FOUNDER COMPENSATION";
+      ws.getCell(sectionRow, totalColIdx).value = `${yearCount}-Year Total`;
+
+      const fcRows: Array<{ label: string; values: number[]; bold?: boolean }> = [
+        { label: "Founder Compensation (as planned)", values: fc.reported },
+        { label: "  Fully-loaded (incl. benefits + payroll tax)", values: fc.reportedLoaded },
+        { label: "Founder Compensation (market rate, normalized)", values: fc.normalized },
+        { label: "  Fully-loaded (incl. benefits + payroll tax)", values: fc.normalizedLoaded },
+        { label: "Lender Normalization Adjustment (market - planned)", values: fc.delta, bold: true },
+      ];
+
+      for (const item of fcRows) {
+        r++;
+        ws.getCell(r, 1).value = item.label;
+        ws.getCell(r, 1).font = item.bold ? BOLD_FONT : NORMAL_FONT;
+        let total = 0;
+        for (let y = 0; y < yearCount; y++) {
+          const cell = ws.getCell(r, y + 2);
+          const v = Math.round(item.values[y] || 0);
+          total += v;
+          cell.value = v;
+          cell.numFmt = CURRENCY_FORMAT;
+          if (item.bold) styleBoldDataCell(cell); else styleDataCell(cell);
+        }
+        const lastYearColLetter = String.fromCharCode(65 + yearCount);
+        const totalCell = ws.getCell(r, totalColIdx);
+        totalCell.value = { formula: `SUM(B${r}:${lastYearColLetter}${r})`, result: safeResult(total) };
+        totalCell.numFmt = CURRENCY_FORMAT;
+        if (item.bold) styleBoldDataCell(totalCell); else styleDataCell(totalCell);
+      }
+
+      r++;
+      const note = notPayingYet
+        ? "Note: Founder selected \"not paying yet\" — reported founder compensation is $0 across all years. The market-rate line shows what a comparable hire would cost; the lender adjustment is the gap underwriters apply."
+        : fc.hasAdjustment
+        ? "Note: Founder is paying themselves below market rate (\"sweat equity\"). Lenders and boards underwrite to the market-rate line; the adjustment shows the gap."
+        : "Note: Reported and market-rate founder compensation match — no normalization adjustment is applied.";
+      ws.getCell(r, 1).value = note;
+      ws.getCell(r, 1).font = { ...NORMAL_FONT, italic: true, color: { argb: "FF64748B" } };
+      ws.mergeCells(r, 1, r, fcCols);
+      ws.getRow(r).alignment = { wrapText: true, vertical: "top" };
+      ws.getRow(r).height = 32;
+    }
+  }
 
   ws.views = [{ state: "frozen", ySplit: 1, xSplit: 1 }];
   return totalRow;
@@ -1917,6 +1986,7 @@ function buildPnLTab(
   entityType?: string,
   precomputed?: PrecomputedFinancials,
   hasManagementFee?: boolean,
+  founderCompData?: ModelData,
 ) {
   const niLabel = profitLabel(entityType);
   const cumNiLabel = cumulativeProfitLabel(entityType);
@@ -1945,6 +2015,22 @@ function buildPnLTab(
     { label: cumNiLabel, bold: false, key: "cumni" },
     { label: ROW_RESERVE, bold: false, key: "reserve" },
   ];
+
+  // Task #692: dedicated, clearly-labeled founder-compensation lines so
+  // lenders and board members can see the founder-pay impact at a glance.
+  // Surfaced as memo / "of which" rows under the existing Personnel line —
+  // they don't sum into Total Expenses (founder pay is already inside
+  // Personnel Costs above) but they make the choice explicit, including a
+  // separate Lender Normalization Adjustment line that mirrors the
+  // in-app dashboard's view (`computeFounderCompNormalization`).
+  let fc: ReturnType<typeof computeFounderCompNormalization> | undefined;
+  let fcNotPayingYet = false;
+  if (founderCompData) {
+    fc = computeFounderCompNormalization(founderCompData as FullModelData, yearCount);
+    const stRaw = (founderCompData.staffing || {}) as Record<string, unknown>;
+    fcNotPayingYet = stRaw.notPayingFounderYet === true;
+  }
+  const showFounderRows = !!fc && (fc.reported.some((v) => v > 0) || fcNotPayingYet || fc.hasAdjustment);
 
   const rowMap: Record<string, number> = {};
   for (let idx = 0; idx < pnlRows.length; idx++) {
@@ -2023,7 +2109,62 @@ function buildPnLTab(
     if (item.section) styleSectionRow(ws, r, cols);
   }
 
-  const beRow = pnlRows.length + 2;
+  let nextRow = pnlRows.length + 2;
+  if (showFounderRows && fc) {
+    // Extend the P&L table by one column for the founder block's N-year
+    // total so the section header, per-row writes, and total all live in
+    // the same well-formed table shape.
+    const totalColIdx = yearCount + 2;
+    ws.getColumn(totalColIdx).width = 18;
+    const fcCols = cols + 1;
+
+    nextRow += 1;
+    const sectionRow = nextRow;
+    styleSectionRow(ws, sectionRow, fcCols);
+    ws.getCell(sectionRow, 1).value = "FOUNDER COMPENSATION (memo — already in Personnel above)";
+    ws.getCell(sectionRow, totalColIdx).value = `${yearCount}-Year Total`;
+
+    const memoRows: Array<{ label: string; values: number[]; bold?: boolean }> = [
+      { label: "  Founder compensation (as planned)", values: fc.reportedLoaded },
+      { label: "  Founder compensation (market rate, normalized)", values: fc.normalizedLoaded },
+      { label: "  Lender Normalization Adjustment (market - planned)", values: fc.delta, bold: true },
+    ];
+    for (const item of memoRows) {
+      nextRow += 1;
+      ws.getCell(nextRow, 1).value = item.label;
+      ws.getCell(nextRow, 1).font = item.bold ? BOLD_FONT : NORMAL_FONT;
+      let total = 0;
+      for (let y = 0; y < yearCount; y++) {
+        const cell = ws.getCell(nextRow, y + 2);
+        const v = Math.round(item.values[y] || 0);
+        total += v;
+        cell.value = v;
+        cell.numFmt = CURRENCY_FORMAT;
+        if (item.bold) styleBoldDataCell(cell); else styleDataCell(cell);
+      }
+      const lastYearColLetter = String.fromCharCode(65 + yearCount);
+      const totalCell = ws.getCell(nextRow, totalColIdx);
+      totalCell.value = { formula: `SUM(B${nextRow}:${lastYearColLetter}${nextRow})`, result: safeResult(total) };
+      totalCell.numFmt = CURRENCY_FORMAT;
+      if (item.bold) styleBoldDataCell(totalCell); else styleDataCell(totalCell);
+    }
+
+    nextRow += 1;
+    const note = fcNotPayingYet
+      ? "Note: Founder selected \"not paying yet\" — reported founder compensation is $0. Lenders underwrite to the market-rate line."
+      : fc.hasAdjustment
+      ? "Note: Founder is paying themselves below market (\"sweat equity\"). Lenders / boards underwrite to the market-rate line."
+      : "Note: Reported and market-rate founder compensation match — no adjustment is applied.";
+    ws.getCell(nextRow, 1).value = note;
+    ws.getCell(nextRow, 1).font = { ...NORMAL_FONT, italic: true, color: { argb: "FF64748B" } };
+    ws.mergeCells(nextRow, 1, nextRow, fcCols);
+    ws.getRow(nextRow).alignment = { wrapText: true, vertical: "top" };
+    ws.getRow(nextRow).height = 30;
+
+    nextRow += 1; // gap before break-even
+  }
+
+  const beRow = nextRow;
   ws.getCell(beRow, 1).value = "Break-even";
   ws.getCell(beRow, 1).font = BOLD_FONT;
   let beCumNI = 0;
