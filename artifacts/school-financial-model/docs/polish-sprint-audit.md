@@ -29,7 +29,7 @@ A `GuidanceModeSelector` with three depths (Compact / Guided / Extra help) alrea
 
 ## Phase 3 — Beginner teaching layer
 
-**Status:** Partial. **Six missing concepts shipped here as part of #701.**
+**Status:** Partial. **Seven missing concept entries shipped here as part of #701.**
 
 The codebase has a rich coaching layer: `ConceptExplainer`, `MicroLessonCard`, `WhyThisMatters`, `RationaleField`, plus per-school-type explainer copy in `lib/coaching/explainers.ts`. Required concepts that already had an entry: revenue, expense, net_income, cash_flow, break_even, reserves, debt_service, paying_yourself (founder compensation), budget_vs_actual (actuals vs projections), dscr_explained.
 
