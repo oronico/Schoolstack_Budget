@@ -7,7 +7,14 @@ export type ConceptId =
   | "break_even"
   | "reserves"
   | "debt_service"
-  | "paying_yourself";
+  | "paying_yourself"
+  | "beginning_cash"
+  | "ending_cash"
+  | "staffing_cost_ratio"
+  | "facility_cost_ratio"
+  | "public_funding_timing"
+  | "tuition_collection_rate"
+  | "assumption_confidence";
 
 export interface ConceptExplanation {
   id: ConceptId;
@@ -69,5 +76,47 @@ export const CONCEPT_EXPLANATIONS: Record<ConceptId, ConceptExplanation> = {
     title: "Why paying yourself eventually matters",
     body:
       "It's common — and often necessary — for founders to take a discounted salary in early years to protect cash. That's a real choice, and we honor it in your plan. But your model should also show what the school would cost to run if a market-rate hire filled your role, because that's the cost lenders, board members, and any future leader will eventually face. Modeling both views protects you from quietly subsidizing the school forever.",
+  },
+  beginning_cash: {
+    id: "beginning_cash",
+    title: "What is beginning cash?",
+    body:
+      "Beginning cash is what you have in the bank on the first day of a month or year — before any new revenue lands and before any new bills go out. It's the starting point for every cash-flow calculation. A healthy beginning cash balance gives you room to cover a slow month without scrambling; a thin one means even a small timing mismatch can put you in the red.",
+  },
+  ending_cash: {
+    id: "ending_cash",
+    title: "What is ending cash?",
+    body:
+      "Ending cash is what's left in the bank at the close of a month or year, after every dollar received and every bill paid. It rolls forward to become next month's beginning cash. Watching ending cash month by month is how you spot the lowest point of the year — usually a summer or pre-launch month — so you can plan reserves or a line of credit before you need them.",
+  },
+  staffing_cost_ratio: {
+    id: "staffing_cost_ratio",
+    title: "What is the staffing cost ratio?",
+    body:
+      "Staffing cost ratio is total personnel cost (salaries, benefits, payroll taxes) divided by total revenue, shown as a percent. It is almost always the largest single line on a school budget, and the healthy range varies by school type — your benchmark on this step is the right reference. When your ratio runs well above that benchmark, it usually means you are staffed for a bigger enrollment than you have, or your revenue is light. Either way, it is a signal to revisit either the headcount plan or the enrollment plan.",
+  },
+  facility_cost_ratio: {
+    id: "facility_cost_ratio",
+    title: "What is the facility cost ratio?",
+    body:
+      "Facility cost ratio is rent, utilities, insurance, and other occupancy costs as a percent of total revenue. A common healthy range is 12% to 20% depending on school type and city. Facility costs are usually fixed — if enrollment comes in lower than expected, the rent does not shrink — so a high facility ratio is one of the strongest signals that your fixed-cost base is heavier than your revenue can comfortably carry.",
+  },
+  public_funding_timing: {
+    id: "public_funding_timing",
+    title: "Why public funding timing matters",
+    body:
+      "Public funding (per-pupil revenue, ESA payments, voucher reimbursements) is usually committed for the year, but the cash often arrives on a state schedule that lags your bills by 30, 60, or 90 days. Your annual model can look balanced and your monthly cash can still get tight if a payment slips. Mapping when each public payment actually lands — and stress-testing what happens if it's late — is one of the highest-value things you can do for credibility.",
+  },
+  tuition_collection_rate: {
+    id: "tuition_collection_rate",
+    title: "What is the tuition collection rate?",
+    body:
+      "Tuition collection rate is the percent of billed tuition you actually receive in cash over the year. It's almost never 100% — late payments, financial-aid adjustments, mid-year withdrawals, and write-offs all reduce it. A realistic rate (often 92% to 98% for established schools, lower for first-year programs) keeps your cash forecast honest. Modeling 100% collection makes the budget look stronger than it really is.",
+  },
+  assumption_confidence: {
+    id: "assumption_confidence",
+    title: "What is assumption confidence?",
+    body:
+      "Every number in your model is either a fact (an actual you can prove) or an assumption (your best estimate). Assumption confidence is a quick read on how much evidence stands behind each estimate — actuals, a signed agreement, a quote, public guidance, research, or a working estimate. Marking each one honestly does not mean your plan is weak; it tells a board, funder, or lender exactly which parts of the model are rock-solid and which still need clarification.",
   },
 };
