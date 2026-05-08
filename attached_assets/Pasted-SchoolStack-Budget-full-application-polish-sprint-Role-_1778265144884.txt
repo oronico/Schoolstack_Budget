@@ -1,0 +1,592 @@
+SchoolStack Budget full application polish sprint.
+
+Role:
+You are acting as product engineer, CFO-modeling QA lead, and founder-experience designer.
+
+Goal:
+Go through the full SchoolStack Budget application, not just the guest wizard, and make sure the experience is polished, logical, beginner-friendly, and robust enough for experienced operators to build a full-scale CFO-quality school financial model.
+
+Product thesis:
+SchoolStack Budget is for schools first. It helps even inexperienced entrepreneurs learn budgeting, accounting, and financial modeling in a safe, welcoming space. If a founder later wants to borrow money, apply for grants, communicate with a board, negotiate with a landlord, or talk to funders, the model should be credible enough to share.
+
+Do not make the product feel like a bank portal.
+Do not build a loan origination system.
+Do not lead with underwriting judgment.
+Do not make founders feel rejected or inadequate.
+
+The app should feel:
+- clear
+- warm
+- serious
+- educational
+- empowering
+- accurate
+- CFO-quality when needed
+- nonjudgmental for beginners
+
+Current architecture:
+The authenticated wizard currently includes:
+- Story
+- School Details
+- Actuals Intake for operating schools
+- Enrollment
+- Revenue
+- Staffing
+- Expenses
+- Capital & Financing
+- Assumptions & Sensitivity
+- Review
+- Consultant
+- Lender Narrative
+- Export
+
+Use this structure. Do not rebuild from scratch.
+
+PHASE 1. Information architecture review
+
+Review the full wizard flow and confirm each step answers one clear question:
+
+1. Story
+Question: What kind of school are you building and why?
+
+2. School Details
+Question: What is the operating context, entity structure, model type, facility status, and planning stage?
+
+3. Actuals Intake
+Question: If you are already operating, what actually happened financially and operationally last year?
+
+4. Enrollment
+Question: How many students will you serve, and how confident are those numbers?
+
+5. Revenue
+Question: Where will money come from, how much, and when will it arrive?
+
+6. Staffing
+Question: Who does the work, what does it cost, and when do roles come online?
+
+7. Expenses
+Question: What does it cost to operate the school beyond staff?
+
+8. Capital & Financing
+Question: What startup capital, debt, or major financing assumptions affect the plan?
+
+9. Assumptions & Sensitivity
+Question: Which assumptions drive the model, and what happens if they change?
+
+10. Review
+Question: Does the model make sense mathematically and operationally?
+
+11. Consultant
+Question: What should the founder understand, fix, or explain before sharing the model?
+
+12. Lender Narrative
+Question: How can the founder explain the model credibly to an external audience?
+
+13. Export
+Question: Which deliverable does the founder need?
+
+Acceptance:
+- Every step has a clear purpose.
+- No step feels duplicative.
+- Beginner users understand why the step matters.
+- Expert users can move efficiently without being slowed down by excessive coaching.
+- The wizard should not feel like a loan application.
+
+PHASE 2. Add beginner/expert experience controls
+
+Add or strengthen a guidance mode toggle with at least two visible modes:
+
+A. Guided Builder
+For beginners.
+Includes:
+- plain-English explanations
+- examples
+- “why this matters”
+- “what this means in your books”
+- coaching prompts
+- common mistakes
+- suggested defaults
+
+B. CFO Mode
+For experienced operators.
+Includes:
+- compact layout
+- fewer explanations
+- faster table entry
+- advanced assumptions visible
+- direct access to row-level drivers
+- source/provenance fields
+- scenario controls
+- export checks
+
+Do not make two separate products. Same data model, same engine, different presentation depth.
+
+Acceptance:
+- Beginner can complete model without knowing accounting vocabulary.
+- Expert can build quickly without feeling patronized.
+- Toggle does not change the underlying math.
+
+PHASE 3. Beginner teaching layer
+
+Add short plain-English teaching moments near major concepts.
+
+Required concept explainers:
+- Revenue
+- Expense
+- Net income
+- Cash flow
+- Beginning cash
+- Ending cash
+- Break-even enrollment
+- Staffing cost ratio
+- Facility cost ratio
+- Debt service
+- DSCR, framed as “debt payment cushion”
+- Operating reserves
+- Public funding timing
+- Tuition collection rate
+- Founder compensation
+- Actuals vs projections
+- Assumption confidence
+
+Tone:
+Use:
+- “Here’s what this means.”
+- “Why this matters.”
+- “A funder or lender may ask about this.”
+- “This assumption gets stronger when...”
+- “This does not mean your plan is weak. It means this part needs more clarity.”
+
+Avoid:
+- pass/fail
+- approved/declined
+- ineligible
+- credit decision
+- underwriting determination
+- rejected
+
+Acceptance:
+- Explain concepts in 2-4 sentences.
+- No finance jargon without explanation.
+- Do not overwhelm the page.
+- Expert mode can collapse or hide most explanations.
+
+PHASE 4. Actuals-first pathway for operating schools
+
+Operating schools should start with actuals.
+
+Review Actuals Intake and strengthen it so it captures:
+- prior-year enrollment
+- prior-year revenue by category
+- prior-year expenses by category
+- ending cash
+- tuition revenue actually collected
+- public funding actually received
+- philanthropy actually received
+- personnel expense
+- facility expense
+- other operating expenses
+- existing debt
+- current cash
+- profit and loss upload, if available
+- accounting basis: cash, accrual, not sure
+
+Then seed Year 1 projections from actuals where appropriate.
+
+Add clear language:
+“Your actuals are the best starting point. We will use them to help build a realistic projection, but you can adjust assumptions for growth, pricing, staffing, or facility changes.”
+
+Acceptance:
+- Operating schools are not treated like startups.
+- Actuals clearly influence projections.
+- The model distinguishes actuals from assumptions.
+- The export shows what is actual and what is projected.
+
+PHASE 5. Assumptions-first pathway for new schools
+
+New schools should not feel punished for not having actuals.
+
+For launch-stage founders, ask:
+- projected opening month
+- Year 1 operating months
+- committed students
+- signed agreements
+- deposits collected
+- waitlist
+- tuition or public funding assumption
+- facility status
+- startup costs
+- pre-opening cash needs
+- first month with revenue
+- first month with payroll
+- first month with rent
+
+Add language:
+“Since you do not have actuals yet, we are building a planning model from assumptions. The stronger the evidence behind each assumption, the stronger and more useful your model becomes.”
+
+Acceptance:
+- New founders learn how to build defensible assumptions.
+- The model does not pretend projections are actuals.
+- Export includes an assumptions confidence section.
+
+PHASE 6. Revenue step polish
+
+Review RevenueStep.
+
+It must handle:
+- tuition
+- fees
+- public funding
+- ESA/voucher/scholarship funding
+- grants
+- donations
+- fundraising
+- contracts or services
+- other revenue
+
+For each revenue source, support:
+- amount
+- driver: per student, annual fixed, monthly, percent of base
+- timing
+- collection rate
+- confidence/source
+- confirmed vs projected
+- recurring vs one-time
+- restricted vs unrestricted, if applicable
+
+Add coaching:
+- “Revenue is stronger when it is tied to enrolled students, signed agreements, or confirmed public funding.”
+- “Fundraising can support your launch, but a school should not depend on uncertain donations forever.”
+- “If public funds arrive late, your annual model may look fine while your cash gets tight.”
+
+Acceptance:
+- Revenue is easy for beginners.
+- Experts can customize rows.
+- The export clearly shows revenue quality and assumptions.
+
+PHASE 7. Enrollment step polish
+
+Enrollment should be a modeling driver, not just a student count.
+
+Add or verify:
+- Year 1-5 enrollment
+- current enrollment if operating
+- capacity
+- growth rate
+- retention rate
+- signed agreements
+- deposits
+- waitlist
+- applications/inquiries
+- grade or age bands
+- evidence source
+
+Add outputs:
+- break-even enrollment
+- enrollment needed to cover staffing
+- enrollment needed to cover facility
+- utilization percentage
+- growth reasonableness flag
+
+Acceptance:
+- Founder sees whether enrollment assumptions are credible.
+- Model flags aggressive growth gently.
+- Break-even enrollment is visible in Review and exports.
+
+PHASE 8. Staffing step polish
+
+Staffing must support both simple and CFO-level modeling.
+
+Beginner mode:
+- role
+- FTE
+- salary or hourly/contract cost
+- start year
+- benefits yes/no
+- payroll tax assumed
+
+CFO mode:
+- function category
+- employment type
+- FTE
+- annualized rate
+- start/end year
+- ratio-based staffing
+- benefits rate
+- payroll tax rate
+- wage cap logic if available
+- contractor vs employee distinction
+
+Add founder compensation coaching:
+“Many founders start unpaid. That may be realistic temporarily, but a sustainable school eventually needs to pay the people doing the work. Your model gets stronger when it shows when and how founder compensation begins.”
+
+Add outputs:
+- staffing as % of revenue
+- students per teacher
+- loaded personnel cost
+- founder compensation included/not included
+- normalized founder compensation scenario
+
+Acceptance:
+- No hidden unpaid labor.
+- Founder comp is visible and teachable.
+- Staffing ratios are shown clearly.
+
+PHASE 9. Facility and expense polish
+
+Expenses must distinguish fixed, variable, and timing-sensitive costs.
+
+Add or verify:
+- rent
+- utilities
+- insurance
+- curriculum
+- software
+- professional services
+- marketing
+- supplies
+- transportation
+- food
+- student services
+- compliance/licensing
+- repairs/maintenance
+- startup vs ongoing
+- monthly vs annual timing
+- inflation/escalation
+
+Facility must support:
+- leased
+- owned
+- donated/shared
+- home-based, if used for planning
+- facility capacity
+- lease term
+- lease escalation
+- NNN charges
+- insurance
+- occupancy documentation status
+
+Founder-facing language:
+“Facility costs are usually fixed. If enrollment comes in lower than expected, rent does not shrink.”
+
+Acceptance:
+- Facility burden appears as % of revenue.
+- Fixed-cost pressure is visible.
+- Beginner can enter simple expenses.
+- Expert can customize rows.
+
+PHASE 10. Cash flow as truth layer
+
+Strengthen monthly cash flow.
+
+The app must show:
+- beginning cash
+- cash received
+- cash paid
+- ending cash
+- lowest cash month
+- months below zero
+- summer gap
+- delayed public funding scenario
+- tuition timing
+- payroll timing
+- rent timing
+- debt timing
+
+Plain-English output:
+“Your annual budget may look balanced, but cash gets tight in September because expenses arrive before revenue.”
+
+Acceptance:
+- User can see cash timing risk.
+- Monthly cash flow is included in 1-Year Operating Budget export.
+- Review page highlights lowest cash month.
+
+PHASE 11. Assumptions confidence layer
+
+For key assumptions, ask:
+- Is this based on actuals?
+- Is this based on a signed agreement?
+- Is this based on a quote?
+- Is this based on public program guidance?
+- Is this based on research?
+- Is this an estimate?
+
+Apply to:
+- enrollment
+- tuition
+- public funding
+- grants/donations
+- rent
+- staffing
+- insurance
+- major expenses
+- debt service
+- startup costs
+
+Create an “Assumptions Confidence” section:
+- Strong
+- Moderate
+- Needs Support
+
+Acceptance:
+- The founder knows which assumptions need evidence.
+- Export shows assumption source/confidence.
+- This supports board, grant, lender, and funder credibility without feeling punitive.
+
+PHASE 12. Review page CFO-quality polish
+
+Review page should become the model command center.
+
+Show:
+- total revenue
+- total expenses
+- net income
+- monthly cash low point
+- break-even enrollment
+- staffing %
+- facility %
+- reserves
+- debt payment cushion
+- founder compensation status
+- revenue quality
+- assumptions confidence
+- top 3 strengths
+- top 3 items to clarify
+- what to fix first
+
+Add two views:
+- Simple Summary
+- CFO Detail
+
+Acceptance:
+- Beginner understands what the model says.
+- Expert can inspect major ratios quickly.
+- Every warning includes a next step.
+
+PHASE 13. Consultant output polish
+
+Consultant step should not sound like a lender decision.
+
+It should produce:
+- What your model says
+- What looks strong
+- What needs more clarity
+- What could create cash pressure
+- What to fix first
+- What someone reviewing this may ask
+- Suggested next steps before sharing externally
+
+Do not say:
+- approved
+- declined
+- failed
+- pass/fail
+- ineligible
+- rejected
+
+Acceptance:
+- Output is coaching, not judgment.
+- Language is founder-safe.
+- Recommendations are practical.
+
+PHASE 14. Export polish
+
+Canonical founder-facing exports:
+
+1. Founder Planning Workbook
+Purpose: working Excel model with assumptions and detail.
+
+2. 1-Year Operating Budget
+Purpose: operating budget and monthly cash flow for the next school year.
+
+3. 5-Year Financial Model
+Purpose: annual sustainability model with assumptions, staffing, facility, cash, and scenarios.
+
+4. Board and Funder Summary
+Purpose: plain-English board/funder-ready PDF or workbook summary.
+
+5. Lender Conversation Snapshot
+Purpose: concise lender-facing model summary, not a credit memo.
+
+Every export should include:
+- model date
+- school name
+- school stage
+- actuals/projections distinction
+- assumptions
+- revenue
+- expenses
+- staffing
+- facility
+- cash flow
+- break-even
+- reserves
+- scenarios
+- plain-English summary
+
+Acceptance:
+- Filenames match canonical labels.
+- No founder-visible export says credit memo, approval packet, or underwriting decision.
+- Outputs are credible for board, grant, lender, and funder conversations.
+
+PHASE 15. Board, grant, and lender communication support
+
+Add narrative sections that help the founder explain:
+
+Board:
+- What are we planning?
+- What are the biggest risks?
+- What needs approval?
+- What decisions are ahead?
+
+Grant:
+- What will funding enable?
+- What costs are one-time vs recurring?
+- How does the school sustain beyond the grant?
+- What assumptions support the request?
+
+Lender:
+- What is the repayment source?
+- What assumptions support affordability?
+- What happens if enrollment is lower?
+- What cash cushion exists?
+- What will the loan fund?
+
+These should be generated from model data, but editable.
+
+Acceptance:
+- Founder can use outputs in real external conversations.
+- Narrative is plain English and professional.
+
+PHASE 16. Regression and QA
+
+Add tests for:
+- beginner path can complete model
+- expert path can complete model
+- operating school actuals seed projections
+- new school assumptions remain clearly labeled
+- default model does not create fantasy revenue
+- founder comp scenario works
+- collection rate behaves intentionally
+- debt cushion/DSCR label is clear
+- one-year budget export uses correct label
+- five-year model export uses correct label
+- no banned credit-decision language appears in founder-facing copy
+- exports open and contain no NaN, undefined, #REF!, #DIV/0!, or #VALUE!
+
+Run:
+pnpm run typecheck
+pnpm --filter @workspace/school-financial-model run build
+pnpm --filter @workspace/api-server run build
+pnpm --filter @workspace/api-server run qa:excel
+pnpm --filter @workspace/api-server run qa:formula-results
+pnpm --filter @workspace/api-server run qa:smoke-arithmetic
+pnpm --filter @workspace/school-financial-model run test
+pnpm --filter @workspace/api-server run test
+
+Deliver:
+- product polish report
+- files changed
+- tests run
+- before/after screenshots if available
+- remaining watch items
