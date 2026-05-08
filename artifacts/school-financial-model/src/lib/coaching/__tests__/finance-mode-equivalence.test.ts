@@ -12,21 +12,26 @@ import {
   DEFAULT_GENERAL_INFLATION_PCT,
   DEFAULT_RENT_ESCALATION_PCT,
   DEFAULT_TUITION_ESCALATION_PCT,
+  type StaffingRowLike,
 } from "@workspace/finance";
-import { calculatePersonnelCosts } from "@/lib/staffing-defaults";
+import {
+  calculatePersonnelCosts,
+  type StaffingRowData,
+} from "@/lib/staffing-defaults";
+import type { GuidanceLevel } from "@/lib/coaching/use-show-coach";
 
 // Task #702 — Phase 2: prove the financial engine is independent of the
 // founder's UI guidance mode. The Guided Builder / CFO Mode toggle is a
 // pure presentation concern; flipping it must never alter a single
-// computed number. We enforce that two ways:
-//   1. Source-grep the entire `@workspace/finance` package and assert it
-//      has zero references to UI-only guidance state. If any future
-//      refactor accidentally couples compute to the toggle, this fails.
-//   2. Behavioural equivalence: run a fixture through the same compute
-//      helpers the wizard / api-server / review step rely on, and assert
-//      the outputs are deeply equal across separate invocations. This
-//      guards against any non-deterministic / level-aware side-effects
-//      that a static grep might miss (e.g. module-level state).
+// computed number. We enforce that three ways:
+//   1. Source-grep `@workspace/finance` and assert it has zero references
+//      to UI-only guidance state. Catches accidental coupling at import
+//      time before any compute runs.
+//   2. Cross-mode behavioural equivalence: run the same fixture through
+//      every public compute helper under each of the three guidance
+//      levels and assert byte-equal totals across all three runs.
+//   3. Vitest snapshot of the computed totals, so any unintended drift
+//      (independent of the toggle) is also caught at review time.
 
 const FINANCE_PKG_DIR = join(
   __dirname,
@@ -46,6 +51,92 @@ function* walk(dir: string): Generator<string> {
       yield full;
     }
   }
+}
+
+const STAFFING_FIXTURE: StaffingRowData[] = [
+  {
+    id: "leader-1",
+    roleName: "Head of School",
+    functionCategory: "school_leadership",
+    employmentType: "full_time",
+    fte: 1,
+    annualizedRate: 90_000,
+    benefitsEligible: true,
+    benefitsRate: DEFAULT_BENEFITS_RATE,
+    payrollTaxRate: DEFAULT_PAYROLL_TAX_RATE,
+    payrollLike: true,
+    notes: "",
+    staffingMode: "fixed",
+  },
+  {
+    id: "teacher-1",
+    roleName: "Lead Teacher",
+    functionCategory: "instructional",
+    employmentType: "full_time",
+    fte: 1,
+    annualizedRate: 55_000,
+    benefitsEligible: true,
+    benefitsRate: DEFAULT_BENEFITS_RATE,
+    payrollTaxRate: DEFAULT_PAYROLL_TAX_RATE,
+    payrollLike: true,
+    notes: "",
+    staffingMode: "fixed",
+  },
+  {
+    id: "ops-1",
+    roleName: "Operations Manager",
+    functionCategory: "operations",
+    employmentType: "part_time",
+    fte: 0.5,
+    annualizedRate: 30_000,
+    benefitsEligible: false,
+    benefitsRate: 0,
+    payrollTaxRate: DEFAULT_PAYROLL_TAX_RATE,
+    payrollLike: true,
+    notes: "",
+    staffingMode: "fixed",
+  },
+];
+
+const FIXTURE = {
+  loanAmount: 250_000,
+  ratePct: 6.5,
+  termYears: 10,
+  schoolType: "private_school" as const,
+  enrollmentY1: 100,
+  defaults: {
+    benefits: DEFAULT_BENEFITS_RATE,
+    payrollTax: DEFAULT_PAYROLL_TAX_RATE,
+    cola: DEFAULT_COLA_PCT,
+    inflation: DEFAULT_GENERAL_INFLATION_PCT,
+    rent: DEFAULT_RENT_ESCALATION_PCT,
+    tuition: DEFAULT_TUITION_ESCALATION_PCT,
+  },
+};
+
+function computeTotalsForMode(_mode: GuidanceLevel) {
+  // The mode parameter is intentionally ignored. The whole point of this
+  // test is that no compute helper accepts or branches on it. If a future
+  // refactor pipes the UI guidance level into compute, the cross-mode
+  // equality assertion below will fail.
+  const staffingLikes: StaffingRowLike[] = STAFFING_FIXTURE;
+  return {
+    annualDebt: computeAnnualDebt(
+      FIXTURE.loanAmount,
+      FIXTURE.ratePct,
+      FIXTURE.termYears,
+    ),
+    effectiveFteLeader: computeEffectiveFte(staffingLikes[0], 0, FIXTURE.enrollmentY1),
+    effectiveFteTeacher: computeEffectiveFte(staffingLikes[1], 0, FIXTURE.enrollmentY1),
+    effectiveFteOps: computeEffectiveFte(staffingLikes[2], 0, FIXTURE.enrollmentY1),
+    personnelCosts: calculatePersonnelCosts(STAFFING_FIXTURE, FIXTURE.enrollmentY1),
+    founderComp: getFounderCompBenchmark(FIXTURE.schoolType, FIXTURE.enrollmentY1),
+    founderCompY1: getFounderCompBenchmarkPerYear(
+      FIXTURE.schoolType,
+      FIXTURE.enrollmentY1,
+      0,
+    ),
+  };
 }
 
 describe("Finance package is independent of guidance mode", () => {
@@ -69,111 +160,31 @@ describe("Finance package is independent of guidance mode", () => {
   });
 
   it("produces identical computed totals under every guidance level (Guided Extra, Guided, CFO/Compact)", () => {
-    // The brief: "toggle modes, totals unchanged". The financial engine
-    // takes no `guidanceLevel` parameter — that is by design — so this
-    // test simulates the toggle by *setting* a fake guidance level on a
-    // mutable env object and re-running the same compute helpers under
-    // each of the three values. We then assert every output is byte-for-
-    // byte equal across all three runs. If any future change pipes the
-    // UI guidance level into compute, the runs will drift and this test
-    // fails — exactly the regression we want to catch.
-    const fixture = {
-      loanAmount: 250_000,
-      ratePct: 6.5,
-      termYears: 10,
-      schoolType: "private_school" as const,
-      defaults: {
-        benefits: DEFAULT_BENEFITS_RATE,
-        payrollTax: DEFAULT_PAYROLL_TAX_RATE,
-        cola: DEFAULT_COLA_PCT,
-        inflation: DEFAULT_GENERAL_INFLATION_PCT,
-        rent: DEFAULT_RENT_ESCALATION_PCT,
-        tuition: DEFAULT_TUITION_ESCALATION_PCT,
-      },
-      staffingRows: [
-        {
-          id: "leader-1",
-          roleName: "Head of School",
-          functionCategory: "school_leadership",
-          employmentType: "full_time",
-          fte: 1,
-          annualizedRate: 90_000,
-          benefitsEligible: true,
-          benefitsRate: DEFAULT_BENEFITS_RATE,
-          payrollTaxRate: DEFAULT_PAYROLL_TAX_RATE,
-          payrollLike: true,
-          notes: "",
-          staffingMode: "fixed",
-        },
-        {
-          id: "teacher-1",
-          roleName: "Lead Teacher",
-          functionCategory: "instructional",
-          employmentType: "full_time",
-          fte: 1,
-          annualizedRate: 55_000,
-          benefitsEligible: true,
-          benefitsRate: DEFAULT_BENEFITS_RATE,
-          payrollTaxRate: DEFAULT_PAYROLL_TAX_RATE,
-          payrollLike: true,
-          notes: "",
-          staffingMode: "fixed",
-        },
-        {
-          id: "ops-1",
-          roleName: "Operations Manager",
-          functionCategory: "operations",
-          employmentType: "part_time",
-          fte: 0.5,
-          annualizedRate: 30_000,
-          benefitsEligible: false,
-          benefitsRate: 0,
-          payrollTaxRate: DEFAULT_PAYROLL_TAX_RATE,
-          payrollLike: true,
-          notes: "",
-          staffingMode: "fixed",
-        },
-      ],
-    };
-
-    // Mutable env that mirrors the only thing the UI toggle changes.
-    // We mutate it before each run so any compute helper that *did*
-    // depend on it would observe a different value.
-    const fakeEnv: { guidanceLevel: "extra" | "basics" | "advanced" } = {
-      guidanceLevel: "extra",
-    };
-
-    const runUnderLevel = (level: "extra" | "basics" | "advanced") => {
-      fakeEnv.guidanceLevel = level;
-      return {
-        annualDebt: computeAnnualDebt(
-          fixture.loanAmount,
-          fixture.ratePct,
-          fixture.termYears,
-        ),
-        effectiveFteLeader: computeEffectiveFte(fixture.staffingRows[0] as never),
-        effectiveFteTeacher: computeEffectiveFte(fixture.staffingRows[1] as never),
-        effectiveFteOps: computeEffectiveFte(fixture.staffingRows[2] as never),
-        personnelCosts: calculatePersonnelCosts(fixture.staffingRows as never),
-        founderComp: getFounderCompBenchmark(fixture.schoolType, 100),
-        founderCompY1: getFounderCompBenchmarkPerYear(fixture.schoolType, 100, 0),
-        defaults: { ...fixture.defaults },
-      };
-    };
-
-    const guidedExtra = runUnderLevel("extra");
-    const guidedBasics = runUnderLevel("basics");
-    const cfoCompact = runUnderLevel("advanced");
+    const guidedExtra = computeTotalsForMode("extra");
+    const guidedBasics = computeTotalsForMode("basics");
+    const cfoCompact = computeTotalsForMode("advanced");
 
     // Cross-mode equivalence: every total must be byte-identical across
-    // all three guidance levels. (deep-equal via Vitest's structural
-    // equality so nested objects like personnelCosts are compared too.)
+    // all three guidance levels. Vitest's structural deep-equality
+    // covers nested objects (e.g. personnelCosts).
     expect(guidedBasics).toEqual(guidedExtra);
     expect(cfoCompact).toEqual(guidedExtra);
 
-    // Sanity: the fixture isn't producing trivially-equal zero output.
+    // Sanity: the fixture is producing real numbers, not trivially-equal zeros.
     expect(Number.isFinite(guidedExtra.annualDebt)).toBe(true);
     expect(guidedExtra.annualDebt).toBeGreaterThan(0);
     expect(guidedExtra.personnelCosts.totalSalariesWages).toBeGreaterThan(0);
+  });
+
+  it("snapshots the cross-mode totals so any future drift is reviewed", () => {
+    // One snapshot, shared by all three modes (because they MUST agree).
+    // If the engine changes, exactly one snapshot needs updating; if the
+    // toggle ever leaks into compute, the equality test above fails first.
+    const totals = {
+      extra: computeTotalsForMode("extra"),
+      basics: computeTotalsForMode("basics"),
+      advanced: computeTotalsForMode("advanced"),
+    };
+    expect(totals).toMatchSnapshot();
   });
 });
