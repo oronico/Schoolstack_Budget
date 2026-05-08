@@ -1,5 +1,5 @@
 FROM node:22-slim AS base
-RUN corepack enable && corepack prepare pnpm@10 --activate
+RUN corepack enable && corepack prepare pnpm@10.26.1 --activate
 WORKDIR /build
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
