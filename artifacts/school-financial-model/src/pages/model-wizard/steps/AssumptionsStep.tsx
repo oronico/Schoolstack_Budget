@@ -4,6 +4,7 @@ import { Lightbulb, TrendingUp, Users, Calendar, DollarSign, RotateCcw, MapPin, 
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { InlineHelpCard } from "@/components/coaching/InlineHelpCard";
+import { ConceptExplainer } from "@/components/coaching/ConceptExplainer";
 import { EXPLAINERS } from "@/lib/coaching/explainers";
 import { useAuth } from "@/lib/auth-context";
 import { useShowCoach } from "@/lib/coaching/use-show-coach";
@@ -550,6 +551,7 @@ export function AssumptionsStep() {
                 ? "The dial-tuning step. Your enrollment, revenue, staffing, expense, and capital plans are in. Use this screen to set the rates, escalators, and structural settings that shape your opening 5-year projection."
                 : "The dial-tuning step. Your enrollment, revenue, staffing, expense, and capital decisions are already in. Use this screen to adjust the rates, escalators, and structural settings that stress-test your 5-year model.")}
         </p>
+        <ConceptExplainer concept="assumption_confidence" className="mt-3 max-w-2xl" />
       </div>
 
       {showReassurance && (

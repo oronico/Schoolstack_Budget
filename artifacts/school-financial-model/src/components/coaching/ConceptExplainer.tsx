@@ -5,22 +5,32 @@ import {
   CONCEPT_EXPLANATIONS,
   type ConceptId,
 } from "@/lib/coaching/concept-explanations";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 
 interface ConceptExplainerProps {
   concept: ConceptId;
   className?: string;
   defaultOpen?: boolean;
+  /** Render even in CFO Mode. Default: hidden in `advanced` (CFO Mode)
+   *  so the wizard collapses to a max-density layout. */
+  alwaysShow?: boolean;
 }
 
 export function ConceptExplainer({
   concept,
   className,
   defaultOpen = false,
+  alwaysShow = false,
 }: ConceptExplainerProps) {
   const entry = CONCEPT_EXPLANATIONS[concept];
+  const { guidanceLevel } = useShowCoach();
   const [open, setOpen] = useState(defaultOpen);
 
   if (!entry) return null;
+  // Task #702 — CFO Mode (advanced) hides every ConceptExplainer to
+  // satisfy the "no explanations, max density" brief. Callers that
+  // need a concept visible regardless of mode can pass `alwaysShow`.
+  if (guidanceLevel === "advanced" && !alwaysShow) return null;
 
   return (
     <div

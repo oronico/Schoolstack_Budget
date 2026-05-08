@@ -130,6 +130,8 @@ export function CapitalFinancingStep() {
           If you're financing facilities, equipment, or working capital with debt, set the loan terms and lender covenants here. Skip the details if you have no loan - your model still builds without one.
         </p>
         <ConceptExplainer concept="debt_service" className="mt-3 max-w-2xl" />
+        <ConceptExplainer concept="beginning_cash" className="mt-2 max-w-2xl" />
+        <ConceptExplainer concept="ending_cash" className="mt-2 max-w-2xl" />
       </div>
 
       <div className="space-y-10">

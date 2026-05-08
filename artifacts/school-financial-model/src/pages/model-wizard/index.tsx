@@ -17,6 +17,7 @@ import { WhatThisMeansInYourBooks } from "@/components/coaching/WhatThisMeansInY
 import { WizardPrepChecklist } from "@/components/coaching/WizardPrepChecklist";
 import { useAuth } from "@/lib/auth-context";
 import { FounderPersonaPrompt } from "@/components/coaching/FounderPersonaPrompt";
+import { GuidanceModeSelector } from "@/components/coaching/GuidanceModeSelector";
 import { hasCompletePersona } from "@/lib/coaching/founder-persona";
 
 import { fullModelSchema, isSingleYearModel, type FullModelData } from "./schema";
@@ -1489,6 +1490,14 @@ export function ModelWizardPage() {
               </p>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
+              {/* Task #702 — surface Guided Builder / CFO Mode toggle in
+                  the wizard header on every viewport so founders can switch
+                  teaching density without leaving the step. The selector
+                  reads/writes the same `guidanceLevel` field as the
+                  Settings page. */}
+              <div className="w-full sm:w-[260px] md:w-[300px]">
+                <GuidanceModeSelector compact />
+              </div>
               <div className="text-xs font-medium text-muted-foreground">
                 {isSaving ? (
                   <span data-testid="wizard-save-status-saving" className="flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin" /> Saving...</span>

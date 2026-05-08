@@ -758,6 +758,18 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
           </p>
           <ConceptExplainer concept="revenue" className="mt-3 max-w-2xl" />
           <ConceptExplainer concept="timing" className="mt-2 max-w-2xl" />
+          {isCharterType && (
+            <ConceptExplainer
+              concept="public_funding_timing"
+              className="mt-2 max-w-2xl"
+            />
+          )}
+          {!isCharterType && (
+            <ConceptExplainer
+              concept="tuition_collection_rate"
+              className="mt-2 max-w-2xl"
+            />
+          )}
         </div>
 
         {showCoach && (

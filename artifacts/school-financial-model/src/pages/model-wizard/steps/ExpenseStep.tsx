@@ -1284,6 +1284,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         <div className="mt-3 grid gap-2 max-w-2xl">
           <ConceptExplainer concept="expense" />
           <ConceptExplainer concept="net_income" />
+          <ConceptExplainer concept="facility_cost_ratio" />
         </div>
       </div>
 

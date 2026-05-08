@@ -5,6 +5,7 @@ import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, AlertTriangle, User
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
+import { ConceptExplainer } from "@/components/coaching/ConceptExplainer";
 import { RationaleField } from "@/components/coaching/RationaleField";
 import { AssumptionConfidenceCard } from "@/components/wizard/AssumptionConfidenceCard";
 import { PayingYourselfMatters } from "@/components/coaching/PayingYourselfMatters";
@@ -723,6 +724,7 @@ export function StaffingStep() {
         <p className="text-muted-foreground text-lg">
           Add every person on your team - full-time, part-time, and contract. Include teachers, leaders, support staff, and contractors. We'll calculate total personnel costs automatically. It's okay to start small - many great schools launch with just a founder and one or two team members.
         </p>
+        <ConceptExplainer concept="staffing_cost_ratio" className="mt-3 max-w-2xl" />
       </div>
 
       {showCoach && (
