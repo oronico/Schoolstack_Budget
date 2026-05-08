@@ -18,7 +18,18 @@ import {
   calculatePersonnelCosts,
   type StaffingRowData,
 } from "@/lib/staffing-defaults";
+import { computeMetrics } from "@/lib/coaching/diagnostics-engine";
+import type { FullModelData } from "@/pages/model-wizard/schema";
 import type { GuidanceLevel } from "@/lib/coaching/use-show-coach";
+
+// Persisted user record we mutate as we toggle guidance levels. The
+// diagnostics engine and finance helpers don't read this — that's
+// precisely the invariant under test — but we still flip it before each
+// run so any future code that *did* introduce a coupling would observe
+// a different value and the equality assertion would fail.
+const fakePersistedUser: { guidanceLevel: GuidanceLevel } = {
+  guidanceLevel: "extra",
+};
 
 // Task #702 — Phase 2: prove the financial engine is independent of the
 // founder's UI guidance mode. The Guided Builder / CFO Mode toggle is a
@@ -114,13 +125,38 @@ const FIXTURE = {
   },
 };
 
-function computeTotalsForMode(_mode: GuidanceLevel) {
-  // The mode parameter is intentionally ignored. The whole point of this
-  // test is that no compute helper accepts or branches on it. If a future
-  // refactor pipes the UI guidance level into compute, the cross-mode
-  // equality assertion below will fail.
-  const staffingLikes: StaffingRowLike[] = STAFFING_FIXTURE;
+// Realistic FullModelData fixture — same shape micro-lessons.test uses —
+// so we can drive the diagnostics engine end-to-end (revenue + staffing
+// + expenses → cash, DSCR, runway, etc.) under each guidance level.
+function makeFixtureModel(): FullModelData {
   return {
+    schoolProfile: { schoolType: "private_school" },
+    enrollment: { year1: FIXTURE.enrollmentY1 },
+    programs: [],
+    revenueRows: [
+      { id: "r1", category: "tuition", lineItem: "Tuition", enabled: true, driverType: "amount", amounts: [800_000, 900_000, 1_000_000, 1_100_000, 1_200_000] },
+      { id: "r2", category: "philanthropy", lineItem: "Annual Fund", enabled: true, driverType: "amount", amounts: [50_000, 60_000, 70_000, 80_000, 90_000] },
+    ],
+    staffingRows: STAFFING_FIXTURE,
+    expenseRows: [
+      { id: "e1", category: "facilities", lineItem: "Rent", enabled: true, driverType: "amount", amounts: [120_000, 124_000, 128_000, 132_000, 136_000] },
+      { id: "e2", category: "supplies", lineItem: "Curriculum & supplies", enabled: true, driverType: "amount", amounts: [25_000, 27_000, 29_000, 31_000, 33_000] },
+      { id: "e3", category: "operations", lineItem: "Insurance", enabled: true, driverType: "amount", amounts: [12_000, 12_500, 13_000, 13_500, 14_000] },
+    ],
+  } as unknown as FullModelData;
+}
+
+function computeTotalsForMode(mode: GuidanceLevel) {
+  // Toggle the persisted guidance level the way a real user would by
+  // clicking the selector. The compute path that follows must not see
+  // it: that's the contract we're proving.
+  fakePersistedUser.guidanceLevel = mode;
+
+  const staffingLikes: StaffingRowLike[] = STAFFING_FIXTURE;
+  const fixtureModel = makeFixtureModel();
+
+  return {
+    // Low-level finance helpers (called from many wizard surfaces).
     annualDebt: computeAnnualDebt(
       FIXTURE.loanAmount,
       FIXTURE.ratePct,
@@ -136,6 +172,9 @@ function computeTotalsForMode(_mode: GuidanceLevel) {
       FIXTURE.enrollmentY1,
       0,
     ),
+    // High-level model totals (the same call the wizard / review screen
+    // makes). Drives revenue, expenses, surplus, cash, etc.
+    modelMetrics: computeMetrics(fixtureModel),
   };
 }
 

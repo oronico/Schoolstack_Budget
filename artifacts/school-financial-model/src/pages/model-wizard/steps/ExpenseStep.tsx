@@ -169,7 +169,11 @@ function CollapsibleInfoBox({
   summary: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
+  // CFO Mode (advanced) opens advanced/source callouts by default so
+  // operators see the supporting notes without an extra click; Guided
+  // modes keep the original collapsed-by-default behaviour.
+  const { guidanceLevel } = useShowCoach();
+  const [isOpen, setIsOpen] = useState(guidanceLevel === "advanced");
   return (
     <div className={cn("rounded-xl border overflow-hidden", borderColor, bgColor)}>
       <div
@@ -1445,6 +1449,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
           />
           <FinancingInsight text="Aim for 45-90 days of operating reserves. A dedicated savings account is a simple way to show you're managing cash well - and it protects your school from surprises." className="ml-12 -mt-2" />
           <ConceptExplainer concept="reserves" className="ml-12" />
+          <ConceptExplainer concept="break_even" className="ml-12 mt-2" />
 
           <BusinessOperationsToggle
             checked={hasBusinessAccount === true}

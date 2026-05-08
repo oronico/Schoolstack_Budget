@@ -72,7 +72,12 @@ function CollapsibleCallout({
   summary: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
+  // CFO Mode (advanced) defaults these advanced/contextual callouts to
+  // expanded so operators see source notes, benchmarks, and rationale
+  // without an extra click. Guided modes keep the lighter collapsed
+  // state to preserve the step's quiet first impression.
+  const { guidanceLevel } = useShowCoach();
+  const [isOpen, setIsOpen] = useState(guidanceLevel === "advanced");
   return (
     <div className={cn("rounded-xl border overflow-hidden", borderColor, bgColor)}>
       <div
@@ -725,6 +730,7 @@ export function StaffingStep() {
           Add every person on your team - full-time, part-time, and contract. Include teachers, leaders, support staff, and contractors. We'll calculate total personnel costs automatically. It's okay to start small - many great schools launch with just a founder and one or two team members.
         </p>
         <ConceptExplainer concept="staffing_cost_ratio" className="mt-3 max-w-2xl" />
+        <ConceptExplainer concept="paying_yourself" className="mt-2 max-w-2xl" />
       </div>
 
       {showCoach && (
