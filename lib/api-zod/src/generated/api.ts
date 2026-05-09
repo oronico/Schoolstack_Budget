@@ -796,7 +796,18 @@ export const CreateModelBody = zod.object({
                 mimeType: zod.string(),
                 size: zod.number(),
                 uploadedAt: zod.string(),
-                dataBase64: zod.string().optional(),
+                dataBase64: zod
+                  .string()
+                  .optional()
+                  .describe(
+                    "Legacy inline base64 payload (Task #707). Older\nmodels still load with this field; new uploads\nstore the file in App Storage and use objectPath\ninstead (Task #714).\n",
+                  ),
+                objectPath: zod
+                  .string()
+                  .optional()
+                  .describe(
+                    "Task #714 — object storage path for the uploaded\nfile (e.g. `\/objects\/uploads\/<uuid>`). When set,\nthe file lives in App Storage and the model JSON\nno longer carries the bytes inline. Serve via\n`GET \/api\/storage{objectPath}`.\n",
+                  ),
               }),
             )
             .optional()
@@ -1475,7 +1486,18 @@ export const GetModelResponse = zod.object({
                 mimeType: zod.string(),
                 size: zod.number(),
                 uploadedAt: zod.string(),
-                dataBase64: zod.string().optional(),
+                dataBase64: zod
+                  .string()
+                  .optional()
+                  .describe(
+                    "Legacy inline base64 payload (Task #707). Older\nmodels still load with this field; new uploads\nstore the file in App Storage and use objectPath\ninstead (Task #714).\n",
+                  ),
+                objectPath: zod
+                  .string()
+                  .optional()
+                  .describe(
+                    "Task #714 — object storage path for the uploaded\nfile (e.g. `\/objects\/uploads\/<uuid>`). When set,\nthe file lives in App Storage and the model JSON\nno longer carries the bytes inline. Serve via\n`GET \/api\/storage{objectPath}`.\n",
+                  ),
               }),
             )
             .optional()
@@ -2160,7 +2182,18 @@ export const UpdateModelBody = zod.object({
                 mimeType: zod.string(),
                 size: zod.number(),
                 uploadedAt: zod.string(),
-                dataBase64: zod.string().optional(),
+                dataBase64: zod
+                  .string()
+                  .optional()
+                  .describe(
+                    "Legacy inline base64 payload (Task #707). Older\nmodels still load with this field; new uploads\nstore the file in App Storage and use objectPath\ninstead (Task #714).\n",
+                  ),
+                objectPath: zod
+                  .string()
+                  .optional()
+                  .describe(
+                    "Task #714 — object storage path for the uploaded\nfile (e.g. `\/objects\/uploads\/<uuid>`). When set,\nthe file lives in App Storage and the model JSON\nno longer carries the bytes inline. Serve via\n`GET \/api\/storage{objectPath}`.\n",
+                  ),
               }),
             )
             .optional()
@@ -2834,7 +2867,18 @@ export const UpdateModelResponse = zod.object({
                 mimeType: zod.string(),
                 size: zod.number(),
                 uploadedAt: zod.string(),
-                dataBase64: zod.string().optional(),
+                dataBase64: zod
+                  .string()
+                  .optional()
+                  .describe(
+                    "Legacy inline base64 payload (Task #707). Older\nmodels still load with this field; new uploads\nstore the file in App Storage and use objectPath\ninstead (Task #714).\n",
+                  ),
+                objectPath: zod
+                  .string()
+                  .optional()
+                  .describe(
+                    "Task #714 — object storage path for the uploaded\nfile (e.g. `\/objects\/uploads\/<uuid>`). When set,\nthe file lives in App Storage and the model JSON\nno longer carries the bytes inline. Serve via\n`GET \/api\/storage{objectPath}`.\n",
+                  ),
               }),
             )
             .optional()
@@ -3542,7 +3586,18 @@ export const ArchiveModelResponse = zod.object({
                 mimeType: zod.string(),
                 size: zod.number(),
                 uploadedAt: zod.string(),
-                dataBase64: zod.string().optional(),
+                dataBase64: zod
+                  .string()
+                  .optional()
+                  .describe(
+                    "Legacy inline base64 payload (Task #707). Older\nmodels still load with this field; new uploads\nstore the file in App Storage and use objectPath\ninstead (Task #714).\n",
+                  ),
+                objectPath: zod
+                  .string()
+                  .optional()
+                  .describe(
+                    "Task #714 — object storage path for the uploaded\nfile (e.g. `\/objects\/uploads\/<uuid>`). When set,\nthe file lives in App Storage and the model JSON\nno longer carries the bytes inline. Serve via\n`GET \/api\/storage{objectPath}`.\n",
+                  ),
               }),
             )
             .optional()
@@ -4262,4 +4317,45 @@ export const PublicConsultantAnalysisResponse = zod.object({
     ),
   }),
   generatedAt: zod.date(),
+});
+
+/**
+ * Task #714 — returns a presigned GCS URL the browser uses to upload
+an evidence file (lease, MOU, payroll quote) directly to App
+Storage. The client sends only JSON metadata here (name, size,
+contentType); the file bytes are PUT to the returned URL.
+
+ * @summary Request a presigned URL for evidence file upload
+ */
+
+export const RequestUploadUrlBody = zod.object({
+  name: zod.string().min(1),
+  size: zod.number().min(1),
+  contentType: zod.string().min(1),
+});
+
+export const RequestUploadUrlResponse = zod.object({
+  uploadURL: zod.string().url(),
+  objectPath: zod.string(),
+  metadata: zod
+    .object({
+      name: zod.string().min(1),
+      size: zod.number().min(1),
+      contentType: zod.string().min(1),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Serve a public asset from PUBLIC_OBJECT_SEARCH_PATHS
+ */
+export const GetPublicObjectParams = zod.object({
+  filePath: zod.coerce.string(),
+});
+
+/**
+ * @summary Serve an evidence file uploaded via presigned URL
+ */
+export const GetStorageObjectParams = zod.object({
+  objectPath: zod.coerce.string(),
 });

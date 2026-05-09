@@ -160,13 +160,13 @@ export function AssumptionConfidenceCard({ stepTitle }: { stepTitle: string }) {
   );
 }
 
-// Task #707 — keep model JSON manageable on share links: cap each
-// uploaded evidence file at 4 MB and allow up to 5 attachments per
-// assumption. Lender packets are typically a handful of leases / quotes
-// per row; the limits keep the inline base64 payload from blowing up
-// the model document.
-const MAX_EVIDENCE_FILE_BYTES = 4 * 1024 * 1024;
-const MAX_EVIDENCE_FILES_PER_ROW = 5;
+// Task #714 — uploads now stream directly to App Storage via a
+// presigned URL, so the model JSON only carries an objectPath
+// reference (not the bytes). That lets us raise the per-file cap from
+// 4 MB to 25 MB and the per-row cap from 5 to 25 without bloating
+// share links / model documents.
+const MAX_EVIDENCE_FILE_BYTES = 25 * 1024 * 1024;
+const MAX_EVIDENCE_FILES_PER_ROW = 25;
 const ACCEPTED_EVIDENCE_MIME =
   ".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.xls,.xlsx,.csv,.txt,.heic";
 
@@ -176,20 +176,36 @@ function formatBytes(n: number): string {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-async function readFileAsBase64(file: File): Promise<string> {
-  return await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(reader.error || new Error("Could not read file"));
-    reader.onload = () => {
-      const result = String(reader.result || "");
-      // FileReader.readAsDataURL returns "data:<mime>;base64,<payload>".
-      // Strip the prefix so we store just the payload — saves bytes and
-      // matches the AssumptionEvidenceFile.dataBase64 contract.
-      const idx = result.indexOf("base64,");
-      resolve(idx >= 0 ? result.slice(idx + "base64,".length) : result);
-    };
-    reader.readAsDataURL(file);
+// Task #714 — two-step presigned-URL upload:
+//   1. POST /api/storage/uploads/request-url  → { uploadURL, objectPath }
+//   2. PUT  uploadURL (file bytes)            → file lives in App Storage
+// Returns the objectPath the model should reference.
+async function uploadEvidenceToStorage(file: File): Promise<string> {
+  const reqRes = await fetch("/api/storage/uploads/request-url", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: file.name,
+      size: file.size,
+      contentType: file.type || "application/octet-stream",
+    }),
   });
+  if (!reqRes.ok) {
+    throw new Error(`Couldn't get upload URL (${reqRes.status})`);
+  }
+  const { uploadURL, objectPath } = (await reqRes.json()) as {
+    uploadURL: string;
+    objectPath: string;
+  };
+  const putRes = await fetch(uploadURL, {
+    method: "PUT",
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    body: file,
+  });
+  if (!putRes.ok) {
+    throw new Error(`Upload did not complete (${putRes.status})`);
+  }
+  return objectPath;
 }
 
 function ConfidenceRow({
@@ -241,7 +257,10 @@ function ConfidenceRow({
         continue;
       }
       try {
-        const dataBase64 = await readFileAsBase64(f);
+        // Task #714 — upload directly to App Storage and store only
+        // the returned objectPath on the model. The bytes never enter
+        // the model JSON, so share links / saved scenarios stay small.
+        const objectPath = await uploadEvidenceToStorage(f);
         next.push({
           id:
             typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -251,10 +270,11 @@ function ConfidenceRow({
           mimeType: f.type || "application/octet-stream",
           size: f.size,
           uploadedAt: new Date().toISOString(),
-          dataBase64,
+          objectPath,
         });
-      } catch {
-        setUploadError(`Couldn't read "${f.name}". Try a different file.`);
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : "upload did not complete";
+        setUploadError(`Couldn't upload "${f.name}" — ${reason}.`);
       }
     }
     onSetFiles(next);

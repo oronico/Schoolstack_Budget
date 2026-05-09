@@ -1035,6 +1035,10 @@ export const fullModelSchema = z.object({
               size: z.number().int().nonnegative(),
               uploadedAt: z.string(),
               dataBase64: z.string().optional(),
+              // Task #714 — App Storage path for files uploaded via the
+              // /api/storage/uploads/request-url presigned URL flow.
+              // When set, the model JSON does NOT carry the bytes inline.
+              objectPath: z.string().optional(),
             }),
           )
           .optional(),

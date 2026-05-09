@@ -16,6 +16,8 @@ tags:
     description: Financial model operations
   - name: public
     description: Public operations (no authentication required)
+  - name: Storage
+    description: Object storage upload and serving endpoints (Task #714 — evidence files moved out of model JSON into App Storage).
 paths:
   /healthz:
     get:
@@ -673,8 +675,117 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /storage/uploads/request-url:
+    post:
+      tags: [Storage]
+      operationId: requestUploadUrl
+      summary: Request a presigned URL for evidence file upload
+      description: |
+        Task #714 — returns a presigned GCS URL the browser uses to upload
+        an evidence file (lease, MOU, payroll quote) directly to App
+        Storage. The client sends only JSON metadata here (name, size,
+        contentType); the file bytes are PUT to the returned URL.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Presigned upload URL generated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+        "400":
+          description: Missing or invalid required fields.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Failed to generate upload URL.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /storage/public-objects/{filePath}:
+    get:
+      tags: [Storage]
+      operationId: getPublicObject
+      summary: Serve a public asset from PUBLIC_OBJECT_SEARCH_PATHS
+      parameters:
+        - name: filePath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Object content streamed with correct Content-Type.
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: File not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /storage/objects/{objectPath}:
+    get:
+      tags: [Storage]
+      operationId: getStorageObject
+      summary: Serve an evidence file uploaded via presigned URL
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Object content streamed with correct Content-Type.
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Object not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        size:
+          type: integer
+          minimum: 1
+        contentType:
+          type: string
+          minLength: 1
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+          format: uri
+        objectPath:
+          type: string
+        metadata:
+          $ref: "#/components/schemas/UploadUrlRequest"
     PublicExportRequest:
       type: object
       properties:
@@ -1393,6 +1504,19 @@ components:
                       type: string
                     dataBase64:
                       type: string
+                      description: |
+                        Legacy inline base64 payload (Task #707). Older
+                        models still load with this field; new uploads
+                        store the file in App Storage and use objectPath
+                        instead (Task #714).
+                    objectPath:
+                      type: string
+                      description: |
+                        Task #714 — object storage path for the uploaded
+                        file (e.g. `/objects/uploads/<uuid>`). When set,
+                        the file lives in App Storage and the model JSON
+                        no longer carries the bytes inline. Serve via
+                        `GET /api/storage{objectPath}`.
                   required:
                     - id
                     - name

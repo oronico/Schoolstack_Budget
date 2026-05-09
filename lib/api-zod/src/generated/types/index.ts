@@ -131,6 +131,8 @@ export * from "./staffingRow";
 export * from "./staffingRowStaffingMode";
 export * from "./stressScenario";
 export * from "./updateFinancialModelData";
+export * from "./uploadUrlRequest";
+export * from "./uploadUrlResponse";
 export * from "./userResponse";
 export * from "./userResponseGuidanceLevel";
 export * from "./userResponsePersonaComfort";

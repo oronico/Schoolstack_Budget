@@ -412,6 +412,10 @@ interface AppendixFileLike {
   uploadedAt?: string;
   mimeType?: string;
   dataBase64?: string;
+  /** Task #714 — App Storage path; when set, the appendix prints a
+   *  clickable download link so the lender reviewer can pull the file
+   *  straight from the packet. */
+  objectPath?: string;
 }
 
 // Task #715 — per-file size cap for embedded attachments. PDFs and images
@@ -436,6 +440,18 @@ function decodeBase64ToUint8(b64: string): Uint8Array | null {
   } catch {
     return null;
   }
+}
+
+/** Task #714 — build the public download URL for an evidence file
+ *  stored in App Storage. Returns null when no objectPath is present
+ *  (legacy inline base64 attachments) or when no public APP_URL is
+ *  configured (the appendix degrades to filename-only). */
+function evidenceDownloadUrl(objectPath: string | undefined): string | null {
+  if (!objectPath) return null;
+  const base = (process.env.APP_URL || "").replace(/\/+$/, "");
+  if (!base) return null;
+  const path = objectPath.startsWith("/") ? objectPath : `/${objectPath}`;
+  return `${base}/api/storage${path}`;
 }
 
 // Task #707 — render an "Evidence Files" appendix subsection listing
@@ -488,10 +504,24 @@ function renderAssumptionsEvidenceAppendix(
       }
     }
     const metaStr = meta.length ? `   (${meta.join(" · ")})` : "";
+    const downloadUrl = evidenceDownloadUrl(file.objectPath);
     doc.font("Helvetica").fontSize(8).fillColor(BRAND.black);
-    doc.text(`  • ${file.name}${metaStr}`, doc.page.margins.left + 10, doc.y, {
-      width: doc.page.width - doc.page.margins.left - doc.page.margins.right - 10,
-    });
+    if (downloadUrl) {
+      // Task #714 — render the filename as a clickable link to App
+      // Storage so the reviewer can pull the source doc straight from
+      // the PDF.
+      doc.fillColor(BRAND.navy).text(`  • ${file.name}`, doc.page.margins.left + 10, doc.y, {
+        link: downloadUrl,
+        underline: true,
+        continued: true,
+        width: doc.page.width - doc.page.margins.left - doc.page.margins.right - 10,
+      });
+      doc.fillColor(BRAND.black).text(metaStr, { underline: false, link: null });
+    } else {
+      doc.text(`  • ${file.name}${metaStr}`, doc.page.margins.left + 10, doc.y, {
+        width: doc.page.width - doc.page.margins.left - doc.page.margins.right - 10,
+      });
+    }
 
     // Task #715 — turn the manifest into a self-contained underwriting
     // bundle. Image attachments are inlined directly under the manifest
@@ -500,6 +530,9 @@ function renderAssumptionsEvidenceAppendix(
     // pdf-lib after the PDFKit document is finalized. Non-embeddable
     // formats (docx, xlsx, …) and oversized files keep a clear note so
     // the reviewer knows why the document is missing from the bundle.
+    // Task #714 back-compat: only embed when dataBase64 is present
+    // (legacy inline attachments). New objectPath-only attachments rely
+    // on the clickable download link above.
     const annotation = renderEvidenceAttachmentBody(doc, file);
     if (annotation) {
       doc.font("Helvetica-Oblique").fontSize(8).fillColor(BRAND.darkGray);

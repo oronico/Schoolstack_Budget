@@ -3489,11 +3489,20 @@ function buildAssumptionsConfidenceTab(wb: ExcelJS.Workbook, data: ModelData) {
     // workbook sees the same supporting documents that appear in the
     // lender PDF's evidence appendix.
     const noteText = entry.evidenceNote?.trim() || "";
+    // Task #714 — files now live in App Storage; surface a download
+    // URL alongside the filename whenever an objectPath is present so
+    // the lender can pull the actual document from the workbook notes.
+    const appBase = (process.env.APP_URL || "").replace(/\/+$/, "");
     const fileLines = Array.isArray(entry.evidenceFiles)
       ? entry.evidenceFiles
           .filter((f) => f && typeof f.name === "string" && f.name.length > 0)
           .map((f) => {
             const sizeKb = typeof f.size === "number" ? ` (${formatEvidenceFileSizeForExcel(f.size)})` : "";
+            const objectPath = (f as { objectPath?: string }).objectPath;
+            if (appBase && objectPath) {
+              const path = objectPath.startsWith("/") ? objectPath : `/${objectPath}`;
+              return `📎 ${f.name}${sizeKb} — ${appBase}/api/storage${path}`;
+            }
             return `📎 ${f.name}${sizeKb}`;
           })
       : [];

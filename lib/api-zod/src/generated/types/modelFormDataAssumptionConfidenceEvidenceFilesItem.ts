@@ -12,5 +12,17 @@ export type ModelFormDataAssumptionConfidenceEvidenceFilesItem = {
   mimeType: string;
   size: number;
   uploadedAt: string;
+  /** Legacy inline base64 payload (Task #707). Older
+models still load with this field; new uploads
+store the file in App Storage and use objectPath
+instead (Task #714).
+ */
   dataBase64?: string;
+  /** Task #714 — object storage path for the uploaded
+file (e.g. `/objects/uploads/<uuid>`). When set,
+the file lives in App Storage and the model JSON
+no longer carries the bytes inline. Serve via
+`GET /api/storage{objectPath}`.
+ */
+  objectPath?: string;
 };
