@@ -101,7 +101,7 @@ The currently-deployed commit on Railway is the previously-published `origin/mai
 1. ~~**Typecheck failure in `AssumptionConfidenceCard.tsx` / `.test.tsx`**~~ — **RESOLVED** by Task #705's merge. Follow-up #737 retracted.
 2. **`qa:formula-results` 1/2** — cross-tab DSCR-cash vs Balance-Sheet-cash mismatch (~$207 672) on one fixture. Pre-existing engine accounting issue. Workbook still opens cleanly per `qa:excel` 30/30. Follow-up **#738** filed.
 3. **e2e `wizard-smoke-six-paths` `*_new` paths Step 7→8** — 5/8 pass; charter_new, private_new, learning_lab_new flake on the Assumptions & Sensitivity heading. Pre-existing across #726, #727. Does not affect `/underwriting` (the public single-file wizard).
-4. **Object storage runtime dependency bundling** — fixed by including `@google-cloud/storage` and `google-auth-library` in `artifacts/api-server/build.ts` esbuild allowlist (commit **077f90cc**). Monitor first production uploads after redeploy: borrower XLSX upload, borrower PDF upload, wrong-file-type rejection, cross-tenant access denial, and underwriter download of permitted docs. Local round-trip test (`pnpm --filter @workspace/api-server run test:storage-evidence-roundtrip`) is **23/23 PASS** and exercises every one of those paths.
+4. **Object storage runtime dependency bundling fix pending production deploy.** Monitor first production uploads after redeploy. Confirm no missing-module errors for `@google-cloud/storage` or `google-auth-library`. Fix lives in commit **077f90cc** (`artifacts/api-server/build.ts` esbuild allowlist now includes both modules). Local round-trip test (`pnpm --filter @workspace/api-server run test:storage-evidence-roundtrip`) is **23/23 PASS**.
 
 ---
 
