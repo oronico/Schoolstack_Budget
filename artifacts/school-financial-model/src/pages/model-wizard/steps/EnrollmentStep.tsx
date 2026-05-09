@@ -448,7 +448,7 @@ function RetentionDemandSection({ isOperatingSchool, isSecondYearPlus }: { isOpe
   );
 }
 
-export function EnrollmentStep() {
+export function EnrollmentStep({ focus }: { focus?: string } = {}) {
   const { watch, setValue } = useFormContext();
   const { user } = useAuth();
   const persona = getFounderPersona(user);
@@ -825,8 +825,11 @@ export function EnrollmentStep() {
         />
       )}
 
-      {/* Task #703 — Assumptions-first launch checklist (new schools only). */}
-      <LaunchAssumptionsChecklist />
+      {/* Task #703 — Assumptions-first launch checklist (new schools only).
+          Task #711 — `focused` is set when the founder arrived from the
+          dashboard's Launch readiness card so the checklist scrolls into
+          view automatically. */}
+      <LaunchAssumptionsChecklist focused={focus === "launch-checklist"} />
 
       {programs.length === 0 && (
         <IDontKnowYet

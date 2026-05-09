@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { ClipboardList } from "lucide-react";
 import { FormInput } from "@/components/ui/form-inputs";
@@ -26,16 +27,30 @@ import { FormInput } from "@/components/ui/form-inputs";
 // ship without a schema migration; future tasks can promote individual
 // fields into `schoolProfileSchema` when the engine starts reading them.
 
-export function LaunchAssumptionsChecklist() {
+export function LaunchAssumptionsChecklist({ focused = false }: { focused?: boolean } = {}) {
   const { watch } = useFormContext();
   const stage = watch("schoolProfile.schoolStage");
+  // Task #711 — when the founder arrives via the dashboard's Launch
+  // readiness card (`?step=3&focus=launch-checklist`), scroll the
+  // checklist into view so they don't have to hunt for it inside the
+  // (long) Enrollment step.
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!focused) return;
+    const node = containerRef.current;
+    if (node && typeof node.scrollIntoView === "function") {
+      node.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [focused]);
 
   // Strictly new-school. Operating schools see Actuals Intake instead.
   if (stage !== "new_school") return null;
 
   return (
     <div
+      ref={containerRef}
       data-testid="launch-assumptions-checklist"
+      data-focused={focused ? "true" : undefined}
       className="rounded-2xl border border-sky-200 bg-sky-50/40 p-5 sm:p-6 space-y-5"
     >
       <div className="flex items-start gap-3">
