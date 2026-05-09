@@ -6,6 +6,7 @@ import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { RationaleField } from "@/components/coaching/RationaleField";
 import { AssumptionConfidenceCard } from "@/components/wizard/AssumptionConfidenceCard";
+import { facilityBurdenFractionOfRevenue } from "@workspace/finance";
 import { ConceptExplainer } from "@/components/coaching/ConceptExplainer";
 import { cn, formatCurrency } from "@/lib/utils";
 import { formatPerStudent } from "@/lib/per-student-lens";
@@ -1906,6 +1907,12 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
           )}
         </div>
       )}
+      {/* Task #704 (Phase 9): facility-burden + fixed/variable/timing
+          summary plus the brief's exact "rent does not shrink" coaching
+          line. Surfaces facility cost as a % of revenue and groups the
+          founder's expense rows by cost behavior so they can see fixed-
+          cost pressure at a glance. */}
+      <ExpenseBehaviorSummary />
       <AssumptionConfidenceCard stepTitle="Expenses" />
     </div>
   );
@@ -2448,6 +2455,94 @@ function CapitalLineCard({
               placeholder="Optional note"
             />
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Task #704 (Phase 9): expense behavior summary card. Surfaces facility
+ * burden as a % of Year-1 revenue plus the brief's exact "rent does not
+ * shrink" coaching line. Reads expenseRows + revenueRows directly from the
+ * form so it stays in sync with the founder's edits.
+ */
+function ExpenseBehaviorSummary() {
+  const { watch } = useFormContext();
+  const expenseRows = (watch("expenseRows") as ExpenseRowData[] | undefined) || [];
+  const revenueRows = (watch("revenueRows") as Array<{ amounts?: number[] }> | undefined) || [];
+  const { showCoach } = useShowCoach();
+
+  const facilityY1 = useMemo(
+    () =>
+      expenseRows
+        .filter((r) => r.category === "occupancy_facility")
+        .reduce((sum, r) => sum + (r.amounts?.[0] ?? 0), 0),
+    [expenseRows],
+  );
+  const revenueY1 = useMemo(
+    () => revenueRows.reduce((sum, r) => sum + (r.amounts?.[0] ?? 0), 0),
+    [revenueRows],
+  );
+
+  // Task #704 (Phase 9): group rows by cost behavior so the founder sees
+  // their fixed-cost burden at a glance. Uses driverType as the proxy:
+  //   • annual_fixed   → fixed (rent, insurance, software contracts)
+  //   • per_student / per_new_student / per_returning_student / per_fte
+  //                    → variable (scales with enrollment / staffing)
+  //   • monthly + others with explicit timing → timing-sensitive
+  const grouped = useMemo(() => {
+    const out = { fixed: 0, variable: 0, timing: 0 };
+    for (const r of expenseRows) {
+      const y1 = r.amounts?.[0] ?? 0;
+      const dt = (r as { driverType?: string }).driverType || "";
+      if (dt === "annual_fixed") out.fixed += y1;
+      else if (/per_student|per_new_student|per_returning_student|per_fte|percent_of_/.test(dt)) out.variable += y1;
+      else out.timing += y1;
+    }
+    return out;
+  }, [expenseRows]);
+
+  const facilityFraction = facilityBurdenFractionOfRevenue(facilityY1, revenueY1);
+  if (expenseRows.length === 0) return null;
+
+  return (
+    <div className="bg-card border border-border/60 rounded-2xl p-5 shadow-sm space-y-3">
+      <div className="flex items-center gap-2">
+        <Building2 className="h-4 w-4 text-primary" />
+        <h4 className="text-sm font-bold text-foreground">Facility burden at a glance</h4>
+      </div>
+      <div className="rounded-lg border border-border/50 bg-background p-3 text-sm">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Facility cost as % of Year 1 revenue</div>
+        <div className="font-semibold text-foreground">
+          {facilityFraction === null
+            ? "Add Year 1 revenue to see this"
+            : `${Math.round(facilityFraction * 100)}% (${formatCurrency(facilityY1)})`}
+        </div>
+      </div>
+      {/* Task #704 (Phase 9): fixed vs variable vs timing-sensitive grouping
+          so founders see how much of Y1 expense is locked-in (rent,
+          contracts) vs scaling with enrollment vs timing-driven. */}
+      <div className="grid gap-2 sm:grid-cols-3 text-sm">
+        <div className="rounded-lg border border-rose-200 bg-rose-50/50 p-3">
+          <div className="text-[10px] uppercase tracking-wider text-rose-800 mb-1">Fixed (won't shrink)</div>
+          <div data-testid="expense-behavior-fixed" className="font-semibold text-rose-900">{formatCurrency(grouped.fixed)}</div>
+        </div>
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3">
+          <div className="text-[10px] uppercase tracking-wider text-emerald-800 mb-1">Variable (scales with enrollment / staff)</div>
+          <div data-testid="expense-behavior-variable" className="font-semibold text-emerald-900">{formatCurrency(grouped.variable)}</div>
+        </div>
+        <div className="rounded-lg border border-sky-200 bg-sky-50/50 p-3">
+          <div className="text-[10px] uppercase tracking-wider text-sky-800 mb-1">Timing-sensitive</div>
+          <div data-testid="expense-behavior-timing" className="font-semibold text-sky-900">{formatCurrency(grouped.timing)}</div>
+        </div>
+      </div>
+      {showCoach && (
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+          <Lightbulb className="h-4 w-4 text-amber-700 mt-0.5 flex-shrink-0" />
+          <p className="text-xs text-amber-900">
+            Facility costs are usually fixed. If enrollment comes in lower than expected, rent does not shrink.
+          </p>
         </div>
       )}
     </div>

@@ -357,6 +357,18 @@ export function computeStraightLineDepreciation(
   return { annualDepreciation: actualAnnual, accumulatedDepreciation: accumulated, netBookValue: nbv };
 }
 
+export {
+  enrollmentToCoverCost,
+  utilizationFraction,
+  assessGrowthReasonable,
+  staffingFractionOfRevenue,
+  facilityBurdenFractionOfRevenue,
+  studentsPerTeacherActual,
+  loadedPersonnelCost,
+  founderCompIsIncluded,
+  type GrowthReasonableness,
+} from "./wizard-ratios.js";
+
 export function computeProjectedAR(
   annualTuitionRevenue: number,
   collectionDelayDays: number,

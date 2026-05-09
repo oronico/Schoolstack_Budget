@@ -23,6 +23,10 @@ import {
   getFounderCompBenchmark,
   getFounderCompBenchmarkPerYear,
   getFounderCompBandTransitions,
+  studentsPerTeacherActual,
+  staffingFractionOfRevenue,
+  founderCompIsIncluded,
+  loadedPersonnelCost,
 } from "@workspace/finance";
 import {
   getStatePayrollTaxEntry,
@@ -1110,6 +1114,24 @@ export function StaffingStep() {
       >
         <Plus className="h-4 w-4" /> Add Staff Member
       </button>
+
+      {/* Task #704 (Phase 8): staffing ratios summary + founder-comp
+          coaching line from the polish-sprint brief. Surfaces students-per-
+          teacher (actual), staffing as % of revenue, and whether founder
+          comp is included so the founder sees these key ratios alongside
+          the roster instead of having to leave the step for the dashboard. */}
+      <StaffingRatiosSummary />
+      {showCoach && (
+        <div className="bg-gradient-to-br from-amber-50/80 to-yellow-50/40 border border-amber-200/60 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-start gap-2 mb-2">
+            <Lightbulb className="h-4 w-4 text-amber-700 mt-0.5 flex-shrink-0" />
+            <p className="text-sm font-bold text-amber-900">A note on founder compensation</p>
+          </div>
+          <p className="text-sm text-amber-900/90">
+            Many founders start unpaid. That may be realistic temporarily, but a sustainable school eventually needs to pay the people doing the work. Your model gets stronger when it shows when and how founder compensation begins.
+          </p>
+        </div>
+      )}
       <AssumptionConfidenceCard stepTitle="Staffing" />
     </div>
   );
@@ -1712,6 +1734,139 @@ function FieldToggle({
       >
         {checked ? "Yes" : "No"}
       </button>
+    </div>
+  );
+}
+
+/**
+ * Task #704 (Phase 8): staffing ratios summary card. Surfaces:
+ *   • students-per-teacher ratio (actual, computed from teacher FTE rows)
+ *   • staffing as % of revenue (when revenue rows exist)
+ *   • a "founder comp included" badge so the founder sees lender-relevant
+ *     completeness in-context instead of having to leave the step.
+ *
+ * Pure read-only — uses the shared @workspace/finance helpers so dashboards
+ * and tests agree on the math.
+ */
+function StaffingRatiosSummary() {
+  const { watch } = useFormContext();
+  const rows = (watch("staffingRows") as StaffingRowData[] | undefined) || [];
+  const enrollment = watch("enrollment") as { year1?: number } | undefined;
+  const revenueRows = (watch("revenueRows") as Array<{ amounts?: number[] }> | undefined) || [];
+  const y1Students = enrollment?.year1 || 0;
+
+  const personnelY1 = useMemo(
+    () => calculatePersonnelCosts(rows, y1Students).grandTotal,
+    [rows, y1Students],
+  );
+
+  const teacherFte = useMemo(() => {
+    return rows
+      .filter((r) => /teacher/i.test(r.roleName || "") || r.functionCategory === "instructional")
+      .reduce((sum, r) => sum + (r.fte || 0), 0);
+  }, [rows]);
+
+  const revenueY1 = useMemo(
+    () => revenueRows.reduce((sum, r) => sum + (r.amounts?.[0] ?? 0), 0),
+    [revenueRows],
+  );
+
+  // Founder-comp inclusion is read straight off the canonical
+  // FounderCompPanel inputs (`staffing.reportedFounderComp[]` /
+  // `staffing.normalizedFounderComp[]`) so this card stays in lock-step
+  // with the panel — never inferred from staffing-row role names.
+  const reportedFounderCompArrCheck = (watch("staffing.reportedFounderComp") as number[] | undefined) || [];
+  const normalizedFounderCompArrCheck = (watch("staffing.normalizedFounderComp") as number[] | undefined) || [];
+  const compIncluded =
+    founderCompIsIncluded(reportedFounderCompArrCheck) ||
+    founderCompIsIncluded(normalizedFounderCompArrCheck);
+
+  const studentsPerTeacher = studentsPerTeacherActual(y1Students, teacherFte);
+  const staffingFraction = staffingFractionOfRevenue(personnelY1, revenueY1);
+
+  // Task #704 (Phase 8): loaded personnel cost = sum of base salary plus
+  // benefits + payroll tax for every row. Surfaces the *true* cost of the
+  // current roster vs. the headline-salary rollup. We use the shared
+  // helper so dashboards/tests agree.
+  const loadedTotal = useMemo(
+    () =>
+      rows.reduce(
+        (sum, r) =>
+          sum +
+          loadedPersonnelCost(
+            (r.annualizedRate || 0) * (r.fte || 0),
+            (r.benefitsEligible ? r.benefitsRate || 0 : 0) / 100,
+            (r.payrollTaxRate || 0) / 100,
+          ),
+        0,
+      ),
+    [rows],
+  );
+  const baseSalaryTotal = useMemo(
+    () => rows.reduce((sum, r) => sum + (r.annualizedRate || 0) * (r.fte || 0), 0),
+    [rows],
+  );
+  const loadedDelta = loadedTotal - baseSalaryTotal;
+
+  // Normalized-vs-reported founder-comp delta is the gap the engine
+  // would book if the founder paid themselves the normalized
+  // (benchmark-aligned) amount instead of the reported amount.
+  // Reads canonical FounderCompPanel fields — see comment above.
+  const reportedFounderCompY1 = reportedFounderCompArrCheck[0] || 0;
+  const normalizedFounderCompY1 = normalizedFounderCompArrCheck[0] || 0;
+  const founderNormalizedDelta = Math.max(0, normalizedFounderCompY1 - reportedFounderCompY1);
+
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="bg-card border border-border/60 rounded-2xl p-5 shadow-sm">
+      <div className="flex items-center gap-2 mb-3">
+        <Users className="h-4 w-4 text-primary" />
+        <h4 className="text-sm font-bold text-foreground">Staffing ratios at a glance</h4>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3 text-sm">
+        <div className="rounded-lg border border-border/50 bg-background p-3">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Students per teacher</div>
+          <div className="font-semibold text-foreground">
+            {studentsPerTeacher === null ? "Add teacher FTE to see this" : `${studentsPerTeacher} : 1`}
+          </div>
+        </div>
+        <div className="rounded-lg border border-border/50 bg-background p-3">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Staffing as % of Y1 revenue</div>
+          <div className="font-semibold text-foreground">
+            {staffingFraction === null ? "Add Year 1 revenue to see this" : `${Math.round(staffingFraction * 100)}%`}
+          </div>
+        </div>
+        <div className="rounded-lg border border-border/50 bg-background p-3">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Founder compensation</div>
+          <div className={cn("font-semibold", compIncluded ? "text-emerald-700" : "text-amber-700")}>
+            {compIncluded ? "Included in model" : "Not yet included"}
+          </div>
+        </div>
+      </div>
+      {/* Task #704 (Phase 8): loaded personnel cost + normalized founder-
+          comp delta. Surfaces what the roster actually costs once benefits
+          and payroll tax are layered on, plus how much the model is
+          understating personnel when founder comp is below the benchmark. */}
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 text-sm">
+        <div className="rounded-lg border border-border/50 bg-background p-3">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Loaded personnel cost (Y1)</div>
+          <div data-testid="staffing-loaded-cost" className="font-semibold text-foreground">{formatCurrency(loadedTotal)}</div>
+          <div className="text-[11px] text-muted-foreground mt-1">
+            {loadedDelta > 0
+              ? `+${formatCurrency(loadedDelta)} above base salary (benefits + payroll tax)`
+              : "No benefits or payroll tax layered on yet"}
+          </div>
+        </div>
+        <div className="rounded-lg border border-border/50 bg-background p-3">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Normalized founder-comp delta</div>
+          <div data-testid="staffing-founder-comp-delta" className={cn("font-semibold", founderNormalizedDelta > 0 ? "text-amber-700" : "text-emerald-700")}>
+            {founderNormalizedDelta > 0
+              ? `+${formatCurrency(founderNormalizedDelta)} would be needed to reach benchmark`
+              : "Founder comp meets or exceeds benchmark"}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

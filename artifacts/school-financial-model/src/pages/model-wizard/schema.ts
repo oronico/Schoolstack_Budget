@@ -428,6 +428,13 @@ export const enrollmentSchema = z.object({
   retentionRate: z.coerce.number(numMsg("retention rate")).min(0, "Retention rate must be 0% or higher").max(100, "Retention rate can't exceed 100%").optional(),
   applicationsReceived: z.coerce.number(numMsg("applications received")).min(0, "Please enter a positive number").optional(),
   waitlistCount: z.coerce.number(numMsg("waitlist count")).min(0, "Please enter a positive number").optional(),
+  // Task #704 (Phase 7): demand-evidence inputs that anchor the enrollment
+  // ramp. Optional so legacy models keep loading; the EnrollmentStep ratios
+  // panel surfaces them next to break-even and utilization so a founder can
+  // see whether their assumptions are credible.
+  signedAgreementsCount: z.coerce.number(numMsg("signed agreements")).min(0, "Please enter a positive number").optional(),
+  depositCount: z.coerce.number(numMsg("deposits collected")).min(0, "Please enter a positive number").optional(),
+  evidenceSource: z.string().max(280).optional(),
 });
 
 export const revenueRowSchema = z.object({
@@ -479,6 +486,17 @@ export const revenueRowSchema = z.object({
   // whose id starts with `restricted_` is treated as restricted by default
   // so legacy models migrate without surprises.
   isRestricted: z.boolean().optional(),
+  // Task #704 (Phase 6): recurring vs one-time classification. Lets the
+  // founder mark a row as one-time (e.g. launch grant, capital gift) so the
+  // exports and quality breakdown can show how much of revenue is repeatable
+  // year-over-year versus a one-shot inflow. Defaults to undefined; the
+  // wizard treats undefined as "recurring" for legacy rows.
+  recurringType: z.enum(["recurring", "one_time"]).optional(),
+  // Task #704 (Phase 6): free-text evidence source for the row's amount /
+  // confidence (e.g. "signed MOU with Acme Foundation", "state per-pupil
+  // worksheet 2026"). Surfaced in lender / board exports alongside
+  // revenueQuality so reviewers see why a number is what it is.
+  evidenceSource: z.string().max(280).optional(),
 });
 
 export const revenueDefaultsSchema = z.object({

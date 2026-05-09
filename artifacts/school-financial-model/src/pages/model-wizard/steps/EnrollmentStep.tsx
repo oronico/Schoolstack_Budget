@@ -28,6 +28,7 @@ import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { getFounderPersona } from "@/lib/coaching/founder-persona";
 import { useYearCount } from "@/lib/use-model-duration";
 import { enrollmentBenchmarkFor } from "@/lib/school-type-benchmarks";
+import { utilizationFraction, assessGrowthReasonable, enrollmentToCoverCost } from "@workspace/finance";
 import {
   BarChart,
   Bar,
@@ -278,6 +279,11 @@ function RetentionDemandSection({ isOperatingSchool, isSecondYearPlus }: { isOpe
   const retentionRate = watch("enrollment.retentionRate");
   const applicationsReceived = watch("enrollment.applicationsReceived");
   const waitlistCount = watch("enrollment.waitlistCount");
+  // Task #704 (Phase 7): demand-evidence inputs that anchor the enrollment
+  // ramp. Optional so legacy models keep loading.
+  const signedAgreementsCount = watch("enrollment.signedAgreementsCount");
+  const depositCount = watch("enrollment.depositCount");
+  const evidenceSource = watch("enrollment.evidenceSource");
 
   const showRetention = isOperatingSchool && isSecondYearPlus;
 
@@ -382,6 +388,61 @@ function RetentionDemandSection({ isOperatingSchool, isSecondYearPlus }: { isOpe
             min={0}
           />
         </div>
+        {/* Task #704 (Phase 7): signed agreements + deposit-count inputs.
+            These are the strongest enrollment-evidence signals — a signed
+            agreement or a paid deposit is more bankable than an
+            application or a waitlist seat. */}
+        <div>
+          <label className="block text-sm font-semibold text-foreground mb-1 flex items-center gap-1.5">
+            <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
+            Signed Enrollment Agreements
+          </label>
+          <p className="text-xs text-muted-foreground mb-2">
+            How many families have signed an enrollment agreement for the upcoming year?
+          </p>
+          <input
+            data-testid="enrollment-signed-agreements"
+            type="number"
+            value={signedAgreementsCount ?? ""}
+            onChange={(e) => setValue("enrollment.signedAgreementsCount", e.target.value === "" ? undefined : parseInt(e.target.value), { shouldDirty: true })}
+            className="w-full text-sm border-2 border-border rounded-xl px-3 py-2 bg-card outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+            placeholder="0"
+            min={0}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-foreground mb-1 flex items-center gap-1.5">
+            <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
+            Deposits Collected
+          </label>
+          <p className="text-xs text-muted-foreground mb-2">
+            How many families have paid an enrollment or tuition deposit?
+          </p>
+          <input
+            data-testid="enrollment-deposit-count"
+            type="number"
+            value={depositCount ?? ""}
+            onChange={(e) => setValue("enrollment.depositCount", e.target.value === "" ? undefined : parseInt(e.target.value), { shouldDirty: true })}
+            className="w-full text-sm border-2 border-border rounded-xl px-3 py-2 bg-card outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+            placeholder="0"
+            min={0}
+          />
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-semibold text-foreground mb-1">Evidence source (optional)</label>
+        <p className="text-xs text-muted-foreground mb-2">
+          Where do these numbers come from? (e.g. CRM export, signed agreement count from registrar, deposit ledger)
+        </p>
+        <input
+          data-testid="enrollment-evidence-source"
+          type="text"
+          value={evidenceSource ?? ""}
+          onChange={(e) => setValue("enrollment.evidenceSource", e.target.value, { shouldDirty: true })}
+          maxLength={280}
+          className="w-full text-sm border-2 border-border rounded-xl px-3 py-2 bg-card outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+          placeholder="e.g. CRM export pulled 2026-04-15"
+        />
       </div>
     </div>
   );
@@ -1302,6 +1363,19 @@ export function EnrollmentStep() {
         <FinancingInsight text="Having evidence for your Year 1 enrollment - applications, waitlist data, letters of intent - strengthens your model whether you're seeking financing or not." />
       )}
 
+      {/* Task #704 (Phase 7): enrollment ratios summary. Surfaces capacity
+          utilization and YoY growth reasonableness for each projection year
+          so the founder sees in-context whether their ramp pattern is
+          aggressive without leaving the step. Pure read-only presentation —
+          the underlying enrollment numbers are still authored above. */}
+      {hasYear1Data && (
+        <EnrollmentRatiosSummary
+          enrollments={chartEnrollments}
+          maxCapacity={maxCapacity || 0}
+          yearLabels={chartLabels}
+        />
+      )}
+
       {hasYear1Data && (
         <div>
           <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">
@@ -1456,6 +1530,114 @@ export function EnrollmentStep() {
         helperText="A lender or board reviewer will read this next to your enrollment ramp. Be specific about your demand evidence."
       />
       <AssumptionConfidenceCard stepTitle="Enrollment" />
+    </div>
+  );
+}
+
+/**
+ * Task #704 (Phase 7): read-only ratios card surfacing capacity utilization
+ * and YoY growth reasonableness for each projection year. Uses the shared
+ * `wizard-ratios` helpers so the wizard, dashboards, and tests agree on
+ * thresholds. The "aggressive growth" tier matches the inline EnrollmentStep
+ * warning at +25% YoY so the two cues never disagree.
+ */
+function EnrollmentRatiosSummary({
+  enrollments,
+  maxCapacity,
+  yearLabels,
+}: {
+  enrollments: number[];
+  maxCapacity: number;
+  yearLabels: string[];
+}) {
+  // Task #704 (Phase 7): break-even / coverage outputs. We pull staffing,
+  // facility, and revenue rows directly from the form so the founder sees
+  // "students needed to cover staff" / "students needed to cover facility"
+  // alongside utilization without having to leave the step. Numbers fall
+  // back gracefully (placeholder copy) when the inputs aren't set yet.
+  const { watch } = useFormContext();
+  const revenueRows = (watch("revenueRows") as Array<{ amounts?: number[]; driverType?: string; category?: string }> | undefined) || [];
+  const expenseRows = (watch("expenseRows") as Array<{ category?: string; amounts?: number[] }> | undefined) || [];
+  const staffingRows = (watch("staffingRows") as Array<{ fte?: number; annualizedRate?: number; benefitsRate?: number; payrollTaxRate?: number; benefitsEligible?: boolean; employmentType?: string; payrollLike?: boolean }> | undefined) || [];
+
+  // Per-student revenue uses ONLY enrollment-linked categories (tuition,
+  // tuition offsets, public per-pupil funding, school-choice vouchers).
+  // Including philanthropy/other_revenue would inflate the denominator
+  // and understate students-needed-to-cover-cost (Task #704 review).
+  const ENROLLMENT_LINKED = new Set(["tuition_and_fees", "tuition_offsets", "public_funding", "school_choice"]);
+  const y1Students = enrollments[0] || 0;
+  const enrollmentLinkedRevenueY1 = revenueRows
+    .filter((r) => ENROLLMENT_LINKED.has(r.category || ""))
+    .reduce((sum, r) => sum + (r.amounts?.[0] ?? 0), 0);
+  const revenuePerStudent = y1Students > 0 ? enrollmentLinkedRevenueY1 / y1Students : 0;
+
+  const staffingY1 = staffingRows.reduce((sum, r) => {
+    const base = (r.fte || 0) * (r.annualizedRate || 0);
+    if (r.employmentType === "contract" && !r.payrollLike) return sum + base;
+    const benefits = r.benefitsEligible ? base * ((r.benefitsRate || 0) / 100) : 0;
+    const tax = base * ((r.payrollTaxRate || 0) / 100);
+    return sum + base + benefits + tax;
+  }, 0);
+  const facilityY1 = expenseRows
+    .filter((r) => r.category === "occupancy_facility")
+    .reduce((sum, r) => sum + (r.amounts?.[0] ?? 0), 0);
+  const totalFixedY1 = staffingY1 + facilityY1;
+
+  const coverStaff = enrollmentToCoverCost(staffingY1, revenuePerStudent);
+  const coverFacility = enrollmentToCoverCost(facilityY1, revenuePerStudent);
+  const breakEvenStudents = enrollmentToCoverCost(totalFixedY1, revenuePerStudent);
+
+  const rows = enrollments.map((curr, i) => {
+    const util = utilizationFraction(curr, maxCapacity);
+    const prev = i > 0 ? enrollments[i - 1] : 0;
+    const growth = i > 0 ? assessGrowthReasonable(prev, curr) : "ok";
+    return { year: yearLabels[i] || `Year ${i + 1}`, curr, util, growth };
+  });
+  return (
+    <div className="bg-card border border-border/60 rounded-2xl p-5 shadow-sm">
+      <div className="flex items-center gap-2 mb-3">
+        <Sparkles className="h-4 w-4 text-primary" />
+        <h4 className="text-sm font-bold text-foreground">Enrollment ratios at a glance</h4>
+      </div>
+      {/* Break-even & coverage outputs (per Task #704 brief). Read-only —
+          the underlying inputs live on the Revenue, Staffing, and Expense
+          steps. */}
+      <div className="grid gap-2 sm:grid-cols-3 mb-3 text-xs">
+        <div className="rounded-lg border border-border/50 bg-background p-3">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Students to cover staffing</div>
+          <div data-testid="enrollment-cover-staffing" className="text-sm font-semibold text-foreground">
+            {coverStaff === null ? "Set per-student revenue to see this" : `${coverStaff} students`}
+          </div>
+        </div>
+        <div className="rounded-lg border border-border/50 bg-background p-3">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Students to cover facility</div>
+          <div data-testid="enrollment-cover-facility" className="text-sm font-semibold text-foreground">
+            {coverFacility === null ? "Set per-student revenue to see this" : `${coverFacility} students`}
+          </div>
+        </div>
+        <div className="rounded-lg border border-border/50 bg-background p-3">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Break-even enrollment (Y1)</div>
+          <div data-testid="enrollment-break-even" className="text-sm font-semibold text-foreground">
+            {breakEvenStudents === null ? "Set per-student revenue to see this" : `${breakEvenStudents} students`}
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-2 text-xs" style={{ gridTemplateColumns: `repeat(${Math.max(1, rows.length)}, minmax(0, 1fr))` }}>
+        {rows.map((r, i) => (
+          <div key={i} className="rounded-lg border border-border/50 bg-background p-3">
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{r.year}</div>
+            <div className="text-sm font-semibold text-foreground">{r.curr} students</div>
+            <div className="text-[11px] text-muted-foreground mt-1">
+              {r.util === null ? "Set max capacity to see utilization" : `${Math.round(r.util * 100)}% of capacity`}
+            </div>
+            {i > 0 && r.growth !== "ok" && (
+              <div className={cn("text-[11px] mt-1 font-medium", r.growth === "very_aggressive" ? "text-rose-700" : "text-amber-700")}>
+                {r.growth === "very_aggressive" ? "Very aggressive growth — make sure your demand evidence supports this." : "Aggressive growth — show the demand evidence behind this jump."}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

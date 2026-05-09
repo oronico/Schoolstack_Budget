@@ -1297,6 +1297,25 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
       {hasAnyRevenue && (
         <CashFlowTimingSummary monthlyInflow={monthlyCashInflow} />
       )}
+
+      {/* Task #704 (Phase 6): founder-facing coaching block. Three exact
+          lines from the polish-sprint brief that frame revenue evidence,
+          fundraising dependence, and public-funding timing risk. Gated
+          behind the same showCoach hook as the rest of the step so
+          Beginner mode sees it and CFO mode keeps a quieter view. */}
+      {showCoach && (
+        <div className="bg-gradient-to-br from-blue-50/80 to-sky-50/40 border border-blue-200/60 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-start gap-2 mb-3">
+            <Lightbulb className="h-4 w-4 text-blue-700 mt-0.5 flex-shrink-0" />
+            <p className="text-sm font-bold text-blue-900">A few notes on revenue quality</p>
+          </div>
+          <ul className="space-y-2 text-sm text-blue-900/90">
+            <li className="flex gap-2"><span aria-hidden>•</span><span>Revenue is stronger when it is tied to enrolled students, signed agreements, or confirmed public funding.</span></li>
+            <li className="flex gap-2"><span aria-hidden>•</span><span>Fundraising can support your launch, but a school should not depend on uncertain donations forever.</span></li>
+            <li className="flex gap-2"><span aria-hidden>•</span><span>If public funds arrive late, your annual model may look fine while your cash gets tight.</span></li>
+          </ul>
+        </div>
+      )}
       <AssumptionConfidenceCard stepTitle="Revenue" />
     </div>
   );
@@ -1829,6 +1848,43 @@ function RevenueLineItem({
           {rowErrors?.category && (
             <p className="text-sm text-destructive font-medium animate-in fade-in mt-1">{rowErrors.category.message || "Please select a revenue category"}</p>
           )}
+
+          {/* Task #704 (Phase 6): recurring vs one-time + evidence-source
+              row inputs. Surfaced in the row body so a founder marking a
+              row as one-time (e.g. launch grant) or attaching an evidence
+              note can do so without leaving the wizard. Both fields are
+              optional; the schema treats undefined as "recurring" for
+              legacy rows. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pt-3 border-t border-border/40">
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1">
+                Recurring or one-time?
+              </label>
+              <select
+                data-testid={`revenue-row-${row.id}-recurring-type`}
+                value={row.recurringType ?? "recurring"}
+                onChange={(e) => onFieldChange("recurringType", e.target.value)}
+                className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground cursor-pointer"
+              >
+                <option value="recurring">Recurring (year after year)</option>
+                <option value="one_time">One-time (this year only)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1">
+                Evidence source
+              </label>
+              <input
+                data-testid={`revenue-row-${row.id}-evidence-source`}
+                type="text"
+                value={row.evidenceSource ?? ""}
+                onChange={(e) => onFieldChange("evidenceSource", e.target.value)}
+                maxLength={280}
+                className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-card"
+                placeholder="e.g. signed MOU, state per-pupil worksheet"
+              />
+            </div>
+          </div>
 
           {showTiming && hasTimingControls && (
             <TimingControls

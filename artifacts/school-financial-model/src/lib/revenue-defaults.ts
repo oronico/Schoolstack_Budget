@@ -202,6 +202,11 @@ export interface RevenueRowData {
   // a default from category + id via `inferRevenueQuality` in @workspace/finance.
   revenueQuality?: "contracted" | "projected" | "donor_dependent" | "policy_dependent";
   revenueQualityOverridden?: boolean;
+  // Task #704 (Phase 6): recurring vs one-time classification + free-text
+  // evidence source. Both optional; legacy rows treat undefined recurringType
+  // as "recurring".
+  recurringType?: "recurring" | "one_time";
+  evidenceSource?: string;
 }
 
 const DEPOSIT_TIMING_TO_FREQUENCY: Record<string, PaymentFrequency> = {
