@@ -880,6 +880,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             ? "Enter the amounts you expect for each year of your opening plan. We've pre-filled typical starting points for a school like yours - adjust them to match your concept."
             : "Enter your expected amounts for each year. We've filled in smart defaults - adjust them to match your school."}
         </p>
+        <p className="text-sm text-muted-foreground mt-3" data-testid="help-revenue">Enter the annual amount per student or annual fixed amount. The model will do the multiplication.</p>
       </div>
 
       {stateFundingConfig && stateCode && (

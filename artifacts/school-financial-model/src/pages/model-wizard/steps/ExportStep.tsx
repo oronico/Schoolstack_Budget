@@ -344,6 +344,8 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
           : "Before you download, let our team review your numbers."}
       </p>
 
+      <p className="text-sm text-muted-foreground mb-8 max-w-2xl mx-auto" data-testid="help-export">This workbook is a planning tool. It can support conversations with lenders, funders, boards, and advisors, but it is not a loan application or funding decision.</p>
+
       {reviewAvailable && !reviewSubmitted && !showReviewForm && (
         <div className="max-w-2xl mx-auto mb-10">
           <div

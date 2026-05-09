@@ -129,6 +129,7 @@ export function CapitalFinancingStep() {
         <p className="text-muted-foreground text-lg">
           If you're financing facilities, equipment, or working capital with debt, set the loan terms and lender covenants here. Skip the details if you have no loan - your model still builds without one.
         </p>
+        <p className="text-sm text-muted-foreground mt-3" data-testid="help-cash">Annual profit does not always mean you have enough cash each month. Watch for months when expenses arrive before revenue.</p>
         <ConceptExplainer concept="cash_flow" className="mt-3 max-w-2xl" />
         <ConceptExplainer concept="debt_service" className="mt-2 max-w-2xl" />
         <ConceptExplainer concept="beginning_cash" className="mt-2 max-w-2xl" />

@@ -1286,6 +1286,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Expenses & Operations</h2>
         <p className="text-muted-foreground text-lg">First, a few quick questions about your business operations. Then we'll review your expense details.</p>
+        <p className="text-sm text-muted-foreground mt-3" data-testid="help-expenses">Include costs you must pay even if enrollment is lower than expected, especially rent, insurance, software, payroll, and professional services.</p>
         <div className="mt-3 grid gap-2 max-w-2xl">
           <ConceptExplainer concept="expense" />
           <ConceptExplainer concept="net_income" />

@@ -814,6 +814,7 @@ export function EnrollmentStep({ focus }: { focus?: string } = {}) {
             ? "List the schedules families can sign up for - Full Day, Half Day, 2-Day, after-school, and so on. Each one gets its own tuition. The matrix below lets you say how many students are in each grade or age band for that schedule. Don't sweat perfection - you can always come back and adjust."
             : "Add each schedule you offer with its own tuition. Use the matrix below to assign students per grade/band per program."}
         </p>
+        <p className="text-sm text-muted-foreground mt-3" data-testid="help-enrollment">Use the number of students you reasonably expect, not your dream number. If you have deposits, signed agreements, or returning students, use those as your anchor.</p>
       </div>
 
       {showCoach && (

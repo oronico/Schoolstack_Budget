@@ -733,6 +733,7 @@ export function StaffingStep() {
         <p className="text-muted-foreground text-lg">
           Add every person on your team - full-time, part-time, and contract. Include teachers, leaders, support staff, and contractors. We'll calculate total personnel costs automatically. It's okay to start small - many great schools launch with just a founder and one or two team members.
         </p>
+        <p className="text-sm text-muted-foreground mt-3" data-testid="help-staffing">Include the people actually doing the work. If the founder is unpaid at first, show when founder pay begins so the model reflects long-term sustainability.</p>
         <ConceptExplainer concept="staffing_cost_ratio" className="mt-3 max-w-2xl" />
         <ConceptExplainer concept="paying_yourself" className="mt-2 max-w-2xl" />
       </div>
