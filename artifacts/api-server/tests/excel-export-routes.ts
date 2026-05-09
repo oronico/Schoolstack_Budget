@@ -191,7 +191,7 @@ const ROUTES: ExportRouteSpec[] = [
     label: "/export/underwriting",
     pathSuffix: "/underwriting",
     eventName: "exported_underwriting",
-    filenameContains: "Underwriting_Pro_Forma.xlsx",
+    filenameContains: "Lender_Pro_Forma.xlsx",
     flagGated: true,
   },
   {

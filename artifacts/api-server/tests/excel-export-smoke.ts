@@ -161,7 +161,7 @@ const FORMATS: FormatSpec[] = [
       "DSCR & Covenants",
       "Sources & Uses",
       "Scenarios",
-      "Underwriting Snapshot",
+      "Lender Snapshot",
       "Budget Narrative",
       "Financial Health",
       "Decision History",

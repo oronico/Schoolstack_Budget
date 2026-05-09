@@ -198,7 +198,7 @@ export const BOARD_SECTIONS: SectionId[] = [
 
 export const SECTION_META: Record<SectionId, { title: string; description: string }> = {
   cover: { title: "Cover Page", description: "School name, date, and packet purpose" },
-  executive_summary: { title: "Executive Summary", description: "High-level financial narrative and verdict" },
+  executive_summary: { title: "Executive Summary", description: "High-level financial narrative summary" },
   school_overview: { title: "School Overview", description: "Type, stage, location, and mission summary" },
   enrollment_plan: { title: "Enrollment Plan", description: "5-year enrollment targets and growth trajectory" },
   revenue_model: { title: "Revenue Model", description: "Revenue sources, concentration, and projections" },

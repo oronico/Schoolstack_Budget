@@ -322,6 +322,58 @@ describe("founder voice — canonical export labels & filenames", () => {
   );
 });
 
+// Task #727 — cross-package guard. The api-server emits founder-visible
+// strings inside PDF cover titles, Excel sheet/cell values, download
+// filenames, and 5xx error bodies. Make sure none of the deprecated
+// export labels or banned credit-verdict phrases leak through those
+// render paths. Internal demo-generation scripts and code comments are
+// out of scope (allowlisted by file).
+const API_SERVER_ROOT = join(SRC_ROOT, "../../api-server/src");
+const API_SERVER_FOUNDER_FACING_FILES = [
+  "lib/packets/lender-summary-pdf.ts",
+  "lib/packets/lender-packet-pdf.ts",
+  "lib/packets/board-packet-pdf.ts",
+  "lib/packets/packet-types.ts",
+  "lib/underwriting-workbook.ts",
+  "lib/underwriting-export.ts",
+  "lib/lender-proforma-export.ts",
+  "lib/pdf-proforma.ts",
+  "lib/formula-export.ts",
+  "routes/models.ts",
+  "routes/public.ts",
+];
+
+const API_SERVER_BANNED_TOKENS = [
+  "Underwriting Snapshot",
+  "Underwriting Workbook",
+  "Underwriting Package",
+  "Underwriting Packet",
+  "Underwriting Pro Forma",
+  "Underwriting_Pro_Forma",
+  "Credit Memo",
+  "Loan Approval Packet",
+  "Approval Packet",
+  "Bank Packet",
+  "Lender-Ready Packet",
+];
+
+describe("founder voice — api-server founder-visible exports", () => {
+  it.each(API_SERVER_FOUNDER_FACING_FILES)(
+    "%s contains no deprecated export label or banned credit-verdict phrase",
+    (rel) => {
+      const stripped = stripComments(readFileSync(join(API_SERVER_ROOT, rel), "utf8"));
+      for (const banned of API_SERVER_BANNED_TOKENS) {
+        expect(
+          stripped,
+          `api-server/src/${rel} must not emit "${banned}" — it leaks into ` +
+            `PDF/Excel render output, download filenames, or 5xx error ` +
+            `bodies. See docs/FOUNDER_VOICE.md for the approved vocabulary.`,
+        ).not.toContain(banned);
+      }
+    },
+  );
+});
+
 describe("founder voice — no banned phrases on founder-facing surfaces", () => {
   const files = listFiles(SRC_ROOT);
 

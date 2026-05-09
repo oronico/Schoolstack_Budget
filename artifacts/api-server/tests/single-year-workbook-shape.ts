@@ -75,7 +75,7 @@ function collectHyperlinkTargets(ws: ExcelJS.Worksheet): string[] {
 
 /**
  * Count the columns whose declared width matches the yc-driver value
- * (16 for most sheets, 14 for the Underwriting Snapshot trend block).
+ * (16 for most sheets, 14 for the Lender Snapshot trend block).
  * This isolates the yc-driven array from sibling fixed-shape blocks
  * (e.g. the Debt Schedule loan-terms columns) so that "Y2-Y5 dropped"
  * is asserted on the same array `Array(yc).fill(...)` produced.
@@ -107,9 +107,9 @@ const UNDERWRITING_YEAR_SHEETS: Array<{ name: (yc: number) => string; yearWidth:
   { name: () => "Balance Sheet", yearWidth: 16 },
   { name: () => "DSCR & Covenants", yearWidth: 16 },
   { name: () => "Scenarios", yearWidth: 16 },
-  // Underwriting Snapshot uses width:14 for its yc trend columns and a
+  // Lender Snapshot uses width:14 for its yc trend columns and a
   // separate fixed left-side label block (widths 28 / 30 / 4).
-  { name: () => "Underwriting Snapshot", yearWidth: 14 },
+  { name: () => "Lender Snapshot", yearWidth: 14 },
 ];
 
 /**

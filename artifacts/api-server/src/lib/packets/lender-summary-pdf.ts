@@ -67,9 +67,9 @@ export function drawLenderSummaryPage(doc: PDFDoc, data: LenderSummaryData): voi
   doc.save();
   doc.rect(0, 0, pageW, 70).fill(BRAND.navy);
   doc.font("Helvetica-Bold").fontSize(18).fillColor(BRAND.white);
-  doc.text("Lender Summary", margin, 22, { width: contentW });
+  doc.text("Lender Conversation Snapshot", margin, 22, { width: contentW });
   doc.font("Helvetica").fontSize(9).fillColor(BRAND.gray);
-  doc.text("SchoolStack Budget — One-Page Underwriting Snapshot", margin, 46);
+  doc.text("SchoolStack Budget — One-Page Lender Conversation Snapshot", margin, 46);
   doc.restore();
 
   doc.y = 84;

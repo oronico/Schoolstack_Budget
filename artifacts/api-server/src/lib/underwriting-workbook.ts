@@ -63,7 +63,7 @@ function getTabNames(yc: number, hasFounderSummary = false): string[] {
     "Enrollment Drivers", "Tuition & Funding", "Staffing Drivers", "OpEx Drivers", "Capital Stack",
     "Enrollment Tuition Fcst", "Staffing Costs Fcst", "Budget Detail", "Budget Summary",
     "Monthly Cash Flow Y1", operatingStmtTabName(yc), "Debt Schedule", "Balance Sheet",
-    "DSCR & Covenants", "Sources & Uses", "Scenarios", "Underwriting Snapshot", "Financial Health",
+    "DSCR & Covenants", "Sources & Uses", "Scenarios", "Lender Snapshot", "Financial Health",
     "Budget Narrative", "Assumptions Confidence",
   ];
 }
@@ -2981,7 +2981,7 @@ function buildScenarios(wb: ExcelJS.Workbook, data: ModelData, enrollment: numbe
 
 function buildUnderwritingSnapshot(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], revByYear: number[], persByYear: number[], opexByYear: number[], cdByYear: number[], niByYear: number[], cashByYear: number[], balanceByYear: number[]) {
   const yc = getYearCount(data);
-  const ws = wb.addWorksheet("Underwriting Snapshot");
+  const ws = wb.addWorksheet("Lender Snapshot");
   const sp = data.schoolProfile || {};
   const yLabels = yearLabels(sp.openingYear, yc);
   const niLabel = netIncomeLabel(sp.entityType);
@@ -2990,7 +2990,7 @@ function buildUnderwritingSnapshot(wb: ExcelJS.Workbook, data: ModelData, enroll
 
   let r = 1;
   ws.mergeCells(r, 1, r, yc + 3);
-  ws.getCell(r, 1).value = "Underwriting Snapshot - Loan Committee Summary";
+  ws.getCell(r, 1).value = "Lender Conversation Snapshot - Summary";
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
   r += 2;

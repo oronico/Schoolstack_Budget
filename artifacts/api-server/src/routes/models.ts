@@ -1293,10 +1293,10 @@ router.get("/models/:id/export/underwriting", authMiddleware, async (req: AuthRe
 
     await trackEvent("exported_underwriting", req.userId, { modelId: model.id });
 
-    sendBinary(res, buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", `${safeName}_Underwriting_Pro_Forma.xlsx`);
+    sendBinary(res, buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", `${safeName}_Lender_Pro_Forma.xlsx`);
   } catch (err) {
-    console.error("Underwriting export error:", err);
-    res.status(500).json({ error: "Something went wrong generating the Underwriting Pro Forma workbook." });
+    console.error("Lender Pro Forma export error:", err);
+    res.status(500).json({ error: "Something went wrong generating the Lender Pro Forma workbook." });
   }
 });
 
