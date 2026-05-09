@@ -554,3 +554,104 @@ export function listAssumptionKeysByStep(stepTitle: string): AssumptionKey[] {
     (k) => ASSUMPTION_REGISTRY[k].stepTitle === stepTitle,
   );
 }
+
+/** Task #703 — Assumptions Confidence Layer rollup posture. The brief
+ *  asks every per-step confidence answer to roll up into a single
+ *  Strong / Moderate / Needs Support label that the Review screen and
+ *  the lender / board exports can surface. */
+export type AssumptionConfidencePosture =
+  | "Strong"
+  | "Moderate"
+  | "Needs Support";
+
+export interface AssumptionConfidenceRollup {
+  posture: AssumptionConfidencePosture;
+  /** Total registry keys we expect a founder to weigh in on. */
+  total: number;
+  /** Count where the founder either picked a non-estimate level OR
+   *  attached an evidence note to an estimate. Mirrors the per-step
+   *  card's "X of Y with evidence" tally so the rollup and the inline
+   *  cards never disagree on what counts. */
+  withEvidence: number;
+  /** Per-level counts. Useful for the export's evidence-mix subtitle. */
+  breakdown: Record<AssumptionConfidenceLevel, number>;
+  /** True when at least one high-impact key is still a bare estimate
+   *  with no note. Drives the Needs Support floor regardless of the
+   *  raw evidence ratio. */
+  highImpactGap: boolean;
+}
+
+/** Single source of truth for what counts as "with evidence" — must
+ *  match the per-step `AssumptionConfidenceCard` tally so the Review
+ *  rollup never contradicts the inline cards. */
+function entryHasEvidence(entry: AssumptionConfidenceEntry | undefined): boolean {
+  if (!entry) return false;
+  if (entry.confidence !== "estimate") return true;
+  return !!(entry.evidenceNote && entry.evidenceNote.trim().length > 0);
+}
+
+/** Roll a flat confidence map into a Strong / Moderate / Needs Support
+ *  posture. Pure: no I/O, no mutation. The thresholds intentionally lean
+ *  toward "Needs Support" so the Review screen never overstates a
+ *  founder's evidence depth.
+ *
+ *  - Strong:        ≥ 70% of registry keys carry evidence AND no
+ *                   high-impact assumption is a bare estimate.
+ *  - Moderate:      ≥ 40% with evidence, no high-impact gap.
+ *  - Needs Support: anything else, OR any high-impact gap (even when
+ *                   the overall ratio looks healthy — a bare-estimate
+ *                   tuition_per_student / enrollment_y1 swamps the rest
+ *                   of the model and the rollup must say so). */
+export function rollupAssumptionConfidence(
+  map: Record<string, AssumptionConfidenceEntry | undefined> | undefined,
+): AssumptionConfidenceRollup {
+  const safe = map ?? {};
+  const allKeys = listAssumptionKeys();
+  const total = allKeys.length;
+
+  const breakdown: Record<AssumptionConfidenceLevel, number> = {
+    actuals: 0,
+    signed_agreement: 0,
+    quote: 0,
+    research: 0,
+    estimate: 0,
+  };
+  let withEvidence = 0;
+  for (const k of allKeys) {
+    const entry = safe[k];
+    if (!entry) continue;
+    breakdown[entry.confidence] += 1;
+    if (entryHasEvidence(entry)) withEvidence += 1;
+  }
+
+  const highImpactGap = HIGH_IMPACT_CONFIDENCE_KEYS.some((k) => {
+    const entry = safe[k];
+    return isEstimateWithoutEvidence(entry);
+  });
+
+  const ratio = total === 0 ? 0 : withEvidence / total;
+  let posture: AssumptionConfidencePosture;
+  if (highImpactGap) {
+    posture = "Needs Support";
+  } else if (ratio >= 0.7) {
+    posture = "Strong";
+  } else if (ratio >= 0.4) {
+    posture = "Moderate";
+  } else {
+    posture = "Needs Support";
+  }
+
+  return { posture, total, withEvidence, breakdown, highImpactGap };
+}
+
+export const ASSUMPTION_CONFIDENCE_POSTURE_DESCRIPTIONS: Record<
+  AssumptionConfidencePosture,
+  string
+> = {
+  Strong:
+    "Most assumptions are backed by actuals, signed agreements, written quotes, or research.",
+  Moderate:
+    "Several assumptions still need a source. Tag them on each step to harden the model for a reviewer.",
+  "Needs Support":
+    "This does not mean your plan is weak. It means this part needs more clarity. Add evidence to your high-impact assumptions first.",
+};

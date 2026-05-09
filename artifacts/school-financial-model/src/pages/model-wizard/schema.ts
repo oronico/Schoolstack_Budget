@@ -193,6 +193,23 @@ export const schoolProfileSchema = z.object({
   fiscalYearStartMonth: z.coerce.number(numMsg("fiscal year start month")).min(1, "Choose a fiscal year start month").max(12, "Month must be between 1 and 12"),
   isPartialFirstYear: z.boolean(),
   year1OperatingMonths: z.coerce.number(numMsg("operating months")).min(1, "Your first year needs at least 1 operating month").max(12, "Operating months can't exceed 12"),
+  // Task #703 — Assumptions-first launch checklist for new schools.
+  // Captures the early-stage realities a brand-new school can already
+  // commit to (committed students, signed agreements, deposits, opening
+  // cadence) so the model is grounded in evidence rather than pure
+  // estimates. All sub-fields are optional + permissive so legacy
+  // models without the checklist round-trip cleanly through save/load.
+  launchAssumptions: z.object({
+    committedStudents: z.coerce.number(numMsg("committed students")).min(0, "Please enter a positive number").optional(),
+    signedEnrollmentAgreements: z.coerce.number(numMsg("signed enrollment agreements")).min(0, "Please enter a positive number").optional(),
+    depositsCollected: z.coerce.number(numMsg("deposits collected")).min(0, "Please enter a positive amount").optional(),
+    projectedOpeningMonth: z.string().optional(),
+    firstMonthWithRevenue: z.string().optional(),
+    firstMonthWithPayroll: z.string().optional(),
+    firstMonthWithRent: z.string().optional(),
+    preOpeningCashNeeds: z.coerce.number(numMsg("pre-opening cash needs")).min(0, "Please enter a positive amount").optional(),
+    startupCosts: z.coerce.number(numMsg("startup costs")).min(0, "Please enter a positive amount").optional(),
+  }).optional(),
   isAccredited: z.boolean().optional(),
   accreditingBody: z.string().optional(),
   hasManagementFee: z.boolean().optional(),

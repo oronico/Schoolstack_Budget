@@ -299,6 +299,10 @@ export {
 } from "./revenue-quality.js";
 
 export {
+  ASSUMPTION_CONFIDENCE_POSTURE_DESCRIPTIONS,
+  rollupAssumptionConfidence,
+  type AssumptionConfidencePosture,
+  type AssumptionConfidenceRollup,
   ASSUMPTION_REGISTRY,
   HEADLINE_METRIC_LABELS,
   METRIC_DRIVER_KEYS,

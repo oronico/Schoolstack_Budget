@@ -7,6 +7,8 @@ import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { IDontKnowYet } from "@/components/coaching/IDontKnowYet";
 import { RationaleField } from "@/components/coaching/RationaleField";
 import { AssumptionConfidenceCard } from "@/components/wizard/AssumptionConfidenceCard";
+import { LaunchAssumptionsChecklist } from "@/components/wizard/LaunchAssumptionsChecklist";
+import { SeededFromActualsBadge } from "@/components/wizard/SeededFromActualsBadge";
 import { cn, formatCurrency } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS } from "../schema";
 import type { Program } from "../schema";
@@ -762,6 +764,9 @@ export function EnrollmentStep() {
         />
       )}
 
+      {/* Task #703 — Assumptions-first launch checklist (new schools only). */}
+      <LaunchAssumptionsChecklist />
+
       {programs.length === 0 && (
         <IDontKnowYet
           label="I don't have programs mapped out yet - start me with one"
@@ -783,6 +788,27 @@ export function EnrollmentStep() {
           }}
         />
       )}
+
+      {/* Task #703 — once Y1 has been seeded from actuals (operating school
+          + a populated priorYearSnapshot), surface the seeded badge with a
+          one-click reset back to the prior-year ending enrollment. */}
+      {isOperatingSchool &&
+        watch("priorYearSnapshot.endingEnrollment") &&
+        py1 > 0 && (
+          <SeededFromActualsBadge
+            actualLabel={`${watch("priorYearSnapshot.endingEnrollment")} students`}
+            onResetToActual={() => {
+              const actual = Number(watch("priorYearSnapshot.endingEnrollment")) || 0;
+              if (programs.length > 0) {
+                const updated = programs.map((p, i) =>
+                  i === 0 ? { ...p, year1: actual, currentYear: actual } : p,
+                );
+                setValue("programs", updated, { shouldDirty: true });
+              }
+              setValue("enrollment.year1", actual, { shouldDirty: true });
+            }}
+          />
+        )}
 
       {!isNewSchool && currentStudents > 0 && programs.length > 0 && !prefillDismissed && programs.every(p => !p.year1 && !p.currentYear) && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">

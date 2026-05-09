@@ -115,6 +115,7 @@ export * from "./schoolProfileEnrollmentRevenueMethod";
 export * from "./schoolProfileEntityType";
 export * from "./schoolProfileGradeBandEnrollment";
 export * from "./schoolProfileGradeBandPerPupil";
+export * from "./schoolProfileLaunchAssumptions";
 export * from "./schoolProfileLendingLabIntent";
 export * from "./schoolProfileOwnershipType";
 export * from "./schoolProfileSchoolType";

@@ -624,6 +624,19 @@ export interface FacilityPhase {
   [key: string]: unknown;
 }
 
+export type SchoolProfileLaunchAssumptions = {
+  committedStudents?: number;
+  signedEnrollmentAgreements?: number;
+  depositsCollected?: number;
+  projectedOpeningMonth?: string;
+  firstMonthWithRevenue?: string;
+  firstMonthWithPayroll?: string;
+  firstMonthWithRent?: string;
+  preOpeningCashNeeds?: number;
+  startupCosts?: number;
+  [key: string]: unknown;
+};
+
 export type SchoolProfileGradeBandEnrollment = {
   k5?: number[];
   m68?: number[];
@@ -652,6 +665,7 @@ export interface SchoolProfile {
   fiscalYearStartMonth?: number;
   isPartialFirstYear?: boolean;
   year1OperatingMonths?: number;
+  launchAssumptions?: SchoolProfileLaunchAssumptions;
   locationSecured?: boolean;
   facilityStreet?: string;
   facilityCity?: string;

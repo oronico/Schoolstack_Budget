@@ -289,6 +289,19 @@ export const CreateModelBody = zod.object({
         fiscalYearStartMonth: zod.number().optional(),
         isPartialFirstYear: zod.boolean().optional(),
         year1OperatingMonths: zod.number().optional(),
+        launchAssumptions: zod
+          .object({
+            committedStudents: zod.number().optional(),
+            signedEnrollmentAgreements: zod.number().optional(),
+            depositsCollected: zod.number().optional(),
+            projectedOpeningMonth: zod.string().optional(),
+            firstMonthWithRevenue: zod.string().optional(),
+            firstMonthWithPayroll: zod.string().optional(),
+            firstMonthWithRent: zod.string().optional(),
+            preOpeningCashNeeds: zod.number().optional(),
+            startupCosts: zod.number().optional(),
+          })
+          .optional(),
         locationSecured: zod.boolean().optional(),
         facilityStreet: zod.string().optional(),
         facilityCity: zod.string().optional(),
@@ -940,6 +953,19 @@ export const GetModelResponse = zod.object({
         fiscalYearStartMonth: zod.number().optional(),
         isPartialFirstYear: zod.boolean().optional(),
         year1OperatingMonths: zod.number().optional(),
+        launchAssumptions: zod
+          .object({
+            committedStudents: zod.number().optional(),
+            signedEnrollmentAgreements: zod.number().optional(),
+            depositsCollected: zod.number().optional(),
+            projectedOpeningMonth: zod.string().optional(),
+            firstMonthWithRevenue: zod.string().optional(),
+            firstMonthWithPayroll: zod.string().optional(),
+            firstMonthWithRent: zod.string().optional(),
+            preOpeningCashNeeds: zod.number().optional(),
+            startupCosts: zod.number().optional(),
+          })
+          .optional(),
         locationSecured: zod.boolean().optional(),
         facilityStreet: zod.string().optional(),
         facilityCity: zod.string().optional(),
@@ -1597,6 +1623,19 @@ export const UpdateModelBody = zod.object({
         fiscalYearStartMonth: zod.number().optional(),
         isPartialFirstYear: zod.boolean().optional(),
         year1OperatingMonths: zod.number().optional(),
+        launchAssumptions: zod
+          .object({
+            committedStudents: zod.number().optional(),
+            signedEnrollmentAgreements: zod.number().optional(),
+            depositsCollected: zod.number().optional(),
+            projectedOpeningMonth: zod.string().optional(),
+            firstMonthWithRevenue: zod.string().optional(),
+            firstMonthWithPayroll: zod.string().optional(),
+            firstMonthWithRent: zod.string().optional(),
+            preOpeningCashNeeds: zod.number().optional(),
+            startupCosts: zod.number().optional(),
+          })
+          .optional(),
         locationSecured: zod.boolean().optional(),
         facilityStreet: zod.string().optional(),
         facilityCity: zod.string().optional(),
@@ -2241,6 +2280,19 @@ export const UpdateModelResponse = zod.object({
         fiscalYearStartMonth: zod.number().optional(),
         isPartialFirstYear: zod.boolean().optional(),
         year1OperatingMonths: zod.number().optional(),
+        launchAssumptions: zod
+          .object({
+            committedStudents: zod.number().optional(),
+            signedEnrollmentAgreements: zod.number().optional(),
+            depositsCollected: zod.number().optional(),
+            projectedOpeningMonth: zod.string().optional(),
+            firstMonthWithRevenue: zod.string().optional(),
+            firstMonthWithPayroll: zod.string().optional(),
+            firstMonthWithRent: zod.string().optional(),
+            preOpeningCashNeeds: zod.number().optional(),
+            startupCosts: zod.number().optional(),
+          })
+          .optional(),
         locationSecured: zod.boolean().optional(),
         facilityStreet: zod.string().optional(),
         facilityCity: zod.string().optional(),
@@ -2919,6 +2971,19 @@ export const ArchiveModelResponse = zod.object({
         fiscalYearStartMonth: zod.number().optional(),
         isPartialFirstYear: zod.boolean().optional(),
         year1OperatingMonths: zod.number().optional(),
+        launchAssumptions: zod
+          .object({
+            committedStudents: zod.number().optional(),
+            signedEnrollmentAgreements: zod.number().optional(),
+            depositsCollected: zod.number().optional(),
+            projectedOpeningMonth: zod.string().optional(),
+            firstMonthWithRevenue: zod.string().optional(),
+            firstMonthWithPayroll: zod.string().optional(),
+            firstMonthWithRent: zod.string().optional(),
+            preOpeningCashNeeds: zod.number().optional(),
+            startupCosts: zod.number().optional(),
+          })
+          .optional(),
         locationSecured: zod.boolean().optional(),
         facilityStreet: zod.string().optional(),
         facilityCity: zod.string().optional(),

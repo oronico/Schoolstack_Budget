@@ -13,6 +13,7 @@ import type { SchoolProfileEnrollmentRevenueMethod } from "./schoolProfileEnroll
 import type { SchoolProfileEntityType } from "./schoolProfileEntityType";
 import type { SchoolProfileGradeBandEnrollment } from "./schoolProfileGradeBandEnrollment";
 import type { SchoolProfileGradeBandPerPupil } from "./schoolProfileGradeBandPerPupil";
+import type { SchoolProfileLaunchAssumptions } from "./schoolProfileLaunchAssumptions";
 import type { SchoolProfileLendingLabIntent } from "./schoolProfileLendingLabIntent";
 import type { SchoolProfileOwnershipType } from "./schoolProfileOwnershipType";
 import type { SchoolProfileSchoolType } from "./schoolProfileSchoolType";
@@ -34,6 +35,7 @@ export interface SchoolProfile {
   fiscalYearStartMonth?: number;
   isPartialFirstYear?: boolean;
   year1OperatingMonths?: number;
+  launchAssumptions?: SchoolProfileLaunchAssumptions;
   locationSecured?: boolean;
   facilityStreet?: string;
   facilityCity?: string;

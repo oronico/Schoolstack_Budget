@@ -1467,6 +1467,33 @@ components:
           type: boolean
         year1OperatingMonths:
           type: integer
+        # Task #703 — Assumptions-first launch checklist (new schools).
+        # Optional sub-object whose fields the wizard's
+        # LaunchAssumptionsChecklist persists. Kept explicit (rather than
+        # leaning on `additionalProperties: true`) so orval-generated
+        # zod schemas don't strip these keys at validation time.
+        launchAssumptions:
+          type: object
+          additionalProperties: true
+          properties:
+            committedStudents:
+              type: number
+            signedEnrollmentAgreements:
+              type: number
+            depositsCollected:
+              type: number
+            projectedOpeningMonth:
+              type: string
+            firstMonthWithRevenue:
+              type: string
+            firstMonthWithPayroll:
+              type: string
+            firstMonthWithRent:
+              type: string
+            preOpeningCashNeeds:
+              type: number
+            startupCosts:
+              type: number
         locationSecured:
           type: boolean
         facilityStreet:
