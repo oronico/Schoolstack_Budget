@@ -1088,6 +1088,7 @@ export function UnderwritingLandingPage() {
             {step === 2 ? (
               <div className="space-y-5">
                 <h2 className="font-display text-lg md:text-xl font-bold text-[#1E293B]">Enrollment</h2>
+                <p className="text-sm text-[#1E293B]/60" data-testid="help-enrollment">Use the number of students you reasonably expect, not your dream number. If you have deposits, signed agreements, or returning students, use those as your anchor.</p>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <FieldText label="Year-1 students" type="number" min={0} value={String(model.year1Students)} onChange={(v) => updateNum("year1Students", v)} testId="input-year1-students" />
                   <FieldText label="Annual growth (%)" type="number" min={-50} step={1} value={String(model.annualGrowthPct)} onChange={(v) => updateNum("annualGrowthPct", v)} testId="input-growth-pct" hint="Year-over-year enrollment growth" />
@@ -1144,6 +1145,7 @@ export function UnderwritingLandingPage() {
             {step === 3 ? (
               <div className="space-y-5">
                 <h2 className="font-display text-lg md:text-xl font-bold text-[#1E293B]">Revenue</h2>
+                <p className="text-sm text-[#1E293B]/60" data-testid="help-revenue">Enter the annual amount per student or annual fixed amount. The model will do the multiplication.</p>
                 <p className="text-sm text-[#1E293B]/60">
                   Enter the per-student amounts you'll collect. Leave a row at $0 to skip it. Tuition + public funding stack
                   for hybrid-funded schools.
@@ -1157,6 +1159,7 @@ export function UnderwritingLandingPage() {
             {step === 4 ? (
               <div className="space-y-5">
                 <h2 className="font-display text-lg md:text-xl font-bold text-[#1E293B]">Staffing</h2>
+                <p className="text-sm text-[#1E293B]/60" data-testid="help-staffing">Include the people actually doing the work. If the founder is unpaid at first, show when founder pay begins so the model reflects long-term sustainability.</p>
                 <p className="text-sm text-[#1E293B]/60">
                   Teacher count is calculated from your students-per-teacher ratio. We assume 18% benefits and 7.65% payroll tax on every role.
                 </p>
@@ -1237,6 +1240,7 @@ export function UnderwritingLandingPage() {
             {step === 5 ? (
               <div className="space-y-5">
                 <h2 className="font-display text-lg md:text-xl font-bold text-[#1E293B]">Expenses & facility</h2>
+                <p className="text-sm text-[#1E293B]/60" data-testid="help-expenses">Include costs you must pay even if enrollment is lower than expected, especially rent, insurance, software, payroll, and professional services.</p>
                 <p className="text-sm text-[#1E293B]/60">
                   Capture your big-rock annual costs and facility readiness.
                 </p>
@@ -1316,6 +1320,7 @@ export function UnderwritingLandingPage() {
             {step === 6 ? (
               <div className="space-y-5">
                 <h2 className="font-display text-lg md:text-xl font-bold text-[#1E293B]">Debt & cash</h2>
+                <p className="text-sm text-[#1E293B]/60" data-testid="help-cash">Annual profit does not always mean you have enough cash each month. Watch for months when expenses arrive before revenue.</p>
                 <p className="text-sm text-[#1E293B]/60">
                   Tell us about any existing debt and your cash position. These drive estimated DSCR and cash runway calculations.
                 </p>
@@ -1385,6 +1390,7 @@ export function UnderwritingLandingPage() {
             {step === 7 ? (
               <div className="space-y-6">
                 <h2 className="font-display text-lg md:text-xl font-bold text-[#1E293B]">Review & export</h2>
+                <p className="text-sm text-[#1E293B]/60" data-testid="help-export">This workbook is a planning tool. It can support conversations with lenders, funders, boards, and advisors, but it is not a loan application or funding decision.</p>
 
                 <div className="bg-[#FAF9F7] rounded-xl p-4 space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-[#1E293B]/60">School</span><span className="font-semibold text-[#1E293B]" data-testid="review-school-name">{model.schoolName || "Untitled School"}</span></div>
