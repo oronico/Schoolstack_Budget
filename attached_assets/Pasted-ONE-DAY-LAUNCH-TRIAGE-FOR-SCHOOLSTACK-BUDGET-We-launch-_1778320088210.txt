@@ -1,0 +1,169 @@
+ONE-DAY LAUNCH TRIAGE FOR SCHOOLSTACK BUDGET
+
+We launch tomorrow for the loan program. Stop expanding scope. Do not rebuild the app.
+
+Goal:
+Ship a stable public budget-readiness tool that helps beginner school founders build a credible first financial model and export a usable workbook for loan-readiness, board, funder, or lender conversations.
+
+Launch standard:
+- /underwriting loads in incognito
+- no login required
+- no redirect to /register
+- readiness analysis runs
+- Excel workbook downloads
+- workbook opens cleanly
+- no fantasy revenue
+- no NaN, undefined, #REF!, #DIV/0!, or #VALUE!
+- no Plaid or ACH copy
+- no loan approval or credit-decision language
+- Railway deploy is green
+- Netlify proxy to Railway works
+
+DO NOT DO:
+- do not build full CFO mode
+- do not build full underwriting workflow
+- do not build new database tables
+- do not add new export products
+- do not restructure the wizard
+- do not build grant narrative engine
+- do not add complex assumption confidence architecture
+- do not touch core finance formulas unless a test proves a defect
+
+PHASE 1. Deployment unblock
+
+1. Confirm API Dockerfile pins pnpm 10:
+artifacts/api-server/Dockerfile
+
+Required line:
+RUN corepack enable && corepack prepare pnpm@10 --activate
+
+2. Confirm root package.json includes:
+"packageManager": "pnpm@10"
+
+3. Confirm Railway uses:
+RAILWAY_DOCKERFILE_PATH=artifacts/api-server/Dockerfile
+
+4. Redeploy Railway.
+
+5. Verify:
+curl https://schoolstackbudget.up.railway.app/health
+curl https://schoolstackbudget.up.railway.app/api/ready
+curl https://budget.schoolstack.ai/api/ready
+
+PHASE 2. Public wizard smoke test
+
+Test:
+https://budget.schoolstack.ai/underwriting
+
+Incognito flow:
+1. Open page.
+2. Confirm no redirect.
+3. Complete default microschool model.
+4. Run readiness analysis.
+5. Download Excel.
+6. Open workbook.
+7. Confirm revenue is credible.
+8. Confirm workbook has no broken formulas or NaN/undefined values.
+
+PHASE 3. Minimum beginner guidance
+
+Add only short help text. Keep it lightweight.
+
+Enrollment:
+“Use the number of students you reasonably expect, not your dream number. If you have deposits, signed agreements, or returning students, use those as your anchor.”
+
+Revenue:
+“Enter the annual amount per student or annual fixed amount. The model will do the multiplication.”
+
+Staffing:
+“Include the people actually doing the work. If the founder is unpaid at first, show when founder pay begins so the model reflects long-term sustainability.”
+
+Expenses:
+“Include costs you must pay even if enrollment is lower than expected, especially rent, insurance, software, payroll, and professional services.”
+
+Cash:
+“Annual profit does not always mean you have enough cash each month. Watch for months when expenses arrive before revenue.”
+
+Export:
+“This workbook is a planning tool. It can support conversations with lenders, funders, boards, and advisors, but it is not a loan application or funding decision.”
+
+PHASE 4. Founder-facing language sweep
+
+Search founder-visible copy for:
+approved
+declined
+ineligible
+failed
+fail
+pass/fail
+credit decision
+underwriting decision
+loan approval
+approval packet
+credit memo
+bank determination
+rejected
+
+Replace with:
+worth strengthening
+needs more clarity
+may raise questions
+model needs support
+a lender or funder may ask about this
+useful for loan-readiness conversations
+
+Allowed exceptions:
+- internal tests
+- non-founder API status
+- system errors like password reset failed
+
+PHASE 5. Export label cleanup
+
+Use these founder-facing labels:
+- Founder Planning Workbook
+- 1-Year Operating Budget
+- 5-Year Financial Model
+- Lender Conversation Snapshot
+
+Do not use:
+- Underwriting Model Workbook
+- Credit Memo
+- Loan Approval Packet
+- Approval Packet
+
+PHASE 6. Final validation
+
+Run:
+pnpm run typecheck
+pnpm --filter @workspace/school-financial-model run build
+pnpm --filter @workspace/api-server run build
+pnpm --filter @workspace/api-server run qa:excel
+pnpm --filter @workspace/api-server run qa:formula-results
+pnpm --filter @workspace/api-server run qa:smoke-arithmetic
+pnpm --filter @workspace/school-financial-model run test
+
+If time is short, minimum required:
+pnpm run typecheck
+pnpm --filter @workspace/school-financial-model run build
+pnpm --filter @workspace/api-server run build
+pnpm --filter @workspace/api-server run qa:smoke-arithmetic
+
+PHASE 7. Launch proof note
+
+Create/update:
+docs/ONE_DAY_LAUNCH_PROOF_PACK.md
+
+Include:
+- Railway deploy status
+- API health
+- DB readiness
+- /underwriting incognito status
+- readiness analysis status
+- Excel export status
+- workbook open status
+- language sweep status
+- known watch items
+- final GO / NO GO
+
+Launch decision:
+GO only if Railway is green, /underwriting works, analysis runs, and Excel export opens cleanly.
