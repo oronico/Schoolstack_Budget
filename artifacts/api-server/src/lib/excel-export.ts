@@ -808,6 +808,384 @@ function precomputeFinancials(
   return { revenueByRow, revenueCategoryTotals, totalRevenue, totalPersonnel, totalExpenses, totalCapDebt, totalAllExpenses, netIncome, cumulativeNI, managementFee };
 }
 
+// Task #739 — Single-year ("1-Year Operating Budget") workbooks need a
+// month-by-month cash flow view tied to the annual P&L on the Financial
+// Model sheet. Spreads precomputed annual totals across 12 fiscal-year
+// months (default Jul–Jun, overridable via schoolProfile.fiscalYearStartMonth).
+//   - Revenue & operating expenses: spread evenly across `opMonths`
+//     (year1OperatingMonths when isPartialFirstYear, else 12).
+//   - Personnel: spread evenly across `opMonths` (no payroll outside
+//     operating window).
+//   - Capital & debt service: spread evenly across all 12 months
+//     (lenders bill year-round even before the school opens).
+// Each per-stream Annual Total cell uses a direct formula reference back
+// to the matching Financial Model row so the sheet can never drift from
+// the P&L. Includes a trough-month callout and an Ending Cash highlight.
+function buildMonthlyCashFlowTab(
+  ws: ExcelJS.Worksheet,
+  sp: SchoolProfile,
+  precomputed: PrecomputedFinancials,
+  expenseRows: ExpenseRow[],
+  enrollment: number[],
+  startingCash: number,
+  fmRows: { revenueRow: number; staffRow: number; expenseRow: number; mgmtFeeRow: number | null; capDebtRow: number; totalExpRow: number; netIncomeRow: number },
+): void {
+  const fyStart = sp.fiscalYearStartMonth || 7;
+  const isPartial = sp.isPartialFirstYear || false;
+  const opMonths = isPartial ? Math.max(1, Math.min(12, sp.year1OperatingMonths || 10)) : 12;
+  const students = enrollment[0] || 0;
+
+  ws.columns = [{ width: 32 }, ...Array(12).fill({ width: 14 }), { width: 16 }];
+
+  const monthHeaders: string[] = [""];
+  for (let i = 0; i < 12; i++) {
+    const mIdx = ((fyStart - 1 + i) % 12) + 1;
+    monthHeaders.push(MONTH_NAMES[mIdx]);
+  }
+  monthHeaders.push("Annual Total");
+
+  // Title
+  let r = 1;
+  ws.mergeCells(r, 1, r, 14);
+  ws.getCell(r, 1).value = `${sp.schoolName || "School"} — Year 1 Monthly Cash Flow`;
+  ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
+  ws.getRow(r).height = 26;
+
+  // Header row
+  r++;
+  ws.getRow(r).values = monthHeaders;
+  styleHeaderRow(ws, r, 14);
+
+  // Helper: write an evenly-spread row whose Annual Total ties back to a
+  // specific Financial Model cell.
+  function writeSpreadRow(label: string, annualTotal: number, monthsActive: number, fmFormula?: string, bold = false): { row: number; monthlyVals: number[] } {
+    r++;
+    ws.getCell(r, 1).value = label;
+    if (bold) styleBoldDataCell(ws.getCell(r, 1)); else styleDataCell(ws.getCell(r, 1));
+    const monthlyVals: number[] = new Array(12).fill(0);
+    if (monthsActive > 0 && annualTotal !== 0) {
+      const baseMonthly = Math.round(annualTotal / monthsActive);
+      let allocated = 0;
+      for (let m = 0; m < monthsActive; m++) {
+        // Last active month absorbs the rounding residual so monthly
+        // sum equals the annual total exactly (lender QA tolerates ±1
+        // but parity is cheap to maintain here).
+        const v = m === monthsActive - 1 ? annualTotal - allocated : baseMonthly;
+        allocated += v;
+        monthlyVals[m] = v;
+      }
+    }
+    for (let m = 0; m < 12; m++) {
+      const cell = ws.getCell(r, m + 2);
+      cell.value = monthlyVals[m];
+      cell.numFmt = CURRENCY_FORMAT;
+      if (bold) styleBoldDataCell(cell); else styleDataCell(cell);
+    }
+    const totalCell = ws.getCell(r, 14);
+    if (fmFormula) {
+      setFormula(totalCell, fmFormula, annualTotal);
+    } else {
+      setFormula(totalCell, `SUM(${c(r, 2)}:${c(r, 13)})`, annualTotal);
+    }
+    totalCell.numFmt = CURRENCY_FORMAT;
+    if (bold) styleBoldDataCell(totalCell); else styleDataCell(totalCell);
+    return { row: r, monthlyVals };
+  }
+
+  // ── Opening cash ──
+  r++;
+  styleSectionRow(ws, r, 14);
+  ws.getCell(r, 1).value = "OPENING CASH";
+
+  r++;
+  ws.getCell(r, 1).value = "Opening Cash Balance";
+  styleDataCell(ws.getCell(r, 1));
+  const openCashCell = ws.getCell(r, 2);
+  openCashCell.value = Math.round(startingCash);
+  openCashCell.numFmt = CURRENCY_FORMAT;
+  styleBoldDataCell(openCashCell);
+  const openCashRow = r;
+
+  // ── Cash inflows by source ──
+  r++;
+  styleSectionRow(ws, r, 14);
+  ws.getCell(r, 1).value = "CASH INFLOWS BY SOURCE";
+
+  const inflowRowNumbers: number[] = [];
+  // Iterate revenue categories in a stable, lender-friendly order.
+  const REV_CAT_ORDER = ["tuition_and_fees", "tuition_offsets", "school_choice", "public_funding", "philanthropy", "grants_contributions", "other_revenue"];
+  const seenRevCats = new Set<string>();
+  for (const cat of REV_CAT_ORDER) {
+    const totals = precomputed.revenueCategoryTotals.get(cat);
+    if (!totals) continue;
+    seenRevCats.add(cat);
+    const annual = Math.round(totals[0] ?? 0);
+    if (annual === 0) continue;
+    const label = REVENUE_CATEGORY_LABELS[cat] ?? cat;
+    const out = writeSpreadRow(toTitleCase(label), annual, opMonths);
+    inflowRowNumbers.push(out.row);
+  }
+  // Catch any category not in the canonical order list.
+  for (const [cat, totals] of precomputed.revenueCategoryTotals.entries()) {
+    if (seenRevCats.has(cat)) continue;
+    const annual = Math.round(totals[0] ?? 0);
+    if (annual === 0) continue;
+    const label = REVENUE_CATEGORY_LABELS[cat] ?? cat;
+    const out = writeSpreadRow(toTitleCase(label), annual, opMonths);
+    inflowRowNumbers.push(out.row);
+  }
+
+  // Total inflows row.
+  r++;
+  ws.getCell(r, 1).value = "Total Cash Inflows";
+  styleBoldDataCell(ws.getCell(r, 1));
+  const totalInflowRow = r;
+  for (let m = 0; m < 12; m++) {
+    const col = m + 2;
+    const cell = ws.getCell(r, col);
+    let monthly = 0;
+    for (const ir of inflowRowNumbers) {
+      const v = ws.getCell(ir, col).value;
+      if (typeof v === "number") monthly += v;
+    }
+    if (inflowRowNumbers.length > 0) {
+      const sumExpr = inflowRowNumbers.map(ir => c(ir, col)).join("+");
+      setFormula(cell, sumExpr, monthly);
+    } else {
+      cell.value = 0;
+    }
+    cell.numFmt = CURRENCY_FORMAT;
+    styleBoldDataCell(cell);
+  }
+  // Annual total ties to Financial Model revenue row.
+  setFormula(ws.getCell(r, 14), `'Financial Model'!B${fmRows.revenueRow}`, precomputed.totalRevenue[0] ?? 0);
+  ws.getCell(r, 14).numFmt = CURRENCY_FORMAT;
+  styleBoldDataCell(ws.getCell(r, 14));
+
+  // ── Cash outflows by category ──
+  r++;
+  styleSectionRow(ws, r, 14);
+  ws.getCell(r, 1).value = "CASH OUTFLOWS BY CATEGORY";
+
+  const outflowRowNumbers: number[] = [];
+
+  // Personnel (single line). Annual Total ties to FM staffing row.
+  const persOut = writeSpreadRow(
+    "Personnel",
+    precomputed.totalPersonnel[0] ?? 0,
+    opMonths,
+    `'Financial Model'!B${fmRows.staffRow}`,
+  );
+  outflowRowNumbers.push(persOut.row);
+
+  // Operating expenses by category. Recompute year-0 totals per category
+  // mirroring precomputeFinancials so the breakdown sums (with the
+  // last-month residual absorption) back to the FM operating-expense
+  // total.
+  const expCatTotals = new Map<string, number>();
+  const yearTotalRev = precomputed.totalRevenue[0] ?? 0;
+  for (const row of expenseRows) {
+    if (!row.enabled) continue;
+    // The management fee (authorizer_fee row) gets its own dedicated
+    // outflow line below when hasManagementFee is true — exclude it
+    // here to avoid double-counting in the category breakdown.
+    if (fmRows.mgmtFeeRow !== null && row.id === "authorizer_fee") continue;
+    let val = 0;
+    if (row.driverType === "percent_of_revenue") {
+      val = ((row.amounts?.[0] ?? 0) / 100) * yearTotalRev;
+    } else {
+      val = computeDriverValue(row.amounts, 0, row.driverType, students);
+    }
+    const catKey = row.category || "other";
+    expCatTotals.set(catKey, (expCatTotals.get(catKey) ?? 0) + val);
+  }
+  const EXP_CAT_ORDER = ["occupancy_facility", "instructional_program", "technology", "administrative_general"];
+  const seenExpCats = new Set<string>();
+  for (const cat of EXP_CAT_ORDER) {
+    if (!expCatTotals.has(cat)) continue;
+    seenExpCats.add(cat);
+    const annual = Math.round(expCatTotals.get(cat) ?? 0);
+    if (annual === 0) continue;
+    const label = EXPENSE_CATEGORY_LABELS[cat] ?? cat;
+    const out = writeSpreadRow(toTitleCase(label), annual, opMonths);
+    outflowRowNumbers.push(out.row);
+  }
+  for (const [cat, val] of expCatTotals.entries()) {
+    if (seenExpCats.has(cat)) continue;
+    const annual = Math.round(val);
+    if (annual === 0) continue;
+    const label = EXPENSE_CATEGORY_LABELS[cat] ?? cat;
+    const out = writeSpreadRow(toTitleCase(label), annual, opMonths);
+    outflowRowNumbers.push(out.row);
+  }
+
+  // Management fee (when present) — spread across the operating window.
+  // The Financial Model lists management fee on its own row between Opex
+  // and Capital & Debt, so we spread it the same way as opex to keep the
+  // monthly shape realistic.
+  if (fmRows.mgmtFeeRow !== null) {
+    const mgmtFeeAnnual = Math.round(precomputed.managementFee[0] ?? 0);
+    if (mgmtFeeAnnual !== 0) {
+      const mfOut = writeSpreadRow(
+        "Management Fee",
+        mgmtFeeAnnual,
+        opMonths,
+        `'Financial Model'!B${fmRows.mgmtFeeRow}`,
+      );
+      outflowRowNumbers.push(mfOut.row);
+    }
+  }
+
+  // Capital & debt service spread across all 12 months.
+  const capDebtAnnual = precomputed.totalCapDebt[0] ?? 0;
+  if (capDebtAnnual !== 0) {
+    const cdOut = writeSpreadRow(
+      "Capital & Debt Service",
+      capDebtAnnual,
+      12,
+      `'Financial Model'!B${fmRows.capDebtRow}`,
+    );
+    outflowRowNumbers.push(cdOut.row);
+  }
+
+  // Total outflows row.
+  r++;
+  ws.getCell(r, 1).value = "Total Cash Outflows";
+  styleBoldDataCell(ws.getCell(r, 1));
+  const totalOutflowRow = r;
+  for (let m = 0; m < 12; m++) {
+    const col = m + 2;
+    const cell = ws.getCell(r, col);
+    let monthly = 0;
+    for (const or of outflowRowNumbers) {
+      const v = ws.getCell(or, col).value;
+      if (typeof v === "number") monthly += v;
+    }
+    if (outflowRowNumbers.length > 0) {
+      const sumExpr = outflowRowNumbers.map(or => c(or, col)).join("+");
+      setFormula(cell, sumExpr, monthly);
+    } else {
+      cell.value = 0;
+    }
+    cell.numFmt = CURRENCY_FORMAT;
+    styleBoldDataCell(cell);
+  }
+  // Tie annual outflow total directly to the Financial Model "Total
+  // Expenses" row. That row already includes Personnel + Opex +
+  // Management Fee (when present) + Capital & Debt, so a single
+  // reference is robust to row-shifting from optional sections.
+  const totalOutflowAnnual =
+    (precomputed.totalPersonnel[0] ?? 0)
+    + (precomputed.totalExpenses[0] ?? 0)
+    + (precomputed.totalCapDebt[0] ?? 0);
+  setFormula(
+    ws.getCell(r, 14),
+    `'Financial Model'!B${fmRows.totalExpRow}`,
+    totalOutflowAnnual,
+  );
+  ws.getCell(r, 14).numFmt = CURRENCY_FORMAT;
+  styleBoldDataCell(ws.getCell(r, 14));
+
+  // ── Net change & ending cash ──
+  r++;
+  styleSectionRow(ws, r, 14);
+  ws.getCell(r, 1).value = "NET CHANGE IN CASH";
+
+  r++;
+  ws.getCell(r, 1).value = "Net Cash Flow (Inflows − Outflows)";
+  styleBoldDataCell(ws.getCell(r, 1));
+  const netCfRow = r;
+  const netCfMonthly: number[] = new Array(12).fill(0);
+  for (let m = 0; m < 12; m++) {
+    const col = m + 2;
+    const inV = ws.getCell(totalInflowRow, col).value;
+    const outV = ws.getCell(totalOutflowRow, col).value;
+    const inN = typeof inV === "number" ? inV : (inV && typeof inV === "object" && "result" in inV && typeof (inV as { result: unknown }).result === "number" ? (inV as { result: number }).result : 0);
+    const outN = typeof outV === "number" ? outV : (outV && typeof outV === "object" && "result" in outV && typeof (outV as { result: unknown }).result === "number" ? (outV as { result: number }).result : 0);
+    netCfMonthly[m] = inN - outN;
+    setFormula(ws.getCell(r, col), `${c(totalInflowRow, col)}-${c(totalOutflowRow, col)}`, netCfMonthly[m]);
+    ws.getCell(r, col).numFmt = CURRENCY_FORMAT;
+    styleBoldDataCell(ws.getCell(r, col));
+  }
+  setFormula(
+    ws.getCell(r, 14),
+    `'Financial Model'!B${fmRows.netIncomeRow}`,
+    precomputed.netIncome[0] ?? 0,
+  );
+  ws.getCell(r, 14).numFmt = CURRENCY_FORMAT;
+  styleBoldDataCell(ws.getCell(r, 14));
+
+  r++;
+  ws.getCell(r, 1).value = "Ending Cash Balance";
+  styleBoldDataCell(ws.getCell(r, 1));
+  const endingCashRow = r;
+  const endingMonthly: number[] = new Array(12).fill(0);
+  let running = startingCash;
+  for (let m = 0; m < 12; m++) {
+    const col = m + 2;
+    running = running + netCfMonthly[m];
+    endingMonthly[m] = running;
+    if (m === 0) {
+      setFormula(ws.getCell(r, col), `${c(openCashRow, 2)}+${c(netCfRow, col)}`, Math.round(running));
+    } else {
+      setFormula(ws.getCell(r, col), `${c(endingCashRow, col - 1)}+${c(netCfRow, col)}`, Math.round(running));
+    }
+    ws.getCell(r, col).numFmt = CURRENCY_FORMAT;
+    styleBoldDataCell(ws.getCell(r, col));
+  }
+  setFormula(ws.getCell(r, 14), `${c(endingCashRow, 13)}`, Math.round(endingMonthly[11]));
+  ws.getCell(r, 14).numFmt = CURRENCY_FORMAT;
+  styleBoldDataCell(ws.getCell(r, 14));
+  // Highlight Year 1 ending cash (red if negative, amber if thin, green if healthy).
+  applyHealthFill(ws.getCell(r, 14), endingMonthly[11], { green: Math.max(startingCash * 0.25, 1), amber: 0 });
+
+  // ── Trough callout ──
+  r += 2;
+  const minCash = Math.min(...endingMonthly);
+  const minIdx = endingMonthly.indexOf(minCash);
+  const minMonthLabel = MONTH_NAMES[((fyStart - 1 + minIdx) % 12) + 1];
+
+  ws.getCell(r, 1).value = "Cash Trough Month";
+  styleDataCell(ws.getCell(r, 1));
+  ws.getCell(r, 2).value = `${minMonthLabel} (Month ${minIdx + 1})`;
+  ws.getCell(r, 2).font = BOLD_FONT;
+  ws.getCell(r, 2).border = THIN_BORDER;
+  ws.mergeCells(r, 2, r, 4);
+
+  r++;
+  ws.getCell(r, 1).value = "Trough Cash Balance";
+  styleDataCell(ws.getCell(r, 1));
+  setFormula(ws.getCell(r, 2), `MIN(${c(endingCashRow, 2)}:${c(endingCashRow, 13)})`, Math.round(minCash));
+  ws.getCell(r, 2).numFmt = CURRENCY_FORMAT;
+  styleBoldDataCell(ws.getCell(r, 2));
+  applyHealthFill(ws.getCell(r, 2), minCash, { green: Math.max(startingCash * 0.25, 1), amber: 0 });
+
+  r++;
+  ws.getCell(r, 1).value = "Year 1 Ending Cash";
+  styleDataCell(ws.getCell(r, 1));
+  setFormula(ws.getCell(r, 2), `${c(endingCashRow, 13)}`, Math.round(endingMonthly[11]));
+  ws.getCell(r, 2).numFmt = CURRENCY_FORMAT;
+  styleBoldDataCell(ws.getCell(r, 2));
+  applyHealthFill(ws.getCell(r, 2), endingMonthly[11], { green: Math.max(startingCash * 0.25, 1), amber: 0 });
+
+  r += 2;
+  ws.getCell(r, 1).value = "Year 1 operates for " + opMonths + " of 12 months" + (isPartial ? " (partial-year start)" : "") + ". Revenue and operating expenses are spread evenly across the operating window; capital and debt service are spread across all 12 months. Annual totals are tied directly to the Financial Model sheet.";
+  ws.getCell(r, 1).font = { italic: true, size: 9, name: "Calibri", color: { argb: "FF6B7280" } };
+  ws.mergeCells(r, 1, r, 14);
+  ws.getRow(r).alignment = { wrapText: true, vertical: "top" };
+  ws.getRow(r).height = 28;
+
+  setPrintArea(ws, r, 14);
+}
+
+function toTitleCase(label: string): string {
+  return label
+    .toLowerCase()
+    .split(/\s+/)
+    .map((w) => w.length === 0 ? w : w[0].toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
 export async function generateWorkbook(rawData: Record<string, unknown>, consultantData?: ConsultantSummary): Promise<Buffer> {
   const data = rawData as unknown as ModelData;
   const sp = data.schoolProfile || {};
@@ -865,6 +1243,10 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
     const expensesWs = wb.addWorksheet("Operating Expenses");
     const capitalWs = wb.addWorksheet("Capital & Debt");
     const pnlWs = wb.addWorksheet("Financial Model");
+    // Task #739 — In single-year mode the Monthly Cash Flow sheet is
+    // inserted between the Financial Model and Summary tabs so the cover
+    // ToC and sheet ordering stay logical (P&L → monthly cash → summary).
+    const monthlyCashFlowWs = yearCount === 1 ? wb.addWorksheet("Monthly Cash Flow") : null;
     const summaryWs = wb.addWorksheet("Summary");
 
     const revTotalRow = buildRevenueScheduleTab(revenueWs, revenueRows, enrollmentByYear, yearCount, cols, yearHeaders, aRefs, data.tuitionTiers, precomputed);
@@ -874,8 +1256,34 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
 
     buildPnLTab(pnlWs, yearCount, cols, yearHeaders, revTotalRow, staffTotalRow, expTotalRow, capTotalRow, sp.entityType, precomputed, sp.hasManagementFee, data);
 
-    const revenueMix = computeRevenueMixForExport(revenueRows, enrollmentByYear, yearCount, data.tuitionTiers);
     const mgmtOffset = sp.hasManagementFee ? 1 : 0;
+
+    if (monthlyCashFlowWs) {
+      // Financial Model row layout (mirrors buildPnLTab):
+      //   row 2 = Total Revenue, row 3 = Personnel, row 4 = Operating
+      //   Expenses, row 5 = Management Fee (if hasManagementFee), then
+      //   Capital & Debt, Total Expenses, Net Income.
+      const startingCash = data.priorYearSnapshot?.endingCash ?? data.currentYearProjection?.currentCash ?? 0;
+      buildMonthlyCashFlowTab(
+        monthlyCashFlowWs,
+        sp,
+        precomputed,
+        expenseRows,
+        enrollmentByYear,
+        startingCash,
+        {
+          revenueRow: 2,
+          staffRow: 3,
+          expenseRow: 4,
+          mgmtFeeRow: sp.hasManagementFee ? 5 : null,
+          capDebtRow: 5 + mgmtOffset,
+          totalExpRow: 6 + mgmtOffset,
+          netIncomeRow: 7 + mgmtOffset,
+        },
+      );
+    }
+
+    const revenueMix = computeRevenueMixForExport(revenueRows, enrollmentByYear, yearCount, data.tuitionTiers);
     buildSummaryTabNew(summaryWs, sp, yearCount, cols, yearHeaders, {
       fmRevenueRow: 2, fmStaffRow: 3, fmExpenseRow: 4, fmCapDebtRow: 5 + mgmtOffset,
       fmTotalExpRow: 6 + mgmtOffset, fmNIRow: 7 + mgmtOffset, fmCumNIRow: 8 + mgmtOffset, fmReserveRow: 9 + mgmtOffset,
