@@ -12,7 +12,12 @@ import { createRateLimiter } from "../lib/rate-limiter";
 import { trackEvent } from "../lib/track-event";
 import { isEmailConfigured, sendReviewRequestToTeam, sendReviewConfirmation } from "../lib/mailer";
 import { schoolTypeDisplay, entityTypeDisplay } from "../lib/pdf-utils";
-import { computeAnnualDscr } from "@workspace/finance";
+import {
+  computeAnnualDscr,
+  parseAccountingExportCsv,
+  mapAccountingExportToSnapshot,
+  MAX_ACCOUNTING_EXPORT_BYTES,
+} from "@workspace/finance";
 
 const router: IRouter = Router();
 
@@ -418,6 +423,52 @@ router.post("/public/track-cta", rateLimiter, async (req: Request, res: Response
 const TIMING_FIELD_MAX_LEN = 64;
 const TIMING_STEP_MAX = 100;
 const TIMING_DURATION_MAX_SECONDS = 24 * 60 * 60; // 24h is well past any sane wizard session
+
+// Task #708 — Server-side P&L import. Lets the wizard's "Import from
+// QuickBooks" / CSV-fallback affordances post a raw QuickBooks (or
+// generic) Profit & Loss export and get back the same parsed totals +
+// snapshot field mapping the client-side parser would produce. The UI
+// still parses client-side by default (so the founder's books never
+// leave their browser), but routing through this endpoint is what lets
+// a future QuickBooks-OAuth importer land its server-fetched CSV here
+// without re-implementing the mapping. Source is tracked so we can see
+// how often founders pick the QuickBooks path vs. the generic CSV
+// fallback.
+router.post("/public/import-actuals", rateLimiter, async (req: Request, res: Response) => {
+  try {
+    const { csv, source } = req.body ?? {};
+    if (typeof csv !== "string" || csv.length === 0) {
+      res.status(400).json({ error: "Missing csv body." });
+      return;
+    }
+    if (csv.length > MAX_ACCOUNTING_EXPORT_BYTES) {
+      res.status(413).json({
+        error: `CSV is larger than ${Math.round(MAX_ACCOUNTING_EXPORT_BYTES / 1000)} KB. Trim it to a single P&L summary and re-upload.`,
+      });
+      return;
+    }
+    const normalizedSource = source === "quickbooks" ? "quickbooks" : "csv";
+    const parsed = parseAccountingExportCsv(csv);
+    const mappings = mapAccountingExportToSnapshot(parsed);
+    const snapshot: Record<string, number> = {};
+    for (const [key, value] of mappings) snapshot[key] = value;
+    await trackEvent("actuals_import", null, {
+      source: normalizedSource,
+      recognizedRowCount: parsed.recognizedRowCount,
+      mappedFieldCount: mappings.length,
+    });
+    res.json({
+      source: normalizedSource,
+      totals: parsed.totals,
+      snapshot,
+      parseWarnings: parsed.parseWarnings,
+      recognizedRowCount: parsed.recognizedRowCount,
+    });
+  } catch (err) {
+    console.error("Public actuals import error:", err);
+    res.status(500).json({ error: "Something went wrong importing the P&L." });
+  }
+});
 
 router.post("/public/timing", rateLimiter, async (req: Request, res: Response) => {
   try {

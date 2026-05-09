@@ -1,12 +1,14 @@
 import { useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
-import { ClipboardCheck, Upload, ArrowLeftRight, FileSpreadsheet, AlertTriangle } from "lucide-react";
+import { ClipboardCheck, Upload, ArrowLeftRight, FileSpreadsheet, AlertTriangle, BookOpen } from "lucide-react";
 import {
   parseAccountingExportCsv,
   parseAccountingExportRows,
+  mapAccountingExportToSnapshot,
   MAX_ACCOUNTING_EXPORT_BYTES,
   PATHWAY_FRAMING_COPY,
   type ParsedAccountingExport,
+  type ActualsSnapshotField,
 } from "@workspace/finance";
 import { FormInput } from "@/components/ui/form-inputs";
 import { hasActualsSeedData } from "@/lib/seed-from-actuals";
@@ -27,25 +29,9 @@ import { hasActualsSeedData } from "@/lib/seed-from-actuals";
 // confirmation that the values entered here stay saved on the model — so
 // the founder can flip back without losing typed-in numbers.
 
-type FieldKey =
-  | "totalRevenue"
-  | "totalExpenses"
-  | "tuitionRevenue"
-  | "philanthropyRevenue"
-  | "personnelExpenses"
-  | "facilityExpenses";
+type FieldKey = ActualsSnapshotField;
 
-function mapParsedToSnapshot(parsed: ParsedAccountingExport): Array<[FieldKey, number]> {
-  const t = parsed.totals;
-  const out: Array<[FieldKey, number]> = [];
-  if (typeof t.totalRevenue === "number") out.push(["totalRevenue", t.totalRevenue]);
-  if (typeof t.totalExpenses === "number") out.push(["totalExpenses", t.totalExpenses]);
-  if (typeof t.tuitionRevenue === "number") out.push(["tuitionRevenue", t.tuitionRevenue]);
-  if (typeof t.philanthropyRevenue === "number") out.push(["philanthropyRevenue", t.philanthropyRevenue]);
-  if (typeof t.payrollExpense === "number") out.push(["personnelExpenses", t.payrollExpense]);
-  if (typeof t.facilityExpense === "number") out.push(["facilityExpenses", t.facilityExpense]);
-  return out;
-}
+type ImportSource = "quickbooks" | "csv";
 
 export function ActualsIntakeStep({ jumpToStep }: { jumpToStep?: (s: number) => void }) {
   const { watch, setValue, getValues } = useFormContext();
@@ -75,8 +61,27 @@ export function ActualsIntakeStep({ jumpToStep }: { jumpToStep?: (s: number) => 
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [filledFields, setFilledFields] = useState<FieldKey[]>([]);
   const [parseWarnings, setParseWarnings] = useState<string[]>([]);
+  // Tracks which entry-point the founder picked so the upload summary
+  // and analytics can distinguish "Imported from QuickBooks" from the
+  // generic CSV fallback (Xero, Wave, hand-rolled spreadsheet, etc.).
+  const [importSource, setImportSource] = useState<ImportSource | null>(null);
+  // Inline instruction panel for the QuickBooks path. Surfaced before
+  // the picker so founders know where to find Reports → P&L → Export.
+  const [showQuickBooksHelp, setShowQuickBooksHelp] = useState(false);
 
-  const triggerPicker = () => fileInputRef.current?.click();
+  const triggerPicker = (source: ImportSource) => {
+    setImportSource(source);
+    fileInputRef.current?.click();
+  };
+
+  const handleQuickBooksClick = () => {
+    setImportSource("quickbooks");
+    if (showQuickBooksHelp) {
+      triggerPicker("quickbooks");
+    } else {
+      setShowQuickBooksHelp(true);
+    }
+  };
 
   const handleFile = async (file: File) => {
     setUploadError(null);
@@ -120,7 +125,7 @@ export function ActualsIntakeStep({ jumpToStep }: { jumpToStep?: (s: number) => 
         const text = await file.text();
         parsed = parseAccountingExportCsv(text);
       }
-      const mappings = mapParsedToSnapshot(parsed);
+      const mappings = mapAccountingExportToSnapshot(parsed);
       const filled: FieldKey[] = [];
       for (const [key, value] of mappings) {
         const current = getValues(`priorYearSnapshot.${key}`) as number | string | undefined;
@@ -194,9 +199,9 @@ export function ActualsIntakeStep({ jumpToStep }: { jumpToStep?: (s: number) => 
           <div className="flex items-start gap-3">
             <Upload className="h-5 w-5 text-emerald-700 flex-shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground">Have a P&amp;L export? Drop it in.</p>
+              <p className="text-sm font-semibold text-foreground">Auto-import last year's books</p>
               <p className="text-xs text-muted-foreground mt-1">
-                We'll read your QuickBooks, Xero, or Wave Profit &amp; Loss and pre-fill the six numbers below. We won't overwrite anything you've already typed.
+                Pull the six numbers below straight from your accounting tool. We won't overwrite anything you've already typed, and your books never leave your browser.
               </p>
               <input
                 ref={fileInputRef}
@@ -206,22 +211,57 @@ export function ActualsIntakeStep({ jumpToStep }: { jumpToStep?: (s: number) => 
                 onChange={onFileChange}
                 data-testid="actuals-intake-upload-input"
               />
-              <button
-                type="button"
-                onClick={triggerPicker}
-                disabled={isParsing}
-                data-testid="actuals-intake-upload-button"
-                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
-              >
-                <FileSpreadsheet className="h-4 w-4" />
-                {isParsing ? "Reading file…" : uploadFilename ? "Upload a different export" : "Upload P&L (CSV or Excel)"}
-              </button>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleQuickBooksClick}
+                  disabled={isParsing}
+                  data-testid="actuals-intake-quickbooks-button"
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  {isParsing && importSource === "quickbooks"
+                    ? "Reading file…"
+                    : showQuickBooksHelp
+                      ? "Choose your QuickBooks export"
+                      : "Import from QuickBooks"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => triggerPicker("csv")}
+                  disabled={isParsing}
+                  data-testid="actuals-intake-upload-button"
+                  className="inline-flex items-center gap-2 rounded-lg border border-emerald-600 bg-white px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  {isParsing && importSource === "csv"
+                    ? "Reading file…"
+                    : uploadFilename
+                      ? "Upload a different export"
+                      : "Upload CSV or Excel (Xero, Wave, other)"}
+                </button>
+              </div>
+              {showQuickBooksHelp && (
+                <div
+                  data-testid="actuals-intake-quickbooks-help"
+                  className="mt-3 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs text-foreground"
+                >
+                  <p className="font-semibold">Export your Profit &amp; Loss from QuickBooks:</p>
+                  <ol className="mt-1 list-decimal pl-4 space-y-0.5 text-muted-foreground">
+                    <li>In QuickBooks, open <span className="font-medium">Reports → Profit and Loss</span>.</li>
+                    <li>Set the date range to last fiscal year and run the report.</li>
+                    <li>Click <span className="font-medium">Export → Export to Excel</span> (CSV also works).</li>
+                    <li>Click <span className="font-medium">Choose your QuickBooks export</span> above and pick the file.</li>
+                  </ol>
+                </div>
+              )}
               {uploadFilename && filledFields.length > 0 && (
                 <p
                   data-testid="actuals-intake-upload-summary"
                   className="text-xs text-emerald-800 mt-2"
                 >
-                  Pulled {filledFields.length} number{filledFields.length === 1 ? "" : "s"} from <span className="font-medium">{uploadFilename}</span>. Review the cells below and edit anything that looks off.
+                  {importSource === "quickbooks" ? "Imported" : "Pulled"} {filledFields.length} number{filledFields.length === 1 ? "" : "s"} from <span className="font-medium">{uploadFilename}</span>
+                  {importSource === "quickbooks" ? " (QuickBooks)" : ""}. Review the cells below and edit anything that looks off.
                 </p>
               )}
               {uploadError && (

@@ -227,12 +227,14 @@ export {
   parseAccountingExportCsv,
   parseAccountingExportRows,
   parseAccountingNumber,
+  mapAccountingExportToSnapshot,
   MAX_ACCOUNTING_EXPORT_BYTES,
   computeCategorySubtotalReconciliation,
   CATEGORY_RECONCILIATION_THRESHOLD,
   type AccountingExportTotals,
   type ParsedAccountingExport,
   type CategorySubtotalReconciliation,
+  type ActualsSnapshotField,
 } from "./decision-engine/accounting-export-parser.js";
 
 export type { AccountingExportLike, LiveSnapshotLike } from "./decision-engine/model-shape.js";

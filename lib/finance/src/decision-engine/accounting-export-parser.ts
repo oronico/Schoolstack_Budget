@@ -114,6 +114,34 @@ export function computeCategorySubtotalReconciliation(
 // avoid pathological parser inputs.
 export const MAX_ACCOUNTING_EXPORT_BYTES = 1_000_000;
 
+// Snapshot field keys filled by the Actuals Intake step's "Import from
+// QuickBooks" / CSV upload affordances. Kept here next to the parser so
+// the api-server import endpoint, the wizard upload UI, and any future
+// QuickBooks-OAuth importer all agree on which priorYearSnapshot cells
+// the headline P&L totals map onto.
+export type ActualsSnapshotField =
+  | "totalRevenue"
+  | "totalExpenses"
+  | "tuitionRevenue"
+  | "philanthropyRevenue"
+  | "personnelExpenses"
+  | "facilityExpenses";
+
+export function mapAccountingExportToSnapshot(
+  parsed: ParsedAccountingExport,
+): Array<[ActualsSnapshotField, number]> {
+  const t = parsed.totals;
+  const out: Array<[ActualsSnapshotField, number]> = [];
+  if (typeof t.totalRevenue === "number") out.push(["totalRevenue", t.totalRevenue]);
+  if (typeof t.totalExpenses === "number") out.push(["totalExpenses", t.totalExpenses]);
+  if (typeof t.tuitionRevenue === "number") out.push(["tuitionRevenue", t.tuitionRevenue]);
+  if (typeof t.philanthropyRevenue === "number")
+    out.push(["philanthropyRevenue", t.philanthropyRevenue]);
+  if (typeof t.payrollExpense === "number") out.push(["personnelExpenses", t.payrollExpense]);
+  if (typeof t.facilityExpense === "number") out.push(["facilityExpenses", t.facilityExpense]);
+  return out;
+}
+
 const REVENUE_LABEL_PATTERNS: RegExp[] = [
   /^total\s+(income|revenue|revenues)$/i,
   /^total\s+ordinary\s+(income|revenue|revenues)$/i,
