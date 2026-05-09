@@ -518,6 +518,14 @@ export function NarrativeStep({ modelId, jumpToStep }: NarrativeStepProps) {
         })}
       </div>
 
+      <AudienceDraftsSection
+        narrative={narrative}
+        consultantData={consultantData as Record<string, unknown> | undefined}
+        formValues={formValues}
+        setValue={setValue}
+        register={register}
+      />
+
       {flagsLoading && (
         <div className="flex items-center justify-center py-8 gap-3 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
@@ -599,6 +607,218 @@ export function NarrativeStep({ modelId, jumpToStep }: NarrativeStepProps) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// Audience-specific narrative drafts (Board / Grant / Lender). Each draft
+// is auto-generated from the founder's model so they have a starting point,
+// then editable inline. The framing line "draft from your model — edit
+// before sending" is intentional: founders should not ship the auto-draft
+// verbatim, and a reviewer should never see machine prose unedited.
+// ───────────────────────────────────────────────────────────────────────
+
+type AudienceKey = "board" | "grant" | "lender";
+
+const AUDIENCE_DEFS: Array<{
+  key: AudienceKey;
+  label: string;
+  helper: string;
+  icon: typeof Users;
+}> = [
+  {
+    key: "board",
+    label: "Board narrative",
+    helper:
+      "A warmer, mission-anchored update for trustees. Frames cash, DSCR, and risks as decisions the board can help with.",
+    icon: Users,
+  },
+  {
+    key: "grant",
+    label: "Grant narrative",
+    helper:
+      "A mission-aligned, multi-year impact framing for foundation officers and grant reviewers.",
+    icon: BookOpen,
+  },
+  {
+    key: "lender",
+    label: "Lender narrative",
+    helper:
+      "A factual, lender-grade summary of DSCR, runway, stress results, and the next step before lender conversations.",
+    icon: Shield,
+  },
+];
+
+function buildAudienceDraft(
+  audience: AudienceKey,
+  formValues: Record<string, unknown>,
+  consultantData: Record<string, unknown> | undefined,
+): string {
+  const sp = (formValues.schoolProfile || {}) as Record<string, unknown>;
+  const en = (formValues.enrollment || {}) as Record<string, unknown>;
+  const schoolName =
+    (typeof sp.schoolName === "string" && sp.schoolName.trim()) ||
+    "the school";
+  const y1 = Number(en.year1 ?? 0) || 0;
+  const y5 = Number(en.year5 ?? 0) || 0;
+  const enrollmentLine =
+    y1 && y5
+      ? `${y1.toLocaleString()} students in Year 1, growing to ${y5.toLocaleString()} by Year 5`
+      : `the enrollment trajectory in the budget`;
+
+  const cd = (consultantData || {}) as Record<string, unknown>;
+  const lenderReadiness =
+    typeof cd.lenderReadiness === "string" ? cd.lenderReadiness : null;
+  const biggestStrength =
+    typeof cd.biggestStrength === "string" && cd.biggestStrength.trim()
+      ? cd.biggestStrength
+      : null;
+  const biggestRisk =
+    typeof cd.biggestRisk === "string" && cd.biggestRisk.trim()
+      ? cd.biggestRisk
+      : null;
+  const explanation =
+    typeof cd.lenderReadinessExplanation === "string"
+      ? cd.lenderReadinessExplanation
+      : null;
+
+  const strengthLine = biggestStrength
+    ? `The model's strongest point right now: ${biggestStrength}`
+    : `The model documents the school's strongest planning point in the body of the budget.`;
+  const riskLine = biggestRisk
+    ? `The single item we'd want to address first: ${biggestRisk}`
+    : `The model surfaces the watch items the team is tracking in the risk section of the budget.`;
+
+  if (audience === "board") {
+    return [
+      `Trustees, this update is a snapshot of where ${schoolName} stands financially today, drawn directly from the same canonical model the dashboard and any external packet share. We are planning for ${enrollmentLine}.`,
+      strengthLine + ".",
+      riskLine + ". This is a board-level conversation — the team is asking for direction, not just an FYI.",
+      lenderReadiness
+        ? `Read against a lender's standard criteria, the plan today reads as a "${lenderReadiness}" packet. ${explanation ?? ""}`.trim()
+        : `Detail on how the plan reads against the standard external review criteria is in the appendix.`,
+    ].join("\n\n");
+  }
+
+  if (audience === "grant") {
+    return [
+      `Thank you for considering ${schoolName}. The figures below are drawn directly from the same canonical financial model the board and any lender would see, so every number ties back to a line in the budget.`,
+      `Over the grant horizon we are planning for ${enrollmentLine}. Each additional seat funded by this grant translates directly into students served against the school's mission.`,
+      strengthLine + ".",
+      `Two stewardship matters we want to surface up front: ${biggestRisk ?? "the watch items documented in the risk section of the budget"}. The team's planned response is described in detail in the model's recommendations.`,
+      `We are happy to walk through any line of the model in detail with the funder.`,
+    ].join("\n\n");
+  }
+
+  // lender
+  return [
+    `${schoolName} is presenting this packet for lender review. The figures below are drawn from the canonical financial model that the board, dashboard, and any external review use as the single source of truth.`,
+    `Enrollment plan: ${enrollmentLine}. The model's stress battery and sensitivity tables are in the body of the packet for review.`,
+    strengthLine + ".",
+    riskLine + ".",
+    lenderReadiness
+      ? `Against the standard lender battery, the model today reads as a "${lenderReadiness}" packet. ${explanation ?? ""}`.trim()
+      : `The packet documents DSCR, runway, and reserve metrics in the body for direct comparison against a lender's covenants.`,
+    `Recommended next step before lender conversations: address the highest-priority recommendation in the model and re-run the stress battery.`,
+  ].join("\n\n");
+}
+
+function AudienceDraftsSection({
+  narrative,
+  consultantData,
+  formValues,
+  setValue,
+  register,
+}: {
+  narrative: Record<string, string>;
+  consultantData: Record<string, unknown> | undefined;
+  formValues: Record<string, unknown>;
+  setValue: (name: string, value: unknown, opts?: { shouldDirty?: boolean }) => void;
+  register: (name: string) => Record<string, unknown>;
+}) {
+  const audienceDrafts = ((narrative as unknown as Record<string, unknown>)
+    .audienceDrafts || {}) as Record<AudienceKey, string>;
+
+  // Auto-fill any draft that is still blank with the freshly-generated text,
+  // so the founder always sees a starting point. Once they edit, we leave it
+  // alone (write-once per draft).
+  useEffect(() => {
+    for (const def of AUDIENCE_DEFS) {
+      const current = (audienceDrafts[def.key] || "").trim();
+      if (current.length === 0) {
+        const draft = buildAudienceDraft(def.key, formValues, consultantData);
+        setValue(`budgetNarrative.audienceDrafts.${def.key}`, draft, {
+          shouldDirty: false,
+        });
+      }
+    }
+    // We deliberately exclude `audienceDrafts` from deps to avoid re-running
+    // on every keystroke; the consultantData / formValues identity is stable
+    // enough between renders for this purpose.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [consultantData]);
+
+  const handleRegenerate = (key: AudienceKey) => {
+    const draft = buildAudienceDraft(key, formValues, consultantData);
+    setValue(`budgetNarrative.audienceDrafts.${key}`, draft, {
+      shouldDirty: true,
+    });
+  };
+
+  return (
+    <div className="space-y-4 pt-4 border-t" data-testid="audience-drafts-section">
+      <div>
+        <h3 className="font-display text-lg font-bold text-foreground flex items-center gap-2">
+          <FileText className="h-5 w-5 text-amber-600" />
+          Board, grant, and lender drafts
+        </h3>
+        <p className="text-sm text-muted-foreground mt-1">
+          We've written a first draft from your model — edit before sending.
+          Each draft uses the same canonical numbers, but the framing changes for the audience.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {AUDIENCE_DEFS.map((def) => {
+          const Icon = def.icon;
+          return (
+            <div
+              key={def.key}
+              className="border rounded-xl bg-card p-4 space-y-2"
+              data-testid={`audience-draft-card-${def.key}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-2">
+                  <Icon className="h-4 w-4 mt-1 text-amber-600 shrink-0" />
+                  <div>
+                    <div className="font-semibold text-foreground">{def.label}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {def.helper}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRegenerate(def.key)}
+                  className="text-xs font-semibold text-amber-700 hover:text-amber-900 underline underline-offset-2 shrink-0"
+                  data-testid={`audience-draft-regenerate-${def.key}`}
+                >
+                  Regenerate from model
+                </button>
+              </div>
+              <p className="text-[11px] text-muted-foreground italic">
+                Draft from your model — edit before sending.
+              </p>
+              <textarea
+                className="w-full min-h-[180px] p-3 text-sm border rounded-lg bg-background resize-y focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-amber-400"
+                data-testid={`audience-draft-textarea-${def.key}`}
+                {...(register(`budgetNarrative.audienceDrafts.${def.key}`) as Record<string, unknown>)}
+              />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

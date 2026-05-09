@@ -120,6 +120,33 @@ function CollapsibleTable({ children, label }: { children: React.ReactNode; labe
   );
 }
 
+function SectionBand({
+  number,
+  title,
+  subtitle,
+}: {
+  number: number;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <div
+      data-testid={`consultant-section-band-${number}`}
+      className="flex items-start gap-3 pt-4 pb-2 border-b border-border/40"
+    >
+      <span className="mt-0.5 inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary font-bold text-xs shrink-0">
+        {number}
+      </span>
+      <div>
+        <h3 className="font-display font-bold text-xl text-foreground leading-tight">
+          {title}
+        </h3>
+        <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
+      </div>
+    </div>
+  );
+}
+
 function CustomTooltip({ active, payload, label, formatter, formatByName }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string; formatter?: (v: number) => string; formatByName?: Record<string, (v: number) => string> }) {
   if (!active || !payload?.length) return null;
   return (
@@ -356,6 +383,12 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
         </div>
       </div>
 
+      <SectionBand
+        number={1}
+        title="What your model says"
+        subtitle="The high-level read of your plan — what your numbers, lender benchmarks, and exec summary together tell the reader."
+      />
+
       <div className="bg-gradient-to-r from-emerald-50/80 to-teal-50/50 border border-emerald-200/60 rounded-2xl p-5 shadow-sm">
         <div className="flex items-start gap-3">
           <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -480,6 +513,12 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
         <p className="text-foreground/80 leading-relaxed text-[15px]">{data.executiveSummary}</p>
       </div>
 
+      <SectionBand
+        number={2}
+        title="What looks strong"
+        subtitle="The strongest part of the model right now — paired with the biggest risk a reviewer will probe alongside it."
+      />
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-gradient-to-br from-green-50 to-emerald-50/50 border border-green-200/80 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
@@ -505,6 +544,12 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
           <p className="text-rose-900 font-medium text-[15px]">{data.biggestRisk}</p>
         </div>
       </div>
+
+      <SectionBand
+        number={3}
+        title="What needs more clarity"
+        subtitle="Specific assumptions and metrics where a reviewer is likely to want more context, backup, or a written rationale."
+      />
 
       {data.topIssues && data.topIssues.length > 0 && (
         <TopIssuesPanel
@@ -929,6 +974,12 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
         </div>
       )}
 
+      <SectionBand
+        number={4}
+        title="What could create cash pressure"
+        subtitle="Where your numbers could come under pressure — including the standard lender stress battery, sensitivity table, and cash runway."
+      />
+
       {stressChartData && stressChartData.length > 0 && (
         <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
@@ -1307,6 +1358,12 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
         </div>
       )}
 
+      <SectionBand
+        number={5}
+        title="What to fix first"
+        subtitle="The highest-leverage edits to make to your model right now — ordered so the priority items come first."
+      />
+
       <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
         <div className="flex items-center gap-2 mb-5">
           <Lightbulb className="h-5 w-5 text-primary" />
@@ -1353,7 +1410,43 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
         </div>
       </div>
 
-      <div className={cn("rounded-2xl p-6 border shadow-sm", lenderBg)}>
+      <SectionBand
+        number={6}
+        title="What someone reviewing this may ask"
+        subtitle="Likely questions a board member, grant officer, or lender will raise — use these to pressure-test your own narrative."
+      />
+
+      <div
+        data-testid="reviewer-questions-card"
+        className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm"
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <HelpCircle className="h-5 w-5 text-primary" />
+          <h3 className="font-display font-bold text-lg text-foreground">Likely review questions</h3>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          A reviewer will probably want a clear answer for each of these before they sign off. Think of them as a self-check, not a verdict.
+        </p>
+        <ul className="list-disc pl-5 space-y-2 text-[15px] text-foreground/80 leading-relaxed">
+          <li>How are you supporting the enrollment ramp from Year 1 to Year 5, including waitlist depth and a backup plan if the ramp slips?</li>
+          <li>What is the basis for your retention assumption, and what would you do operationally if it dropped 10 points?</li>
+          <li>Which revenue lines are contracted versus projected, and how does the model behave if a soft revenue line comes in light?</li>
+          <li>How does cash hold up under the standard stress battery — DSCR trough, runway, and ending cash in the toughest year?</li>
+          <li>What would you cut first if you needed to bring expenses down by 10% mid-year?</li>
+          <li>Where in the model does each headline number come from, and which assumptions drive it?</li>
+        </ul>
+      </div>
+
+      <SectionBand
+        number={7}
+        title="Suggested next steps before sharing externally"
+        subtitle="What to polish before sending this model to a board, a grant officer, or a lender — coaching framing, not a verdict."
+      />
+
+      <div
+        data-testid="readiness-coaching-card"
+        className={cn("rounded-2xl p-6 border shadow-sm", lenderBg)}
+      >
         <div className="flex items-center gap-4 mb-3">
           <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center",
             data.lenderReadiness === "Strong" ? "bg-green-100" :
@@ -1363,15 +1456,19 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
           </div>
           <div>
             <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">
-              Lending Lab Readiness
+              How this reads for an external reviewer right now
             </h4>
-            <p className={cn("font-display font-bold text-2xl", lenderColor)}>
-              {data.lenderReadiness}
+            <p className={cn("font-display font-bold text-xl", lenderColor)}>
+              {data.lenderReadiness === "Strong"
+                ? "Ready to share — keep polishing the narrative."
+                : data.lenderReadiness === "Needs Work"
+                  ? "Almost there — a few targeted edits will tighten the story."
+                  : "Worth another pass before you send it out."}
             </p>
           </div>
         </div>
         <p className="text-foreground/50 text-sm leading-relaxed mb-3 italic">
-          Thinking about a loan? The Building Hope Impact Fund Lending Lab offers small, affordable loans for early-stage schools. Here&rsquo;s how your model stacks up against their criteria.
+          This is coaching guidance, not a verdict on you or your school. The Building Hope Impact Fund Lending Lab offers small, affordable loans for early-stage schools — here&rsquo;s how your model would read against their criteria today.
         </p>
         <p className="text-foreground/70 leading-relaxed text-[15px]">
           {data.lenderReadinessExplanation}

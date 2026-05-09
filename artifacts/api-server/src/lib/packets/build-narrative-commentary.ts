@@ -717,6 +717,99 @@ export function buildBoardCommentary(
 }
 
 // ───────────────────────────────────────────────────────────────────────
+// Grant commentary (mission-aligned tone, multi-year impact framing)
+// ───────────────────────────────────────────────────────────────────────
+
+export function buildGrantCommentary(
+  bundle: NarrativeSourceBundle,
+): NarrativeCommentary {
+  const f = new FigureScribe();
+  const paragraphs: string[] = [];
+
+  // Paragraph 1 - mission-anchored opening with the multi-year impact arc.
+  paragraphs.push(
+    `Thank you for considering ${bundle.schoolName}. This narrative is drawn directly from the same canonical financial model the board and any lender would see, so the numbers that follow tie back line for line to our budget. Over the grant horizon we are planning for ${f.num(
+      bundle.enrollmentY1,
+    )} students in ${f.yearLabel(1)}, growing to ${f.num(
+      bundle.enrollmentY5,
+    )} by ${f.yearLabel(5)}${
+      bundle.retentionRatePct !== null
+        ? ` while holding a ${f.pct(bundle.retentionRatePct, 0)} year-over-year retention assumption`
+        : ""
+    }. Each additional seat funded by this grant translates directly into students served against that mission.`,
+  );
+
+  // Paragraph 2 - how the grant fits the funding mix. We use the donor-dependent
+  // share of Year-1 revenue (from the revenue-quality breakdown) as the closest
+  // canonical proxy for philanthropic share.
+  const donorShare = bundle.revenueQualityY1
+    ? bundle.revenueQualityY1.donorDependentPct
+    : null;
+  const mixLine = donorShare !== null
+    ? `Philanthropic and other donor-dependent support currently represents about ${f.pct(donorShare, 0)} of our ${f.yearLabel(1)} revenue mix.`
+    : `Philanthropic support is a meaningful share of our funding plan in ${f.yearLabel(1)}.`;
+  paragraphs.push(
+    `${mixLine} Grant funding is what bridges the gap between our enrollment ramp and operating sustainability — without it the model would not reach the trajectory described above. The plan does not assume any single funder closes that gap on their own; instead, it relies on a portfolio of grants and earned revenue that grows year over year.`,
+  );
+
+  // Paragraph 3 - sustainability: cash, break-even, and the path off subsidy.
+  const cashLine = bundle.cashRunwayMonths >= 60
+    ? `The model holds positive operating cash across all five years${
+        bundle.reserveMonthsLastYear !== null
+          ? `, with operating reserves reaching roughly ${f.num(
+              bundle.reserveMonthsLastYear,
+            )} months by ${f.yearLabel(bundle.reserveLastYearNumber)}`
+          : ""
+      }.`
+    : `Operating cash carries the school for ${f.monthsCount(
+        bundle.cashRunwayMonths,
+      )} from open before the next funding milestone is needed${
+        bundle.troughEndingCash !== null && bundle.troughYear !== null
+          ? `, with the tightest year landing at ${f.signedCurrency(
+              bundle.troughEndingCash,
+            )} of cash on hand in ${f.yearLabel(bundle.troughYear)}`
+          : ""
+      }.`;
+  const breakEvenGrant = bundle.breakEvenYear !== null
+    ? `Operating break-even is reached in ${f.yearLabel(bundle.breakEvenYear)}, which is the point at which earned revenue alone would cover operating expenses.`
+    : `Within the 5-year window the model does not yet reach cumulative break-even, which is why sustained philanthropic support over the grant period remains essential.`;
+  paragraphs.push(`${cashLine} ${breakEvenGrant}`);
+
+  // Paragraph 4 - stewardship + risks the funder should know about.
+  if (bundle.topRisks.length > 0) {
+    const riskLines = bundle.topRisks
+      .slice(0, 2)
+      .map(
+        (r) =>
+          `${f.absorb(r.title)}. Our planned response is to ${f.absorb(r.mitigant)}`,
+      )
+      .join(". ");
+    paragraphs.push(
+      `Two stewardship matters we want to surface up front for our funders. ${riskLines}.`,
+    );
+  } else {
+    paragraphs.push(
+      `No critical or high-severity issues are flagged at this time; the watch items the team is tracking are documented in the body of the model.`,
+    );
+  }
+
+  // Paragraph 5 - close with strength and next-step ask.
+  const closingAction = bundle.highPriorityActions[0]
+    ? `The most immediate use of grant funding would support ${f.absorb(bundle.highPriorityActions[0].title)}.`
+    : `Grant funding will be applied directly to enrollment ramp expenses described in the budget.`;
+  paragraphs.push(
+    `${f.absorb(bundle.biggestStrength || "The school is executing against a clearly documented plan.")} ${closingAction} We are happy to walk through any line of the model in detail with the funder.`,
+  );
+
+  return {
+    paragraphs: paragraphs.map(stripDashes),
+    allowedFigures: f.figures,
+    bundle,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+// ───────────────────────────────────────────────────────────────────────
 // Helpers
 // ───────────────────────────────────────────────────────────────────────
 

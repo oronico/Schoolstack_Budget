@@ -374,6 +374,80 @@ describe("founder voice — api-server founder-visible exports", () => {
   );
 });
 
+// Task #706 — Consultant view must render the brief's seven coaching
+// sections in order, and the Lender Narrative step must surface editable
+// Board / Grant / Lender drafts framed as "draft from your model — edit
+// before sending".
+const CONSULTANT_VIEW_PATH = join(
+  SRC_ROOT,
+  "components/consultant/ConsultantAnalysisView.tsx",
+);
+const NARRATIVE_STEP_PATH = join(
+  SRC_ROOT,
+  "pages/model-wizard/steps/NarrativeStep.tsx",
+);
+
+const BRIEF_SECTION_TITLES = [
+  "What your model says",
+  "What looks strong",
+  "What needs more clarity",
+  "What could create cash pressure",
+  "What to fix first",
+  "What someone reviewing this may ask",
+  "Suggested next steps before sharing externally",
+];
+
+describe("founder voice — Task #706 polish-sprint phases 13-15", () => {
+  it("ConsultantAnalysisView renders the seven brief-mandated section titles", () => {
+    const src = readFileSync(CONSULTANT_VIEW_PATH, "utf8");
+    for (const title of BRIEF_SECTION_TITLES) {
+      expect(
+        src,
+        `ConsultantAnalysisView is missing brief section title "${title}"`,
+      ).toContain(title);
+    }
+  });
+
+  it("ConsultantAnalysisView mounts the seven sections in brief order", () => {
+    const src = readFileSync(CONSULTANT_VIEW_PATH, "utf8");
+    let cursor = 0;
+    for (const title of BRIEF_SECTION_TITLES) {
+      const idx = src.indexOf(title, cursor);
+      expect(
+        idx,
+        `Section title "${title}" should appear after the previous one`,
+      ).toBeGreaterThan(-1);
+      cursor = idx + title.length;
+    }
+  });
+
+  it("ConsultantAnalysisView mounts seven numbered SectionBand markers", () => {
+    const src = readFileSync(CONSULTANT_VIEW_PATH, "utf8");
+    for (let n = 1; n <= 7; n += 1) {
+      expect(
+        src,
+        `ConsultantAnalysisView is missing SectionBand number={${n}}`,
+      ).toContain(`number={${n}}`);
+    }
+  });
+
+  it("NarrativeStep renders editable Board, Grant, and Lender draft cards", () => {
+    const src = readFileSync(NARRATIVE_STEP_PATH, "utf8");
+    expect(src).toContain("Board narrative");
+    expect(src).toContain("Grant narrative");
+    expect(src).toContain("Lender narrative");
+    expect(src).toContain("audience-draft-textarea-");
+    expect(src).toMatch(/AudienceDraftsSection/);
+    expect(src).toMatch(/"board"[\s\S]{0,200}"grant"[\s\S]{0,200}"lender"/);
+  });
+
+  it("NarrativeStep frames audience drafts with the brief's edit-before-sending language", () => {
+    const src = readFileSync(NARRATIVE_STEP_PATH, "utf8");
+    expect(src).toContain("draft from your model");
+    expect(src).toContain("edit before sending");
+  });
+});
+
 describe("founder voice — no banned phrases on founder-facing surfaces", () => {
   const files = listFiles(SRC_ROOT);
 
