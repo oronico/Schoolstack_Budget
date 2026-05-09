@@ -6,6 +6,19 @@ const numMsg = (field: string) => ({
   required_error: `Please enter a value for ${field}`,
 });
 
+// Empty `<input type="number">` controlled by react-hook-form with
+// `valueAsNumber: true` arrives at the schema as `NaN`, not `undefined`.
+// `z.coerce.number().min(0).optional()` then incorrectly rejects it (NaN
+// is a number, so `.optional()` is satisfied, but `.min(0)` fails). Run
+// every "optional numeric that may come from a blank FormInput" through
+// this preprocess so a blank field is treated as "user hasn't filled
+// this in yet" and validation passes.
+const emptyToUndef = (v: unknown): unknown => {
+  if (v === "" || v === null) return undefined;
+  if (typeof v === "number" && Number.isNaN(v)) return undefined;
+  return v;
+};
+
 export const schoolStageSchema = z.enum(["new_school", "operating_school"], {
   required_error: "Please tell us whether you're planning a new school or already operating",
   invalid_type_error: "Please select a valid school stage",
@@ -200,15 +213,19 @@ export const schoolProfileSchema = z.object({
   // estimates. All sub-fields are optional + permissive so legacy
   // models without the checklist round-trip cleanly through save/load.
   launchAssumptions: z.object({
-    committedStudents: z.coerce.number(numMsg("committed students")).min(0, "Please enter a positive number").optional(),
-    signedEnrollmentAgreements: z.coerce.number(numMsg("signed enrollment agreements")).min(0, "Please enter a positive number").optional(),
-    depositsCollected: z.coerce.number(numMsg("deposits collected")).min(0, "Please enter a positive amount").optional(),
+    // Empty FormInput numerics arrive as NaN (RHF `valueAsNumber: true`).
+    // Preprocess NaN/empty/null → undefined so the `.optional()` honors
+    // "user just hasn't filled this in yet" without blocking
+    // schoolProfile validation on Continue.
+    committedStudents: z.preprocess(emptyToUndef, z.coerce.number(numMsg("committed students")).min(0, "Please enter a positive number")).optional(),
+    signedEnrollmentAgreements: z.preprocess(emptyToUndef, z.coerce.number(numMsg("signed enrollment agreements")).min(0, "Please enter a positive number")).optional(),
+    depositsCollected: z.preprocess(emptyToUndef, z.coerce.number(numMsg("deposits collected")).min(0, "Please enter a positive amount")).optional(),
     projectedOpeningMonth: z.string().optional(),
     firstMonthWithRevenue: z.string().optional(),
     firstMonthWithPayroll: z.string().optional(),
     firstMonthWithRent: z.string().optional(),
-    preOpeningCashNeeds: z.coerce.number(numMsg("pre-opening cash needs")).min(0, "Please enter a positive amount").optional(),
-    startupCosts: z.coerce.number(numMsg("startup costs")).min(0, "Please enter a positive amount").optional(),
+    preOpeningCashNeeds: z.preprocess(emptyToUndef, z.coerce.number(numMsg("pre-opening cash needs")).min(0, "Please enter a positive amount")).optional(),
+    startupCosts: z.preprocess(emptyToUndef, z.coerce.number(numMsg("startup costs")).min(0, "Please enter a positive amount")).optional(),
   }).optional(),
   isAccredited: z.boolean().optional(),
   accreditingBody: z.string().optional(),
