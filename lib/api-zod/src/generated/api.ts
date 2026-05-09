@@ -796,12 +796,6 @@ export const CreateModelBody = zod.object({
                 mimeType: zod.string(),
                 size: zod.number(),
                 uploadedAt: zod.string(),
-                dataBase64: zod
-                  .string()
-                  .optional()
-                  .describe(
-                    "Legacy inline base64 payload (Task #707). Older\nmodels still load with this field; new uploads\nstore the file in App Storage and use objectPath\ninstead (Task #714).\n",
-                  ),
                 objectPath: zod
                   .string()
                   .optional()
@@ -1486,12 +1480,6 @@ export const GetModelResponse = zod.object({
                 mimeType: zod.string(),
                 size: zod.number(),
                 uploadedAt: zod.string(),
-                dataBase64: zod
-                  .string()
-                  .optional()
-                  .describe(
-                    "Legacy inline base64 payload (Task #707). Older\nmodels still load with this field; new uploads\nstore the file in App Storage and use objectPath\ninstead (Task #714).\n",
-                  ),
                 objectPath: zod
                   .string()
                   .optional()
@@ -2182,12 +2170,6 @@ export const UpdateModelBody = zod.object({
                 mimeType: zod.string(),
                 size: zod.number(),
                 uploadedAt: zod.string(),
-                dataBase64: zod
-                  .string()
-                  .optional()
-                  .describe(
-                    "Legacy inline base64 payload (Task #707). Older\nmodels still load with this field; new uploads\nstore the file in App Storage and use objectPath\ninstead (Task #714).\n",
-                  ),
                 objectPath: zod
                   .string()
                   .optional()
@@ -2867,12 +2849,6 @@ export const UpdateModelResponse = zod.object({
                 mimeType: zod.string(),
                 size: zod.number(),
                 uploadedAt: zod.string(),
-                dataBase64: zod
-                  .string()
-                  .optional()
-                  .describe(
-                    "Legacy inline base64 payload (Task #707). Older\nmodels still load with this field; new uploads\nstore the file in App Storage and use objectPath\ninstead (Task #714).\n",
-                  ),
                 objectPath: zod
                   .string()
                   .optional()
@@ -3586,12 +3562,6 @@ export const ArchiveModelResponse = zod.object({
                 mimeType: zod.string(),
                 size: zod.number(),
                 uploadedAt: zod.string(),
-                dataBase64: zod
-                  .string()
-                  .optional()
-                  .describe(
-                    "Legacy inline base64 payload (Task #707). Older\nmodels still load with this field; new uploads\nstore the file in App Storage and use objectPath\ninstead (Task #714).\n",
-                  ),
                 objectPath: zod
                   .string()
                   .optional()

@@ -1502,13 +1502,6 @@ components:
                       type: integer
                     uploadedAt:
                       type: string
-                    dataBase64:
-                      type: string
-                      description: |
-                        Legacy inline base64 payload (Task #707). Older
-                        models still load with this field; new uploads
-                        store the file in App Storage and use objectPath
-                        instead (Task #714).
                     objectPath:
                       type: string
                       description: |

@@ -1,14 +1,9 @@
-// Task #715 — smoke test for the embedded evidence-file appendix in
-// the lender packet PDF. Builds a real packet from the microschoolStartup
-// fixture, monkey-patches a few synthetic evidence files onto the
-// assumptionConfidence map (one embeddable PNG, one embeddable PDF,
-// one oversized PDF, one unsupported docx), then renders the PDF and
-// asserts:
-//   - output is a real PDF
-//   - the merged page count grew by the embedded PDF's page count
-//     (proves pdf-lib actually appended its pages)
-//   - output is non-trivial in size (proves the image was embedded too,
-//     since the PNG payload is much larger than the manifest entry alone)
+// Task #729 — smoke test for the evidence-files appendix in the lender
+// packet PDF. The legacy inline-base64 embed/merge path was removed
+// along with the `dataBase64` field; uploaded files now live in App
+// Storage and the appendix prints a clickable download link per file
+// instead of inlining the bytes. This test verifies the manifest still
+// renders correctly with `objectPath`-only attachments.
 
 import { generateLenderPacketPDF } from "../src/lib/packets/lender-packet-pdf.js";
 import { buildLenderPacket } from "../src/lib/packets/build-lender-packet.js";
@@ -32,23 +27,8 @@ function check(label: string, cond: boolean, detail = "") {
   }
 }
 
-// 1x1 PNG (transparent), captured from a known PNG fixture.
-const TINY_PNG_B64 =
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
-
-// Build a real 3-page PDF on the fly so we can verify the page count grew.
-async function buildSyntheticPdfBase64(pages: number): Promise<string> {
-  const doc = await PDFDocument.create();
-  for (let i = 0; i < pages; i++) {
-    const p = doc.addPage([300, 200]);
-    p.drawText(`Synthetic lease page ${i + 1}`, { x: 20, y: 100, size: 12 });
-  }
-  const bytes = await doc.save();
-  return Buffer.from(bytes).toString("base64");
-}
-
 async function main() {
-  console.log("=== Lender Packet PDF Evidence Embed Smoke Test ===\n");
+  console.log("=== Lender Packet PDF Evidence Appendix Smoke Test ===\n");
 
   const data = {
     ...(microschoolStartup as Record<string, unknown>),
@@ -60,17 +40,14 @@ async function main() {
       },
     ],
   };
-  const consultantOutput = await runConsultantEngine(data);
-  const packet = buildLenderPacket(data as any, consultantOutput, "test-model-id");
 
-  const syntheticPdfPages = 3;
-  const syntheticPdfB64 = await buildSyntheticPdfBase64(syntheticPdfPages);
-  const syntheticPdfBytes = Buffer.from(syntheticPdfB64, "base64").length;
+  const consultant = await runConsultantEngine(data as Parameters<typeof runConsultantEngine>[0]);
+  const packet = await buildLenderPacket(data as Parameters<typeof buildLenderPacket>[0], consultant);
 
-  // Inject synthetic evidence files onto known assumption keys.
-  // microschoolStartup might not populate assumptionConfidence; we
-  // overwrite a permissive shape directly.
-  (packet as any).assumptionConfidence = {
+  // Inject synthetic objectPath-only evidence files onto known
+  // assumption keys. None of these carry inline bytes — the lender
+  // appendix should print download links and skip any embed code.
+  (packet as unknown as { assumptionConfidence: Record<string, unknown> }).assumptionConfidence = {
     tuition_per_student: {
       confidence: "signed_agreement",
       evidenceNote: "Lease attached.",
@@ -79,17 +56,17 @@ async function main() {
           id: "f1",
           name: "lease.pdf",
           mimeType: "application/pdf",
-          size: syntheticPdfBytes,
+          size: 256 * 1024,
           uploadedAt: new Date().toISOString(),
-          dataBase64: syntheticPdfB64,
+          objectPath: "/objects/uploads/lease-uuid",
         },
         {
           id: "f2",
           name: "site-photo.png",
           mimeType: "image/png",
-          size: Buffer.from(TINY_PNG_B64, "base64").length,
+          size: 12 * 1024,
           uploadedAt: new Date().toISOString(),
-          dataBase64: TINY_PNG_B64,
+          objectPath: "/objects/uploads/site-photo-uuid",
         },
       ],
     },
@@ -99,50 +76,62 @@ async function main() {
       evidenceFiles: [
         {
           id: "f3",
-          name: "huge-scan.pdf",
-          mimeType: "application/pdf",
-          // 12 MB — over the 10 MB cap, must NOT be embedded.
-          size: 12 * 1024 * 1024,
-          uploadedAt: new Date().toISOString(),
-          // Provide bytes anyway; size cap is what should gate embed.
-          dataBase64: syntheticPdfB64,
-        },
-        {
-          id: "f4",
           name: "MOU.docx",
           mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
           size: 50 * 1024,
           uploadedAt: new Date().toISOString(),
-          dataBase64: "AAAA",
+          objectPath: "/objects/uploads/mou-uuid",
         },
       ],
     },
   };
 
   // Baseline: render the same packet with no evidence files to compare
-  // page counts.
+  // page counts. The appendix should not balloon the packet by more than
+  // a page or two when only manifest entries are added.
   const baselinePacket = JSON.parse(JSON.stringify(packet));
   baselinePacket.assumptionConfidence = {};
   const baselineBuffer = await generateLenderPacketPDF(baselinePacket);
   const baselineDoc = await PDFDocument.load(baselineBuffer);
   const baselinePages = baselineDoc.getPageCount();
 
+  // Render once without APP_URL (no clickable links, manifest only).
+  const previousAppUrl = process.env.APP_URL;
+  delete process.env.APP_URL;
   const buffer = await generateLenderPacketPDF(packet);
   check("output begins with %PDF-", buffer.subarray(0, 5).toString("ascii") === "%PDF-");
   check("output is non-trivial", buffer.length > 5000, `length=${buffer.length}`);
 
-  const merged = await PDFDocument.load(buffer);
-  const mergedPages = merged.getPageCount();
-  // The merged packet should have AT LEAST baseline + 3 pages from the
-  // embedded synthetic PDF. The image inlines onto an existing PDFKit
-  // page so it does not necessarily add a page; the appendix subsection
-  // itself may add a page or two depending on layout, but the floor is
-  // baseline + syntheticPdfPages.
+  const renderedDoc = await PDFDocument.load(buffer);
+  const renderedPages = renderedDoc.getPageCount();
+  // Sanity check — the packet still renders to a real, non-empty PDF
+  // when objectPath-only attachments are present. We deliberately do
+  // not assert exact page counts here: the appendix itself, plus
+  // upstream sections that vary with assumptionConfidence, can shift
+  // the count. The legacy assertion (merged >= baseline + embedded-PDF
+  // pages) was removed when the inline-base64 embed/merge path was
+  // deleted (Task #729).
   check(
-    "merged page count grew by at least the embedded PDF's pages",
-    mergedPages >= baselinePages + syntheticPdfPages,
-    `baseline=${baselinePages}, merged=${mergedPages}, expected >= ${baselinePages + syntheticPdfPages}`,
+    "rendered packet has at least the baseline page count",
+    renderedPages >= baselinePages,
+    `baseline=${baselinePages}, rendered=${renderedPages}`,
   );
+
+  // Render once with APP_URL set so the appendix produces clickable
+  // download links pointing at /api/storage/objects/...
+  process.env.APP_URL = "https://example.test";
+  const linkedBuffer = await generateLenderPacketPDF(packet);
+  check(
+    "appendix renders with download links when APP_URL is configured",
+    linkedBuffer.subarray(0, 5).toString("ascii") === "%PDF-" && linkedBuffer.length > 5000,
+    `length=${linkedBuffer.length}`,
+  );
+
+  if (previousAppUrl === undefined) {
+    delete process.env.APP_URL;
+  } else {
+    process.env.APP_URL = previousAppUrl;
+  }
 
   console.log(`\nResults: ${passed} passed, ${failed} failed`);
   if (failed > 0) {

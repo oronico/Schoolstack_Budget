@@ -1024,8 +1024,11 @@ export const fullModelSchema = z.object({
         evidenceNote: z.string().optional(),
         // Task #707 — founder-uploaded evidence files (lease, MOU, payroll
         // quote PDFs, etc.). Optional + defaulted so older models without
-        // attachments continue to validate. The base64 payload is stored
-        // inline so the model JSON remains self-contained on share links.
+        // attachments continue to validate. Files are stored in App
+        // Storage via the /api/storage/uploads/request-url presigned URL
+        // flow (Task #714); only the `objectPath` reference is kept in
+        // the model JSON. Task #729 dropped the legacy inline
+        // `dataBase64` payload after migrating existing rows.
         evidenceFiles: z
           .array(
             z.object({
@@ -1034,10 +1037,6 @@ export const fullModelSchema = z.object({
               mimeType: z.string(),
               size: z.number().int().nonnegative(),
               uploadedAt: z.string(),
-              dataBase64: z.string().optional(),
-              // Task #714 — App Storage path for files uploaded via the
-              // /api/storage/uploads/request-url presigned URL flow.
-              // When set, the model JSON does NOT carry the bytes inline.
               objectPath: z.string().optional(),
             }),
           )

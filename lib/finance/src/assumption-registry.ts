@@ -510,15 +510,12 @@ export interface AssumptionEvidenceFile {
   size: number;
   /** ISO timestamp the file was attached. */
   uploadedAt: string;
-  /** Legacy (Task #707): raw file bytes base64-encoded inline in the model
-   *  JSON (no data: prefix). Older models still load with this field, but
-   *  new uploads use App Storage instead — see `objectPath`. Consumers
-   *  that only need filename + size may strip this before serializing. */
-  dataBase64?: string;
   /** Task #714 — App Storage path for the uploaded file
-   *  (e.g. `/objects/uploads/<uuid>`). When set, the file lives in
-   *  cloud object storage and the model JSON no longer carries the bytes
-   *  inline. Serve via `GET /api/storage{objectPath}`. */
+   *  (e.g. `/objects/uploads/<uuid>`). The file lives in cloud object
+   *  storage and the model JSON no longer carries the bytes inline.
+   *  Serve via `GET /api/storage{objectPath}`. Task #729 dropped the
+   *  legacy inline `dataBase64` field after migrating all existing
+   *  rows. */
   objectPath?: string;
 }
 
@@ -648,7 +645,7 @@ export const ASSUMPTION_CONFIDENCE_STATUS_COPY: Record<AssumptionConfidenceStatu
 interface ConfidenceLikeEntry {
   confidence: string;
   evidenceNote?: string;
-  evidenceFiles?: Array<{ id?: string; name?: string; mimeType?: string; size?: number; uploadedAt?: string; dataBase64?: string; objectPath?: string }>;
+  evidenceFiles?: Array<{ id?: string; name?: string; mimeType?: string; size?: number; uploadedAt?: string; objectPath?: string }>;
 }
 interface ConfidenceLikeMap {
   [key: string]: ConfidenceLikeEntry | undefined;

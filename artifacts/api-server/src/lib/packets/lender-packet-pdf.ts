@@ -1,4 +1,3 @@
-import { PDFDocument } from "pdf-lib";
 import {
   createDoc, drawHeader, sectionTitle, subSection, bodyText,
   drawFooter, docToBuffer, statusBadge, labelValue,
@@ -98,15 +97,11 @@ export async function generateLenderPacketPDF(
   );
 
   drawFooter(doc);
-  const baseBuffer = await docToBuffer(doc);
-
-  // Task #715 — append the actual lease / MOU / signed-quote PDFs the
-  // founder uploaded so the lender packet ships as a single
-  // self-contained underwriting bundle. Image attachments are already
-  // inlined under their manifest entry; PDFs cannot be embedded by
-  // PDFKit so we use pdf-lib here to copy their pages onto the end.
-  const pdfAttachments = collectEmbeddablePdfAttachments(packet.assumptionConfidence);
-  return mergeEvidencePdfs(baseBuffer, pdfAttachments);
+  return docToBuffer(doc);
+  // Task #729 — the inline-base64 PDF embed/merge path was removed
+  // along with the legacy `dataBase64` field. Evidence files now live
+  // in App Storage and the appendix prints clickable download links
+  // for the lender to pull each source document on demand.
 }
 
 function drawCoverPage(doc: PDFDoc, packet: LenderPacket) {
@@ -411,35 +406,10 @@ interface AppendixFileLike {
   size?: number;
   uploadedAt?: string;
   mimeType?: string;
-  dataBase64?: string;
   /** Task #714 — App Storage path; when set, the appendix prints a
    *  clickable download link so the lender reviewer can pull the file
    *  straight from the packet. */
   objectPath?: string;
-}
-
-// Task #715 — per-file size cap for embedded attachments. PDFs and images
-// larger than this are listed in the manifest with a "too large to embed"
-// note instead of being inlined, so the lender packet stays a reasonable
-// download size even when a founder uploads a multi-megabyte scan.
-const MAX_EMBED_BYTES = 10 * 1024 * 1024; // 10 MB
-
-function isEmbeddableImageMime(mime?: string): boolean {
-  if (!mime) return false;
-  const m = mime.toLowerCase();
-  return m === "image/png" || m === "image/jpeg" || m === "image/jpg";
-}
-
-function isEmbeddablePdfMime(mime?: string): boolean {
-  return (mime || "").toLowerCase() === "application/pdf";
-}
-
-function decodeBase64ToUint8(b64: string): Uint8Array | null {
-  try {
-    return new Uint8Array(Buffer.from(b64, "base64"));
-  } catch {
-    return null;
-  }
 }
 
 /** Task #714 — build the public download URL for an evidence file
@@ -523,139 +493,14 @@ function renderAssumptionsEvidenceAppendix(
       });
     }
 
-    // Task #715 — turn the manifest into a self-contained underwriting
-    // bundle. Image attachments are inlined directly under the manifest
-    // entry; PDF attachments get a "see appended pages" pointer because
-    // PDFKit cannot embed an existing PDF — the pages are merged in by
-    // pdf-lib after the PDFKit document is finalized. Non-embeddable
-    // formats (docx, xlsx, …) and oversized files keep a clear note so
-    // the reviewer knows why the document is missing from the bundle.
-    // Task #714 back-compat: only embed when dataBase64 is present
-    // (legacy inline attachments). New objectPath-only attachments rely
-    // on the clickable download link above.
-    const annotation = renderEvidenceAttachmentBody(doc, file);
-    if (annotation) {
-      doc.font("Helvetica-Oblique").fontSize(8).fillColor(BRAND.darkGray);
-      doc.text(`    ${annotation}`, doc.page.margins.left + 10, doc.y, {
-        width: doc.page.width - doc.page.margins.left - doc.page.margins.right - 10,
-      });
-      doc.fillColor(BRAND.black);
-    }
+    // Task #729 — files now live in App Storage, so each manifest entry
+    // exposes the source document via the clickable download link
+    // rendered above. The legacy inline-base64 image embed and the
+    // pdf-lib page merge for attached PDFs were removed along with the
+    // `dataBase64` payload they read from.
     doc.moveDown(0.2);
   }
   doc.moveDown(0.3);
-}
-
-// Task #715 — render the embeddable body for one evidence attachment.
-// For images we draw the image inline (PDFKit native); for PDFs / other
-// types we return an explanatory note string so the caller can render it
-// next to the manifest entry. Returns null when the inline image was
-// successfully drawn and no further annotation is needed.
-function renderEvidenceAttachmentBody(doc: PDFDoc, file: AppendixFileLike): string | null {
-  const size = typeof file.size === "number" ? file.size : 0;
-  const oversized = size > MAX_EMBED_BYTES;
-
-  if (isEmbeddableImageMime(file.mimeType)) {
-    if (oversized) {
-      return `Image too large to embed (${formatEvidenceFileSize(size)} > ${formatEvidenceFileSize(MAX_EMBED_BYTES)} cap). Available on request.`;
-    }
-    if (!file.dataBase64) {
-      return "Image bytes not available in this export. Available on request.";
-    }
-    const bytes = decodeBase64ToUint8(file.dataBase64);
-    if (!bytes) {
-      return "Image attachment could not be decoded. Available on request.";
-    }
-    const maxW = doc.page.width - doc.page.margins.left - doc.page.margins.right - 20;
-    // Reserve room for a typical image; PDFKit will paginate if the
-    // image itself doesn't fit on the current page.
-    ensureSpace(doc, 220);
-    try {
-      doc.image(Buffer.from(bytes), doc.page.margins.left + 10, doc.y, {
-        fit: [maxW, 360],
-      });
-      // Advance the cursor past the rendered image. PDFKit's image()
-      // does not move doc.y automatically when fit/align are used.
-      doc.y += 360 + 6;
-    } catch {
-      return "Image attachment could not be rendered. Available on request.";
-    }
-    return null;
-  }
-
-  if (isEmbeddablePdfMime(file.mimeType)) {
-    if (oversized) {
-      return `PDF too large to embed (${formatEvidenceFileSize(size)} > ${formatEvidenceFileSize(MAX_EMBED_BYTES)} cap). Available on request.`;
-    }
-    if (!file.dataBase64) {
-      return "PDF bytes not available in this export. Available on request.";
-    }
-    return "PDF attached — full document appended at the end of this packet.";
-  }
-
-  return "Format not supported for inline embed (typical: docx, xlsx). Available on request from the founder.";
-}
-
-// Task #715 — collect every attached PDF that should be merged into the
-// final packet via pdf-lib. Mirrors the eligibility rules used by
-// renderEvidenceAttachmentBody so the manifest's "appended at the end"
-// pointer always matches what is actually appended.
-function collectEmbeddablePdfAttachments(
-  confidence: LenderPacket["assumptionConfidence"],
-): Array<{ label: string; name: string; bytes: Uint8Array }> {
-  const out: Array<{ label: string; name: string; bytes: Uint8Array }> = [];
-  for (const [k, entry] of Object.entries(confidence || {})) {
-    if (!Object.prototype.hasOwnProperty.call(ASSUMPTION_REGISTRY, k)) continue;
-    const files = (entry as { evidenceFiles?: AppendixFileLike[] } | undefined)?.evidenceFiles;
-    if (!Array.isArray(files) || files.length === 0) continue;
-    const label = ASSUMPTION_REGISTRY[k as AssumptionKey].label;
-    for (const f of files) {
-      if (!f?.name) continue;
-      if (!isEmbeddablePdfMime(f.mimeType)) continue;
-      const size = typeof f.size === "number" ? f.size : 0;
-      if (size > MAX_EMBED_BYTES) continue;
-      if (!f.dataBase64) continue;
-      const bytes = decodeBase64ToUint8(f.dataBase64);
-      if (!bytes) continue;
-      out.push({ label, name: f.name, bytes });
-    }
-  }
-  return out;
-}
-
-// Task #715 — merge attached PDF documents (lease, MOU, signed quotes,
-// …) onto the end of the PDFKit-generated packet so the result is a
-// single self-contained bundle for the lender. Skipped silently when no
-// embeddable PDFs were uploaded. On any merge error we return the
-// original PDFKit buffer untouched — a partial-merge or stack trace
-// would block the export entirely, and the manifest already lists the
-// missing documents.
-async function mergeEvidencePdfs(
-  basePdf: Buffer,
-  attachments: Array<{ label: string; name: string; bytes: Uint8Array }>,
-): Promise<Buffer> {
-  if (attachments.length === 0) return basePdf;
-  try {
-    const merged = await PDFDocument.load(basePdf);
-    for (const att of attachments) {
-      let src: PDFDocument;
-      try {
-        src = await PDFDocument.load(att.bytes, { ignoreEncryption: true });
-      } catch {
-        // Skip individual broken / encrypted PDFs; the manifest entry
-        // tells the reviewer the file was attached.
-        continue;
-      }
-      const indices = src.getPageIndices();
-      if (indices.length === 0) continue;
-      const copied = await merged.copyPages(src, indices);
-      for (const page of copied) merged.addPage(page);
-    }
-    const out = await merged.save();
-    return Buffer.from(out);
-  } catch {
-    return basePdf;
-  }
 }
 
 function renderSection(doc: PDFDoc, section: PacketSection, packet: LenderPacket) {
