@@ -93,7 +93,7 @@ Verified clean per the brief's content rules:
 
 ## 12. Note on tracked QA artifacts
 
-Running `pnpm run qa:excel` and `pnpm run qa:formula-results` regenerates the 30 tracked workbooks under `artifacts/api-server/qa-output/` plus `qa-report.json` by design. Byte-level changes against HEAD are timestamp-only inside the xlsx ZIPs; `qa-report.json` continues to show `overallPass: true` (30 / 30). These regenerated artifacts are a side effect of the validation runs, not a code change owned by this task.
+Running `pnpm run qa:excel` and `pnpm run qa:formula-results` regenerates the 30 tracked workbooks under `artifacts/api-server/qa-output/` plus `qa-report.json` by design. The xlsx files carry timestamp churn inside their ZIP container, and `qa-report.json` reflects current tab names, tab counts, scanned-cell counts, and the active set of QA checks as of this run. The harness still reports `overallPass: true` (30 / 30) — every scenario passes its current checks. These regenerated artifacts are a side effect of the validation runs, not a code change owned by this task; if a clean-only commit is preferred, they can be reverted in a follow-up QA-refresh commit (the main agent cannot run `git checkout` to revert tracked files in this environment).
 
 ## 13. Final call
 
