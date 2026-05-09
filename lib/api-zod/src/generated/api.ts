@@ -3917,6 +3917,7 @@ export const GetConsultantAnalysisResponse = zod.object({
       }),
     ),
   }),
+  narrativeCommentaries: zod.record(zod.string(), zod.unknown()).optional(),
   generatedAt: zod.date(),
 });
 
@@ -4286,6 +4287,7 @@ export const PublicConsultantAnalysisResponse = zod.object({
       }),
     ),
   }),
+  narrativeCommentaries: zod.record(zod.string(), zod.unknown()).optional(),
   generatedAt: zod.date(),
 });
 

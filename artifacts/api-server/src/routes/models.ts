@@ -39,6 +39,12 @@ import { generateWorkbook } from "../lib/excel-export";
 import { trackEvent } from "../lib/track-event";
 import { runConsultantEngine, computeYearFinancialsFromData } from "../lib/consultant-engine";
 import { type AssumptionFlag } from "../lib/assumption-flags";
+import {
+  buildNarrativeBundle,
+  buildBoardCommentary,
+  buildGrantCommentary,
+  buildLenderCommentary,
+} from "../lib/packets/build-narrative-commentary";
 import { computeDaysCashOnHand } from "../lib/workbook-helpers.js";
 import {
   computeDecisionImpactFromPersisted,
@@ -687,9 +693,24 @@ router.get("/models/:id/consultant", authMiddleware, async (req: AuthRequest, re
       })
       .where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)));
 
+    // Task #745 — surface the canonical-engine narrative commentaries
+    // (board / grant / lender) on the consultant response so the wizard's
+    // Lender Narrative step can render the same fallback prose the PDFs
+    // would render when a founder hasn't customized the audience draft.
+    // Each commentary is figure-allowlisted by the same guard that
+    // protects the PDF render path, so the preview can never drift from
+    // what will ship.
+    const narrativeBundle = buildNarrativeBundle(data, consultantOutput);
+    const narrativeCommentaries = {
+      board: buildBoardCommentary(narrativeBundle),
+      grant: buildGrantCommentary(narrativeBundle),
+      lender: buildLenderCommentary(narrativeBundle),
+    };
+
     const outputWithReasons = {
       ...consultantOutput,
       assumptionFlags: persistedFlags,
+      narrativeCommentaries,
     };
     res.json(outputWithReasons);
   } catch (err) {

@@ -1044,6 +1044,8 @@ export const ConsultantOutputLenderReadiness = {
   Not_Yet_Ready: "Not Yet Ready",
 } as const;
 
+export type ConsultantOutputNarrativeCommentaries = { [key: string]: unknown };
+
 export type ConsultantRecommendationPriority =
   (typeof ConsultantRecommendationPriority)[keyof typeof ConsultantRecommendationPriority];
 
@@ -1284,6 +1286,7 @@ export interface ConsultantOutput {
   lendingLabAssessment: LendingLabAssessment;
   normalizedView?: NormalizedFinancialsView;
   lenderStressTests: LenderStressTestResults;
+  narrativeCommentaries?: ConsultantOutputNarrativeCommentaries;
   generatedAt: string;
 }
 

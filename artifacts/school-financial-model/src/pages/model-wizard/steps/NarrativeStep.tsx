@@ -724,6 +724,18 @@ function buildAudienceDraft(
   ].join("\n\n");
 }
 
+// Task #745 — split a founder-edited audience draft into paragraphs the
+// same way `chooseCommentaryParagraphs` in the PDF render path does
+// (split on blank lines, trim, drop empties). Keeping the splitter
+// identical to the server contract is what guarantees the in-app
+// preview matches the actual PDF output.
+function splitFounderDraft(text: string): string[] {
+  return (text || "")
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+}
+
 function AudienceDraftsSection({
   narrative,
   consultantData,
@@ -739,18 +751,32 @@ function AudienceDraftsSection({
 }) {
   const audienceDrafts = ((narrative as unknown as Record<string, unknown>)
     .audienceDrafts || {}) as Record<AudienceKey, string>;
+  // Task #745 — durable per-audience flag that records "the auto-seeded
+  // draft has already been written here, OR the founder has explicitly
+  // reset back to the canonical-engine fallback". Either case must
+  // disqualify this audience from future auto-fill so a reset doesn't
+  // silently get overwritten on the next consultant refresh / remount.
+  const audienceDraftsAutoFilled = ((narrative as unknown as Record<string, unknown>)
+    .audienceDraftsAutoFilled || {}) as Record<AudienceKey, boolean | undefined>;
 
-  // Auto-fill any draft that is still blank with the freshly-generated text,
-  // so the founder always sees a starting point. Once they edit, we leave it
-  // alone (write-once per draft).
+  // Auto-fill any draft that is still blank AND has never been seeded
+  // before with the freshly-generated text, so the founder always sees a
+  // starting point on first visit. Once a draft has been auto-filled or
+  // explicitly reset by the founder, we leave it alone (write-once).
   useEffect(() => {
     for (const def of AUDIENCE_DEFS) {
       const current = (audienceDrafts[def.key] || "").trim();
-      if (current.length === 0) {
+      const alreadyAutoFilled = audienceDraftsAutoFilled[def.key] === true;
+      if (current.length === 0 && !alreadyAutoFilled) {
         const draft = buildAudienceDraft(def.key, formValues, consultantData);
         setValue(`budgetNarrative.audienceDrafts.${def.key}`, draft, {
           shouldDirty: false,
         });
+        setValue(
+          `budgetNarrative.audienceDraftsAutoFilled.${def.key}`,
+          true,
+          { shouldDirty: false },
+        );
       }
     }
     // We deliberately exclude `audienceDrafts` from deps to avoid re-running
@@ -764,7 +790,36 @@ function AudienceDraftsSection({
     setValue(`budgetNarrative.audienceDrafts.${key}`, draft, {
       shouldDirty: true,
     });
+    setValue(`budgetNarrative.audienceDraftsAutoFilled.${key}`, true, {
+      shouldDirty: true,
+    });
   };
+
+  // Task #745 — clears the founder draft so the PDF (and the preview
+  // panel below) falls back to the canonical-engine commentary the
+  // server returns. The textarea is the source of truth: blank → PDF
+  // renders the engine commentary; non-blank → PDF renders the
+  // founder draft. We also set the auto-filled flag to true so the
+  // auto-seed effect above does NOT silently re-populate this draft on
+  // the next render / consultant refresh — the reset is durable.
+  const handleResetToAutoBuilt = (key: AudienceKey) => {
+    setValue(`budgetNarrative.audienceDrafts.${key}`, "", {
+      shouldDirty: true,
+    });
+    setValue(`budgetNarrative.audienceDraftsAutoFilled.${key}`, true, {
+      shouldDirty: true,
+    });
+  };
+
+  // Pull the canonical-engine commentaries for board / grant / lender
+  // off the consultant response. These are produced by the same
+  // `buildBoardCommentary` / `buildGrantCommentary` /
+  // `buildLenderCommentary` helpers that the PDF render path uses, so
+  // an empty audience draft renders identically here and in the PDF.
+  const narrativeCommentaries =
+    ((consultantData as Record<string, unknown> | undefined)?.narrativeCommentaries as
+      | Record<AudienceKey, { paragraphs?: string[] } | undefined>
+      | undefined) || undefined;
 
   return (
     <div className="space-y-4 pt-4 border-t" data-testid="audience-drafts-section">
@@ -798,14 +853,24 @@ function AudienceDraftsSection({
                     </div>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleRegenerate(def.key)}
-                  className="text-xs font-semibold text-amber-700 hover:text-amber-900 underline underline-offset-2 shrink-0"
-                  data-testid={`audience-draft-regenerate-${def.key}`}
-                >
-                  Regenerate from model
-                </button>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleResetToAutoBuilt(def.key)}
+                    className="text-xs font-semibold text-muted-foreground hover:text-foreground underline underline-offset-2"
+                    data-testid={`audience-draft-reset-${def.key}`}
+                  >
+                    Reset to auto-built
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRegenerate(def.key)}
+                    className="text-xs font-semibold text-amber-700 hover:text-amber-900 underline underline-offset-2"
+                    data-testid={`audience-draft-regenerate-${def.key}`}
+                  >
+                    Regenerate from model
+                  </button>
+                </div>
               </div>
               <p className="text-[11px] text-muted-foreground italic">
                 Draft from your model — edit before sending.
@@ -815,6 +880,117 @@ function AudienceDraftsSection({
                 data-testid={`audience-draft-textarea-${def.key}`}
                 {...(register(`budgetNarrative.audienceDrafts.${def.key}`) as Record<string, unknown>)}
               />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Task #745 — side-by-side preview of all three audience-specific
+          narratives the way each PDF will render them. Mirrors the
+          server-side `chooseCommentaryParagraphs` contract: a non-blank
+          founder draft wins (split on blank lines, "Edited by the
+          founder" footer); a blank draft falls back to the canonical
+          engine commentary (`buildBoardCommentary` / `buildGrantCommentary`
+          / `buildLenderCommentary`) returned on the consultant response,
+          with the canonical-engine footer note. Founders can use this
+          to catch tone drift across the three audiences before exporting. */}
+      <NarrativePreviewPanel
+        audienceDrafts={audienceDrafts}
+        narrativeCommentaries={narrativeCommentaries}
+      />
+    </div>
+  );
+}
+
+// Task #745 — render the side-by-side preview of all three audience
+// narratives. Each card renders the same paragraph layout and footer
+// note the corresponding PDF will print, so the founder sees exactly
+// what each audience will receive before downloading.
+function NarrativePreviewPanel({
+  audienceDrafts,
+  narrativeCommentaries,
+}: {
+  audienceDrafts: Record<AudienceKey, string>;
+  narrativeCommentaries:
+    | Record<AudienceKey, { paragraphs?: string[] } | undefined>
+    | undefined;
+}) {
+  return (
+    <div
+      className="border rounded-xl bg-muted/20 p-4 space-y-3"
+      data-testid="narrative-preview-panel"
+    >
+      <div>
+        <h4 className="font-display text-base font-bold text-foreground flex items-center gap-2">
+          <FileText className="h-4 w-4 text-amber-600" />
+          Preview · what each audience will receive
+        </h4>
+        <p className="text-xs text-muted-foreground mt-1">
+          These mirror the prose that will print in each audience's exported
+          PDF. Compare across the three to catch tone drift before exporting.
+        </p>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-3">
+        {AUDIENCE_DEFS.map((def) => {
+          const Icon = def.icon;
+          const founderText = (audienceDrafts[def.key] || "").trim();
+          const usingFounderDraft = founderText.length > 0;
+          const paragraphs = usingFounderDraft
+            ? splitFounderDraft(founderText)
+            : narrativeCommentaries?.[def.key]?.paragraphs ?? [];
+
+          return (
+            <div
+              key={def.key}
+              className="border rounded-lg bg-card p-3 space-y-2 flex flex-col"
+              data-testid={`narrative-preview-card-${def.key}`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Icon className="h-4 w-4 text-amber-600 shrink-0" />
+                  <div className="font-semibold text-sm text-foreground truncate">
+                    {def.label}
+                  </div>
+                </div>
+                <span
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                    usingFounderDraft
+                      ? "bg-amber-100 text-amber-800"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
+                  data-testid={`narrative-preview-badge-${def.key}`}
+                >
+                  {usingFounderDraft ? "Founder-edited" : "Auto-built"}
+                </span>
+              </div>
+
+              <div className="space-y-2 flex-1">
+                {paragraphs.length === 0 ? (
+                  <p className="text-xs italic text-muted-foreground">
+                    No prose available yet — finish your model so the engine
+                    can build a fallback narrative for this audience.
+                  </p>
+                ) : (
+                  paragraphs.map((p, i) => (
+                    <p
+                      key={i}
+                      className="text-xs leading-relaxed text-foreground whitespace-pre-wrap"
+                    >
+                      {p}
+                    </p>
+                  ))
+                )}
+              </div>
+
+              <p
+                className="text-[10px] italic text-muted-foreground border-t pt-2"
+                data-testid={`narrative-preview-footer-${def.key}`}
+              >
+                {usingFounderDraft
+                  ? "Edited by the founder for this audience. Figures elsewhere in this packet are sourced from the canonical engine."
+                  : "Every figure in this commentary is sourced from the same canonical engine that powers the rest of this packet."}
+              </p>
             </div>
           );
         })}

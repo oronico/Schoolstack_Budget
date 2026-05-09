@@ -15,6 +15,7 @@ export * from "./consultantKeyMetric";
 export * from "./consultantKeyMetricStatus";
 export * from "./consultantOutput";
 export * from "./consultantOutputLenderReadiness";
+export * from "./consultantOutputNarrativeCommentaries";
 export * from "./consultantRecommendation";
 export * from "./consultantRecommendationPriority";
 export * from "./costComposition";

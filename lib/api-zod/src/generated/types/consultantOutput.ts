@@ -7,6 +7,7 @@
  */
 import type { ConsultantKeyMetric } from "./consultantKeyMetric";
 import type { ConsultantOutputLenderReadiness } from "./consultantOutputLenderReadiness";
+import type { ConsultantOutputNarrativeCommentaries } from "./consultantOutputNarrativeCommentaries";
 import type { ConsultantRecommendation } from "./consultantRecommendation";
 import type { CostComposition } from "./costComposition";
 import type { CumulativeYear } from "./cumulativeYear";
@@ -43,5 +44,6 @@ export interface ConsultantOutput {
   lendingLabAssessment: LendingLabAssessment;
   normalizedView?: NormalizedFinancialsView;
   lenderStressTests: LenderStressTestResults;
+  narrativeCommentaries?: ConsultantOutputNarrativeCommentaries;
   generatedAt: Date;
 }

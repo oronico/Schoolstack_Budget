@@ -745,6 +745,18 @@ export const budgetNarrativeSchema = z.object({
       lender: z.string().optional(),
     })
     .optional(),
+  // Task #745 — per-audience flag tracking whether the auto-seeded draft
+  // has already been written, OR the founder has explicitly reset back
+  // to the canonical-engine fallback. Set in either case so the auto-fill
+  // effect in `AudienceDraftsSection` never silently re-populates a draft
+  // the founder intentionally cleared.
+  audienceDraftsAutoFilled: z
+    .object({
+      board: z.boolean().optional(),
+      grant: z.boolean().optional(),
+      lender: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 export const assumptionFlagResponseSchema = z.object({

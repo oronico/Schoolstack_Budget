@@ -2159,6 +2159,17 @@ components:
         # view, lender packet PDF, and lender pro-forma workbook.
         lenderStressTests:
           $ref: "#/components/schemas/LenderStressTestResults"
+        # Task #745 — canonical-engine narrative commentaries (board /
+        # grant / lender) so the wizard's Lender Narrative step can show
+        # the founder a side-by-side preview of exactly what each PDF
+        # will print as the audience-specific narrative when the founder
+        # has not edited the corresponding audience draft. Each entry is
+        # a NarrativeCommentary { paragraphs, allowedFigures, bundle,
+        # generatedAt } figure-allowlisted by the same guard that
+        # protects the PDF render path.
+        narrativeCommentaries:
+          type: object
+          additionalProperties: true
         generatedAt:
           type: string
           format: date-time
