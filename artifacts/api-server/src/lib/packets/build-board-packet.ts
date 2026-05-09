@@ -163,6 +163,18 @@ export interface BoardPacket extends PacketData {
    * in `paragraphs` reconciles to canonical engine output (guard test).
    */
   boardCommentary: NarrativeCommentary;
+  /**
+   * Task #716 — per-assumption Confidence + evidence note collected by
+   * the wizard's AssumptionConfidenceCard, mirrored from the lender
+   * packet so the board PDF can render the same Assumptions Confidence
+   * rollup (including the Actual / Projected pill on the headline).
+   * Empty record when the founder hasn't tagged anything — the renderer
+   * still surfaces the rollup with a "Needs Support" posture.
+   */
+  assumptionConfidence: Record<
+    string,
+    { confidence: "actuals" | "signed_agreement" | "quote" | "research" | "estimate"; evidenceNote?: string }
+  >;
 }
 
 const BOARD_PACKET_SECTIONS: SectionId[] = [
@@ -283,6 +295,16 @@ export function buildBoardPacket(
 
   const recruitingProjections = buildRecruitingProjections(modelData);
 
+  // Task #716 — pull-through of the per-assumption Confidence map the
+  // founder built in the wizard. Mirrors the lender packet so the board
+  // PDF can render the same Assumptions Confidence rollup (with the
+  // Actual / Projected pill on the headline). Shape is enforced upstream
+  // by zod (`assumptionConfidenceSchema`), so a permissive cast through
+  // unknown is safe here.
+  const rawModel = modelData as unknown as Record<string, unknown>;
+  const assumptionConfidence =
+    (rawModel.assumptionConfidence as BoardPacket["assumptionConfidence"]) || {};
+
   return {
     ...basePacket,
     sections: enrichedSections,
@@ -298,6 +320,7 @@ export function buildBoardPacket(
     forecastAccuracyFilter: normalizedFilter,
     forecastAccuracyUnfilteredCount: fullForecastAccuracy.entries.length,
     recruitingProjections,
+    assumptionConfidence,
     // Task #617 - deterministic board commentary, built from the same
     // canonical bundle the lender commentary uses so the two narratives
     // can never disagree on a number.

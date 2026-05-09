@@ -12,7 +12,7 @@ import type { CashRunwayView } from "./build-cash-runway";
 import type { PacketSection, LinkedMetric } from "./packet-types";
 import { renderForecastAccuracySection } from "./forecast-accuracy-pdf.js";
 import { cashStatusBadgeLabel, renderCashRunwaySection } from "./cash-runway-pdf.js";
-import { renderNarrativeCommentarySection } from "./lender-packet-pdf.js";
+import { renderNarrativeCommentarySection, renderAssumptionsConfidenceSection } from "./lender-packet-pdf.js";
 import { buildFounderSummary, type FounderSummary } from "./build-founder-summary.js";
 import type { ConsultantOutput } from "../consultant-engine.js";
 import type { ModelData } from "../workbook-helpers.js";
@@ -49,6 +49,14 @@ export async function generateBoardPacketPDF(
   drawOutlookSection(doc, packet);
 
   renderBoardNarrativeSection(doc, packet.boardNarrative, packet.boardFlaggedAssumptions);
+
+  // Task #716 — surface the same Assumptions Confidence rollup the lender
+  // PDF shows (with the Actual / Projected pill on the headline). The
+  // board PDF is the second-most-shared report, so reusing the lender
+  // renderer means trustees see the identical provenance signal — no
+  // second copy of the styling, no risk of the two surfaces drifting on
+  // wording or color.
+  renderAssumptionsConfidenceSection(doc, packet.assumptionConfidence, packet.provenance);
 
   for (const section of packet.sections) {
     if (!section.included) continue;

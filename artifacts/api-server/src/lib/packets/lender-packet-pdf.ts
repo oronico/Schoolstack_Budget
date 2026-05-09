@@ -237,7 +237,10 @@ function renderBudgetNarrativeSection(doc: PDFDoc, narrative: BudgetNarrativeDat
 // Task #659 — group registered assumption keys by their wizard step
 // title and render confidence + (optional) evidence note for each one
 // the founder has tagged. Skipped silently when no entries exist.
-function renderAssumptionsConfidenceSection(
+// Task #716 — exported so the board PDF can reuse the exact same
+// renderer (including the Actual / Projected pill on the rollup) instead
+// of carrying a parallel implementation that could drift.
+export function renderAssumptionsConfidenceSection(
   doc: PDFDoc,
   confidence: LenderPacket["assumptionConfidence"],
   provenance?: "actuals" | "assumptions",
