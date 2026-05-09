@@ -1,47 +1,50 @@
-import { cn } from "@/lib/utils";
+import { CheckCircle2, Sparkles } from "lucide-react";
 
-// Task #703 — small inline badge that distinguishes a figure pulled
-// from last year's actuals from a forward-looking projection. Surfaced
-// next to numeric values on Review, the consultant view, and the
-// founder workbook export so the actual-vs-projected distinction stays
-// visible after the founder leaves the Actuals Intake step.
+// Task #703 — small chip used inline next to numbers on the Review step
+// (and embedded in the Prior-Year vs Projected table headers) so a
+// reader can immediately tell whether a column is "what really happened"
+// vs "what we are forecasting." Same component is reused as a compact
+// inline badge and as a column-header pill.
 
-export type FigureKind = "actual" | "projected";
+export type ActualVsProjectedKind = "actual" | "projected";
+// Backwards-compat alias for HEAD callers that imported `FigureKind`.
+export type FigureKind = ActualVsProjectedKind;
 
-const STYLES: Record<FigureKind, string> = {
-  actual:
-    "bg-emerald-50 text-emerald-800 border-emerald-200",
-  projected:
-    "bg-slate-50 text-slate-600 border-slate-200",
-};
-
-const LABELS: Record<FigureKind, string> = {
-  actual: "Actual",
-  projected: "Projected",
+const COPY: Record<ActualVsProjectedKind, { label: string; tone: string; Icon: typeof CheckCircle2 }> = {
+  actual: {
+    label: "Actual",
+    tone: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    Icon: CheckCircle2,
+  },
+  projected: {
+    label: "Projected",
+    tone: "bg-slate-100 text-slate-700 border-slate-200",
+    Icon: Sparkles,
+  },
 };
 
 export function ActualVsProjectedBadge({
   kind,
+  className = "",
   sourceLabel,
-  className,
 }: {
-  kind: FigureKind;
-  /** Optional tooltip text — e.g. "From last year's books" or
-   *  "Year 1 projection". Falls back to the kind label. */
-  sourceLabel?: string;
+  kind: ActualVsProjectedKind;
   className?: string;
+  /** Optional tooltip text — e.g. "From last year's books" or
+   *  "Year 1 projection". Falls back to the kind label. Preserved from
+   *  the HEAD implementation so existing callers that pass it keep
+   *  working after the rebase. */
+  sourceLabel?: string;
 }) {
+  const { label, tone, Icon } = COPY[kind];
   return (
     <span
       data-testid={`actual-vs-projected-badge-${kind}`}
-      title={sourceLabel || LABELS[kind]}
-      className={cn(
-        "inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-        STYLES[kind],
-        className,
-      )}
+      title={sourceLabel || label}
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${tone} ${className}`}
     >
-      {LABELS[kind]}
+      <Icon className="h-3 w-3" aria-hidden />
+      {label}
     </span>
   );
 }

@@ -14,6 +14,7 @@ import {
   listAssumptionKeys,
   isEstimateWithoutEvidence,
   HIGH_IMPACT_CONFIDENCE_KEYS,
+  computeAssumptionConfidenceRollup,
   type AssumptionKey,
 } from "@workspace/finance";
 import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "../benchmark-thresholds";
@@ -242,15 +243,55 @@ function renderAssumptionsConfidenceSection(
   const entries = Object.entries(confidence || {}).filter(([k]) =>
     Object.prototype.hasOwnProperty.call(ASSUMPTION_REGISTRY, k),
   ) as Array<[AssumptionKey, { confidence: keyof typeof ASSUMPTION_CONFIDENCE_LABELS; evidenceNote?: string }]>;
-  if (entries.length === 0) return;
 
   ensureSpace(doc, 60);
   sectionTitle(doc, "Assumptions Confidence");
+
+  // Task #703 — always render the Strong / Moderate / Needs Support
+  // rollup at the top of the section, even when the founder has not
+  // tagged any keys yet. An empty map deliberately produces a "Needs
+  // Support" posture so reviewers see the same single-figure confidence
+  // signal on every packet (matches the wizard Review screen and the
+  // Founder Planning Workbook dashboard).
+  const rollup = computeAssumptionConfidenceRollup({ assumptionConfidence: confidence });
+  ensureSpace(doc, 22);
+  const rollupTone =
+    rollup.status === "Strong"
+      ? BRAND.green
+      : rollup.status === "Moderate"
+        ? BRAND.amber
+        : BRAND.red;
+  doc.font("Helvetica-Bold").fontSize(11).fillColor(rollupTone);
+  doc.text(`Overall: ${rollup.status}`, doc.page.margins.left, doc.y, { continued: true });
+  doc.font("Helvetica").fontSize(9).fillColor(BRAND.darkGray);
+  doc.text(
+    `   ${Math.round(rollup.evidenceRatio * 100)}% weighted evidence  ·  ${rollup.taggedKeys} of ${rollup.totalKeys} tagged`,
+  );
+  doc.moveDown(0.3);
+  doc.font("Helvetica-Oblique").fontSize(9).fillColor(BRAND.darkGray);
+  doc.text(rollup.message, { width: doc.page.width - doc.page.margins.left - doc.page.margins.right });
+  doc.font("Helvetica").fillColor(BRAND.black);
+  doc.moveDown(0.5);
+
   bodyText(
     doc,
     "Each major assumption below is tagged by the founder with the source they leaned on. " +
       "Higher-confidence sources (actuals, signed agreements, written quotes) are stronger evidence than research benchmarks or estimates.",
   );
+
+  // Task #703 — when nothing is tagged, surface the empty state directly
+  // under the rollup so reviewers know the posture is intentional, then
+  // exit before the per-step section iterator (which would render nothing).
+  if (entries.length === 0) {
+    ensureSpace(doc, 16);
+    doc.font("Helvetica-Oblique").fontSize(9).fillColor(BRAND.darkGray);
+    doc.text(
+      `0 of ${listAssumptionKeys().length} assumptions tagged yet — the founder has not anchored any inputs to evidence. Posture defaults to "Needs Support" until at least some keys are tagged.`,
+      { width: doc.page.width - doc.page.margins.left - doc.page.margins.right },
+    );
+    doc.font("Helvetica").fillColor(BRAND.black);
+    return;
+  }
 
   // Cover summary: how many of the registered keys are tagged at all,
   // and which high-impact assumptions are still bare estimates. The same

@@ -4,14 +4,10 @@ import { Edit2, Users, DollarSign, TrendingDown, ArrowUpRight, ArrowDownRight, B
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { dismissLesson, getDismissedLessons } from "@/lib/coaching/micro-lessons";
-import {
-  computeAnnualDebt,
-  rollupAssumptionConfidence,
-  ASSUMPTION_CONFIDENCE_POSTURE_DESCRIPTIONS,
-  type AssumptionConfidenceEntry,
-} from "@workspace/finance";
+import { computeAnnualDebt } from "@workspace/finance";
+import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, profitLabel, getWizardPathway } from "../schema";
+import { AssumptionConfidenceRollupCard } from "@/components/wizard/AssumptionConfidenceRollupCard";
 import { ActualVsProjectedBadge } from "@/components/wizard/ActualVsProjectedBadge";
-import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, profitLabel } from "../schema";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import { DiagnosticPanel } from "@/components/coaching/DiagnosticPanel";
 import { QuickLevers } from "@/components/coaching/QuickLevers";
@@ -490,7 +486,10 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
                 <DollarSign className="h-4 w-4 text-green-700" />
               </div>
             </div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Year 1 Revenue</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+              Year 1 Revenue
+              <ActualVsProjectedBadge kind={getWizardPathway(data) === "actuals" ? "actual" : "projected"} />
+            </p>
             <p className="font-display font-bold text-xl text-foreground mt-1">{formatCurrency(revenueSummary.total)}</p>
           </div>
 
@@ -500,7 +499,10 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
                 <TrendingDown className="h-4 w-4 text-rose-600" />
               </div>
             </div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Year 1 Expenses</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+              Year 1 Expenses
+              <ActualVsProjectedBadge kind={getWizardPathway(data) === "actuals" ? "actual" : "projected"} />
+            </p>
             <p className="font-display font-bold text-xl text-foreground mt-1">{formatCurrency(totalExpenses)}</p>
           </div>
 
@@ -516,7 +518,10 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
                 </span>
               )}
             </div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Year 1 {niLabel}</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+              Year 1 {niLabel}
+              <ActualVsProjectedBadge kind={getWizardPathway(data) === "actuals" ? "actual" : "projected"} />
+            </p>
             <p className={`font-display font-bold text-xl mt-1 ${netIncome >= 0 ? "text-green-700" : "text-rose-600"}`}>
               {formatCurrency(netIncome)}
             </p>
@@ -858,61 +863,20 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
             </div>
           )}
 
-          {/* Task #703 — Assumptions-confidence rollup. One Strong /
-              Moderate / Needs Support label aggregating every per-step
-              picker on the wizard, plus an evidence-mix subtitle so the
-              founder (and any reviewer reading the export) sees how
-              grounded the model's inputs are at a glance. */}
-          {(() => {
-            const map = (data.assumptionConfidence || {}) as Record<string, AssumptionConfidenceEntry | undefined>;
-            const rollup = rollupAssumptionConfidence(map);
-            const POSTURE_TONE: Record<typeof rollup.posture, string> = {
-              Strong: "bg-emerald-50 border-emerald-200 text-emerald-900",
-              Moderate: "bg-amber-50 border-amber-200 text-amber-900",
-              "Needs Support": "bg-rose-50 border-rose-200 text-rose-900",
-            } as const;
-            return (
-              <div
-                data-testid="assumption-confidence-rollup"
-                className={`rounded-2xl border p-5 shadow-sm ${POSTURE_TONE[rollup.posture]}`}
-              >
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
-                      Assumptions confidence
-                    </p>
-                    <p className="font-display text-2xl font-bold mt-0.5">
-                      {rollup.posture}
-                    </p>
-                  </div>
-                  <p className="text-sm font-semibold opacity-90">
-                    {rollup.withEvidence} of {rollup.total} assumptions with evidence
-                  </p>
-                </div>
-                <p className="text-sm mt-2 leading-relaxed">
-                  {ASSUMPTION_CONFIDENCE_POSTURE_DESCRIPTIONS[rollup.posture]}
-                </p>
-                {rollup.highImpactGap && (
-                  <p className="text-xs mt-2 font-medium">
-                    A high-impact assumption (tuition or enrollment) is still a bare estimate. Add a source on its step to lift the rollup.
-                  </p>
-                )}
-                <div className="flex flex-wrap gap-2 mt-3 text-[11px] font-medium opacity-90">
-                  <span className="rounded-md bg-white/60 px-2 py-0.5">Actuals: {rollup.breakdown.actuals}</span>
-                  <span className="rounded-md bg-white/60 px-2 py-0.5">Signed: {rollup.breakdown.signed_agreement}</span>
-                  <span className="rounded-md bg-white/60 px-2 py-0.5">Quotes: {rollup.breakdown.quote}</span>
-                  <span className="rounded-md bg-white/60 px-2 py-0.5">Research: {rollup.breakdown.research}</span>
-                  <span className="rounded-md bg-white/60 px-2 py-0.5">Estimates: {rollup.breakdown.estimate}</span>
-                </div>
-              </div>
-            );
-          })()}
+          {/* Task #703 — single Strong/Moderate/Needs Support rollup of
+              the per-step assumption-confidence tags. Sits at the top of
+              the Review summary so the founder sees the same posture a
+              reviewer will see on the lender packet cover. */}
+          <AssumptionConfidenceRollupCard data={{ assumptionConfidence: data.assumptionConfidence }} />
 
           {schoolStage === "operating_school" && data.priorYearSnapshot && (data.priorYearSnapshot.totalRevenue || data.priorYearSnapshot.tuitionRevenue || data.priorYearSnapshot.publicFundingRevenue || data.priorYearSnapshot.philanthropyRevenue || data.priorYearSnapshot.totalExpenses || data.priorYearSnapshot.personnelExpenses) && (
             <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
               <h3 className="font-display font-bold text-lg mb-4 flex items-center gap-2">
                 <TrendingDown className="h-5 w-5 text-primary" />
                 Prior Year vs. Projected Year 1
+                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                  ({getWizardPathway(data) === "actuals" ? "Actuals seeded Year 1" : "Forward-looking projection"})
+                </span>
               </h3>
               <div className="overflow-x-auto -mx-2">
                 <table className="w-full text-sm">
@@ -921,14 +885,12 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
                       <th className="text-left py-2 px-3 font-semibold text-muted-foreground">Category</th>
                       <th className="text-right py-2 px-3 font-semibold text-muted-foreground">
                         <span className="inline-flex items-center gap-1.5 justify-end">
-                          Prior Year
-                          <ActualVsProjectedBadge kind="actual" sourceLabel="From last year's books" />
+                          Prior Year <ActualVsProjectedBadge kind="actual" sourceLabel="From last year's books" />
                         </span>
                       </th>
                       <th className="text-right py-2 px-3 font-semibold text-muted-foreground">
                         <span className="inline-flex items-center gap-1.5 justify-end">
-                          Year 1 Projected
-                          <ActualVsProjectedBadge kind="projected" sourceLabel="Year 1 projection" />
+                          Year 1 <ActualVsProjectedBadge kind="projected" sourceLabel="Year 1 projection" />
                         </span>
                       </th>
                       <th className="text-right py-2 px-3 font-semibold text-muted-foreground">Variance</th>

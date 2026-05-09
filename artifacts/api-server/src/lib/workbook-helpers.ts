@@ -9,7 +9,9 @@ import {
   computeEffectiveFte,
   defaultCollectionRateForMethod,
   distributeRevenueMonthly,
+  computeAssumptionConfidenceRollup,
   type MonthlyRevenueRowLike,
+  type AssumptionConfidenceRollup,
 } from "@workspace/finance";
 export {
   computeAnnualDebt,
@@ -1058,6 +1060,13 @@ export interface DashboardInput {
   cumNIRef?: { sheetName: string; row: number; startCol: number };
   hasManagementFee?: boolean;
   managementFeePercent?: number;
+  // Task #703 — provenance + assumptions-confidence rollup. Both are
+  // optional so older callers (and the legacy code path) compile
+  // unchanged; when supplied they render as a small banner under the
+  // dashboard title so the workbook reader sees the same posture the
+  // wizard's Review step and the lender PDF cover report.
+  provenance?: "actuals" | "assumptions";
+  assumptionConfidence?: Record<string, { confidence: string; evidenceNote?: string }>;
 }
 
 function statusColor(status: string): string {
@@ -1097,6 +1106,42 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   ws.mergeCells(r, 2, r, signalsRightCol);
   ws.getCell(r, 2).value = `Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`;
   ws.getCell(r, 2).font = { size: 11, italic: true, name: "Calibri", color: { argb: "FF6B7280" } };
+
+  // Task #703 — provenance + assumptions-confidence rollup banner.
+  // Renders as two italic lines under the "Generated …" caption so the
+  // workbook reader sees the same Strong/Moderate/Needs Support posture
+  // surfaced on the wizard's Review step and the lender PDF cover.
+  if (input.provenance) {
+    r++;
+    ws.mergeCells(r, 2, r, signalsRightCol);
+    const cell = ws.getCell(r, 2);
+    cell.value = input.provenance === "actuals" ? "Built from actuals" : "Built from assumptions";
+    cell.font = { size: 11, italic: true, bold: true, name: "Calibri", color: { argb: NAVY } };
+  }
+  let confidenceRollup: AssumptionConfidenceRollup | undefined;
+  if (input.assumptionConfidence) {
+    // Cast: callers pass a permissive `Record<string, { confidence: string }>`
+    // (the wizard schema's runtime shape); the rollup helper only reads
+    // `confidence` + `evidenceNote` strings so the structural shape is
+    // compatible.
+    confidenceRollup = computeAssumptionConfidenceRollup({
+      assumptionConfidence: input.assumptionConfidence,
+    });
+    r++;
+    ws.mergeCells(r, 2, r, signalsRightCol);
+    const cell = ws.getCell(r, 2);
+    const pct = Math.round(confidenceRollup.evidenceRatio * 100);
+    cell.value = `Assumptions Confidence: ${confidenceRollup.status} — ${pct}% weighted evidence (${confidenceRollup.taggedKeys} of ${confidenceRollup.totalKeys} tagged). ${confidenceRollup.message}`;
+    const tone =
+      confidenceRollup.status === "Strong"
+        ? DASHBOARD_GREEN
+        : confidenceRollup.status === "Moderate"
+          ? DASHBOARD_AMBER
+          : DASHBOARD_RED;
+    cell.font = { size: 10, italic: true, name: "Calibri", color: { argb: tone } };
+    cell.alignment = { wrapText: true, vertical: "top" };
+    ws.getRow(r).height = 36;
+  }
 
   r++;
   const greenDot = ws.getCell(r, 2);

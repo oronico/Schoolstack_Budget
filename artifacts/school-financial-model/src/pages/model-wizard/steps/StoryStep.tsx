@@ -11,6 +11,7 @@ import { isYetToLaunch, getFounderPersona } from "@/lib/coaching/founder-persona
 // `yetToLaunch` persona check below is reserved for tone-only copy
 // variants (the "what happens next" onboarding blurb).
 import { useModelDuration } from "@/lib/use-model-duration";
+import { LaunchChecklistCard } from "@/components/wizard/LaunchChecklistCard";
 import {
   GRADE_BAND_KEYS,
   GRADE_BAND_DEFAULT_RATIO,
@@ -424,17 +425,12 @@ export function StoryStep() {
         {explicitPathway === "assumptions" && (
           <div
             data-testid="assumptions-framing-block"
-            className="rounded-xl border border-sky-200 bg-sky-50/60 p-4 space-y-3"
+            className="space-y-3"
           >
-            <div className="flex items-start gap-3">
-              <Compass className="h-4 w-4 text-sky-700 mt-0.5 shrink-0" />
-              <div className="text-sm">
-                <p className="font-semibold text-sky-900">Building a planning model from assumptions</p>
-                <p className="text-sky-800/90 mt-1 leading-relaxed">
-                  You don't have last year's books to start from - that's normal for new schools. Every input from here on is an assumption, and the consultant and lender narrative steps will help you stress-test the ones that matter most. Your dashboard and exports will be tagged "Built from assumptions" so reviewers know the framing.
-                </p>
-              </div>
-            </div>
+            {/* Task #703 — assumptions-first launch checklist replaces
+                the older free-text framing block. Verbatim brief copy
+                lives inside the card. */}
+            <LaunchChecklistCard />
             {!confirmingSwitchToActuals ? (
               <button
                 type="button"

@@ -5,6 +5,7 @@ import {
   parseAccountingExportCsv,
   parseAccountingExportRows,
   MAX_ACCOUNTING_EXPORT_BYTES,
+  PATHWAY_FRAMING_COPY,
   type ParsedAccountingExport,
 } from "@workspace/finance";
 import { FormInput } from "@/components/ui/form-inputs";
@@ -171,8 +172,14 @@ export function ActualsIntakeStep({ jumpToStep }: { jumpToStep?: (s: number) => 
         <h2 className="font-display text-2xl font-bold text-foreground">
           Last year's numbers
         </h2>
-        <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
-          You picked the operating path, so we'll start with what actually happened last year. These six numbers seed your Year-1 projection - you can refine every line on the steps that follow.
+        <p
+          data-testid="actuals-intake-framing"
+          className="text-muted-foreground mt-2 max-w-2xl mx-auto"
+        >
+          {PATHWAY_FRAMING_COPY.actuals}
+        </p>
+        <p className="text-muted-foreground mt-2 max-w-2xl mx-auto text-sm">
+          These six numbers seed your Year-1 projection — you can refine every line on the steps that follow.
         </p>
       </div>
 

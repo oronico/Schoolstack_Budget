@@ -23,6 +23,9 @@ interface SchoolProfile {
   entityType?: string;
   ein?: string;
   schoolStage?: string;
+  // Task #703 — explicit founder pathway choice; drives the provenance
+  // banner on the dashboard sheet (mirrors workbook-helpers SchoolProfile).
+  wizardPathway?: "actuals" | "assumptions";
   openingYear?: number;
   currentStudents?: number;
   maxCapacity?: number;
@@ -945,6 +948,18 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
         cumNIRef: { sheetName: "Financial Model", row: 8 + (sp.hasManagementFee ? 1 : 0), startCol: 2 },
         hasManagementFee: sp.hasManagementFee,
         managementFeePercent: sp.managementFeePercent,
+        // Task #703 — provenance + assumptions-confidence rollup banner.
+        provenance:
+          sp.wizardPathway === "actuals"
+            ? "actuals"
+            : sp.wizardPathway === "assumptions"
+              ? "assumptions"
+              : sp.schoolStage === "operating_school"
+                ? "actuals"
+                : "assumptions",
+        assumptionConfidence:
+          (rawData as { assumptionConfidence?: Record<string, { confidence: string; evidenceNote?: string }> })
+            .assumptionConfidence,
       });
     }
   } else {
@@ -1006,6 +1021,18 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
         hasDebt,
         revenueCategories: {},
         cumNIRef: { sheetName: "Financial Model", row: 8, startCol: 2 },
+        // Task #703 — provenance + assumptions-confidence rollup banner.
+        provenance:
+          sp.wizardPathway === "actuals"
+            ? "actuals"
+            : sp.wizardPathway === "assumptions"
+              ? "assumptions"
+              : sp.schoolStage === "operating_school"
+                ? "actuals"
+                : "assumptions",
+        assumptionConfidence:
+          (rawData as { assumptionConfidence?: Record<string, { confidence: string; evidenceNote?: string }> })
+            .assumptionConfidence,
       });
     }
   }

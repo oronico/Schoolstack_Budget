@@ -555,60 +555,227 @@ export function listAssumptionKeysByStep(stepTitle: string): AssumptionKey[] {
   );
 }
 
-/** Task #703 — Assumptions Confidence Layer rollup posture. The brief
- *  asks every per-step confidence answer to roll up into a single
- *  Strong / Moderate / Needs Support label that the Review screen and
- *  the lender / board exports can surface. */
-export type AssumptionConfidencePosture =
-  | "Strong"
-  | "Moderate"
-  | "Needs Support";
+// Task #703 — Assumptions Confidence rollup.
+//
+// Combines the per-assumption tags collected by the AssumptionConfidenceCard
+// into a single Strong / Moderate / Needs Support status that surfaces on
+// the Review step, the lender / board PDFs, and the Founder Planning
+// Workbook so a reviewer can read the model's evidence posture at a glance.
+//
+// Scoring:
+//   • Each registered key is worth 1 point. High-impact keys
+//     (HIGH_IMPACT_CONFIDENCE_KEYS) are weighted 2x — those are the
+//     swing-factor levers a lender will challenge first.
+//   • A key earns its weight when tagged with anything other than a bare
+//     "estimate" (i.e. actuals / signed_agreement / quote / research, or
+//     "estimate" with an evidence note). This matches the per-step tally
+//     in AssumptionConfidenceCard.
+//   • Status thresholds: Strong ≥ 70%, Moderate ≥ 40%, else Needs Support.
+//
+// The verbatim "Needs Support" copy is taken straight from the founder-
+// facing brief and must not be paraphrased on any surface.
+export type AssumptionConfidenceStatus = "Strong" | "Moderate" | "Needs Support";
 
 export interface AssumptionConfidenceRollup {
-  posture: AssumptionConfidencePosture;
-  /** Total registry keys we expect a founder to weigh in on. */
-  total: number;
-  /** Count where the founder either picked a non-estimate level OR
-   *  attached an evidence note to an estimate. Mirrors the per-step
-   *  card's "X of Y with evidence" tally so the rollup and the inline
-   *  cards never disagree on what counts. */
-  withEvidence: number;
-  /** Per-level counts. Useful for the export's evidence-mix subtitle. */
-  breakdown: Record<AssumptionConfidenceLevel, number>;
-  /** True when at least one high-impact key is still a bare estimate
-   *  with no note. Drives the Needs Support floor regardless of the
-   *  raw evidence ratio. */
-  highImpactGap: boolean;
+  status: AssumptionConfidenceStatus;
+  /** 0..1 share of weighted points earned. */
+  evidenceRatio: number;
+  /** Sum of weights actually earned (with high-impact 2x). */
+  earnedWeight: number;
+  /** Total possible weighted points across the registry. */
+  totalWeight: number;
+  /** Count of keys (any weight) tagged with evidence. */
+  taggedKeys: number;
+  /** Total registered key count. */
+  totalKeys: number;
+  /** High-impact keys that are still bare estimates (or untagged) and
+   *  therefore the highest-leverage thing the founder can firm up. */
+  weakHighImpactKeys: AssumptionKey[];
+  /** Founder-facing copy block matched to the status, ready to drop on
+   *  the Review screen / PDF cover. */
+  message: string;
 }
 
-/** Single source of truth for what counts as "with evidence" — must
- *  match the per-step `AssumptionConfidenceCard` tally so the Review
- *  rollup never contradicts the inline cards. */
-function entryHasEvidence(entry: AssumptionConfidenceEntry | undefined): boolean {
+export const ASSUMPTION_CONFIDENCE_STATUS_COPY: Record<AssumptionConfidenceStatus, string> = {
+  Strong:
+    "Most of the levers in this model are anchored to actuals, signed agreements, written quotes, or named research. A reviewer can follow your reasoning back to a source.",
+  Moderate:
+    "Some of the levers in this model are anchored, but several are still tagged as estimates. Adding a one-line source to the highest-impact ones below is the fastest way to build trust.",
+  // Verbatim from the Task #703 brief — do not paraphrase.
+  "Needs Support":
+    "This does not mean your plan is weak. It means this part needs more clarity.",
+};
+
+// Permissive shape: the wizard schema stores `confidence` as a string
+// (zod-narrowed at parse time), and downstream consumers (api-server
+// excel/PDF code paths) hand us the same `Record<string, { confidence:
+// string; evidenceNote?: string }>`. Accepting the wider shape here keeps
+// every caller compiling without unsafe casts.
+interface ConfidenceLikeEntry {
+  confidence: string;
+  evidenceNote?: string;
+}
+interface ConfidenceLikeMap {
+  [key: string]: ConfidenceLikeEntry | undefined;
+}
+
+/** True when the entry counts as "evidence-backed" for rollup purposes —
+ *  any non-estimate level, or an estimate that carries an evidence note. */
+function entryHasEvidence(entry: ConfidenceLikeEntry | undefined): boolean {
   if (!entry) return false;
   if (entry.confidence !== "estimate") return true;
   return !!(entry.evidenceNote && entry.evidenceNote.trim().length > 0);
 }
 
-/** Roll a flat confidence map into a Strong / Moderate / Needs Support
- *  posture. Pure: no I/O, no mutation. The thresholds intentionally lean
- *  toward "Needs Support" so the Review screen never overstates a
- *  founder's evidence depth.
- *
- *  - Strong:        ≥ 70% of registry keys carry evidence AND no
- *                   high-impact assumption is a bare estimate.
- *  - Moderate:      ≥ 40% with evidence, no high-impact gap.
- *  - Needs Support: anything else, OR any high-impact gap (even when
- *                   the overall ratio looks healthy — a bare-estimate
- *                   tuition_per_student / enrollment_y1 swamps the rest
- *                   of the model and the rollup must say so). */
-export function rollupAssumptionConfidence(
-  map: Record<string, AssumptionConfidenceEntry | undefined> | undefined,
+export function computeAssumptionConfidenceRollup(
+  data: { assumptionConfidence?: ConfidenceLikeMap | null } | null | undefined,
 ): AssumptionConfidenceRollup {
-  const safe = map ?? {};
+  const map = (data?.assumptionConfidence || {}) as ConfidenceLikeMap;
   const allKeys = listAssumptionKeys();
-  const total = allKeys.length;
+  let earned = 0;
+  let total = 0;
+  let tagged = 0;
+  const weakHighImpact: AssumptionKey[] = [];
+  for (const key of allKeys) {
+    const weight = HIGH_IMPACT_CONFIDENCE_KEYS.includes(key) ? 2 : 1;
+    total += weight;
+    const entry = map[key];
+    if (entryHasEvidence(entry)) {
+      earned += weight;
+      tagged += 1;
+    } else if (HIGH_IMPACT_CONFIDENCE_KEYS.includes(key)) {
+      weakHighImpact.push(key);
+    }
+  }
+  const ratio = total > 0 ? earned / total : 0;
+  const status: AssumptionConfidenceStatus =
+    ratio >= 0.7 ? "Strong" : ratio >= 0.4 ? "Moderate" : "Needs Support";
+  return {
+    status,
+    evidenceRatio: ratio,
+    earnedWeight: earned,
+    totalWeight: total,
+    taggedKeys: tagged,
+    totalKeys: allKeys.length,
+    weakHighImpactKeys: weakHighImpact,
+    message: ASSUMPTION_CONFIDENCE_STATUS_COPY[status],
+  };
+}
 
+// Task #703 — pathway-specific verbatim founder copy. These two blocks
+// must appear word-for-word on the Actuals Intake step and the
+// assumptions-first launch checklist respectively (the brief calls them
+// out as the single source of framing for both pathways).
+export const PATHWAY_FRAMING_COPY = {
+  actuals:
+    "Your actuals are the best starting point. Last year's books tell us what really happened — we'll use them to seed Year 1 so you're projecting forward from real numbers, not from a blank page.",
+  assumptions:
+    "Since you do not have actuals yet, every input from here on is an assumption. That's normal for a school you're still launching — the checklist below walks through the ones reviewers will look at first so you can anchor each to a piece of evidence as you go.",
+} as const;
+
+// Task #703 — assumptions-first launch checklist. Each item maps to an
+// existing field on the model so the Story step can show progress / "still
+// to do" without inventing new schema. The id is stable so tests can pin
+// the item set.
+export interface LaunchChecklistItem {
+  id:
+    | "opening_month"
+    | "year1_operating_months"
+    | "committed_students"
+    | "waitlist"
+    | "pre_opening_cash"
+    | "first_revenue_month"
+    | "first_payroll_month"
+    | "first_rent_month"
+    | "startup_costs";
+  label: string;
+  detail: string;
+  /** Where on the model the founder will firm this up. */
+  stepTitle: string;
+}
+
+export const LAUNCH_CHECKLIST_ITEMS: LaunchChecklistItem[] = [
+  {
+    id: "opening_month",
+    label: "Planned opening month",
+    detail: "Which month / year you expect the doors to open.",
+    stepTitle: "School Details",
+  },
+  {
+    id: "year1_operating_months",
+    label: "Year 1 operating months",
+    detail: "How many months of school happen inside Year 1 (partial-year proration).",
+    stepTitle: "School Details",
+  },
+  {
+    id: "committed_students",
+    label: "Committed students",
+    detail: "Families who have signed an enrollment agreement or paid a deposit.",
+    stepTitle: "Enrollment",
+  },
+  {
+    id: "waitlist",
+    label: "Applications & waitlist",
+    detail: "Families in your pipeline who haven't yet committed.",
+    stepTitle: "Enrollment",
+  },
+  {
+    id: "pre_opening_cash",
+    label: "Pre-opening cash on hand",
+    detail: "Cash you have today (founder capital, raised philanthropy, deposits).",
+    stepTitle: "Capital & Financing",
+  },
+  {
+    id: "first_revenue_month",
+    label: "First month with revenue",
+    detail: "When tuition or per-pupil funding starts hitting your bank account.",
+    stepTitle: "Revenue",
+  },
+  {
+    id: "first_payroll_month",
+    label: "First month with payroll",
+    detail: "When you start paying staff — usually a month or two before doors open.",
+    stepTitle: "Staffing",
+  },
+  {
+    id: "first_rent_month",
+    label: "First month with rent",
+    detail: "When the lease clock starts (usually before you can collect tuition).",
+    stepTitle: "Expenses",
+  },
+  {
+    id: "startup_costs",
+    label: "One-time startup costs",
+    detail: "Build-out, deposits, furniture, curriculum — the spend before Day 1.",
+    stepTitle: "Capital & Financing",
+  },
+];
+
+// Task #703 — backwards-compatible adapter for the HEAD branch's
+// `rollupAssumptionConfidence` API. Internal callers and the existing
+// HEAD-side test suite (`assumption-rollup.test.ts`) read this shape;
+// keeping the adapter lets both the weighted scoring and the legacy
+// posture-with-breakdown shape coexist without duplicating logic.
+export type AssumptionConfidencePosture = AssumptionConfidenceStatus;
+
+export interface LegacyAssumptionConfidenceRollup {
+  posture: AssumptionConfidencePosture;
+  total: number;
+  withEvidence: number;
+  breakdown: Record<AssumptionConfidenceLevel, number>;
+  highImpactGap: boolean;
+}
+
+export const ASSUMPTION_CONFIDENCE_POSTURE_DESCRIPTIONS: Record<
+  AssumptionConfidencePosture,
+  string
+> = ASSUMPTION_CONFIDENCE_STATUS_COPY;
+
+export function rollupAssumptionConfidence(
+  map: Record<string, AssumptionConfidenceEntry | undefined> | undefined | null,
+): LegacyAssumptionConfidenceRollup {
+  const safe = (map ?? {}) as ConfidenceLikeMap;
+  const allKeys = listAssumptionKeys();
   const breakdown: Record<AssumptionConfidenceLevel, number> = {
     actuals: 0,
     signed_agreement: 0,
@@ -620,38 +787,25 @@ export function rollupAssumptionConfidence(
   for (const k of allKeys) {
     const entry = safe[k];
     if (!entry) continue;
-    breakdown[entry.confidence] += 1;
+    if (entry.confidence in breakdown) {
+      breakdown[entry.confidence as AssumptionConfidenceLevel] += 1;
+    }
     if (entryHasEvidence(entry)) withEvidence += 1;
   }
-
-  const highImpactGap = HIGH_IMPACT_CONFIDENCE_KEYS.some((k) => {
-    const entry = safe[k];
-    return isEstimateWithoutEvidence(entry);
-  });
-
-  const ratio = total === 0 ? 0 : withEvidence / total;
-  let posture: AssumptionConfidencePosture;
-  if (highImpactGap) {
-    posture = "Needs Support";
-  } else if (ratio >= 0.7) {
-    posture = "Strong";
-  } else if (ratio >= 0.4) {
-    posture = "Moderate";
-  } else {
-    posture = "Needs Support";
-  }
-
-  return { posture, total, withEvidence, breakdown, highImpactGap };
+  const highImpactGap = HIGH_IMPACT_CONFIDENCE_KEYS.some((k) =>
+    isEstimateWithoutEvidence(safe[k] as AssumptionConfidenceEntry | undefined),
+  );
+  const weighted = computeAssumptionConfidenceRollup({ assumptionConfidence: safe });
+  // High-impact gap forces the floor to "Needs Support" even when the
+  // weighted ratio is otherwise healthy — the HEAD-side test pins this
+  // behavior and reviewers expect a single bare-estimate tuition or
+  // enrollment number to dominate the posture.
+  const posture: AssumptionConfidencePosture = highImpactGap ? "Needs Support" : weighted.status;
+  return {
+    posture,
+    total: allKeys.length,
+    withEvidence,
+    breakdown,
+    highImpactGap,
+  };
 }
-
-export const ASSUMPTION_CONFIDENCE_POSTURE_DESCRIPTIONS: Record<
-  AssumptionConfidencePosture,
-  string
-> = {
-  Strong:
-    "Most assumptions are backed by actuals, signed agreements, written quotes, or research.",
-  Moderate:
-    "Several assumptions still need a source. Tag them on each step to harden the model for a reviewer.",
-  "Needs Support":
-    "This does not mean your plan is weak. It means this part needs more clarity. Add evidence to your high-impact assumptions first.",
-};
