@@ -98,6 +98,85 @@ describe("AssumptionConfidenceCard — Task #659", () => {
     expect(screen.getByTestId(`confidence-option-${firstKey}-quote`)).toHaveAttribute("aria-checked", "true");
   });
 
+  it("renders attached evidence files as download links with type-aware previews (Task #730)", () => {
+    const keys = listAssumptionKeysByStep("Revenue");
+    const firstKey = keys[0];
+    const initial: Record<string, AssumptionConfidenceEntry> = {
+      [firstKey]: {
+        confidence: "signed_agreement",
+        evidenceFiles: [
+          {
+            id: "f-pdf",
+            name: "lease.pdf",
+            mimeType: "application/pdf",
+            size: 1024,
+            uploadedAt: "2025-01-01T00:00:00.000Z",
+            objectPath: "/objects/abc123",
+          },
+          {
+            id: "f-img",
+            name: "site-photo.jpg",
+            mimeType: "image/jpeg",
+            size: 2048,
+            uploadedAt: "2025-01-01T00:00:00.000Z",
+            objectPath: "/objects/def456",
+          },
+        ],
+      },
+    };
+    render(<Harness stepTitle="Revenue" initial={initial} />);
+    const pdfLink = screen.getByTestId(`evidence-file-link-${firstKey}-f-pdf`);
+    expect(pdfLink).toHaveAttribute("href", "/api/storage/objects/abc123");
+    expect(pdfLink).toHaveAttribute("target", "_blank");
+    expect(pdfLink).toHaveAttribute("download", "lease.pdf");
+
+    const imgLink = screen.getByTestId(`evidence-file-link-${firstKey}-f-img`);
+    expect(imgLink).toHaveAttribute("href", "/api/storage/objects/def456");
+    const thumb = imgLink.querySelector("img");
+    expect(thumb).not.toBeNull();
+    expect(thumb).toHaveAttribute("src", "/api/storage/objects/def456");
+  });
+
+  it("renders legacy dataBase64 evidence files as a data: URL link without crashing (Task #730)", () => {
+    const keys = listAssumptionKeysByStep("Revenue");
+    const firstKey = keys[0];
+    const initial: Record<string, AssumptionConfidenceEntry> = {
+      [firstKey]: {
+        confidence: "signed_agreement",
+        evidenceFiles: [
+          {
+            id: "f-legacy",
+            name: "old-quote.pdf",
+            mimeType: "application/pdf",
+            size: 512,
+            uploadedAt: "2024-06-01T00:00:00.000Z",
+            dataBase64: "JVBERi0xLjQK",
+          },
+          {
+            id: "f-broken",
+            name: "missing.pdf",
+            mimeType: "application/pdf",
+            size: 100,
+            uploadedAt: "2024-06-01T00:00:00.000Z",
+          },
+        ],
+      },
+    };
+    render(<Harness stepTitle="Revenue" initial={initial} />);
+    const legacyLink = screen.getByTestId(`evidence-file-link-${firstKey}-f-legacy`);
+    expect(legacyLink.getAttribute("href")).toBe(
+      "data:application/pdf;base64,JVBERi0xLjQK",
+    );
+    // No objectPath and no dataBase64 → unavailable, but row still renders
+    // and the remove button still works.
+    expect(
+      screen.getByTestId(`evidence-file-unavailable-${firstKey}-f-broken`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId(`evidence-file-remove-${firstKey}-f-broken`),
+    ).toBeInTheDocument();
+  });
+
   it("shows high-impact badge for tuition_per_student row", () => {
     render(<Harness stepTitle="Revenue" />);
     const label = screen.getByText(ASSUMPTION_REGISTRY.tuition_per_student.label);

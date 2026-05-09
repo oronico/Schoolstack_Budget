@@ -1,6 +1,6 @@
 import { useFormContext } from "react-hook-form";
 import { useRef, useState } from "react";
-import { ShieldCheck, ChevronDown, ChevronUp, Paperclip, X, FileText } from "lucide-react";
+import { ShieldCheck, ChevronDown, ChevronUp, Paperclip, X, FileText, FileSpreadsheet, FileImage } from "lucide-react";
 import {
   ASSUMPTION_REGISTRY,
   ASSUMPTION_CONFIDENCE_LEVELS,
@@ -174,6 +174,43 @@ function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// Task #730 — turn an evidence file into a URL the browser can hit.
+// New uploads (Task #714+) live in App Storage as `objectPath` like
+// `/objects/<id>`, served via `/api/storage/objects/<id>`. Legacy
+// uploads (Task #707) carry inline `dataBase64` instead — we render
+// those as `data:` URLs so the founder can still preview/download
+// them. Returns null when neither field is present.
+function evidenceFileUrl(file: AssumptionEvidenceFile): string | null {
+  if (file.objectPath) {
+    if (file.objectPath.startsWith("/objects/")) {
+      return `/api/storage${file.objectPath}`;
+    }
+    return file.objectPath;
+  }
+  if (file.dataBase64) {
+    const mime = file.mimeType || "application/octet-stream";
+    return `data:${mime};base64,${file.dataBase64}`;
+  }
+  return null;
+}
+
+function isImageMime(mime: string): boolean {
+  return mime.toLowerCase().startsWith("image/");
+}
+
+function isSpreadsheetMime(mime: string, name: string): boolean {
+  const m = mime.toLowerCase();
+  if (
+    m.includes("spreadsheet") ||
+    m.includes("excel") ||
+    m === "text/csv"
+  ) {
+    return true;
+  }
+  const lower = name.toLowerCase();
+  return lower.endsWith(".xls") || lower.endsWith(".xlsx") || lower.endsWith(".csv");
 }
 
 // Task #714 — two-step presigned-URL upload:
@@ -389,29 +426,67 @@ function ConfidenceRow({
           className="mt-2 space-y-1"
           data-testid={`evidence-file-list-${assumptionKey}`}
         >
-          {files.map((f) => (
-            <li
-              key={f.id}
-              className="flex items-center justify-between gap-2 text-xs bg-slate-50 border border-border rounded-lg px-2 py-1"
-            >
-              <span className="inline-flex items-center gap-1.5 min-w-0">
-                <FileText className="h-3 w-3 text-slate-500 shrink-0" />
-                <span className="truncate" title={f.name}>{f.name}</span>
+          {files.map((f) => {
+            const url = evidenceFileUrl(f);
+            const isImage = isImageMime(f.mimeType);
+            const isSheet = isSpreadsheetMime(f.mimeType, f.name);
+            const Icon = isImage ? FileImage : isSheet ? FileSpreadsheet : FileText;
+            const meta = (
+              <>
+                {isImage && url ? (
+                  <img
+                    src={url}
+                    alt=""
+                    className="h-6 w-6 object-cover rounded border border-border shrink-0 bg-white"
+                    loading="lazy"
+                  />
+                ) : (
+                  <Icon className="h-3 w-3 text-slate-500 shrink-0" />
+                )}
+                <span className="truncate">{f.name}</span>
                 <span className="text-muted-foreground shrink-0">
                   · {formatBytes(f.size)}
                 </span>
-              </span>
-              <button
-                type="button"
-                onClick={() => removeFile(f.id)}
-                className="text-muted-foreground hover:text-red-600 shrink-0"
-                aria-label={`Remove ${f.name}`}
-                data-testid={`evidence-file-remove-${assumptionKey}-${f.id}`}
+              </>
+            );
+            return (
+              <li
+                key={f.id}
+                className="flex items-center justify-between gap-2 text-xs bg-slate-50 border border-border rounded-lg px-2 py-1"
               >
-                <X className="h-3 w-3" />
-              </button>
-            </li>
-          ))}
+                {url ? (
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    download={f.name}
+                    className="inline-flex items-center gap-1.5 min-w-0 text-foreground hover:text-primary hover:underline"
+                    title={`Open or download ${f.name}`}
+                    data-testid={`evidence-file-link-${assumptionKey}-${f.id}`}
+                  >
+                    {meta}
+                  </a>
+                ) : (
+                  <span
+                    className="inline-flex items-center gap-1.5 min-w-0 text-muted-foreground"
+                    title="This file is no longer available for download"
+                    data-testid={`evidence-file-unavailable-${assumptionKey}-${f.id}`}
+                  >
+                    {meta}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => removeFile(f.id)}
+                  className="text-muted-foreground hover:text-red-600 shrink-0"
+                  aria-label={`Remove ${f.name}`}
+                  data-testid={`evidence-file-remove-${assumptionKey}-${f.id}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
 
