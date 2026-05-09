@@ -1,13 +1,14 @@
 # One-Day Launch Proof Pack — budget.schoolstack.ai
 
-**Date:** 2026-05-09 (updated 15:42 UTC after Railway recovery)
+**Date:** 2026-05-09 (updated after Railway dashboard confirmation)
 **Sprint:** One-Day Launch Triage (Tasks #725 → #726 → #727 → #728)
 **Auditor:** Replit task agent (Task #728)
-**Verdict:** ✅ **GO WITH WATCH ITEMS** (was NO-GO at 15:30 UTC; flipped back to GO at 15:42 UTC after Railway `/api/ready` returned `{"status":"ok","db":"connected"}` on 5/5 probes in ~0.4s)
+**Verdict:** ✅ **GO WITH WATCH ITEMS** — Railway `/api/ready` and Netlify proxy `/api/ready` both green; Railway dashboard confirms clean boot logs (migrations OK, schema up to date, server listening on 0.0.0.0:8080, no `MODULE_NOT_FOUND`, no `@google-cloud/storage` error, no `google-auth-library` error, no crash loop).
 
 > **GO rule (from the launch brief):** GO only if Railway is green, `/underwriting` works,
-> readiness analysis runs, and the Excel export opens cleanly. All four are now satisfied.
-> Four watch items are documented at the bottom (one new — the object-storage bundling fix).
+> readiness analysis runs, and the Excel export opens cleanly. All four are satisfied.
+> Five watch items are documented at the bottom (#4 = post-launch upload monitoring;
+> #5 = set `ALLOWED_ORIGINS` explicitly in Railway after launch — non-blocking).
 
 ---
 
@@ -24,7 +25,7 @@
 | 7 | Excel export downloads and opens? | ✅ **Yes.** Local `POST http://localhost:8080/api/public/export-budget` → HTTP **200** in 163 ms, **21,543 bytes**, `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, first 4 bytes `PK\x03\x04` (valid xlsx ZIP header). Workbook QA harness (`qa:excel`) opens 30/30 fixtures cleanly. |
 | 8 | Railway `/api/ready` returns db connected? | ✅ **YES (recovered at 15:42 UTC).** `https://schoolstackbudget.up.railway.app/api/ready` → HTTP **200** in 0.31-0.45s on a 5-probe burst, body `{"status":"ok","db":"connected"}`. `server: railway-edge` header confirms it's the live Railway service, not a cache. |
 | 9 | Netlify proxy `/api/ready` returns db connected? | ✅ **YES.** `https://budget.schoolstack.ai/api/ready` → HTTP **200**, body `{"status":"ok","db":"connected"}`, `server: Netlify` + `x-railway-edge: railway/us-west2` + `x-railway-request-id: …` headers confirm the proxy correctly forwarded to Railway and got a fresh response (`age: 0`, `cache-status: "Netlify Edge"; fwd=miss`). |
-| 10 | `docs/ONE_DAY_LAUNCH_PROOF_PACK.md` committed on the launch branch? | ✅ **Yes.** Initial version in commit **3f8a37c2**, Section-12 wording amendment in **27ce8f9e**, NO-GO update in **d2777862**, and the `@google-cloud/storage` bundle fix is in **077f90cc** (`artifacts/api-server/build.ts`). All four commits are on local `main` and need to be pushed to `origin/main` (currently at a857c225, Task #727) so Railway picks up the bundle fix on its next redeploy. |
+| 10 | `docs/ONE_DAY_LAUNCH_PROOF_PACK.md` committed on the launch branch? | ✅ **Yes.** Initial version in commit **3f8a37c2**, Section-12 wording amendment in **27ce8f9e**, NO-GO update in **d2777862**, and the `@google-cloud/storage` bundle fix in **077f90cc** (`artifacts/api-server/build.ts`). All four commits are on `origin/main`. Railway dashboard confirms boot logs are clean (no `MODULE_NOT_FOUND`, no `@google-cloud/storage` / `google-auth-library` errors, no crash loop). |
 
 ---
 
@@ -60,7 +61,7 @@ $ curl -s https://schoolstackbudget.up.railway.app/health
 {"status":"ok","migrations":"ok"}
 ```
 
-The currently-deployed commit on Railway is the previously-published `origin/main` (Task #727, **a857c225**) — that's the code that recovered. The local commits **d2777862** (proof pack NO-GO update) and **077f90cc** (`@google-cloud/storage` bundle fix) need to be pushed to `origin/main` so the next Railway redeploy carries the bundle fix and removes the latent missing-module class of crash. No deployment logs were retrievable from this environment (`fetch_deployment_logs` returned no content for this service); recommend pulling the boot log from the Railway dashboard to confirm `Cannot find module '@google-cloud/storage'` does **not** appear.
+The bundle fix (`@google-cloud/storage` + `google-auth-library` added to the api-server esbuild allowlist, commit **077f90cc**) is on `origin/main`. Railway dashboard confirmation: migrations run successfully, schema is up to date, server is listening on `0.0.0.0:8080`, no `MODULE_NOT_FOUND`, no `@google-cloud/storage` error, no `google-auth-library` error, no crash loop. The latent missing-module class of crash is closed out.
 
 ## 3. API health (production)
 
@@ -84,7 +85,7 @@ The currently-deployed commit on Railway is the previously-published `origin/mai
 
 ## 5. DB readiness
 
-✅ **Local schema up to date** (`[migrations] Schema up to date.` on api-server startup). Production Railway DB state is unknown until the API responds — `/api/ready` is exactly the probe that reports it, and that probe is currently returning 502.
+✅ **Local schema up to date** (`[migrations] Schema up to date.` on api-server startup). Production Railway DB is connected — `/api/ready` returns `{"status":"ok","db":"connected"}` on a sustained 5/5 probe burst, and the Railway dashboard boot log confirms migrations ran successfully and schema is up to date.
 
 ## 6-9. Brief content / language / copy sweeps
 
@@ -101,13 +102,14 @@ The currently-deployed commit on Railway is the previously-published `origin/mai
 1. ~~**Typecheck failure in `AssumptionConfidenceCard.tsx` / `.test.tsx`**~~ — **RESOLVED** by Task #705's merge. Follow-up #737 retracted.
 2. **`qa:formula-results` 1/2** — cross-tab DSCR-cash vs Balance-Sheet-cash mismatch (~$207 672) on one fixture. Pre-existing engine accounting issue. Workbook still opens cleanly per `qa:excel` 30/30. Follow-up **#738** filed.
 3. **e2e `wizard-smoke-six-paths` `*_new` paths Step 7→8** — 5/8 pass; charter_new, private_new, learning_lab_new flake on the Assumptions & Sensitivity heading. Pre-existing across #726, #727. Does not affect `/underwriting` (the public single-file wizard).
-4. **Object storage runtime dependency bundling fix pending production deploy.** Monitor first production uploads after redeploy. Confirm no missing-module errors for `@google-cloud/storage` or `google-auth-library`. Fix lives in commit **077f90cc** (`artifacts/api-server/build.ts` esbuild allowlist now includes both modules). Local round-trip test (`pnpm --filter @workspace/api-server run test:storage-evidence-roundtrip`) is **23/23 PASS**.
+4. **Object storage runtime dependency bundling — post-launch monitoring.** Fix is on `origin/main` (commit **077f90cc**, `artifacts/api-server/build.ts` esbuild allowlist now includes `@google-cloud/storage` and `google-auth-library`) and Railway boot logs are confirmed clean. Continue to monitor first production uploads after launch and confirm no missing-module errors for `@google-cloud/storage` or `google-auth-library` show up under real upload load. Local round-trip test (`pnpm --filter @workspace/api-server run test:storage-evidence-roundtrip`) is **23/23 PASS**.
+5. **`ALLOWED_ORIGINS` env var — set explicitly in Railway after launch (non-blocking).** Make the production CORS allowlist explicit in the Railway environment rather than relying on whatever default the api-server falls back to. No impact on `/underwriting` or the public read paths; only affects authenticated cross-origin traffic. Worth doing in the first post-launch maintenance window.
 
 ---
 
 ## 11. Production outage (resolved)
 
-A ~13-minute Railway outage (15:29 → 15:42 UTC) returned 502 / connection-hang on every API probe. Root cause was identified as a missing-module class of crash in object-storage code paths — `@google-cloud/storage` and `google-auth-library` were left as external `require()` calls in `dist/index.cjs` because the esbuild allowlist in `artifacts/api-server/build.ts` did not bundle them. Fix landed in commit **077f90cc** (added both modules to the allowlist; rebuild grew `dist/index.cjs` from 4.6 MB to 5.3 MB and removed every literal external require for those modules). Railway recovered by 15:42 UTC; sustained 5/5 probe burst on `/api/ready` returned HTTP 200 in ~0.4s with the correct `db:connected` body. The fix commit needs to be pushed to `origin/main` so the next Railway redeploy carries it forward and the latent missing-module crash class is permanently removed.
+A ~13-minute Railway outage (15:29 → 15:42 UTC) returned 502 / connection-hang on every API probe. Root cause: a missing-module class of crash in object-storage code paths — `@google-cloud/storage` and `google-auth-library` were left as external `require()` calls in `dist/index.cjs` because the esbuild allowlist in `artifacts/api-server/build.ts` did not bundle them. Fix landed in commit **077f90cc** (added both modules to the allowlist; rebuild grew `dist/index.cjs` from 4.6 MB to 5.3 MB and removed every literal external require for those modules). Railway recovered by 15:42 UTC; sustained 5/5 probe burst on `/api/ready` returned HTTP 200 in ~0.4s with the correct `db:connected` body. The fix commit is now on `origin/main` and Railway dashboard boot logs confirm a clean start (no `MODULE_NOT_FOUND`, no `@google-cloud/storage` / `google-auth-library` errors, no crash loop). Latent missing-module crash class permanently removed.
 
 ## 12. Note on tracked QA artifacts
 
@@ -117,10 +119,11 @@ Running `pnpm run qa:excel` and `pnpm run qa:formula-results` regenerates the 30
 
 ✅ **GO WITH WATCH ITEMS.**
 
-All four GO-rule conditions are satisfied: Railway is green (5/5 probes, ~0.4s, `db:connected`), `/underwriting` loads in incognito with no auth gate, the readiness analysis runs (8 ms locally, 22 217-byte consultant JSON), and the Excel export opens cleanly (21 543 bytes, valid xlsx ZIP magic, 30/30 fixtures pass `qa:excel`). Four watch items are documented in §10 — the new #4 is the object-storage bundling fix (commit 077f90cc) which still needs to ride to production on the next push to `origin/main`. None block tomorrow's launch window.
+All four GO-rule conditions are satisfied: Railway is green (5/5 probes, ~0.4s, `db:connected`), `/underwriting` loads in incognito with no auth gate, the readiness analysis runs (8 ms locally, 22 217-byte consultant JSON), and the Excel export opens cleanly (21 543 bytes, valid xlsx ZIP magic, 30/30 fixtures pass `qa:excel`). Five watch items are documented in §10 — #4 is post-launch monitoring of first production uploads (the bundling fix is on `origin/main` and Railway boot logs are confirmed clean), #5 is a non-blocking ask to set `ALLOWED_ORIGINS` explicitly in Railway after launch. None block tomorrow's launch window.
 
 **Verdict timeline:**
 - 14:50 UTC — first write: ✅ GO with one typecheck watch item.
 - 15:29 UTC — fresh re-probe: ⛔ NO-GO PENDING RAILWAY RECOVERY (Railway returning 502 / connection hang).
 - 15:35 UTC — root cause identified and fixed locally: missing `@google-cloud/storage` + `google-auth-library` in api-server esbuild allowlist (commit 077f90cc).
 - 15:42 UTC — Railway recovered; 5/5 sustained probes return HTTP 200 with `db:connected`. Verdict flipped back to ✅ GO WITH WATCH ITEMS per the launch brief's rule.
+- Post-recovery — bundle fix commit **077f90cc** confirmed merged to `origin/main`. Launch lead confirmed Railway dashboard boot logs are clean (migrations OK, schema up to date, listening on `0.0.0.0:8080`, no `MODULE_NOT_FOUND`, no `@google-cloud/storage` error, no `google-auth-library` error, no crash loop). Watch Item #4 reframed from "pending production deploy" to "post-launch upload monitoring"; Watch Item #5 added for `ALLOWED_ORIGINS`.
