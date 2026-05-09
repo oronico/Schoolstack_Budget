@@ -40,10 +40,15 @@ export async function generateBoardPacketPDF(
   // Task #617 - board-ready narrative commentary leads the body of the
   // packet. Same canonical-engine bundle the lender commentary uses, so
   // the two narratives can never disagree on a number.
+  // Task #740 — when the founder edited the Board narrative draft on the
+  // wizard's Lender Narrative step, that prose wins; otherwise the
+  // deterministic `buildBoardCommentary` output is rendered as the
+  // fallback so trustees always get a polished read.
   renderNarrativeCommentarySection(
     doc,
     "Board Commentary",
     packet.boardCommentary,
+    packet.audienceDrafts?.board,
   );
 
   drawOutlookSection(doc, packet);
@@ -91,6 +96,18 @@ export async function generateBoardPacketPDF(
   if (packet.scenarioSnapshots.length > 0) {
     renderScenarioComparison(doc, packet.scenarioSnapshots);
   }
+
+  // Task #740 — Grant Version appendix. Founders forwarding the Board
+  // and Funder Summary PDF to a foundation officer get a mission-anchored
+  // framing without re-exporting. Same canonical bundle as the board
+  // commentary above so the figures cannot drift; founder-edited grant
+  // draft (when present) wins over the auto-built fallback.
+  renderNarrativeCommentarySection(
+    doc,
+    "Grant Version",
+    packet.grantCommentary,
+    packet.audienceDrafts?.grant,
+  );
 
   // Forecast accuracy roll-up for the board: shows projected vs. actual on
   // the decisions we pursued so trustees can calibrate confidence in the

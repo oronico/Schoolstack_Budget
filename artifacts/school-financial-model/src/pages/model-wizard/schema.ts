@@ -731,6 +731,20 @@ export const budgetNarrativeSchema = z.object({
   // `staffing:instructional`) so they survive wizard-step reorders. The
   // Lender Narrative roll-up task will read from this map.
   inlineRationales: z.record(z.string(), z.string()).default({}),
+  // Task #706 / #740 — founder-editable Board, Grant, and Lender narrative
+  // drafts. Each draft is auto-seeded from the canonical engine when blank
+  // (see `buildAudienceDraft` in NarrativeStep.tsx) and then editable inline.
+  // Task #740 wires these drafts into the exported PDF packets so the
+  // founder's polished prose actually reaches their reader; the auto-built
+  // `buildBoardCommentary` / `buildGrantCommentary` / `buildLenderCommentary`
+  // serve as the fallback when a draft is left blank.
+  audienceDrafts: z
+    .object({
+      board: z.string().optional(),
+      grant: z.string().optional(),
+      lender: z.string().optional(),
+    })
+    .optional(),
 });
 
 export const assumptionFlagResponseSchema = z.object({

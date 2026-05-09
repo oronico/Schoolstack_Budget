@@ -26,6 +26,7 @@ import {
 } from "../build-narrative-commentary.js";
 import { buildLenderPacket } from "../build-lender-packet.js";
 import { buildBoardPacket } from "../build-board-packet.js";
+import { chooseCommentaryParagraphs } from "../lender-packet-pdf.js";
 import type { ModelData } from "../../workbook-helpers.js";
 
 let passed = 0;
@@ -284,6 +285,114 @@ async function run(): Promise<void> {
   // catch any wrapper layer that silently mutates paragraph text.
   assertEveryFigureAuthorized("lender (via packet)", lp.lenderCommentary);
   assertEveryFigureAuthorized("board (via packet)", bp.boardCommentary);
+
+  // ── Task #740: Grant commentary + audienceDrafts wiring ──────────────
+  check(
+    "BoardPacket exposes a Grant Version commentary built from canonical bundle",
+    bp.grantCommentary.paragraphs.length > 0,
+  );
+  check(
+    "Grant commentary shares the same canonical bundle figures as the board commentary",
+    bp.grantCommentary.bundle.cashRunwayMonths ===
+      bp.boardCommentary.bundle.cashRunwayMonths,
+  );
+  assertEveryFigureAuthorized("grant (via packet)", bp.grantCommentary);
+  check(
+    "BoardPacket.audienceDrafts pulls through empty when the model has no drafts",
+    bp.audienceDrafts &&
+      !bp.audienceDrafts.board &&
+      !bp.audienceDrafts.grant &&
+      !bp.audienceDrafts.lender,
+  );
+
+  // Same model with founder-edited drafts on every audience. Verifies the
+  // builders pull each draft through to the right place: the lender
+  // packet exposes the lender draft via budgetNarrative.audienceDrafts,
+  // and the board packet exposes board / grant / lender drafts via its
+  // own audienceDrafts field so the board PDF can pick the right one
+  // per renderer call.
+  const editedModel = buildModel();
+  (editedModel as Record<string, unknown>).budgetNarrative = {
+    audienceDrafts: {
+      board: "BOARD_FOUNDER_DRAFT_PARAGRAPH_ONE.\n\nBOARD_FOUNDER_DRAFT_PARAGRAPH_TWO.",
+      grant: "GRANT_FOUNDER_DRAFT_PARAGRAPH_ONE.\n\nGRANT_FOUNDER_DRAFT_PARAGRAPH_TWO.",
+      lender: "LENDER_FOUNDER_DRAFT_PARAGRAPH_ONE.\n\nLENDER_FOUNDER_DRAFT_PARAGRAPH_TWO.",
+    },
+  };
+  const lpEdited = buildLenderPacket(editedModel as ModelData, consultantOutput, 1);
+  const bpEdited = buildBoardPacket(editedModel as ModelData, consultantOutput, 1);
+  check(
+    "LenderPacket carries the founder-edited lender draft on budgetNarrative.audienceDrafts",
+    lpEdited.budgetNarrative.audienceDrafts?.lender ===
+      "LENDER_FOUNDER_DRAFT_PARAGRAPH_ONE.\n\nLENDER_FOUNDER_DRAFT_PARAGRAPH_TWO.",
+  );
+  check(
+    "BoardPacket carries the founder-edited board draft",
+    bpEdited.audienceDrafts.board ===
+      "BOARD_FOUNDER_DRAFT_PARAGRAPH_ONE.\n\nBOARD_FOUNDER_DRAFT_PARAGRAPH_TWO.",
+  );
+  check(
+    "BoardPacket carries the founder-edited grant draft",
+    bpEdited.audienceDrafts.grant ===
+      "GRANT_FOUNDER_DRAFT_PARAGRAPH_ONE.\n\nGRANT_FOUNDER_DRAFT_PARAGRAPH_TWO.",
+  );
+  check(
+    "BoardPacket still exposes the canonical-engine grant fallback even when founder draft exists",
+    bpEdited.grantCommentary.paragraphs.length > 0,
+  );
+
+  // ── Task #740: chooseCommentaryParagraphs (renderer fallback chain) ──
+  const blankPick = chooseCommentaryParagraphs(bp.boardCommentary, "");
+  check(
+    "Renderer falls back to canonical-engine paragraphs when founder draft is blank",
+    blankPick.usingFounderDraft === false &&
+      blankPick.paragraphs.length === bp.boardCommentary.paragraphs.length &&
+      blankPick.paragraphs[0] === bp.boardCommentary.paragraphs[0],
+  );
+
+  const undefinedPick = chooseCommentaryParagraphs(bp.boardCommentary, undefined);
+  check(
+    "Renderer falls back when founder draft is undefined",
+    undefinedPick.usingFounderDraft === false &&
+      undefinedPick.paragraphs.length === bp.boardCommentary.paragraphs.length,
+  );
+
+  const whitespacePick = chooseCommentaryParagraphs(bp.boardCommentary, "   \n  \n  ");
+  check(
+    "Renderer falls back when founder draft is whitespace-only",
+    whitespacePick.usingFounderDraft === false &&
+      whitespacePick.paragraphs.length === bp.boardCommentary.paragraphs.length,
+  );
+
+  const founderPick = chooseCommentaryParagraphs(
+    bp.boardCommentary,
+    "Founder paragraph one.\n\nFounder paragraph two.\n\nFounder paragraph three.",
+  );
+  check(
+    "Founder edit wins over the canonical-engine fallback",
+    founderPick.usingFounderDraft === true &&
+      founderPick.paragraphs.length === 3 &&
+      founderPick.paragraphs[0] === "Founder paragraph one." &&
+      founderPick.paragraphs[1] === "Founder paragraph two." &&
+      founderPick.paragraphs[2] === "Founder paragraph three.",
+  );
+  check(
+    "Founder edit does NOT bleed any canonical-engine paragraphs into the rendered list",
+    founderPick.paragraphs.every(
+      (p) => !bp.boardCommentary.paragraphs.includes(p),
+    ),
+  );
+
+  // Empty founder draft AND empty commentary → renderer should skip the
+  // section entirely so we don't emit an orphan title.
+  const emptyPick = chooseCommentaryParagraphs(
+    { paragraphs: [], allowedFigures: [], bundle: bp.boardCommentary.bundle, generatedAt: "" },
+    "",
+  );
+  check(
+    "Renderer returns an empty paragraph list when both founder draft and fallback are empty",
+    emptyPick.paragraphs.length === 0 && emptyPick.usingFounderDraft === false,
+  );
 
   console.log(`\n${passed} passed, ${failed} failed`);
   if (failed > 0) {

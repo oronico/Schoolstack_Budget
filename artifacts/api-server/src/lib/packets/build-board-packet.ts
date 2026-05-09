@@ -22,6 +22,7 @@ import { buildPacketData } from "./build-packet-data";
 import {
   buildNarrativeBundle,
   buildBoardCommentary,
+  buildGrantCommentary,
   type NarrativeCommentary,
 } from "./build-narrative-commentary";
 import { buildCashRunway, type CashRunwayView } from "./build-cash-runway";
@@ -164,6 +165,30 @@ export interface BoardPacket extends PacketData {
    */
   boardCommentary: NarrativeCommentary;
   /**
+   * Task #740 — grant-ready narrative commentary block (mission-anchored,
+   * multi-year impact framing). Renders as a "Grant Version" appendix in
+   * the Board and Funder Summary PDF so a founder forwarding the same
+   * packet to a foundation officer has a funder-appropriate framing
+   * without re-exporting. Same canonical bundle as `boardCommentary` so
+   * the two narratives can never disagree on a number.
+   */
+  grantCommentary: NarrativeCommentary;
+  /**
+   * Task #740 — founder-editable Board / Grant / Lender narrative drafts
+   * pulled through from `budgetNarrative.audienceDrafts`. The board PDF
+   * picks the matching draft per audience (board commentary uses
+   * `audienceDrafts.board`, the Grant Version appendix uses
+   * `audienceDrafts.grant`); the auto-built commentaries above serve as
+   * the fallback when a draft is blank. The lender PDF reads the lender
+   * draft straight off `budgetNarrative.audienceDrafts.lender`, so it is
+   * intentionally not duplicated on `LenderPacket`.
+   */
+  audienceDrafts: {
+    board?: string;
+    grant?: string;
+    lender?: string;
+  };
+  /**
    * Task #716 — per-assumption Confidence + evidence note collected by
    * the wizard's AssumptionConfidenceCard, mirrored from the lender
    * packet so the board PDF can render the same Assumptions Confidence
@@ -305,6 +330,24 @@ export function buildBoardPacket(
   const assumptionConfidence =
     (rawModel.assumptionConfidence as BoardPacket["assumptionConfidence"]) || {};
 
+  // Task #740 — pull through the founder-editable Board / Grant / Lender
+  // drafts so the board PDF can prefer them over the auto-built
+  // commentaries. Defaults to an empty object so the renderer's
+  // optional-chained access stays safe for older models that never
+  // touched the Lender Narrative wizard step.
+  const narrativeRecord = (rawModel.budgetNarrative || {}) as Record<string, unknown>;
+  const rawAudienceDrafts = (narrativeRecord.audienceDrafts || {}) as Record<string, unknown>;
+  const audienceDrafts: BoardPacket["audienceDrafts"] = {
+    board: typeof rawAudienceDrafts.board === "string" ? rawAudienceDrafts.board : undefined,
+    grant: typeof rawAudienceDrafts.grant === "string" ? rawAudienceDrafts.grant : undefined,
+    lender: typeof rawAudienceDrafts.lender === "string" ? rawAudienceDrafts.lender : undefined,
+  };
+
+  // Task #740 — build the canonical-engine Grant commentary once. The
+  // board PDF renders this as the "Grant Version" appendix, with the
+  // founder-edited grant draft (if present) winning over this fallback.
+  const narrativeBundle = buildNarrativeBundle(modelData, consultantOutput);
+
   return {
     ...basePacket,
     sections: enrichedSections,
@@ -324,9 +367,12 @@ export function buildBoardPacket(
     // Task #617 - deterministic board commentary, built from the same
     // canonical bundle the lender commentary uses so the two narratives
     // can never disagree on a number.
-    boardCommentary: buildBoardCommentary(
-      buildNarrativeBundle(modelData, consultantOutput),
-    ),
+    boardCommentary: buildBoardCommentary(narrativeBundle),
+    // Task #740 — deterministic Grant commentary, same canonical bundle
+    // as the board commentary above so the figures cannot drift between
+    // the two appendices.
+    grantCommentary: buildGrantCommentary(narrativeBundle),
+    audienceDrafts,
   };
 }
 

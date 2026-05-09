@@ -47,6 +47,21 @@ export interface BudgetNarrativeData {
   growthStrategy?: string;
   riskMitigation?: string;
   additionalContext?: string;
+  /**
+   * Task #706 / #740 — founder-editable Board / Grant / Lender narrative
+   * drafts. The Lender Narrative wizard step seeds each draft from the
+   * canonical engine when blank and then exposes it as an editable
+   * textarea. The PDF exports embed the founder's edited prose when
+   * present, falling back to the deterministic
+   * `buildLenderCommentary` / `buildBoardCommentary` /
+   * `buildGrantCommentary` output so the figure-allowlist guard still
+   * applies to the auto-drafts.
+   */
+  audienceDrafts?: {
+    board?: string;
+    grant?: string;
+    lender?: string;
+  };
 }
 
 export interface FlaggedAssumptionExport {

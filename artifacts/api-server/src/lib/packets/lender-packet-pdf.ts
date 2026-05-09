@@ -47,10 +47,16 @@ export async function generateLenderPacketPDF(
   // Task #617 - lender-ready narrative commentary leads the body of the
   // packet. Every figure printed here was produced by the same canonical
   // engine that built the rest of the report (guard test enforces).
+  // Task #740 — when the founder edited the Lender narrative draft on the
+  // wizard's Lender Narrative step, that prose wins; otherwise the
+  // deterministic `buildLenderCommentary` output (which the guard test
+  // figure-allowlists) is rendered as the fallback so the founder always
+  // ships a polished narrative.
   renderNarrativeCommentarySection(
     doc,
     "Lender Commentary",
     packet.lenderCommentary,
+    packet.budgetNarrative.audienceDrafts?.lender,
   );
 
   const execSection = packet.sections.find(s => s.id === "executive_summary" && s.included);
@@ -164,7 +170,8 @@ function drawCoverPage(doc: PDFDoc, packet: LenderPacket) {
   doc.text("All projections are based on assumptions entered by the school founder.", { align: "center" });
 }
 
-const NARRATIVE_LABELS: Array<[keyof BudgetNarrativeData, string]> = [
+type NarrativeStringKey = Exclude<keyof BudgetNarrativeData, "audienceDrafts">;
+const NARRATIVE_LABELS: Array<[NarrativeStringKey, string]> = [
   ["enrollmentStrategy", "Enrollment Strategy"],
   ["retentionPlan", "Retention Plan"],
   ["riskMitigation", "Risk Mitigation"],
@@ -758,22 +765,69 @@ function drawFooterNote(doc: PDFDoc, text: string) {
  * styling used elsewhere in the packet. We intentionally do NOT print
  * the source bundle - that surfaces in the in-app preview only, where a
  * founder can audit the inputs before regenerating.
+ *
+ * Task #740 — when the founder edited the audience-specific narrative
+ * draft on the Lender Narrative wizard step (`budgetNarrative.audienceDrafts.*`),
+ * that prose wins. The deterministic `commentary.paragraphs` are used as
+ * the fallback when the founder draft is blank, so the founder-edit path
+ * loses nothing the auto-draft delivered. Founder-edited prose is rendered
+ * as plain text (paragraph splits on blank lines) and the canonical-engine
+ * footer note is suppressed since the figure-allowlist guard does not
+ * apply to hand-edited text.
  */
+/**
+ * Task #740 — Paragraph-selection helper extracted so the fallback chain
+ * (founder edit wins → auto-built commentary fallback → render nothing)
+ * is unit-testable without spinning up a PDFDoc. The renderer below uses
+ * this helper to decide what to print and which footer note to attach.
+ *
+ * Contract:
+ *   - `founderDraft` is non-blank → split on blank lines, trim, drop
+ *     empties; `usingFounderDraft = true`.
+ *   - `founderDraft` is blank/undefined → use `commentary.paragraphs`
+ *     verbatim; `usingFounderDraft = false`.
+ *   - When neither path yields any paragraphs, returns an empty array
+ *     and the caller must skip rendering the section header so we don't
+ *     leave an orphan "Lender Commentary" / "Grant Version" title with
+ *     no body.
+ */
+export function chooseCommentaryParagraphs(
+  commentary: NarrativeCommentary | undefined,
+  founderDraft?: string,
+): { paragraphs: string[]; usingFounderDraft: boolean } {
+  const founderText = (founderDraft || "").trim();
+  const usingFounderDraft = founderText.length > 0;
+  const paragraphs = usingFounderDraft
+    ? founderText
+        .split(/\n{2,}/)
+        .map((p) => p.trim())
+        .filter((p) => p.length > 0)
+    : commentary?.paragraphs ?? [];
+  return { paragraphs, usingFounderDraft };
+}
+
 export function renderNarrativeCommentarySection(
   doc: PDFDoc,
   title: string,
   commentary: NarrativeCommentary,
+  founderDraft?: string,
 ) {
-  if (!commentary || commentary.paragraphs.length === 0) return;
+  const { paragraphs, usingFounderDraft } = chooseCommentaryParagraphs(
+    commentary,
+    founderDraft,
+  );
+  if (paragraphs.length === 0) return;
   sectionTitle(doc, title);
-  for (const paragraph of commentary.paragraphs) {
+  for (const paragraph of paragraphs) {
     ensureSpace(doc, 40);
     bodyText(doc, paragraph);
   }
   doc.moveDown(0.3);
   doc.font("Helvetica-Oblique").fontSize(8).fillColor(BRAND.gray);
   doc.text(
-    "Every figure in this commentary is sourced from the same canonical engine that powers the rest of this packet.",
+    usingFounderDraft
+      ? "Edited by the founder for this audience. Figures elsewhere in this packet are sourced from the canonical engine."
+      : "Every figure in this commentary is sourced from the same canonical engine that powers the rest of this packet.",
     doc.page.margins.left,
     doc.y,
     { width: doc.page.width - doc.page.margins.left - doc.page.margins.right },
