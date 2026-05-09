@@ -879,11 +879,14 @@ function buildPriorYearActuals(s: PacketSection, md: ModelData, yearlyData: Year
   }
 
   const tables: PacketTable[] = [
-    { title: "Prior-Year Revenue vs Year 1", headers: ["Category", "Prior Year", "Year 1", "Variance"], rows: revRows },
-    { title: "Prior-Year Expenses vs Year 1", headers: ["Category", "Prior Year", "Year 1", "Variance"], rows: expRows },
+    // Task #710 — embed the wizard's Actual / Projected indicator into
+    // the column headers so each prior-year-vs-Year-1 figure carries the
+    // same provenance signal a founder sees on the Review screen.
+    { title: "Prior-Year Revenue vs Year 1", headers: ["Category", "Prior Year (Actual)", "Year 1 (Projected)", "Variance"], rows: revRows },
+    { title: "Prior-Year Expenses vs Year 1", headers: ["Category", "Prior Year (Actual)", "Year 1 (Projected)", "Variance"], rows: expRows },
   ];
   if (varianceRows.length > 0) {
-    tables.push({ title: "Net Income Comparison", headers: ["", "Prior Year", "Year 1", ""], rows: varianceRows });
+    tables.push({ title: "Net Income Comparison", headers: ["", "Prior Year (Actual)", "Year 1 (Projected)", ""], rows: varianceRows });
   }
 
   return {

@@ -4,6 +4,7 @@ import {
   fmtCurrency, ensureSpace,
   renderDecisionHistorySection,
   renderPacketTable, renderPacketInsights, renderLinkedMetrics,
+  drawActualVsProjectedPill,
   type PDFDoc, BRAND,
 } from "../pdf-utils.js";
 import type { LenderPacket, RiskMitigant, BudgetNarrativeData, FlaggedAssumptionExport, BreakEvenDownsideExport } from "./build-lender-packet";
@@ -63,7 +64,7 @@ export async function generateLenderPacketPDF(
   // Renders right after the budget narrative so a reviewer reading the
   // founder's prose immediately sees which numbers are anchored vs.
   // estimate. Skipped silently when the founder hasn't tagged anything.
-  renderAssumptionsConfidenceSection(doc, packet.assumptionConfidence);
+  renderAssumptionsConfidenceSection(doc, packet.assumptionConfidence, packet.provenance);
 
   for (const section of packet.sections) {
     if (!section.included) continue;
@@ -239,6 +240,7 @@ function renderBudgetNarrativeSection(doc: PDFDoc, narrative: BudgetNarrativeDat
 function renderAssumptionsConfidenceSection(
   doc: PDFDoc,
   confidence: LenderPacket["assumptionConfidence"],
+  provenance?: "actuals" | "assumptions",
 ): void {
   const entries = Object.entries(confidence || {}).filter(([k]) =>
     Object.prototype.hasOwnProperty.call(ASSUMPTION_REGISTRY, k),
@@ -265,9 +267,16 @@ function renderAssumptionsConfidenceSection(
   doc.text(`Overall: ${rollup.status}`, doc.page.margins.left, doc.y, { continued: true });
   doc.font("Helvetica").fontSize(9).fillColor(BRAND.darkGray);
   doc.text(
-    `   ${Math.round(rollup.evidenceRatio * 100)}% weighted evidence  ·  ${rollup.taggedKeys} of ${rollup.totalKeys} tagged`,
+    `   ${Math.round(rollup.evidenceRatio * 100)}% weighted evidence  ·  ${rollup.taggedKeys} of ${rollup.totalKeys} tagged   `,
+    { continued: true },
   );
-  doc.moveDown(0.3);
+  // Task #710 — Actual / Projected indicator on the rollup, mirroring
+  // the wizard Review screen so a reviewer immediately sees whether the
+  // model behind the confidence rollup was seeded from last year's
+  // actuals or built as a forward-looking projection.
+  doc.text("", { continued: false });
+  drawActualVsProjectedPill(doc, provenance === "actuals" ? "actual" : "projected");
+  doc.moveDown(0.6);
   doc.font("Helvetica-Oblique").fontSize(9).fillColor(BRAND.darkGray);
   doc.text(rollup.message, { width: doc.page.width - doc.page.margins.left - doc.page.margins.right });
   doc.font("Helvetica").fillColor(BRAND.black);

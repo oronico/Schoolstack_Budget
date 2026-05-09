@@ -4,6 +4,7 @@ import {
   ensureSpace,
   renderDecisionHistorySection,
   renderPacketTable, renderPacketInsights, renderLinkedMetrics,
+  drawActualVsProjectedPill,
   type PDFDoc, type TableColumn, BRAND,
 } from "../pdf-utils.js";
 import { financialOutlookBadgeLabel, type BoardPacket, type BoardRiskItem, type BoardFocusArea, type ScenarioSnapshot, type BoardNarrativeData, type BoardFlaggedAssumption, type BoardRecruitingProjections } from "./build-board-packet.js";
@@ -181,6 +182,17 @@ export function drawOutlookSection(doc: PDFDoc, packet: BoardPacket) {
     `Financial Outlook: ${outlook.headline}`,
     financialOutlookBadgeLabel(outlook.status),
   );
+  // Task #710 — surface the same Actual / Projected indicator that founders
+  // see on the wizard's Review step (and that the lender PDF now carries on
+  // its assumption-confidence rollup) inline beside the outlook badge. The
+  // 5-Year outlook is the board PDF's headline rollup surface, so this is
+  // the right place to anchor the provenance signal for trustees.
+  doc.x = doc.page.margins.left;
+  drawActualVsProjectedPill(
+    doc,
+    packet.provenance === "actuals" ? "actual" : "projected",
+  );
+  doc.text("", doc.page.margins.left, doc.y);
   doc.moveDown(0.2);
   bodyText(doc, outlook.summary);
 

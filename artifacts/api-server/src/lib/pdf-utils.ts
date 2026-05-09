@@ -88,6 +88,40 @@ export function bodyText(doc: PDFDoc, text: string) {
   doc.moveDown(0.3);
 }
 
+/**
+ * Task #710 — small inline pill matching the wizard's
+ * `ActualVsProjectedBadge` so reviewers see the same Actual / Projected
+ * indicator next to prior-year-vs-Year-1 figures and the assumption-
+ * confidence rollup that the founder sees on the wizard Review screen.
+ *
+ * Drawn at the current cursor (`doc.x`, `doc.y`) and advances `doc.x`
+ * past the pill so callers can keep writing on the same line. Caller is
+ * responsible for resetting fonts/colors afterwards.
+ */
+export function drawActualVsProjectedPill(
+  doc: PDFDoc,
+  kind: "actual" | "projected",
+): void {
+  const label = kind === "actual" ? "ACTUAL" : "PROJECTED";
+  const fill = kind === "actual" ? "#D1FAE5" : BRAND.lightGray;
+  const text = kind === "actual" ? "#065F46" : BRAND.darkGray;
+  const padX = 4;
+  const padY = 2;
+  doc.font("Helvetica-Bold").fontSize(7);
+  const w = doc.widthOfString(label) + padX * 2;
+  const h = doc.currentLineHeight() + padY;
+  const x = doc.x;
+  const y = doc.y;
+  doc.save();
+  doc.roundedRect(x, y, w, h, 2).fill(fill);
+  doc.restore();
+  doc.fillColor(text);
+  doc.text(label, x + padX, y + padY / 2 + 0.5, { lineBreak: false });
+  doc.x = x + w + 4;
+  doc.y = y;
+  doc.fillColor(BRAND.black);
+}
+
 export function labelValue(doc: PDFDoc, label: string, value: string) {
   const margin = doc.page.margins.left;
   ensureSpace(doc, 16);
