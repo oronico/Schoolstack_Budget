@@ -5,6 +5,7 @@ import {
   type PDFDoc, type TableColumn, BRAND,
 } from "./pdf-utils.js";
 import type { ConsultantOutput, KeyMetric, Recommendation, StressScenario } from "./consultant-engine.js";
+import { lenderReadinessCoachingHeadline } from "./lender-readiness-coaching.js";
 
 export async function generateLoanReadinessPDF(consultantData: ConsultantOutput, schoolName: string, entityType?: string): Promise<Buffer> {
   const doc = createDoc();
@@ -15,7 +16,11 @@ export async function generateLoanReadinessPDF(consultantData: ConsultantOutput,
   bodyText(doc, consultantData.executiveSummary);
 
   sectionTitle(doc, "Lender Readiness Assessment");
-  statusBadge(doc, `Status: ${consultantData.lenderReadiness}`, consultantData.lenderReadiness);
+  statusBadge(
+    doc,
+    lenderReadinessCoachingHeadline(consultantData.lenderReadiness),
+    consultantData.lenderReadiness,
+  );
   doc.moveDown(0.3);
   bodyText(doc, consultantData.lenderReadinessExplanation);
 

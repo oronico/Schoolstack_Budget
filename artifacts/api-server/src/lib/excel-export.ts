@@ -4,6 +4,7 @@ import type { DecisionEngineModelData } from "@workspace/finance";
 type FullModelData = DecisionEngineModelData;
 import { accountingBasisLabel, addDashboardSheet, computeFacilityCostByYear, computeInstructionalCostByYear, setFormula } from "./workbook-helpers.js";
 import { addDecisionHistorySheet } from "./packets/build-decision-history.js";
+import { lenderReadinessCoachingHeadline } from "./lender-readiness-coaching.js";
 
 function safeResult(v: unknown): number | string {
   if (v === null || v === undefined) return "0";
@@ -478,7 +479,7 @@ function buildCoverSheet(
     r += 2;
     ws.getCell(r, 2).value = "Lender Readiness";
     ws.getCell(r, 2).font = { size: 11, color: { argb: "FF94A3B8" }, name: "Calibri" };
-    ws.getCell(r, 3).value = consultantData.lenderReadiness;
+    ws.getCell(r, 3).value = lenderReadinessCoachingHeadline(consultantData.lenderReadiness);
     const readinessColor = consultantData.lenderReadiness === "Strong" ? "FF16A34A"
       : consultantData.lenderReadiness === "Needs Work" ? "FFD97706" : "FFDC2626";
     ws.getCell(r, 3).font = { bold: true, size: 14, name: "Calibri", color: { argb: readinessColor } };
@@ -1748,7 +1749,7 @@ function buildConsultantNotesTab(ws: ExcelJS.Worksheet, consultant: ConsultantSu
 
   r++;
   ws.getCell(r, 1).value = "Status"; ws.getCell(r, 1).font = NORMAL_FONT;
-  ws.getCell(r, 2).value = consultant.lenderReadiness || ""; ws.getCell(r, 2).font = BOLD_FONT;
+  ws.getCell(r, 2).value = lenderReadinessCoachingHeadline(consultant.lenderReadiness); ws.getCell(r, 2).font = BOLD_FONT;
   r++;
   ws.getCell(r, 1).value = "Assessment"; ws.getCell(r, 1).font = NORMAL_FONT;
   ws.getCell(r, 2).value = consultant.lenderReadinessExplanation || ""; ws.getCell(r, 2).font = NORMAL_FONT;
@@ -2876,7 +2877,7 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
 
     r++;
     ws.getCell(r, 1).value = "Readiness Status"; ws.getCell(r, 1).font = NORMAL_FONT;
-    ws.getCell(r, 2).value = consultant.lenderReadiness || "";
+    ws.getCell(r, 2).value = lenderReadinessCoachingHeadline(consultant.lenderReadiness);
     ws.getCell(r, 2).font = {
       bold: true,
       size: 11,
