@@ -329,6 +329,7 @@ export {
   type AssumptionDriver,
   type AssumptionConfidenceLevel,
   type AssumptionConfidenceEntry,
+  type AssumptionEvidenceFile,
   type HeadlineMetricKey,
   type MetricDriverInfo,
 } from "./assumption-registry.js";

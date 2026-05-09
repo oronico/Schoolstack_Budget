@@ -3416,6 +3416,16 @@ function buildAssumptionsMemoTab(wb: ExcelJS.Workbook, data: ModelData) {
   }
 }
 
+// Task #707 — short human-readable byte size for the Excel notes
+// column. Mirrors the formatter in the wizard upload UI and the lender
+// PDF appendix so the same lease shows the same size everywhere.
+function formatEvidenceFileSizeForExcel(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "0 B";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 // Task #659 — Assumptions Confidence tab. Mirrors the lender PDF section:
 // groups every tagged assumption by its wizard step, prints confidence
 // label, evidence note, and a flag in the rightmost column when a
@@ -3474,7 +3484,21 @@ function buildAssumptionsConfidenceTab(wb: ExcelJS.Workbook, data: ModelData) {
     ws.getCell(row, 2).font = NF;
     ws.getCell(row, 3).value = ASSUMPTION_CONFIDENCE_LABELS[entry.confidence];
     ws.getCell(row, 3).font = isBare ? { ...NF, bold: true, color: { argb: "FFD97706" } } : NF;
-    ws.getCell(row, 4).value = entry.evidenceNote?.trim() || "";
+    // Task #707 — combine the founder's evidence note with a list of
+    // any uploaded attachment filenames so a reviewer reading the
+    // workbook sees the same supporting documents that appear in the
+    // lender PDF's evidence appendix.
+    const noteText = entry.evidenceNote?.trim() || "";
+    const fileLines = Array.isArray(entry.evidenceFiles)
+      ? entry.evidenceFiles
+          .filter((f) => f && typeof f.name === "string" && f.name.length > 0)
+          .map((f) => {
+            const sizeKb = typeof f.size === "number" ? ` (${formatEvidenceFileSizeForExcel(f.size)})` : "";
+            return `📎 ${f.name}${sizeKb}`;
+          })
+      : [];
+    const combined = [noteText, ...fileLines].filter(Boolean).join("\n");
+    ws.getCell(row, 4).value = combined;
     ws.getCell(row, 4).font = NF;
     ws.getCell(row, 4).alignment = { wrapText: true, vertical: "top" };
     ws.getCell(row, 5).value =

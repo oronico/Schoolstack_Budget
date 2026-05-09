@@ -362,10 +362,104 @@ export function renderAssumptionsConfidenceSection(
           width: doc.page.width - doc.page.margins.left - doc.page.margins.right - 10,
         });
       }
+      // Task #707 — list each uploaded evidence file under the
+      // assumption so a reviewer reading the confidence section sees
+      // exactly which lease / MOU / quote the founder attached. Full
+      // filename + size is also listed in the Evidence Files appendix
+      // at the end of the section for an at-a-glance manifest.
+      const files = (entry as { evidenceFiles?: Array<{ name?: string; size?: number }> }).evidenceFiles;
+      if (Array.isArray(files) && files.length > 0) {
+        doc.font("Helvetica").fontSize(8).fillColor(BRAND.darkGray);
+        for (const f of files) {
+          if (!f?.name) continue;
+          const sizeStr = typeof f.size === "number" ? `  (${formatEvidenceFileSize(f.size)})` : "";
+          doc.text(`  Attached: ${f.name}${sizeStr}`, doc.page.margins.left + 10, doc.y, {
+            width: doc.page.width - doc.page.margins.left - doc.page.margins.right - 10,
+          });
+        }
+      }
       doc.moveDown(0.2);
     }
     doc.moveDown(0.3);
   }
+
+  // Task #707 — Evidence files appendix. Manifest of every uploaded
+  // attachment so the lender knows what supporting documents the
+  // founder asked them to review. Skipped silently when no files were
+  // uploaded.
+  renderAssumptionsEvidenceAppendix(doc, confidence);
+}
+
+function formatEvidenceFileSize(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "0 B";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+interface AppendixFileLike {
+  name?: string;
+  size?: number;
+  uploadedAt?: string;
+  mimeType?: string;
+}
+
+// Task #707 — render an "Evidence Files" appendix subsection listing
+// every founder-uploaded attachment grouped by assumption. The lender
+// reviewer can use this as a manifest when pulling the source documents
+// from the founder's data room.
+function renderAssumptionsEvidenceAppendix(
+  doc: PDFDoc,
+  confidence: LenderPacket["assumptionConfidence"],
+): void {
+  const rows: Array<{ label: string; file: AppendixFileLike }> = [];
+  for (const [k, entry] of Object.entries(confidence || {})) {
+    if (!Object.prototype.hasOwnProperty.call(ASSUMPTION_REGISTRY, k)) continue;
+    const files = (entry as { evidenceFiles?: AppendixFileLike[] } | undefined)?.evidenceFiles;
+    if (!Array.isArray(files) || files.length === 0) continue;
+    const label = ASSUMPTION_REGISTRY[k as AssumptionKey].label;
+    for (const f of files) {
+      if (!f?.name) continue;
+      rows.push({ label, file: f });
+    }
+  }
+  if (rows.length === 0) return;
+
+  ensureSpace(doc, 60);
+  subSection(doc, "Evidence Files");
+  doc.font("Helvetica").fontSize(9).fillColor(BRAND.darkGray);
+  doc.text(
+    `${rows.length} file${rows.length === 1 ? "" : "s"} attached by the founder. Each was uploaded with the corresponding assumption and is available on request.`,
+    {
+      width: doc.page.width - doc.page.margins.left - doc.page.margins.right,
+    },
+  );
+  doc.moveDown(0.3);
+
+  let lastLabel = "";
+  for (const { label, file } of rows) {
+    ensureSpace(doc, 20);
+    if (label !== lastLabel) {
+      doc.font("Helvetica-Bold").fontSize(9).fillColor(BRAND.navy);
+      doc.text(label, doc.page.margins.left, doc.y);
+      lastLabel = label;
+    }
+    const meta: string[] = [];
+    if (typeof file.size === "number") meta.push(formatEvidenceFileSize(file.size));
+    if (file.mimeType) meta.push(file.mimeType);
+    if (file.uploadedAt) {
+      const d = new Date(file.uploadedAt);
+      if (!Number.isNaN(d.getTime())) {
+        meta.push(`uploaded ${d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}`);
+      }
+    }
+    const metaStr = meta.length ? `   (${meta.join(" · ")})` : "";
+    doc.font("Helvetica").fontSize(8).fillColor(BRAND.black);
+    doc.text(`  • ${file.name}${metaStr}`, doc.page.margins.left + 10, doc.y, {
+      width: doc.page.width - doc.page.margins.left - doc.page.margins.right - 10,
+    });
+  }
+  doc.moveDown(0.3);
 }
 
 function renderSection(doc: PDFDoc, section: PacketSection, packet: LenderPacket) {

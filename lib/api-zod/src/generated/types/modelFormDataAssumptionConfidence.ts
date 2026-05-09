@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ModelFormDataAssumptionConfidenceConfidence } from "./modelFormDataAssumptionConfidenceConfidence";
+import type { ModelFormDataAssumptionConfidenceEvidenceFilesItem } from "./modelFormDataAssumptionConfidenceEvidenceFilesItem";
 
 /**
  * Task #659 — per-assumption confidence + evidence note. Keyed by
@@ -18,5 +19,13 @@ export type ModelFormDataAssumptionConfidence = {
   [key: string]: {
     confidence: ModelFormDataAssumptionConfidenceConfidence;
     evidenceNote?: string;
+    /** Task #707 — founder-uploaded evidence documents (lease,
+MOU, payroll quote, etc.) attached to this assumption.
+An entry with at least one file counts as evidence-backed
+in the rollup, the lender PDF lists each file in the
+evidence appendix, and the Excel notes column shows the
+filenames alongside the founder's note.
+ */
+    evidenceFiles?: ModelFormDataAssumptionConfidenceEvidenceFilesItem[];
   };
 };

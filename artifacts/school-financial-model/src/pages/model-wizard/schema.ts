@@ -1022,6 +1022,22 @@ export const fullModelSchema = z.object({
       z.object({
         confidence: z.enum(["actuals", "signed_agreement", "quote", "research", "estimate"]),
         evidenceNote: z.string().optional(),
+        // Task #707 — founder-uploaded evidence files (lease, MOU, payroll
+        // quote PDFs, etc.). Optional + defaulted so older models without
+        // attachments continue to validate. The base64 payload is stored
+        // inline so the model JSON remains self-contained on share links.
+        evidenceFiles: z
+          .array(
+            z.object({
+              id: z.string(),
+              name: z.string(),
+              mimeType: z.string(),
+              size: z.number().int().nonnegative(),
+              uploadedAt: z.string(),
+              dataBase64: z.string().optional(),
+            }),
+          )
+          .optional(),
       }),
     )
     .optional(),

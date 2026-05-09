@@ -801,6 +801,15 @@ export type ModelFormDataAssumptionFlagResponsesItem = {
   reason?: string;
 };
 
+export type ModelFormDataAssumptionConfidenceEvidenceFilesItem = {
+  id: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  uploadedAt: string;
+  dataBase64?: string;
+};
+
 /**
  * Task #659 — per-assumption confidence + evidence note. Keyed by
 AssumptionKey (see lib/finance/src/assumption-registry.ts). Each
@@ -812,6 +821,14 @@ export type ModelFormDataAssumptionConfidence = {
   [key: string]: {
     confidence: ModelFormDataAssumptionConfidenceConfidence;
     evidenceNote?: string;
+    /** Task #707 — founder-uploaded evidence documents (lease,
+MOU, payroll quote, etc.) attached to this assumption.
+An entry with at least one file counts as evidence-backed
+in the rollup, the lender PDF lists each file in the
+evidence appendix, and the Excel notes column shows the
+filenames alongside the founder's note.
+ */
+    evidenceFiles?: ModelFormDataAssumptionConfidenceEvidenceFilesItem[];
   };
 };
 

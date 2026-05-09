@@ -61,6 +61,7 @@ export * from "./messageResponse";
 export * from "./modelFormData";
 export * from "./modelFormDataAssumptionConfidence";
 export * from "./modelFormDataAssumptionConfidenceConfidence";
+export * from "./modelFormDataAssumptionConfidenceEvidenceFilesItem";
 export * from "./modelFormDataAssumptionFlagResponsesItem";
 export * from "./modelFormDataAssumptionFlagsItem";
 export * from "./modelFormDataAssumptionFlagsItemSeverity";

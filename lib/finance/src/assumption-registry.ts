@@ -499,9 +499,32 @@ export type AssumptionConfidenceLevel =
   | "research"
   | "estimate";
 
+export interface AssumptionEvidenceFile {
+  /** Stable client-generated id so the UI can key + remove individual files. */
+  id: string;
+  /** Original filename as uploaded (e.g. "lease-2025.pdf"). */
+  name: string;
+  /** MIME type captured at upload (e.g. "application/pdf"). */
+  mimeType: string;
+  /** Byte length of the original file. */
+  size: number;
+  /** ISO timestamp the file was attached. */
+  uploadedAt: string;
+  /** Raw file bytes encoded as a base64 string (no data: prefix). Optional
+   *  on read paths that don't need the payload — the lender PDF appendix
+   *  and Excel notes only need filename + size + uploadedAt to list the
+   *  evidence, so consumers may strip the payload before serializing. */
+  dataBase64?: string;
+}
+
 export interface AssumptionConfidenceEntry {
   confidence: AssumptionConfidenceLevel;
   evidenceNote?: string;
+  /** Task #707 — founder-uploaded evidence files (lease, MOU, payroll
+   *  quote, etc.). A non-empty list counts as evidence for rollup math
+   *  with at least the same weight as a "signed agreement" tag, so a
+   *  tagged "estimate" + uploaded lease still earns full credit. */
+  evidenceFiles?: AssumptionEvidenceFile[];
 }
 
 export const ASSUMPTION_CONFIDENCE_LEVELS: AssumptionConfidenceLevel[] = [
@@ -538,12 +561,18 @@ export const HIGH_IMPACT_CONFIDENCE_KEYS: AssumptionKey[] = [
   "enrollment_y5",
 ];
 
-/** True when the entry is "estimate" with no evidence note — the
- *  trigger condition for the AssumptionFlag in detectUnusualAssumptions. */
+/** True when the entry is "estimate" with no evidence note AND no
+ *  uploaded evidence files — the trigger condition for the
+ *  AssumptionFlag in detectUnusualAssumptions. Task #707: an uploaded
+ *  document (lease, MOU, payroll quote) hardens the assumption the
+ *  same way a written note does, so we no longer flag the entry as
+ *  bare. */
 export function isEstimateWithoutEvidence(entry: AssumptionConfidenceEntry | undefined): boolean {
   if (!entry) return false;
   if (entry.confidence !== "estimate") return false;
-  return !entry.evidenceNote || entry.evidenceNote.trim().length === 0;
+  const hasNote = !!entry.evidenceNote && entry.evidenceNote.trim().length > 0;
+  const hasFiles = Array.isArray(entry.evidenceFiles) && entry.evidenceFiles.length > 0;
+  return !hasNote && !hasFiles;
 }
 
 /** All registry keys grouped by their wizard step title. Used by the
@@ -614,15 +643,21 @@ export const ASSUMPTION_CONFIDENCE_STATUS_COPY: Record<AssumptionConfidenceStatu
 interface ConfidenceLikeEntry {
   confidence: string;
   evidenceNote?: string;
+  evidenceFiles?: Array<{ id?: string; name?: string; mimeType?: string; size?: number; uploadedAt?: string; dataBase64?: string }>;
 }
 interface ConfidenceLikeMap {
   [key: string]: ConfidenceLikeEntry | undefined;
 }
 
 /** True when the entry counts as "evidence-backed" for rollup purposes —
- *  any non-estimate level, or an estimate that carries an evidence note. */
+ *  any non-estimate level, an estimate that carries an evidence note, or
+ *  (Task #707) an entry with at least one uploaded evidence file. An
+ *  uploaded document is at least as defensible as a "signed agreement"
+ *  tag, so it earns the same full weight in the rollup. */
 function entryHasEvidence(entry: ConfidenceLikeEntry | undefined): boolean {
   if (!entry) return false;
+  const hasFiles = Array.isArray(entry.evidenceFiles) && entry.evidenceFiles.length > 0;
+  if (hasFiles) return true;
   if (entry.confidence !== "estimate") return true;
   return !!(entry.evidenceNote && entry.evidenceNote.trim().length > 0);
 }

@@ -788,6 +788,21 @@ export const CreateModelBody = zod.object({
             "estimate",
           ]),
           evidenceNote: zod.string().optional(),
+          evidenceFiles: zod
+            .array(
+              zod.object({
+                id: zod.string(),
+                name: zod.string(),
+                mimeType: zod.string(),
+                size: zod.number(),
+                uploadedAt: zod.string(),
+                dataBase64: zod.string().optional(),
+              }),
+            )
+            .optional()
+            .describe(
+              "Task #707 — founder-uploaded evidence documents (lease,\nMOU, payroll quote, etc.) attached to this assumption.\nAn entry with at least one file counts as evidence-backed\nin the rollup, the lender PDF lists each file in the\nevidence appendix, and the Excel notes column shows the\nfilenames alongside the founder's note.\n",
+            ),
         }),
       )
       .optional()
@@ -1452,6 +1467,21 @@ export const GetModelResponse = zod.object({
             "estimate",
           ]),
           evidenceNote: zod.string().optional(),
+          evidenceFiles: zod
+            .array(
+              zod.object({
+                id: zod.string(),
+                name: zod.string(),
+                mimeType: zod.string(),
+                size: zod.number(),
+                uploadedAt: zod.string(),
+                dataBase64: zod.string().optional(),
+              }),
+            )
+            .optional()
+            .describe(
+              "Task #707 — founder-uploaded evidence documents (lease,\nMOU, payroll quote, etc.) attached to this assumption.\nAn entry with at least one file counts as evidence-backed\nin the rollup, the lender PDF lists each file in the\nevidence appendix, and the Excel notes column shows the\nfilenames alongside the founder's note.\n",
+            ),
         }),
       )
       .optional()
@@ -2122,6 +2152,21 @@ export const UpdateModelBody = zod.object({
             "estimate",
           ]),
           evidenceNote: zod.string().optional(),
+          evidenceFiles: zod
+            .array(
+              zod.object({
+                id: zod.string(),
+                name: zod.string(),
+                mimeType: zod.string(),
+                size: zod.number(),
+                uploadedAt: zod.string(),
+                dataBase64: zod.string().optional(),
+              }),
+            )
+            .optional()
+            .describe(
+              "Task #707 — founder-uploaded evidence documents (lease,\nMOU, payroll quote, etc.) attached to this assumption.\nAn entry with at least one file counts as evidence-backed\nin the rollup, the lender PDF lists each file in the\nevidence appendix, and the Excel notes column shows the\nfilenames alongside the founder's note.\n",
+            ),
         }),
       )
       .optional()
@@ -2781,6 +2826,21 @@ export const UpdateModelResponse = zod.object({
             "estimate",
           ]),
           evidenceNote: zod.string().optional(),
+          evidenceFiles: zod
+            .array(
+              zod.object({
+                id: zod.string(),
+                name: zod.string(),
+                mimeType: zod.string(),
+                size: zod.number(),
+                uploadedAt: zod.string(),
+                dataBase64: zod.string().optional(),
+              }),
+            )
+            .optional()
+            .describe(
+              "Task #707 — founder-uploaded evidence documents (lease,\nMOU, payroll quote, etc.) attached to this assumption.\nAn entry with at least one file counts as evidence-backed\nin the rollup, the lender PDF lists each file in the\nevidence appendix, and the Excel notes column shows the\nfilenames alongside the founder's note.\n",
+            ),
         }),
       )
       .optional()
@@ -3474,6 +3534,21 @@ export const ArchiveModelResponse = zod.object({
             "estimate",
           ]),
           evidenceNote: zod.string().optional(),
+          evidenceFiles: zod
+            .array(
+              zod.object({
+                id: zod.string(),
+                name: zod.string(),
+                mimeType: zod.string(),
+                size: zod.number(),
+                uploadedAt: zod.string(),
+                dataBase64: zod.string().optional(),
+              }),
+            )
+            .optional()
+            .describe(
+              "Task #707 — founder-uploaded evidence documents (lease,\nMOU, payroll quote, etc.) attached to this assumption.\nAn entry with at least one file counts as evidence-backed\nin the rollup, the lender PDF lists each file in the\nevidence appendix, and the Excel notes column shows the\nfilenames alongside the founder's note.\n",
+            ),
         }),
       )
       .optional()

@@ -1,6 +1,6 @@
 import { useFormContext } from "react-hook-form";
-import { useState } from "react";
-import { ShieldCheck, ChevronDown, ChevronUp } from "lucide-react";
+import { useRef, useState } from "react";
+import { ShieldCheck, ChevronDown, ChevronUp, Paperclip, X, FileText } from "lucide-react";
 import {
   ASSUMPTION_REGISTRY,
   ASSUMPTION_CONFIDENCE_LEVELS,
@@ -11,6 +11,7 @@ import {
   type AssumptionKey,
   type AssumptionConfidenceLevel,
   type AssumptionConfidenceEntry,
+  type AssumptionEvidenceFile,
 } from "@workspace/finance";
 import { cn } from "@/lib/utils";
 import { useOptionalAuth } from "@/lib/auth-context";
@@ -69,7 +70,14 @@ export function AssumptionConfidenceCard({ stepTitle }: { stepTitle: string }) {
 
   const setLevel = (key: AssumptionKey, level: AssumptionConfidenceLevel) => {
     const cur = map[key];
-    setEntry(key, { confidence: level, evidenceNote: cur?.evidenceNote });
+    setEntry(key, {
+      confidence: level,
+      evidenceNote: cur?.evidenceNote,
+      // Preserve any uploaded evidence files when toggling the
+      // confidence chip — switching from "estimate" to "signed_agreement"
+      // shouldn't drop the lease the founder already attached.
+      evidenceFiles: cur?.evidenceFiles,
+    });
   };
 
   const setNote = (key: AssumptionKey, note: string) => {
@@ -78,19 +86,32 @@ export function AssumptionConfidenceCard({ stepTitle }: { stepTitle: string }) {
       setEntry(key, { confidence: "estimate", evidenceNote: note });
       return;
     }
-    setEntry(key, { confidence: cur.confidence, evidenceNote: note });
+    setEntry(key, { ...cur, confidence: cur.confidence, evidenceNote: note });
   };
 
-  // Task #659 — "with evidence" = either a non-estimate confidence level
-  // (which itself implies evidence: actuals, signed agreement, quote,
-  // research) OR an "estimate" tagged with an evidence note. Bare
-  // "estimate" with no note doesn't count, matching the requirement that
-  // the tally reflects evidence attachment, not just any selection.
+  const setFiles = (key: AssumptionKey, files: AssumptionEvidenceFile[]) => {
+    const cur = map[key];
+    const base: AssumptionConfidenceEntry = cur
+      ? { ...cur }
+      : { confidence: "estimate" };
+    const next: AssumptionConfidenceEntry = {
+      ...base,
+      evidenceFiles: files.length > 0 ? files : undefined,
+    };
+    setEntry(key, next);
+  };
+
+  // Task #659 / #707 — "with evidence" = a non-estimate confidence level
+  // (actuals / signed agreement / quote / research), OR an "estimate"
+  // backed by either a one-line note OR at least one uploaded evidence
+  // file. Bare "estimate" with no note and no attachments doesn't count.
   const withEvidence = keys.filter((k) => {
     const e = map[k];
     if (!e) return false;
     if (e.confidence !== "estimate") return true;
-    return !!(e.evidenceNote && e.evidenceNote.trim().length > 0);
+    const hasNote = !!(e.evidenceNote && e.evidenceNote.trim().length > 0);
+    const hasFiles = !!(e.evidenceFiles && e.evidenceFiles.length > 0);
+    return hasNote || hasFiles;
   }).length;
   const total = keys.length;
 
@@ -131,11 +152,44 @@ export function AssumptionConfidenceCard({ stepTitle }: { stepTitle: string }) {
             notePlaceholder={notePlaceholder}
             onSetLevel={(lvl) => setLevel(key, lvl)}
             onSetNote={(note) => setNote(key, note)}
+            onSetFiles={(files) => setFiles(key, files)}
           />
         ))}
       </div>
     </div>
   );
+}
+
+// Task #707 — keep model JSON manageable on share links: cap each
+// uploaded evidence file at 4 MB and allow up to 5 attachments per
+// assumption. Lender packets are typically a handful of leases / quotes
+// per row; the limits keep the inline base64 payload from blowing up
+// the model document.
+const MAX_EVIDENCE_FILE_BYTES = 4 * 1024 * 1024;
+const MAX_EVIDENCE_FILES_PER_ROW = 5;
+const ACCEPTED_EVIDENCE_MIME =
+  ".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.xls,.xlsx,.csv,.txt,.heic";
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+async function readFileAsBase64(file: File): Promise<string> {
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error || new Error("Could not read file"));
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      // FileReader.readAsDataURL returns "data:<mime>;base64,<payload>".
+      // Strip the prefix so we store just the payload — saves bytes and
+      // matches the AssumptionEvidenceFile.dataBase64 contract.
+      const idx = result.indexOf("base64,");
+      resolve(idx >= 0 ? result.slice(idx + "base64,".length) : result);
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 function ConfidenceRow({
@@ -145,6 +199,7 @@ function ConfidenceRow({
   notePlaceholder,
   onSetLevel,
   onSetNote,
+  onSetFiles,
 }: {
   assumptionKey: AssumptionKey;
   entry: AssumptionConfidenceEntry | undefined;
@@ -152,13 +207,63 @@ function ConfidenceRow({
   notePlaceholder: string;
   onSetLevel: (level: AssumptionConfidenceLevel) => void;
   onSetNote: (note: string) => void;
+  onSetFiles: (files: AssumptionEvidenceFile[]) => void;
 }) {
   const meta = ASSUMPTION_REGISTRY[assumptionKey];
   const [expanded, setExpanded] = useState(!!entry?.evidenceNote);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const level = entry?.confidence;
+  const files = entry?.evidenceFiles ?? [];
   const isHighImpact = HIGH_IMPACT_CONFIDENCE_KEYS.includes(assumptionKey);
+  const hasFiles = files.length > 0;
   const needsEvidence =
-    isHighImpact && level === "estimate" && !(entry?.evidenceNote || "").trim();
+    isHighImpact &&
+    level === "estimate" &&
+    !(entry?.evidenceNote || "").trim() &&
+    !hasFiles;
+
+  const handleFilesPicked = async (picked: FileList | null) => {
+    if (!picked || picked.length === 0) return;
+    setUploadError(null);
+    const next: AssumptionEvidenceFile[] = [...files];
+    for (const f of Array.from(picked)) {
+      if (next.length >= MAX_EVIDENCE_FILES_PER_ROW) {
+        setUploadError(
+          `You can attach up to ${MAX_EVIDENCE_FILES_PER_ROW} files per assumption — remove one to add another.`,
+        );
+        break;
+      }
+      if (f.size > MAX_EVIDENCE_FILE_BYTES) {
+        setUploadError(
+          `"${f.name}" is ${formatBytes(f.size)}. Each file must be ${formatBytes(MAX_EVIDENCE_FILE_BYTES)} or smaller.`,
+        );
+        continue;
+      }
+      try {
+        const dataBase64 = await readFileAsBase64(f);
+        next.push({
+          id:
+            typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          name: f.name,
+          mimeType: f.type || "application/octet-stream",
+          size: f.size,
+          uploadedAt: new Date().toISOString(),
+          dataBase64,
+        });
+      } catch {
+        setUploadError(`Couldn't read "${f.name}". Try a different file.`);
+      }
+    }
+    onSetFiles(next);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeFile = (id: string) => {
+    onSetFiles(files.filter((f) => f.id !== id));
+  };
 
   return (
     <div className="rounded-xl border border-border/60 p-3 bg-card">
@@ -221,10 +326,86 @@ function ConfidenceRow({
         />
       )}
 
+      {/* Task #707 — evidence file uploads. Each row gets its own
+          attach-file control + filename list so a founder can drop the
+          actual lease / MOU / quote behind the assumption. Uploaded
+          files surface in the lender PDF appendix and Excel notes. */}
+      <div className="mt-2 flex items-center gap-2 flex-wrap">
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept={ACCEPTED_EVIDENCE_MIME}
+          className="hidden"
+          onChange={(e) => {
+            void handleFilesPicked(e.target.files);
+          }}
+          data-testid={`evidence-file-input-${assumptionKey}`}
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 border border-border rounded-lg px-2 py-1 bg-white hover:border-primary/40"
+          data-testid={`evidence-attach-${assumptionKey}`}
+          disabled={files.length >= MAX_EVIDENCE_FILES_PER_ROW}
+          title={
+            files.length >= MAX_EVIDENCE_FILES_PER_ROW
+              ? `Maximum of ${MAX_EVIDENCE_FILES_PER_ROW} files per assumption`
+              : "Attach a lease, MOU, quote, or other supporting document"
+          }
+        >
+          <Paperclip className="h-3 w-3" />
+          {hasFiles ? "Attach another file" : "Attach evidence file"}
+        </button>
+        {hasFiles && (
+          <span className="text-[11px] text-muted-foreground">
+            {files.length} of {MAX_EVIDENCE_FILES_PER_ROW} attached
+          </span>
+        )}
+      </div>
+
+      {hasFiles && (
+        <ul
+          className="mt-2 space-y-1"
+          data-testid={`evidence-file-list-${assumptionKey}`}
+        >
+          {files.map((f) => (
+            <li
+              key={f.id}
+              className="flex items-center justify-between gap-2 text-xs bg-slate-50 border border-border rounded-lg px-2 py-1"
+            >
+              <span className="inline-flex items-center gap-1.5 min-w-0">
+                <FileText className="h-3 w-3 text-slate-500 shrink-0" />
+                <span className="truncate" title={f.name}>{f.name}</span>
+                <span className="text-muted-foreground shrink-0">
+                  · {formatBytes(f.size)}
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() => removeFile(f.id)}
+                className="text-muted-foreground hover:text-red-600 shrink-0"
+                aria-label={`Remove ${f.name}`}
+                data-testid={`evidence-file-remove-${assumptionKey}-${f.id}`}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {uploadError && (
+        <p className="text-xs text-red-600 mt-2" role="alert">
+          {uploadError}
+        </p>
+      )}
+
       {needsEvidence && (
         <p className="text-xs text-amber-700 mt-2">
-          This is a swing-factor assumption — adding a one-line source here
-          is the single fastest way to harden the model for a reviewer.
+          This is a swing-factor assumption — adding a one-line source or
+          attaching the supporting document here is the single fastest way
+          to harden the model for a reviewer.
         </p>
       )}
     </div>
