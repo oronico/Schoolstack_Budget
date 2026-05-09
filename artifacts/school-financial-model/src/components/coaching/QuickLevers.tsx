@@ -25,7 +25,7 @@ const ICON_COLORS = {
 
 function DeltaChip({ before, after, label, higherIsBetter = true }: { before: number; after: number; label: string; higherIsBetter?: boolean }) {
   if (before === -1 && after === -1) return null;
-  if (before === 0 && after === 0 && label === "DSCR") return null;
+  if (before === 0 && after === 0 && label === "Debt payment cushion") return null;
 
   const isSentinel = before === -1 || after === -1;
   const delta = after - before;
@@ -62,7 +62,7 @@ function DeltaChip({ before, after, label, higherIsBetter = true }: { before: nu
     else if (delta < 0) display = `${delta} students`;
     else if (delta > 0) display = `+${delta} students`;
     else display = "-";
-  } else if (label === "DSCR") {
+  } else if (label === "Debt payment cushion") {
     display = `${delta >= 0 ? "+" : ""}${delta.toFixed(2)}x`;
   } else if (label === "Cash Trough") {
     display = `${delta >= 0 ? "+" : ""}${formatCurrency(delta)}`;
@@ -115,7 +115,7 @@ function LeverCard({ lever, index }: { lever: QuickLever; index: number }) {
 
       <div className="flex flex-wrap gap-1.5 mb-3">
         <DeltaChip before={lever.before.cashTrough} after={lever.after.cashTrough} label="Cash Trough" />
-        <DeltaChip before={lever.before.dscr} after={lever.after.dscr} label="DSCR" />
+        <DeltaChip before={lever.before.dscr} after={lever.after.dscr} label="Debt payment cushion" />
         <DeltaChip before={lever.before.breakEvenEnrollment} after={lever.after.breakEvenEnrollment} label="BE Enrollment" higherIsBetter={false} />
       </div>
 

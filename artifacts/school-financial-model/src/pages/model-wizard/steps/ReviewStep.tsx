@@ -1,6 +1,7 @@
 import { useFormContext } from "react-hook-form";
+import { useRoute } from "wouter";
 import { formatCurrency, formatPercent } from "@/lib/utils";
-import { Edit2, Users, DollarSign, TrendingDown, ArrowUpRight, ArrowDownRight, Building2, AlertTriangle, Rocket, Lightbulb } from "lucide-react";
+import { Edit2, Users, DollarSign, TrendingDown, ArrowUpRight, ArrowDownRight, Building2, Rocket } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { dismissLesson, getDismissedLessons } from "@/lib/coaching/micro-lessons";
@@ -12,7 +13,10 @@ import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import { DiagnosticPanel } from "@/components/coaching/DiagnosticPanel";
 import { QuickLevers } from "@/components/coaching/QuickLevers";
 import { computeMetrics } from "@/lib/coaching/diagnostics-engine";
-import { computeMonthlyCashInflow } from "@/lib/revenue-defaults";
+import { CashFlowSubsection } from "@/components/review/CashFlowSubsection";
+import { ReviewViewToggle, useReviewView } from "@/components/review/ReviewViewToggle";
+import { SimpleSummaryPanel, CfoDetailPanel } from "@/components/review/ReviewMetricsPanels";
+import { toMonthlyRevenueRows } from "@/components/review/revenue-row-adapter";
 import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { useYearCount } from "@/lib/use-model-duration";
 import { trackCoachingEvent } from "@/lib/coaching/track";
@@ -377,26 +381,10 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
 
   const diagnosticMetrics = useMemo(() => computeMetrics(data as FullModelData), [data]);
 
-  const monthlyCashFlow = useMemo(() => {
-    if (!hasRowData || year1Students === 0) return null;
-    const monthlyInflows = computeMonthlyCashInflow(revenueRows, 0, year1Students);
-    const monthlyExpense = totalExpenses / 12;
-    const startingCash = data.openingBalances?.cash ?? 0;
-    const months: { month: string; beginBalance: number; inflow: number; outflow: number; endBalance: number }[] = [];
-    let runningBalance = startingCash;
-    const calendarMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const fyStart = (data.schoolProfile?.fiscalYearStartMonth || 7) - 1;
-    for (let i = 0; i < 12; i++) {
-      const mIdx = (fyStart + i) % 12;
-      const label = calendarMonths[mIdx] || `M${i + 1}`;
-      const inflow = monthlyInflows[i] || 0;
-      const outflow = monthlyExpense;
-      const endBalance = runningBalance + inflow - outflow;
-      months.push({ month: label, beginBalance: runningBalance, inflow, outflow, endBalance });
-      runningBalance = endBalance;
-    }
-    return months;
-  }, [hasRowData, revenueRows, totalExpenses, year1Students, data.openingBalances?.cash, data.schoolProfile?.fiscalYearStartMonth]);
+  // Task #705 — Wizard, lender PDF, and underwriting workbook now read
+  // the same canonical `computeYear1MonthlyCashFlow` series via the
+  // CashFlowSubsection component so per-stream timing is consistent.
+  const showCashFlowSubsection = hasRowData;
 
   const facilityKpis = useMemo(() => {
     const phases = data.schoolProfile?.facilityPhases || data.facilityPhases || [];
@@ -455,17 +443,34 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
 
   const fyMonth = data.schoolProfile?.fiscalYearStartMonth || 7;
 
+  // Task #705 — Simple Summary vs CFO Detail toggle, persisted per
+  // model id. Simple view keeps the founder focused on KPIs + cash
+  // truth; CFO view exposes the full schedule for board / lender prep.
+  const [, routeParams] = useRoute<{ id: string }>("/model/:id");
+  const modelId = routeParams?.id ?? null;
+  const [reviewView, setReviewView] = useReviewView(modelId);
+  const isCfo = reviewView === "cfo";
+
+  // Lowest-cash state lifted out of CashFlowSubsection so the Simple /
+  // CFO metric panels render the same number the table and chart show.
+  const [lowestCashState, setLowestCashState] = useState<
+    { monthLabel: string; amount: number; isNegative: boolean } | null
+  >(null);
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="font-display text-3xl font-bold text-foreground mb-3">Does Everything Look Right?</h2>
-        <p className="text-muted-foreground text-lg">Review your inputs before we run the numbers. You can go back and make changes anytime. Remember, this is your first draft - every version of your budget gets stronger.</p>
-        <SectionExplainers
-          section="review"
-          className="mt-4"
-          schoolType={schoolType}
-          schoolStage={watch("schoolProfile.schoolStage") as string | undefined}
-        />
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex-1 min-w-[280px]">
+          <h2 className="font-display text-3xl font-bold text-foreground mb-3">Does Everything Look Right?</h2>
+          <p className="text-muted-foreground text-lg">Review your inputs before we run the numbers. You can go back and make changes anytime. Remember, this is your first draft - every version of your budget gets stronger.</p>
+          <SectionExplainers
+            section="review"
+            className="mt-4"
+            schoolType={schoolType}
+            schoolStage={watch("schoolProfile.schoolStage") as string | undefined}
+          />
+        </div>
+        <ReviewViewToggle view={reviewView} onChange={setReviewView} className="mt-2" />
       </div>
 
       <DiagnosticPanel
@@ -578,6 +583,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
         </Section>
       )}
 
+      {isCfo && (
       <Section title="Assumptions & Sensitivity" step={8} icon={<DollarSign className="h-5 w-5" />}>
         <div className="space-y-1.5">
           {isSingleYear ? (
@@ -618,6 +624,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
           )}
         </div>
       </Section>
+      )}
 
       <Section title="Enrollment" step={3} icon={<Users className="h-5 w-5" />}>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-4">
@@ -633,7 +640,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
         </div>
       </Section>
 
-      {data.tuitionTiers && data.tuitionTiers.length > 0 && data.schoolProfile?.schoolType !== "charter_school" && (
+      {isCfo && data.tuitionTiers && data.tuitionTiers.length > 0 && data.schoolProfile?.schoolType !== "charter_school" && (
         <Section title="Tuition Discount Tiers" step={3}>
           <div className="space-y-1.5">
             {data.tuitionTiers.map((tier: { id: string; label: string; discountPercent: number; studentCounts: number[] }) => {
@@ -654,6 +661,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
 
       {hasRowData ? (
         <>
+          {isCfo && (
           <Section title="Revenue Schedule" step={4} icon={<DollarSign className="h-5 w-5" />}>
             <div className="mb-4 flex items-center gap-3">
               <span className="inline-flex items-center gap-1 bg-primary/10 text-primary rounded-full px-3 py-1 text-sm font-semibold">
@@ -674,7 +682,9 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
               ))}
             </div>
           </Section>
+          )}
 
+          {isCfo && (
           <Section title="Staffing & Personnel" step={5} icon={<Users className="h-5 w-5" />}>
             <div className="mb-4 flex items-center gap-3 flex-wrap">
               <span className="inline-flex items-center gap-1 bg-primary/10 text-primary rounded-full px-3 py-1 text-sm font-semibold">
@@ -699,7 +709,9 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
               ))}
             </div>
           </Section>
+          )}
 
+          {isCfo && (
           <Section title="Expenses by Category" step={6}>
             <div className="mb-4 flex items-center gap-3">
               <span className="inline-flex items-center gap-1 bg-primary/10 text-primary rounded-full px-3 py-1 text-sm font-semibold">
@@ -732,6 +744,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
               </div>
             )}
           </Section>
+          )}
 
           {hasRowData && diagnosticMetrics.breakevenEnrollment > 0 && diagnosticMetrics.breakevenEnrollment !== Infinity && (
             <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
@@ -781,86 +794,41 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
             </div>
           )}
 
-          {monthlyCashFlow && monthlyCashFlow.length > 0 && (
-            <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-display font-bold text-lg flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-primary" />
-                  Year 1 Monthly Cash Flow
-                </h3>
-                {monthlyCashFlow.some(m => m.endBalance < 0) && (
-                  <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full bg-rose-100 text-rose-700">
-                    <AlertTriangle className="h-3 w-3" /> Negative months
-                  </span>
-                )}
-              </div>
+          {showCashFlowSubsection && (
+            <>
               {lendingLabIntent === "plan_to_apply" && (
-                <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3 mb-4">
+                <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3">
                   <Rocket className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-amber-800">Monthly cash flow helps you spot timing gaps between when you collect revenue and when bills are due.</p>
                 </div>
               )}
-              {(() => {
-                const minMonth = monthlyCashFlow.reduce((min, m, i) => m.endBalance < monthlyCashFlow[min].endBalance ? i : min, 0);
-                const minAmt = monthlyCashFlow[minMonth].endBalance;
-                const monthLabel = monthlyCashFlow[minMonth].month;
-                const startingCash = data.openingBalances?.cash ?? 0;
-                const isNeg = minAmt < 0;
-                const isLow = !isNeg && startingCash > 0 && minAmt < startingCash * 0.25;
-                if (isNeg) return (
-                  <div className="rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 flex items-start gap-3 mb-4">
-                    <AlertTriangle className="h-4 w-4 text-rose-600 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-rose-800">
-                      <span className="font-bold">Cash Trough Alert:</span> Your cash balance drops to {formatCurrency(minAmt)} in {monthLabel}. You'll run out of money before collections catch up - plan bridge financing or a line of credit to cover this gap.
-                    </p>
-                  </div>
-                );
-                if (isLow) return (
-                  <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3 mb-4">
-                    <Lightbulb className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-amber-800">
-                      <span className="font-bold">Cash Trough:</span> Your lowest cash point is {formatCurrency(minAmt)} in {monthLabel}. This is below 25% of your starting reserves - it's worth building more cushion. Consider increasing reserves or adjusting collection timing.
-                    </p>
-                  </div>
-                );
-                return (
-                  <div className="rounded-xl bg-teal-50 border border-teal-200 px-4 py-3 flex items-start gap-3 mb-4">
-                    <Lightbulb className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-teal-800">
-                      <span className="font-bold">Cash Trough:</span> Your lowest cash point is {formatCurrency(minAmt)} in {monthLabel}. You have enough reserves to weather the collection gap - this is a strong position.
-                    </p>
-                  </div>
-                );
-              })()}
-              <div className="overflow-x-auto -mx-2">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-2 px-2 font-semibold text-muted-foreground">Month</th>
-                      <th className="text-right py-2 px-2 font-semibold text-muted-foreground">Beginning</th>
-                      <th className="text-right py-2 px-2 font-semibold text-muted-foreground">Inflows</th>
-                      <th className="text-right py-2 px-2 font-semibold text-muted-foreground">Outflows</th>
-                      <th className="text-right py-2 px-2 font-semibold text-muted-foreground">Net Cash Flow</th>
-                      <th className="text-right py-2 px-2 font-semibold text-muted-foreground">Ending</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {monthlyCashFlow.map((m, i) => (
-                      <tr key={i} className={`border-b border-border/30 ${m.endBalance < 0 ? "bg-rose-50" : i % 2 === 0 ? "bg-secondary/20" : ""}`}>
-                        <td className="py-2 px-2 font-medium">{m.month}</td>
-                        <td className="py-2 px-2 text-right">{formatCurrency(m.beginBalance)}</td>
-                        <td className="py-2 px-2 text-right text-green-700">{formatCurrency(m.inflow)}</td>
-                        <td className="py-2 px-2 text-right text-rose-600">({formatCurrency(m.outflow)})</td>
-                        <td className={`py-2 px-2 text-right ${m.inflow - m.outflow >= 0 ? "text-green-700" : "text-rose-600"}`}>{formatCurrency(m.inflow - m.outflow)}</td>
-                        <td className={`py-2 px-2 text-right font-semibold ${m.endBalance < 0 ? "text-rose-700" : ""}`}>
-                          {formatCurrency(m.endBalance)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+              {isCfo ? (
+                <CfoDetailPanel
+                  data={data as FullModelData}
+                  metrics={diagnosticMetrics}
+                  lowestCash={lowestCashState}
+                  annualDebtService={capitalDebtSummary.total}
+                />
+              ) : (
+                <SimpleSummaryPanel
+                  data={data as FullModelData}
+                  metrics={diagnosticMetrics}
+                  lowestCash={lowestCashState}
+                  onJumpToStep={(step) => jumpToStep(step)}
+                />
+              )}
+              <CashFlowSubsection
+                revenueRows={toMonthlyRevenueRows(revenueRows)}
+                students={year1Students}
+                annualPersonnel={staffingSummary.totalCost}
+                annualOpex={expenseSummary.total}
+                annualDebt={capitalDebtSummary.total}
+                openingCash={data.openingBalances?.cash ?? 0}
+                fiscalYearStartMonth={fyMonth}
+                opMonths={data.schoolProfile?.year1OperatingMonths || 12}
+                onLowestCashChange={setLowestCashState}
+              />
+            </>
           )}
 
           {/* Task #703 — single Strong/Moderate/Needs Support rollup of
@@ -869,7 +837,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
               reviewer will see on the lender packet cover. */}
           <AssumptionConfidenceRollupCard data={{ assumptionConfidence: data.assumptionConfidence }} />
 
-          {schoolStage === "operating_school" && data.priorYearSnapshot && (data.priorYearSnapshot.totalRevenue || data.priorYearSnapshot.tuitionRevenue || data.priorYearSnapshot.publicFundingRevenue || data.priorYearSnapshot.philanthropyRevenue || data.priorYearSnapshot.totalExpenses || data.priorYearSnapshot.personnelExpenses) && (
+          {isCfo && schoolStage === "operating_school" && data.priorYearSnapshot && (data.priorYearSnapshot.totalRevenue || data.priorYearSnapshot.tuitionRevenue || data.priorYearSnapshot.publicFundingRevenue || data.priorYearSnapshot.philanthropyRevenue || data.priorYearSnapshot.totalExpenses || data.priorYearSnapshot.personnelExpenses) && (
             <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
               <h3 className="font-display font-bold text-lg mb-4 flex items-center gap-2">
                 <TrendingDown className="h-5 w-5 text-primary" />
@@ -1000,7 +968,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
             </div>
           )}
 
-          {data.openingBalances && (
+          {isCfo && data.openingBalances && (
             (data.openingBalances.cash || data.openingBalances.accountsReceivable || data.openingBalances.fixedAssets || data.openingBalances.otherAssets || data.openingBalances.accountsPayable || data.openingBalances.currentDebtPortion || data.openingBalances.longTermDebt) ? (
               <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
                 <h3 className="font-display font-bold text-lg mb-4 flex items-center gap-2">

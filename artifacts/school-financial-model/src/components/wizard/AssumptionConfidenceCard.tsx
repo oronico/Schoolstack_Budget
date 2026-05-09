@@ -189,9 +189,13 @@ function evidenceFileUrl(file: AssumptionEvidenceFile): string | null {
     }
     return file.objectPath;
   }
-  if (file.dataBase64) {
+  // Legacy (Task #707) inline payload was dropped from the Zod schema
+  // in Task #729, but un-migrated rows in saved JSON may still carry
+  // it. Read it defensively so the founder can still preview/download.
+  const legacy = (file as { dataBase64?: string }).dataBase64;
+  if (legacy) {
     const mime = file.mimeType || "application/octet-stream";
-    return `data:${mime};base64,${file.dataBase64}`;
+    return `data:${mime};base64,${legacy}`;
   }
   return null;
 }

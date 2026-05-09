@@ -150,7 +150,9 @@ describe("AssumptionConfidenceCard — Task #659", () => {
             mimeType: "application/pdf",
             size: 512,
             uploadedAt: "2024-06-01T00:00:00.000Z",
-            dataBase64: "JVBERi0xLjQK",
+            // Legacy Task #707 inline payload — schema dropped it in
+            // #729; cast keeps the regression test for unmigrated rows.
+            ...({ dataBase64: "JVBERi0xLjQK" } as Record<string, unknown>),
           },
           {
             id: "f-broken",
