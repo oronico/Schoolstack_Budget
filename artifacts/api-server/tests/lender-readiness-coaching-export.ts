@@ -52,6 +52,8 @@ import { buildFounderSummary } from "../src/lib/packets/build-founder-summary.js
 import { buildLenderSummary } from "../src/lib/packets/build-lender-summary.js";
 import { buildLenderPacket } from "../src/lib/packets/build-lender-packet.js";
 import { generateLenderPacketPDF } from "../src/lib/packets/lender-packet-pdf.js";
+import { buildBoardPacket } from "../src/lib/packets/build-board-packet.js";
+import { generateBoardPacketPDF } from "../src/lib/packets/board-packet-pdf.js";
 import type { ModelData } from "../src/lib/workbook-helpers.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -709,6 +711,116 @@ async function testTask754LenderPacketPdfRender(): Promise<void> {
   }
 }
 
+/**
+ * Task #756 — same render-time decode assertion as Task #754, but for
+ * the founder summary surface. The founder summary PDF is the Board /
+ * Funder Summary PDF rendered with a `FounderSummary` argument; that
+ * argument carries the `lenderReadinessCoachingHeadline(...)` string in
+ * the "What your model says" section paragraphs (see
+ * `build-founder-summary.ts > buildWhatYourModelSays`). Up to now this
+ * surface only had source-grep coverage (`testTask751SourceCoverage`)
+ * and a builder-prose coverage check (`testTask751NarrativeBuilders`),
+ * neither of which prove the headline reaches the rendered PDF page.
+ *
+ * This test renders the board+founder PDF for all three verdicts with
+ * `SCHOOLSTACK_PDF_TEST_UNCOMPRESSED=1` and reuses `extractPdfText` to
+ * decode the actual page content stream, then asserts the verdict's
+ * coaching headline appears in the decoded text — and that the legacy
+ * raw-verdict framing never does.
+ */
+async function testTask756FounderSummaryPdfRender(): Promise<void> {
+  console.log(
+    "\n— Task #756 founder summary PDF: decoded text contains coaching headline for every verdict —",
+  );
+
+  const model = buildNarrativeFixtureModel();
+  const co = await runConsultantEngine(model);
+
+  const prevEnv = process.env.SCHOOLSTACK_PDF_TEST_UNCOMPRESSED;
+  process.env.SCHOOLSTACK_PDF_TEST_UNCOMPRESSED = "1";
+  try {
+    for (const verdict of VERDICTS) {
+      // Mutate the canonical engine output's verdict so both the board
+      // packet and the founder summary built off it carry the verdict
+      // we want to render this iteration. The rest of the engine output
+      // is unchanged so the rendered PDF still has realistic content
+      // around the headline.
+      const coVerdict = { ...co, lenderReadiness: verdict };
+      const packet = buildBoardPacket(model as ModelData, coVerdict, 1);
+      const founderSummary = buildFounderSummary(model as ModelData, coVerdict);
+
+      const buf = await generateBoardPacketPDF(packet, founderSummary);
+      check(
+        `[${verdict}] founder summary PDF buffer starts with %PDF-`,
+        buf.subarray(0, 5).toString() === "%PDF-",
+      );
+      check(
+        `[${verdict}] founder summary PDF buffer is non-trivial in size`,
+        buf.length > 4096,
+      );
+
+      const text = extractPdfText(buf);
+      const headline = LENDER_READINESS_COACHING_HEADLINES[verdict];
+
+      // Em-dash (U+2014) is encoded as WinAnsi byte 0x97 in PDFKit's
+      // standard Type 1 fonts. Match against both the original Unicode
+      // form and the WinAnsi-decoded form. Additionally, the founder
+      // summary applies `stripDashes` to every paragraph, which
+      // collapses em/en dashes to " - " — so the headline as it lands on
+      // the page may have lost its em-dash entirely. Try all three
+      // encodings.
+      const headlineWinAnsi = headline
+        .replace(/\u2014/g, "\x97")
+        .replace(/\u2013/g, "\x96");
+      const headlineStripped = strippedHeadline(verdict);
+      const stripWs = (s: string) => s.replace(/\s+/g, "");
+      const textNoWs = stripWs(text);
+      const present =
+        textNoWs.includes(stripWs(headline)) ||
+        textNoWs.includes(stripWs(headlineWinAnsi)) ||
+        textNoWs.includes(stripWs(headlineStripped)) ||
+        // Final fallback: headline halves around the em-dash. PDFKit's
+        // per-glyph kerning splits a TJ run across hex chunks, which
+        // `extractPdfText` joins with spaces; stripping whitespace and
+        // checking each half independently survives that split.
+        headline
+          .split(/[\u2014\u2013]/)
+          .map((part) => stripWs(part))
+          .filter((part) => part.length > 0)
+          .every((part) => textNoWs.includes(part));
+
+      check(
+        `[${verdict}] founder summary headline "${headline}" appears in decoded PDF text`,
+        present,
+        `decoded text length ${text.length}`,
+      );
+
+      // Negative invariant: the legacy `readinessVerb` clauses that
+      // previously framed the verdict in the founder summary must never
+      // appear in the decoded PDF text either. These are the exact
+      // strings testTask751NarrativeBuilders bans from the builder
+      // output; this assertion lifts the same ban to the rendered page.
+      const bannedClauses = [
+        "reads as a strong starting point for lender conversations",
+        "still needs more work before a lender conversation",
+        "is not yet at a place where a lender conversation will land well",
+      ];
+      for (const banned of bannedClauses) {
+        check(
+          `[${verdict}] founder summary PDF does not contain legacy clause "${banned.slice(0, 40)}..."`,
+          !stripWs(text).includes(stripWs(banned)),
+        );
+      }
+    }
+  } finally {
+    if (prevEnv === undefined) {
+      delete process.env.SCHOOLSTACK_PDF_TEST_UNCOMPRESSED;
+    } else {
+      process.env.SCHOOLSTACK_PDF_TEST_UNCOMPRESSED = prevEnv;
+    }
+  }
+}
+
 function testTask751MailerRendersCoachingHeadline(): void {
   console.log("\n— Task #751 mailer.ts review-feedback render uses coaching headline —");
 
@@ -752,6 +864,7 @@ async function main(): Promise<void> {
   testTask751MailerRendersCoachingHeadline();
   await testTask751NarrativeBuilders();
   await testTask754LenderPacketPdfRender();
+  await testTask756FounderSummaryPdfRender();
 
   console.log(`\nResults: ${passed} passed, ${failed} failed`);
   if (failed > 0) {
