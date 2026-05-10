@@ -1,0 +1,118 @@
+Final variables to verify before launch
+Railway API service
+
+Confirm these are present:
+
+NODE_ENV=production
+DATABASE_URL=present
+JWT_SECRET=present
+APP_URL=https://budget.schoolstack.ai
+RESEND_API_KEY=present, if emails are enabled
+EMAIL_FROM=present, if emails are enabled
+
+Recommended to set before or soon after launch:
+
+ALLOWED_ORIGINS=https://budget.schoolstack.ai,https://schoolstack.ai,https://space.schoolstack.ai
+
+Do not print or paste secret values. Just confirm present or missing.
+
+Netlify frontend
+
+Confirm:
+
+VITE_API_BASE_URL=https://schoolstackbudget.up.railway.app
+NODE_VERSION=20 or the known working version
+PNPM_VERSION=10
+
+Also confirm Netlify is deploying the current production bundle, not an old deploy.
+
+Final tests worth doing
+1. Fresh browser sanity test
+
+Do this once manually:
+
+Incognito → https://budget.schoolstack.ai/underwriting
+
+Confirm:
+
+page loads
+no redirect
+run analysis works
+export downloads
+
+No need to re-run all scenarios unless something changed.
+
+2. Account path sanity test
+
+Because some users may create accounts:
+
+/register loads
+/login loads
+/forgot-password loads
+/dashboard while logged out redirects safely
+no blank pages
+
+You do not need a full account lifecycle test unless registration/email was recently changed.
+
+3. Storage/upload watch test, only if uploads are visible tomorrow
+
+If users can upload documents tomorrow, test one small upload:
+
+upload small PDF or PNG
+retrieve it
+watch Railway logs for @google-cloud/storage, google-auth-library, or MODULE_NOT_FOUND
+
+If uploads are not part of the launch path, keep it as a watch item.
+
+4. Rollback drill
+
+Before announcing, open both dashboards and confirm you know exactly where to click:
+
+Netlify → Deploys → previous successful deploy → Publish deploy
+Railway → Deployments → previous successful deployment → Rollback
+
+No need to actually roll back.
+
+5. Monitoring drill
+
+Keep these open for the first 2–4 hours:
+
+https://budget.schoolstack.ai/api/ready
+Railway logs
+Netlify deploy dashboard
+Support inbox / feedback channel
+Final go/no-go rule
+
+You are GO WITH WATCH ITEMS if:
+
+Railway API ready = db connected
+Netlify proxy ready = db connected
+/underwriting works
+readiness analysis works
+Excel export works
+no broken workbook cells
+no console/page errors
+rollback path is known
+someone is assigned to watch logs
+Do not do before launch
+
+Do not:
+
+change formulas
+add new fields
+change database schema
+rename exports again
+chase the known authenticated *_new E2E flake
+fix the 14px mobile overflow unless it is trivially CSS-only and already tested
+One thing I would assign now
+
+Name the first-day monitor.
+
+Their job:
+
+Check Railway logs every 30 minutes.
+Confirm /api/ready stays green.
+Watch first real exports.
+Watch first uploads if enabled.
+Collect user issues.
+Escalate only P0s.
