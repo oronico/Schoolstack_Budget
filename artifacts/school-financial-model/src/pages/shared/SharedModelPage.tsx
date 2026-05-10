@@ -5,6 +5,7 @@ import { MAX_COMPARE_KEYS } from "@/lib/share-comparison";
 import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "@/lib/benchmark-thresholds";
 import { SEOHead } from "@/components/SEOHead";
 import { DECISION_LABELS, type DecisionImpact } from "@/lib/decision-flows";
+import { lenderReadinessCoachingHeadline } from "@/lib/coaching/lender-readiness-coaching";
 import type { DecisionType } from "@/pages/model-wizard/schema";
 import { ImpactSummary } from "@/components/decision-flow/ImpactSummary";
 import {
@@ -378,18 +379,24 @@ function EnrollmentChart({ enrollment }: { enrollment: number[] }) {
   );
 }
 
-function LenderReadinessBadge({ readiness }: { readiness: string }) {
+export function LenderReadinessBadge({ readiness }: { readiness: string }) {
   const config = {
     "Strong": { bg: "bg-green-100", text: "text-green-800", border: "border-green-300" },
     "Needs Work": { bg: "bg-amber-100", text: "text-amber-800", border: "border-amber-300" },
     "Not Yet Ready": { bg: "bg-red-100", text: "text-red-800", border: "border-red-300" },
   }[readiness] || { bg: "bg-slate-100", text: "text-slate-800", border: "border-slate-300" };
 
+  // Task #753 — render the same coaching headline shown on every export
+  // surface (lender packet PDF, lender summary PDF, founder summary, etc.)
+  // so a recipient who opens the share link sees the same friendly framing
+  // they would see in the PDF the founder shared.
+  const headline = lenderReadinessCoachingHeadline(readiness) || readiness;
+
   return (
     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold border ${config.bg} ${config.text} ${config.border}`}>
       {readiness === "Strong" && <Shield className="h-3.5 w-3.5" />}
       {readiness === "Needs Work" && <AlertTriangle className="h-3.5 w-3.5" />}
-      {readiness}
+      {headline}
     </span>
   );
 }

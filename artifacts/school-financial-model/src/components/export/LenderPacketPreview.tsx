@@ -4,6 +4,7 @@ import { trackExport } from "@/hooks/useExportTracker";
 import { InsightCallout } from "@/components/coaching/InsightCallout";
 import { buildForecastFilterQuery } from "@/lib/forecast-accuracy-query";
 import { CashRunwayCard, type CashRunwayView } from "./CashRunwayCard";
+import { lenderReadinessCoachingHeadline } from "@/lib/coaching/lender-readiness-coaching";
 
 interface LinkedMetric {
   label: string;
@@ -376,7 +377,7 @@ export function CommentaryBlock({
   );
 }
 
-function NarrativeHeader({
+export function NarrativeHeader({
   narrative,
   readiness,
 }: {
@@ -404,7 +405,9 @@ function NarrativeHeader({
       <div className={`rounded-xl border p-4 ${statusColor}`}>
         <div className="flex items-center gap-2 mb-2">
           {statusIcon}
-          <span className="font-bold text-sm">Lender Readiness: {readiness.status}</span>
+          <span className="font-bold text-sm">
+            Lender Readiness: {lenderReadinessCoachingHeadline(readiness.status) || readiness.status}
+          </span>
         </div>
         <p className="text-sm leading-relaxed">{readiness.explanation}</p>
       </div>

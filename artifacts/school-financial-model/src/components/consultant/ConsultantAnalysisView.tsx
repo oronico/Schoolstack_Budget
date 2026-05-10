@@ -43,6 +43,7 @@ import { KpiFormulaDrawer } from "@/components/coaching/ExplainerDrawer";
 import { WhyThisNumber } from "@/components/coaching/WhyThisNumber";
 import type { HeadlineMetricKey } from "@workspace/finance";
 import { trackCoachingEvent } from "@/lib/coaching/track";
+import { lenderReadinessCoachingHeadline } from "@/lib/coaching/lender-readiness-coaching";
 import { TopIssuesPanel } from "./TopIssuesPanel";
 import { HealthSignalsSection } from "./HealthSignalCard";
 import { LendingLabCard } from "./LendingLabCard";
@@ -1459,11 +1460,7 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
               How this reads for an external reviewer right now
             </h4>
             <p className={cn("font-display font-bold text-xl", lenderColor)}>
-              {data.lenderReadiness === "Strong"
-                ? "Ready to share — keep polishing the narrative."
-                : data.lenderReadiness === "Needs Work"
-                  ? "Almost there — a few targeted edits will tighten the story."
-                  : "Worth another pass before you send it out."}
+              {lenderReadinessCoachingHeadline(data.lenderReadiness)}
             </p>
           </div>
         </div>

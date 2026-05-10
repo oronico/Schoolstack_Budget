@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { useAuth } from "@/lib/auth-context";
+import { lenderReadinessCoachingHeadline } from "@/lib/coaching/lender-readiness-coaching";
 import { useLocation } from "wouter";
 import {
   Users,
@@ -1348,15 +1349,19 @@ function SeverityBadge({ severity }: { severity: string }) {
   );
 }
 
-function LenderBadge({ readiness }: { readiness: string }) {
+export function LenderBadge({ readiness }: { readiness: string }) {
   const colors: Record<string, string> = {
     "Strong": "bg-green-100 text-green-700 border-green-200",
     "Needs Work": "bg-amber-100 text-amber-700 border-amber-200",
     "Not Yet Ready": "bg-red-100 text-red-700 border-red-200",
   };
+  // Task #753 — show the same coaching headline the founder sees in the
+  // wizard / Section 7 readiness card and on every export surface, instead
+  // of the bare verdict noun.
+  const headline = lenderReadinessCoachingHeadline(readiness) || readiness;
   return (
     <span className={`text-sm font-bold px-3 py-1 rounded-xl border ${colors[readiness] || "bg-gray-100 text-gray-700 border-gray-200"}`}>
-      {readiness}
+      {headline}
     </span>
   );
 }
