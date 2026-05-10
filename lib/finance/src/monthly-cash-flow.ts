@@ -58,6 +58,29 @@ export function distributeRevenueMonthly(
   opMonths: number = 12,
 ): number[] {
   const monthly = new Array(12).fill(0);
+  const byRow = distributeRevenueMonthlyByRow(rows, yearIndex, students, opMonths);
+  for (const series of byRow.values()) {
+    for (let i = 0; i < 12; i++) monthly[i] += series[i];
+  }
+  return monthly;
+}
+
+/**
+ * Same per-stream timing logic as `distributeRevenueMonthly`, but returns
+ * each row's 12-month series keyed by row id. Callers that need to render
+ * a category-by-category cash-flow breakdown (e.g. the single-year Excel
+ * "Monthly Cash Flow" sheet) can sum these series by category to get a
+ * realistic shape — the per-row distribution still respects each row's
+ * billingMonths, ESA disbursement type, public-funding paymentFrequency
+ * + lag, and philanthropy receiptQuarter.
+ */
+export function distributeRevenueMonthlyByRow(
+  rows: readonly MonthlyRevenueRowLike[],
+  yearIndex: number,
+  students: number,
+  opMonths: number = 12,
+): Map<string, number[]> {
+  const byRow = new Map<string, number[]>();
   const rowValues = new Map<string, number>();
 
   for (const row of rows) {
@@ -92,6 +115,7 @@ export function distributeRevenueMonthly(
     const annualAmount = rowValues.get(row.id) ?? 0;
     if (annualAmount === 0) continue;
 
+    const series = new Array(12).fill(0);
     const category = row.category;
     const collectionRate = (row.collectionRate ?? 100) / 100;
     const delayMonths = Math.ceil((row.collectionDelayDays ?? 0) / 30);
@@ -108,7 +132,7 @@ export function distributeRevenueMonthly(
         i < startMonth + billingMonths && i < 12;
         i++
       ) {
-        monthly[i] += perMonth;
+        series[i] += perMonth;
       }
     } else if (category === "public_funding") {
       const adjustedAmount = annualAmount * collectionRate;
@@ -117,25 +141,25 @@ export function distributeRevenueMonthly(
       if (freq === "monthly") {
         const perMonth = adjustedAmount / 12;
         const startIdx = (timing === "arrears" ? 1 : 0) + delayMonths;
-        for (let i = startIdx; i < 12; i++) monthly[i] += perMonth;
+        for (let i = startIdx; i < 12; i++) series[i] += perMonth;
       } else if (freq === "quarterly") {
         const perPayment = adjustedAmount / 4;
         const baseMonths =
           timing === "arrears" ? [2, 5, 8, 11] : [0, 3, 6, 9];
         baseMonths.forEach((m) => {
           const dm = m + delayMonths;
-          if (dm < 12) monthly[dm] += perPayment;
+          if (dm < 12) series[dm] += perPayment;
         });
       } else if (freq === "semi_annual") {
         const perPayment = adjustedAmount / 2;
         const baseMonths = timing === "arrears" ? [5, 11] : [0, 6];
         baseMonths.forEach((m) => {
           const dm = m + delayMonths;
-          if (dm < 12) monthly[dm] += perPayment;
+          if (dm < 12) series[dm] += perPayment;
         });
       } else if (freq === "annual") {
         const month = (timing === "arrears" ? 11 : 0) + delayMonths;
-        if (month < 12) monthly[month] += adjustedAmount;
+        if (month < 12) series[month] += adjustedAmount;
       }
     } else if (category === "school_choice") {
       const adjustedAmount = annualAmount * collectionRate;
@@ -144,20 +168,20 @@ export function distributeRevenueMonthly(
         const perQuarter = adjustedAmount / 4;
         [0, 3, 6, 9].forEach((m) => {
           const dm = m + delayMonths;
-          if (dm < 12) monthly[dm] += perQuarter;
+          if (dm < 12) series[dm] += perQuarter;
         });
       } else {
         const lagMonths = row.reimbursementLagMonths ?? 2;
         const effectiveDelay = Math.max(lagMonths, delayMonths);
         const perMonth = adjustedAmount / 12;
         for (let i = effectiveDelay; i < 12; i++) {
-          monthly[i] += perMonth;
+          series[i] += perMonth;
         }
         if (effectiveDelay > 0 && effectiveDelay < 12) {
           const deferred = perMonth * effectiveDelay;
           const remainingMonths = 12 - effectiveDelay;
           for (let i = effectiveDelay; i < 12; i++) {
-            monthly[i] += deferred / remainingMonths;
+            series[i] += deferred / remainingMonths;
           }
         }
       }
@@ -168,7 +192,7 @@ export function distributeRevenueMonthly(
       const adjustedAmount = annualAmount * collectionRate;
       const quarter = row.receiptQuarter ?? 1;
       const startMonth = (quarter - 1) * 3 + delayMonths;
-      if (startMonth < 12) monthly[startMonth] += adjustedAmount;
+      if (startMonth < 12) series[startMonth] += adjustedAmount;
     } else {
       // other_revenue and any unrecognized category — spread evenly
       // across operating months.
@@ -177,12 +201,14 @@ export function distributeRevenueMonthly(
       const perMonth = adjustedAmount / months;
       const startIdx = delayMonths;
       for (let i = startIdx; i < startIdx + months && i < 12; i++) {
-        monthly[i] += perMonth;
+        series[i] += perMonth;
       }
     }
+
+    byRow.set(row.id, series);
   }
 
-  return monthly;
+  return byRow;
 }
 
 /**

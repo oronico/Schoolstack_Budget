@@ -241,6 +241,7 @@ export type { AccountingExportLike, LiveSnapshotLike } from "./decision-engine/m
 
 export {
   distributeRevenueMonthly,
+  distributeRevenueMonthlyByRow,
   distributePersonnelMonthly,
   distributeOpexMonthly,
   distributeDebtMonthly,

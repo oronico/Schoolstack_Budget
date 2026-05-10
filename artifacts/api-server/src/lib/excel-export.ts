@@ -1,5 +1,13 @@
 import ExcelJS from "exceljs";
-import { computeAnnualDebt, computeFounderCompNormalization } from "@workspace/finance";
+import {
+  computeAnnualDebt,
+  computeFounderCompNormalization,
+  distributeRevenueMonthlyByRow,
+  distributePersonnelMonthly,
+  distributeOpexMonthly,
+  distributeDebtMonthly,
+  type MonthlyRevenueRowLike,
+} from "@workspace/finance";
 import type { DecisionEngineModelData } from "@workspace/finance";
 type FullModelData = DecisionEngineModelData;
 import { accountingBasisLabel, addDashboardSheet, computeFacilityCostByYear, computeInstructionalCostByYear, setFormula } from "./workbook-helpers.js";
@@ -840,11 +848,52 @@ function buildMonthlyCashFlowTab(
   enrollment: number[],
   startingCash: number,
   fmRows: { revenueRow: number; staffRow: number; expenseRow: number; mgmtFeeRow: number | null; capDebtRow: number; totalExpRow: number; netIncomeRow: number },
+  revenueRows: RevenueRow[],
+  tuitionTiers?: TuitionTier[],
 ): MonthlyCashSnapshot {
   const fyStart = sp.fiscalYearStartMonth || 7;
   const isPartial = sp.isPartialFirstYear || false;
   const opMonths = isPartial ? Math.max(1, Math.min(12, sp.year1OperatingMonths || 10)) : 12;
   const students = enrollment[0] || 0;
+
+  // Task #744 — pre-resolve tier-aware tuition to a single per-student
+  // amount so the canonical distributeRevenueMonthlyByRow helper (which
+  // multiplies per_student rows by `students`) lands on the same annual
+  // total as precomputeFinancials. Mirrors the underwriting workbook.
+  const projectedRevenueRows = revenueRows.map((rv) => {
+    if (rv.id === "gross_tuition" && rv.driverType === "per_student" && tuitionTiers && tuitionTiers.length > 0) {
+      const perStudentEffective = students > 0
+        ? computeTuitionWithTiersForMix(rv.amounts?.[0] ?? 0, 0, students, tuitionTiers) / students
+        : 0;
+      return { ...rv, amounts: [perStudentEffective, ...(rv.amounts?.slice(1) ?? [])] };
+    }
+    return rv;
+  });
+
+  // Per-row monthly distribution honoring billingMonths, ESA disbursement
+  // type, public-funding paymentFrequency + lag, and philanthropy
+  // receiptQuarter. Aggregated below to per-category 12-month series.
+  const byRowMonthly = distributeRevenueMonthlyByRow(
+    projectedRevenueRows as unknown as MonthlyRevenueRowLike[],
+    0,
+    students,
+    opMonths,
+  );
+
+  // Sum the per-row series into per-category 12-month arrays so the
+  // sheet's category breakdown reflects realistic cash arrival timing.
+  const categoryMonthly = new Map<string, number[]>();
+  for (const row of projectedRevenueRows) {
+    if (!row.enabled) continue;
+    const series = byRowMonthly.get(row.id);
+    if (!series) continue;
+    let agg = categoryMonthly.get(row.category);
+    if (!agg) {
+      agg = new Array(12).fill(0);
+      categoryMonthly.set(row.category, agg);
+    }
+    for (let i = 0; i < 12; i++) agg[i] += series[i];
+  }
 
   ws.columns = [{ width: 32 }, ...Array(12).fill({ width: 14 }), { width: 16 }];
 
@@ -867,24 +916,35 @@ function buildMonthlyCashFlowTab(
   ws.getRow(r).values = monthHeaders;
   styleHeaderRow(ws, r, 14);
 
-  // Helper: write an evenly-spread row whose Annual Total ties back to a
-  // specific Financial Model cell.
-  function writeSpreadRow(label: string, annualTotal: number, monthsActive: number, fmFormula?: string, bold = false): { row: number; monthlyVals: number[] } {
+  // Helper: write a row whose monthly cells come from a precomputed
+  // 12-element array (e.g. the per-category output of
+  // distributeRevenueMonthlyByRow), with last-non-zero-month absorbing
+  // any rounding residual so the monthly sum equals the integer annual
+  // total exactly. Annual Total ties to a Financial Model cell when
+  // `fmFormula` is provided; otherwise SUM of the row.
+  function writeMonthlyRow(
+    label: string,
+    monthlyRaw: readonly number[],
+    annualTotal: number,
+    fmFormula?: string,
+    bold = false,
+  ): { row: number; monthlyVals: number[] } {
     r++;
     ws.getCell(r, 1).value = label;
     if (bold) styleBoldDataCell(ws.getCell(r, 1)); else styleDataCell(ws.getCell(r, 1));
     const monthlyVals: number[] = new Array(12).fill(0);
-    if (monthsActive > 0 && annualTotal !== 0) {
-      const baseMonthly = Math.round(annualTotal / monthsActive);
-      let allocated = 0;
-      for (let m = 0; m < monthsActive; m++) {
-        // Last active month absorbs the rounding residual so monthly
-        // sum equals the annual total exactly (lender QA tolerates ±1
-        // but parity is cheap to maintain here).
-        const v = m === monthsActive - 1 ? annualTotal - allocated : baseMonthly;
-        allocated += v;
-        monthlyVals[m] = v;
-      }
+    let allocated = 0;
+    let lastNonZero = -1;
+    for (let m = 0; m < 12; m++) {
+      const rounded = Math.round(monthlyRaw[m] ?? 0);
+      monthlyVals[m] = rounded;
+      allocated += rounded;
+      if (rounded !== 0) lastNonZero = m;
+    }
+    // Absorb the integer rounding residual into the last non-zero month
+    // so the row's monthly sum equals the booked annual total exactly.
+    if (lastNonZero >= 0 && allocated !== annualTotal) {
+      monthlyVals[lastNonZero] += annualTotal - allocated;
     }
     for (let m = 0; m < 12; m++) {
       const cell = ws.getCell(r, m + 2);
@@ -933,7 +993,8 @@ function buildMonthlyCashFlowTab(
     const annual = Math.round(totals[0] ?? 0);
     if (annual === 0) continue;
     const label = REVENUE_CATEGORY_LABELS[cat] ?? cat;
-    const out = writeSpreadRow(toTitleCase(label), annual, opMonths);
+    const monthly = categoryMonthly.get(cat) ?? new Array(12).fill(0);
+    const out = writeMonthlyRow(toTitleCase(label), monthly, annual);
     inflowRowNumbers.push(out.row);
   }
   // Catch any category not in the canonical order list.
@@ -942,7 +1003,8 @@ function buildMonthlyCashFlowTab(
     const annual = Math.round(totals[0] ?? 0);
     if (annual === 0) continue;
     const label = REVENUE_CATEGORY_LABELS[cat] ?? cat;
-    const out = writeSpreadRow(toTitleCase(label), annual, opMonths);
+    const monthly = categoryMonthly.get(cat) ?? new Array(12).fill(0);
+    const out = writeMonthlyRow(toTitleCase(label), monthly, annual);
     inflowRowNumbers.push(out.row);
   }
 
@@ -981,10 +1043,14 @@ function buildMonthlyCashFlowTab(
   const outflowRowNumbers: number[] = [];
 
   // Personnel (single line). Annual Total ties to FM staffing row.
-  const persOut = writeSpreadRow(
+  // Task #744 — distributePersonnelMonthly delivers the canonical
+  // operating-month-only spread so the trough lines up with how staff are
+  // actually paid in partial-year schools.
+  const persAnnual = precomputed.totalPersonnel[0] ?? 0;
+  const persOut = writeMonthlyRow(
     "Personnel",
-    precomputed.totalPersonnel[0] ?? 0,
-    opMonths,
+    distributePersonnelMonthly(persAnnual, opMonths),
+    persAnnual,
     `'Financial Model'!B${fmRows.staffRow}`,
   );
   outflowRowNumbers.push(persOut.row);
@@ -1018,7 +1084,7 @@ function buildMonthlyCashFlowTab(
     const annual = Math.round(expCatTotals.get(cat) ?? 0);
     if (annual === 0) continue;
     const label = EXPENSE_CATEGORY_LABELS[cat] ?? cat;
-    const out = writeSpreadRow(toTitleCase(label), annual, opMonths);
+    const out = writeMonthlyRow(toTitleCase(label), distributeOpexMonthly(annual, opMonths), annual);
     outflowRowNumbers.push(out.row);
   }
   for (const [cat, val] of expCatTotals.entries()) {
@@ -1026,34 +1092,34 @@ function buildMonthlyCashFlowTab(
     const annual = Math.round(val);
     if (annual === 0) continue;
     const label = EXPENSE_CATEGORY_LABELS[cat] ?? cat;
-    const out = writeSpreadRow(toTitleCase(label), annual, opMonths);
+    const out = writeMonthlyRow(toTitleCase(label), distributeOpexMonthly(annual, opMonths), annual);
     outflowRowNumbers.push(out.row);
   }
 
-  // Management fee (when present) — spread across the operating window.
-  // The Financial Model lists management fee on its own row between Opex
-  // and Capital & Debt, so we spread it the same way as opex to keep the
-  // monthly shape realistic.
+  // Management fee (when present) — spread across the operating window
+  // via the canonical opex helper so the shape stays consistent with the
+  // rest of the operating outflows.
   if (fmRows.mgmtFeeRow !== null) {
     const mgmtFeeAnnual = Math.round(precomputed.managementFee[0] ?? 0);
     if (mgmtFeeAnnual !== 0) {
-      const mfOut = writeSpreadRow(
+      const mfOut = writeMonthlyRow(
         "Management Fee",
+        distributeOpexMonthly(mgmtFeeAnnual, opMonths),
         mgmtFeeAnnual,
-        opMonths,
         `'Financial Model'!B${fmRows.mgmtFeeRow}`,
       );
       outflowRowNumbers.push(mfOut.row);
     }
   }
 
-  // Capital & debt service spread across all 12 months.
-  const capDebtAnnual = precomputed.totalCapDebt[0] ?? 0;
+  // Capital & debt service spread across all 12 months (lenders bill
+  // year-round even before the school opens).
+  const capDebtAnnual = Math.round(precomputed.totalCapDebt[0] ?? 0);
   if (capDebtAnnual !== 0) {
-    const cdOut = writeSpreadRow(
+    const cdOut = writeMonthlyRow(
       "Capital & Debt Service",
+      distributeDebtMonthly(capDebtAnnual, "monthly"),
       capDebtAnnual,
-      12,
       `'Financial Model'!B${fmRows.capDebtRow}`,
     );
     outflowRowNumbers.push(cdOut.row);
@@ -1183,7 +1249,7 @@ function buildMonthlyCashFlowTab(
   const year1EndingRow = r;
 
   r += 2;
-  ws.getCell(r, 1).value = "Year 1 operates for " + opMonths + " of 12 months" + (isPartial ? " (partial-year start)" : "") + ". Revenue and operating expenses are spread evenly across the operating window; capital and debt service are spread across all 12 months. Annual totals are tied directly to the Financial Model sheet.";
+  ws.getCell(r, 1).value = "Year 1 operates for " + opMonths + " of 12 months" + (isPartial ? " (partial-year start)" : "") + ". Revenue uses real billing-month timing — tuition flows over its billing months, ESA / school-choice respects direct-quarterly vs. reimbursement-lag disbursement, public funding follows the configured payment frequency and lag, and philanthropy lands in its scheduled receipt quarter. Personnel and operating expenses are paid across the operating window; capital and debt service are paid across all 12 months. Annual totals are tied directly to the Financial Model sheet.";
   ws.getCell(r, 1).font = { italic: true, size: 9, name: "Calibri", color: { argb: "FF6B7280" } };
   ws.mergeCells(r, 1, r, 14);
   ws.getRow(r).alignment = { wrapText: true, vertical: "top" };
@@ -1305,6 +1371,8 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
           totalExpRow: 6 + mgmtOffset,
           netIncomeRow: 7 + mgmtOffset,
         },
+        revenueRows,
+        data.tuitionTiers,
       );
     }
 

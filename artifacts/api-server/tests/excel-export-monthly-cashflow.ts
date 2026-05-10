@@ -403,6 +403,162 @@ async function main(): Promise<void> {
     );
   }
 
+  // ── Task #744: real billing-month timing fixture ──
+  //
+  // Verify the Monthly Cash Flow sheet uses real per-stream timing (via
+  // distributeRevenueMonthlyByRow) instead of an even spread. The
+  // microschoolStartup fixture has tuition with billingMonths=10 (so
+  // months 1–10 of the operating window are billed and months 0/11 are
+  // dry) and an `annual_fixed` philanthropy row that lands entirely in
+  // its receiptQuarter (defaults to Q1). Both are measurable departures
+  // from the old `annual / opMonths` even-spread shape.
+  console.log("\n--- Real billing-month timing (Task #744) ---");
+  const tuitionRow = findRow(ws, "Tuition & Student Fees");
+  if (tuitionRow !== null) {
+    const tuitionMonthly: number[] = [];
+    for (let m = 0; m < 12; m++) {
+      tuitionMonthly.push(getNumeric(ws.getCell(tuitionRow, m + 2)) ?? 0);
+    }
+    // The tuition_and_fees category aggregates Tuition (billingMonths=10,
+    // months 1–10) and Registration Fee (billingMonths=12, all months).
+    // So months 0 and 11 receive ONLY the small registration fee and
+    // months 1–10 receive registration fee + the much larger tuition.
+    // This means months 1–10 must be substantially larger than months
+    // 0 and 11, which is the measurable signature of real billing-month
+    // timing vs. the old even spread (where every month would be equal).
+    const midMonth = tuitionMonthly[5];
+    check(
+      "tuition_and_fees: month 0 (Jul) is much smaller than mid-year (only reg fee, no tuition billing)",
+      midMonth > 0 && tuitionMonthly[0] > 0 && tuitionMonthly[0] < midMonth * 0.25,
+      `month 0 = ${tuitionMonthly[0]}, midMonth = ${midMonth}`,
+    );
+    check(
+      "tuition_and_fees: month 11 (Jun) is much smaller than mid-year (only reg fee, no tuition billing)",
+      midMonth > 0 && tuitionMonthly[11] > 0 && tuitionMonthly[11] < midMonth * 0.25,
+      `month 11 = ${tuitionMonthly[11]}, midMonth = ${midMonth}`,
+    );
+    // Months 1..10 should all be substantially larger than month 0.
+    const billingWindowAllLarger = tuitionMonthly.slice(1, 11).every(v => v > tuitionMonthly[0] * 2);
+    check(
+      "tuition_and_fees: months 1–10 are all >> months 0/11 (tuition billing window)",
+      billingWindowAllLarger,
+      `months 1..10 = ${tuitionMonthly.slice(1, 11).join(",")}, month 0 = ${tuitionMonthly[0]}`,
+    );
+  } else {
+    check("tuition_and_fees row found in Monthly Cash Flow sheet", false);
+  }
+
+  const philanthropyRow = findRow(ws, "Philanthropy");
+  if (philanthropyRow !== null) {
+    const philMonthly: number[] = [];
+    for (let m = 0; m < 12; m++) {
+      philMonthly.push(getNumeric(ws.getCell(philanthropyRow, m + 2)) ?? 0);
+    }
+    const nonZeroMonths = philMonthly.filter(v => v !== 0).length;
+    check(
+      "philanthropy lands in a single month (annual_fixed → receiptQuarter), not spread evenly",
+      nonZeroMonths === 1,
+      `non-zero months = ${nonZeroMonths}, monthly = [${philMonthly.join(",")}]`,
+    );
+    // Q1 default → fiscal month 0 = first month of the operating year.
+    check(
+      "philanthropy lands in fiscal month 0 (Q1 default receiptQuarter)",
+      philMonthly[0] !== 0 && philMonthly.slice(1).every(v => v === 0),
+      `philMonthly = [${philMonthly.join(",")}]`,
+    );
+  } else {
+    check("philanthropy row found in Monthly Cash Flow sheet", false);
+  }
+
+  // The trough month should now reflect the realistic shape — with
+  // tuition holding off in Jul (fiscal month 0) but personnel + opex
+  // starting in month 0, the cash trough has to be earlier than the
+  // last operating month an even-spread model would land on.
+  if (endingRow !== null) {
+    const endingByMonth: number[] = [];
+    for (let m = 0; m < 12; m++) {
+      endingByMonth.push(getNumeric(ws.getCell(endingRow, m + 2)) ?? 0);
+    }
+    let troughIdx = 0;
+    for (let m = 1; m < 12; m++) {
+      if (endingByMonth[m] < endingByMonth[troughIdx]) troughIdx = m;
+    }
+    // With even-spread, the trough would always be the last operating
+    // month (no shape variation). With real timing the trough should
+    // not necessarily be the final month.
+    const isEvenSpreadShape = endingByMonth.slice(0, 11).every((v, i, arr) => i === 0 || v === arr[i - 1] + (arr[1] - arr[0]));
+    check(
+      "ending-cash trajectory is NOT a perfectly even step (real timing variation present)",
+      !isEvenSpreadShape,
+      `endingByMonth = [${endingByMonth.join(",")}]`,
+    );
+    check(
+      "trough month index is in valid range 0..11",
+      troughIdx >= 0 && troughIdx < 12,
+      `troughIdx = ${troughIdx}`,
+    );
+  }
+
+  // ── ESA reimbursement-lag fixture ──
+  //
+  // A school-choice row with disbursementType="reimbursement" and a
+  // 3-month lag should produce a school_choice category series that has
+  // zero (or near-zero) inflow in the first lag months.
+  console.log("\n--- ESA reimbursement-lag fixture ---");
+  const esaFixture = singleYearFixture();
+  const esaRows = esaFixture.revenueRows as Array<Record<string, unknown>>;
+  for (const r of esaRows) {
+    if (r.id === "r3") {
+      r.disbursementType = "reimbursement";
+      r.reimbursementLagMonths = 3;
+    }
+  }
+  const esaBuf = await generateWorkbook(esaFixture);
+  const esaWb = new ExcelJS.Workbook();
+  await esaWb.xlsx.load(esaBuf);
+  const esaCfWs = esaWb.worksheets.find(w => w.name === "Monthly Cash Flow");
+  check("ESA reimbursement fixture: Monthly Cash Flow sheet present", !!esaCfWs);
+  if (esaCfWs) {
+    const esaSchoolChoiceRow = findRow(esaCfWs, "School Choice");
+    if (esaSchoolChoiceRow !== null) {
+      const esaMonthly: number[] = [];
+      for (let m = 0; m < 12; m++) {
+        esaMonthly.push(getNumeric(esaCfWs.getCell(esaSchoolChoiceRow, m + 2)) ?? 0);
+      }
+      // First 3 months (lag) should have no ESA inflow.
+      check(
+        "ESA reimbursement: months 0..2 are zero (3-month lag)",
+        esaMonthly[0] === 0 && esaMonthly[1] === 0 && esaMonthly[2] === 0,
+        `months 0..2 = ${esaMonthly.slice(0, 3).join(",")}`,
+      );
+      check(
+        "ESA reimbursement: months 3..11 receive positive disbursements",
+        esaMonthly.slice(3).every(v => v > 0),
+        `months 3..11 = ${esaMonthly.slice(3).join(",")}`,
+      );
+      // Annual total still ties back to FM revenue (no leakage).
+      const totalIn = findRow(esaCfWs, "Total Cash Inflows");
+      const esaFmWs = esaWb.worksheets.find(w => w.name === "Financial Model");
+      if (totalIn !== null && esaFmWs) {
+        const fmRev = getNumeric(esaFmWs.getCell(2, 2));
+        const cfRev = getNumeric(esaCfWs.getCell(totalIn, 14));
+        check(
+          "ESA reimbursement: Total Cash Inflows annual still ties to FM revenue",
+          fmRev !== null && cfRev !== null && Math.abs(fmRev - cfRev) <= 1,
+          `FM rev=${fmRev}, CF inflows=${cfRev}`,
+        );
+      }
+    } else {
+      check("ESA reimbursement fixture: school_choice row found", false);
+    }
+    const esaBad = scanForBadCells(esaCfWs);
+    check(
+      "ESA reimbursement fixture: no NaN / formula errors",
+      esaBad.length === 0,
+      esaBad.slice(0, 5).join("; "),
+    );
+  }
+
   console.log(`\nResults: ${passed} passed, ${failed} failed`);
   if (failed > 0) {
     console.log("\nFailures:");
