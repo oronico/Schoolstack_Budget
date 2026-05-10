@@ -64,6 +64,7 @@ function main() {
     const r = rollupAssumptionConfidence(empty as Record<string, AssumptionConfidenceEntry | undefined> | undefined);
     check(`empty input (${empty === undefined ? "undefined" : empty === null ? "null" : "{}"}) returns total=${total}`, r.total === total);
     check(`empty input withEvidence=0`, r.withEvidence === 0);
+    check(`empty input evidenceCount mirrors withEvidence`, r.evidenceCount === r.withEvidence);
     check(`empty input posture is one of the three legal values`, ["Strong", "Moderate", "Needs Support"].includes(r.posture));
     check(`empty input breakdown has all five levels`, ["actuals", "signed_agreement", "quote", "research", "estimate"].every(k => k in r.breakdown));
     check(`empty input breakdown all zero`, Object.values(r.breakdown).every(v => v === 0));
@@ -130,6 +131,7 @@ function main() {
     check("mixed: breakdown.research == 1", r.breakdown.research === 1);
     check("mixed: total still == registry size", r.total === total);
     check("mixed: withEvidence counts only entries with evidence (5)", r.withEvidence === 5, `got ${r.withEvidence}`);
+    check("mixed: evidenceCount alias mirrors withEvidence", r.evidenceCount === r.withEvidence, `evidenceCount=${r.evidenceCount}`);
   }
 
   // --- Unknown key in input is ignored, doesn't crash, doesn't inflate counts ---

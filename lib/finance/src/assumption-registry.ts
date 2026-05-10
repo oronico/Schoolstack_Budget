@@ -799,6 +799,11 @@ export interface LegacyAssumptionConfidenceRollup {
   posture: AssumptionConfidencePosture;
   total: number;
   withEvidence: number;
+  /** Task #703 brief alias for `withEvidence` — kept so external
+   *  consumers reading the contract from the brief verbatim
+   *  (`{posture, evidenceCount, total, breakdown}`) get the same number
+   *  without a rename. Always equal to `withEvidence`. */
+  evidenceCount: number;
   breakdown: Record<AssumptionConfidenceLevel, number>;
   highImpactGap: boolean;
 }
@@ -842,6 +847,7 @@ export function rollupAssumptionConfidence(
     posture,
     total: allKeys.length,
     withEvidence,
+    evidenceCount: withEvidence,
     breakdown,
     highImpactGap,
   };
