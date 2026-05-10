@@ -25,6 +25,7 @@ import { renderCashRunwayTroughCallout } from "./cash-runway-pdf.js";
 import { drawLenderSummaryPage } from "./lender-summary-pdf.js";
 import type { LenderSummaryData } from "./build-lender-summary.js";
 import type { NarrativeCommentary } from "./build-narrative-commentary.js";
+import { lenderReadinessCoachingHeadline } from "../lender-readiness-coaching.js";
 
 export async function generateLenderPacketPDF(
   packet: LenderPacket,
@@ -146,7 +147,11 @@ function drawCoverPage(doc: PDFDoc, packet: LenderPacket) {
   doc.font("Helvetica").fillColor(BRAND.darkGray);
   doc.moveDown(2);
 
-  statusBadge(doc, `Lender Readiness: ${packet.lenderReadiness.status}`, packet.lenderReadiness.status);
+  statusBadge(
+    doc,
+    lenderReadinessCoachingHeadline(packet.lenderReadiness.status),
+    packet.lenderReadiness.status,
+  );
   doc.moveDown(0.5);
   bodyText(doc, packet.lenderReadiness.explanation);
 

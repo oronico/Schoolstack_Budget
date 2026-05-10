@@ -37,6 +37,7 @@ import {
   stripDashes,
   type NarrativeSourceBundle,
 } from "./build-narrative-commentary.js";
+import { lenderReadinessCoachingHeadline } from "../lender-readiness-coaching.js";
 
 // ───────────────────────────────────────────────────────────────────────
 // Public types
@@ -168,26 +169,23 @@ class FigureScribe {
 // Section builders
 // ───────────────────────────────────────────────────────────────────────
 
-function readinessVerb(r: NarrativeSourceBundle["lenderReadiness"]): string {
-  // Coach voice. Avoid "approved" / "ready" verdict words.
-  if (r === "Strong") return "reads as a strong starting point for lender conversations";
-  if (r === "Needs Work") return "still needs more work before a lender conversation";
-  return "is not yet at a place where a lender conversation will land well";
-}
-
 function buildWhatYourModelSays(
   bundle: NarrativeSourceBundle,
   f: FigureScribe,
 ): FounderSummarySection {
   const paragraphs: string[] = [];
 
+  // Task #751 — surface the same coaching headline the in-app
+  // Consultant view shows, instead of a custom readiness verb. Keeps
+  // the founder's summary aligned with the lender packet, the loan
+  // readiness PDF, and the legacy Excel export.
   const enrollmentArc =
     `Your plan opens with ${f.num(bundle.enrollmentY1)} students in ${f.yearLabel(1)} ` +
     `and grows to ${f.num(bundle.enrollmentY5)} by ${f.yearLabel(5)}` +
     (bundle.maxCapacity
       ? `, against a stated capacity of ${f.num(bundle.maxCapacity)} seats`
       : "") +
-    `. ${f.absorb(bundle.lenderReadinessExplanation)} On the canonical engine, the model ${readinessVerb(bundle.lenderReadiness)}.`;
+    `. ${f.absorb(bundle.lenderReadinessExplanation)} On the canonical engine, the model reads as: ${lenderReadinessCoachingHeadline(bundle.lenderReadiness)}`;
   paragraphs.push(enrollmentArc);
 
   const dscrSentence =

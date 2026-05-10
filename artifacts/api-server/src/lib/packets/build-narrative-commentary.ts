@@ -30,6 +30,7 @@
 
 import type { ConsultantOutput } from "../consultant-engine";
 import type { ModelData } from "../workbook-helpers";
+import { lenderReadinessCoachingHeadline } from "../lender-readiness-coaching.js";
 
 // ───────────────────────────────────────────────────────────────────────
 // Types
@@ -446,9 +447,13 @@ export function buildLenderCommentary(
       ? ` against a stated capacity of ${f.num(bundle.maxCapacity)} seats`
       : ""
   }.`;
-  const verdictSentence = `Based on the canonical financial engine that powers this packet, the model rates as ${bundle.lenderReadiness} for lender review. ${f.absorb(
-    bundle.lenderReadinessExplanation,
-  )}`;
+  // Task #751 — surface the same coaching headline the in-app Consultant
+  // view renders, instead of the bare verdict word ("Strong" / "Needs
+  // Work" / "Not Yet Ready"). The headline carries the actionable
+  // framing the founder already sees on screen.
+  const verdictSentence = `Based on the canonical financial engine that powers this packet, the model reads as: ${lenderReadinessCoachingHeadline(
+    bundle.lenderReadiness,
+  )} ${f.absorb(bundle.lenderReadinessExplanation)}`;
   paragraphs.push(
     [
       schoolDescriptor
@@ -676,10 +681,13 @@ export function buildBoardCommentary(
           : ""
       }.`
     : `The school carries no senior debt in the base case, so lender ratios do not yet apply.`;
+  // Task #751 — board commentary mirrors the lender packet's coaching
+  // phrasing so trustees see the same headline the founder sees in-app
+  // and on the lender PDF, not the raw verdict noun.
   paragraphs.push(
-    `${dscrLine} The packet currently reads as ${bundle.lenderReadiness} for lender review. ${f.absorb(
-      bundle.lenderReadinessExplanation,
-    )}`,
+    `${dscrLine} The packet currently reads as: ${lenderReadinessCoachingHeadline(
+      bundle.lenderReadiness,
+    )} ${f.absorb(bundle.lenderReadinessExplanation)}`,
   );
 
   // Paragraph 4 - decisions to make this period (top risks framed as choices)

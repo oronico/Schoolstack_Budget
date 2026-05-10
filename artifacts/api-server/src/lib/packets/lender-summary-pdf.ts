@@ -9,6 +9,7 @@
  */
 import { BRAND, type PDFDoc } from "../pdf-utils.js";
 import type { LenderSummaryData } from "./build-lender-summary.js";
+import { lenderReadinessCoachingHeadline } from "../lender-readiness-coaching.js";
 
 const BUCKET_COLORS: Record<keyof BucketShares, string> = {
   contracted: BRAND.green,
@@ -86,25 +87,27 @@ export function drawLenderSummaryPage(doc: PDFDoc, data: LenderSummaryData): voi
   );
   doc.y += 18;
 
-  // ── Verdict pill + explanation ─────────────────────────────────────────
+  // ── Coaching headline + explanation ────────────────────────────────────
+  // Task #751 — surface the same coaching phrasing the in-app Consultant
+  // view shows ("Ready to share", "Almost there", "Worth another pass")
+  // instead of leaking the raw verdict word ("Strong" / "Needs Work" /
+  // "Not Yet Ready") as a small status pill.
   const verdictY = doc.y;
   const vColor = verdictColor(data.verdict.status);
-  doc.save();
-  doc.roundedRect(margin, verdictY, 90, 18, 3).fill(vColor);
-  doc.font("Helvetica-Bold").fontSize(9).fillColor(BRAND.white);
-  doc.text(data.verdict.status.toUpperCase(), margin, verdictY + 5, {
-    width: 90,
-    align: "center",
+  const headline = lenderReadinessCoachingHeadline(data.verdict.status);
+  doc.font("Helvetica-Bold").fontSize(11).fillColor(vColor);
+  doc.text(headline, margin, verdictY, {
+    width: contentW,
     lineBreak: false,
+    ellipsis: true,
   });
-  doc.restore();
   doc.font("Helvetica").fontSize(9).fillColor(BRAND.darkGray);
-  doc.text(data.verdict.line, margin + 100, verdictY + 3, {
-    width: contentW - 100,
+  doc.text(data.verdict.line, margin, verdictY + 14, {
+    width: contentW,
     height: 20,
     ellipsis: true,
   });
-  doc.y = verdictY + 28;
+  doc.y = verdictY + 32;
 
   // ── Two-column headline metrics: DSCR-by-year + Runway/Break-even ─────
   const colGap = 14;

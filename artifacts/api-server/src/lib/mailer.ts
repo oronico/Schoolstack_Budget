@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { lenderReadinessCoachingHeadline } from "./lender-readiness-coaching.js";
 
 let resendClient: Resend | null = null;
 
@@ -549,7 +550,7 @@ export async function sendReviewFeedback(data: ReviewFeedbackData): Promise<{ su
       </tr>
       <tr>
         <td style="padding:8px 12px;color:#475569;font-size:14px;">Lending Readiness</td>
-        <td style="padding:8px 12px;color:#1E293B;font-weight:600;text-align:right;font-size:14px;">${escapeHtml(data.metrics.lenderReadiness)}</td>
+        <td style="padding:8px 12px;color:#1E293B;font-weight:600;text-align:right;font-size:14px;">${escapeHtml(lenderReadinessCoachingHeadline(data.metrics.lenderReadiness))}</td>
       </tr>
     </table>
   `;
@@ -648,7 +649,7 @@ export async function sendReviewFeedback(data: ReviewFeedbackData): Promise<{ su
     `Year 1 Net Margin: ${(data.metrics.y1NetMargin * 100).toFixed(1)}%`,
     `DSCR (Debt Service Coverage): ${data.metrics.dscr.toFixed(2)}x`,
     `Cash Runway: ${data.metrics.cashRunwayMonths} months`,
-    `Lending Readiness: ${data.metrics.lenderReadiness}`,
+    `Lending Readiness: ${lenderReadinessCoachingHeadline(data.metrics.lenderReadiness)}`,
     "",
     "WHAT'S NEXT",
     "Your model is saved in your SchoolStack Budget dashboard. You can update your assumptions anytime and re-run your analysis.",

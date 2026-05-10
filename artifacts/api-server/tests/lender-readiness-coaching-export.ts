@@ -42,6 +42,17 @@ import { generateWorkbook } from "../src/lib/excel-export.js";
 import { generateLoanReadinessPDF } from "../src/lib/pdf-loan-readiness.js";
 import type { ConsultantOutput } from "../src/lib/consultant-engine.js";
 import { microschoolStartup } from "./sample-payloads.js";
+import { runConsultantEngine } from "../src/lib/consultant-engine.js";
+import {
+  buildNarrativeBundle,
+  buildLenderCommentary,
+  buildBoardCommentary,
+} from "../src/lib/packets/build-narrative-commentary.js";
+import { buildFounderSummary } from "../src/lib/packets/build-founder-summary.js";
+import { buildLenderSummary } from "../src/lib/packets/build-lender-summary.js";
+import { buildLenderPacket } from "../src/lib/packets/build-lender-packet.js";
+import { generateLenderPacketPDF } from "../src/lib/packets/lender-packet-pdf.js";
+import type { ModelData } from "../src/lib/workbook-helpers.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -251,6 +262,295 @@ function testExcelSourceUsesCoachingHelper(): void {
   );
 }
 
+// ───────────────────────────────────────────────────────────────────────
+// Task #751 — coaching phrasing also covers the lender packet PDF
+// status badge, the lender summary status, the founder summary
+// readiness verb, the build-narrative-commentary verdict sentence, and
+// the mailer "Lending Readiness:" line.
+// ───────────────────────────────────────────────────────────────────────
+
+function readSrc(rel: string): string {
+  return readFileSync(join(__dirname, "..", rel), "utf8");
+}
+
+function testTask751SourceCoverage(): void {
+  console.log("\n— Task #751 source-scan: coaching helper used on every leak surface —");
+
+  const surfaces: Array<{ rel: string; label: string; banned: RegExp[] }> = [
+    {
+      rel: "src/lib/packets/lender-packet-pdf.ts",
+      label: "lender-packet-pdf.ts cover badge",
+      banned: [
+        // Old template: `Lender Readiness: ${packet.lenderReadiness.status}`
+        /Lender Readiness:\s*\$\{packet\.lenderReadiness\.status\}/,
+      ],
+    },
+    {
+      rel: "src/lib/packets/lender-summary-pdf.ts",
+      label: "lender-summary-pdf.ts verdict pill",
+      banned: [
+        // Old pill text: `data.verdict.status.toUpperCase()`
+        /data\.verdict\.status\.toUpperCase\(\)/,
+      ],
+    },
+    {
+      rel: "src/lib/packets/build-narrative-commentary.ts",
+      label: "build-narrative-commentary.ts verdict sentences",
+      banned: [
+        // Old lender sentence template
+        /model rates as \$\{bundle\.lenderReadiness\}/,
+        // Old board sentence template
+        /reads as \$\{bundle\.lenderReadiness\}/,
+      ],
+    },
+    {
+      rel: "src/lib/packets/build-founder-summary.ts",
+      label: "build-founder-summary.ts readiness verb",
+      banned: [
+        // The hand-rolled `readinessVerb` helper that previously wrapped
+        // the bare verdict word — replaced by the canonical coaching helper.
+        /function readinessVerb\(/,
+        /readinessVerb\(bundle\.lenderReadiness\)/,
+      ],
+    },
+    {
+      rel: "src/lib/mailer.ts",
+      label: "mailer.ts Lending Readiness line",
+      banned: [
+        // Old HTML cell — bare verdict noun escaped into the table.
+        /escapeHtml\(data\.metrics\.lenderReadiness\)/,
+        // Old plain-text line — bare verdict noun appended verbatim.
+        /Lending Readiness:\s*\$\{data\.metrics\.lenderReadiness\}/,
+      ],
+    },
+  ];
+
+  for (const s of surfaces) {
+    const src = readSrc(s.rel);
+    check(
+      `${s.label}: imports lenderReadinessCoachingHeadline`,
+      /lenderReadinessCoachingHeadline/.test(src),
+    );
+    check(
+      `${s.label}: calls lenderReadinessCoachingHeadline(...) at least once`,
+      /lenderReadinessCoachingHeadline\(/.test(src),
+    );
+    for (const re of s.banned) {
+      check(
+        `${s.label}: banned pre-coaching pattern ${re} is gone`,
+        !re.test(src),
+      );
+    }
+  }
+}
+
+function buildNarrativeFixtureModel(): Record<string, unknown> {
+  return {
+    schoolProfile: {
+      schoolName: "Acme Microschool",
+      state: "WA",
+      schoolType: "microschool",
+      entityType: "llc_single",
+      schoolStage: "new_school",
+      fundingProfile: "tuition_based",
+      openingYear: 2026,
+      currentStudents: 0,
+      maxCapacity: 30,
+      fiscalYearStartMonth: 7,
+      isPartialFirstYear: false,
+      year1OperatingMonths: 12,
+      ownershipType: "rent",
+      monthlyRent: 4000,
+      annualRentEscalation: 3,
+      debtIncluded: true,
+    },
+    enrollment: { year1: 12, year2: 18, year3: 22, year4: 26, year5: 28, retentionRate: 88 },
+    revenueRows: [
+      {
+        id: "r1",
+        category: "tuition_and_fees",
+        lineItem: "Tuition",
+        enabled: true,
+        driverType: "per_student",
+        amounts: [12000, 12360, 12731, 13113, 13506],
+        billingMonths: 12,
+      },
+    ],
+    staffingRows: [
+      {
+        id: "s1",
+        roleName: "Head of School",
+        functionCategory: "school_leadership",
+        employmentType: "full_time",
+        fte: 1,
+        annualizedRate: 80_000,
+        benefitsEligible: true,
+        benefitsRate: 25,
+        payrollTaxRate: 9.95,
+        payrollLike: true,
+        notes: "",
+        staffingMode: "fixed",
+      },
+    ],
+    expenseRows: [
+      {
+        id: "e1",
+        category: "occupancy_facility",
+        lineItem: "Rent",
+        enabled: true,
+        driverType: "monthly",
+        amounts: [4000, 4120, 4244, 4371, 4502],
+      },
+    ],
+    capitalAndDebtRows: [
+      {
+        id: "d1",
+        enabled: true,
+        isLoan: true,
+        loanPrincipal: 100_000,
+        loanRate: 7.5,
+        loanTermYears: 7,
+        driverType: "loan",
+        lineItem: "Startup loan",
+      },
+    ],
+    facilities: { annualSalaryIncrease: 3, generalCostInflation: 2.5 },
+    openingBalances: { cash: 50_000 },
+  };
+}
+
+/** Stripped form the narrative builders apply via stripDashes — em-dashes
+ *  collapse to " - ". The built prose will contain this transformed
+ *  variant of the canonical coaching headline. */
+function strippedHeadline(v: LenderReadinessVerdict): string {
+  return LENDER_READINESS_COACHING_HEADLINES[v]
+    .replace(/[\u2014\u2013]/g, " - ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function testTask751NarrativeBuilders(): Promise<void> {
+  console.log("\n— Task #751 narrative builders surface the coaching headline —");
+
+  const model = buildNarrativeFixtureModel();
+  const co = await runConsultantEngine(model);
+  const bundle = buildNarrativeBundle(model as ModelData, co);
+  const verdict = bundle.lenderReadiness;
+  const want = strippedHeadline(verdict);
+
+  // Lender commentary — paragraph 1 verdict sentence.
+  const lender = buildLenderCommentary(bundle);
+  const lenderText = lender.paragraphs.join("\n");
+  check(
+    `buildLenderCommentary contains coaching headline for verdict "${verdict}"`,
+    lenderText.includes(want),
+    `searched ${lenderText.length} chars`,
+  );
+  check(
+    "buildLenderCommentary no longer prints `the model rates as <verdict>`",
+    !/model rates as (Strong|Needs Work|Not Yet Ready)\b/.test(lenderText),
+  );
+
+  // Board commentary — paragraph 3 verdict sentence.
+  const board = buildBoardCommentary(bundle);
+  const boardText = board.paragraphs.join("\n");
+  check(
+    `buildBoardCommentary contains coaching headline for verdict "${verdict}"`,
+    boardText.includes(want),
+  );
+  check(
+    "buildBoardCommentary no longer prints `reads as <verdict> for lender review`",
+    !/reads as (Strong|Needs Work|Not Yet Ready) for lender review/.test(boardText),
+  );
+
+  // Founder summary — "What your model says" paragraph.
+  const founder = buildFounderSummary(model as ModelData, co);
+  const founderText = founder.sections
+    .flatMap((s) => [...s.paragraphs, ...(s.bullets || [])])
+    .join("\n");
+  check(
+    `buildFounderSummary contains coaching headline for verdict "${verdict}"`,
+    founderText.includes(want),
+  );
+  // The previous custom readiness verbs all leaked the framing word
+  // "lender conversation(s)" tied to the verdict; assert at least one
+  // canonical clause from those verbs is no longer present.
+  check(
+    "buildFounderSummary no longer uses the legacy `readinessVerb` clauses",
+    !/reads as a strong starting point for lender conversations/.test(
+      founderText,
+    ) &&
+      !/still needs more work before a lender conversation/.test(founderText) &&
+      !/is not yet at a place where a lender conversation will land well/.test(
+        founderText,
+      ),
+  );
+}
+
+async function testTask751LenderPacketPdfRender(): Promise<void> {
+  console.log("\n— Task #751 lender packet PDF cover badge + summary use coaching headline —");
+
+  const model = buildNarrativeFixtureModel();
+  const co = await runConsultantEngine(model);
+
+  // Build for the engine-derived verdict (whatever it computes for this
+  // fixture). We assert that whichever verdict came back, the coaching
+  // headline appears in the generated PDF byte stream and the legacy
+  // raw-verdict headlines do not.
+  const lp = buildLenderPacket(model as ModelData, co, 1);
+  const ls = buildLenderSummary(model as ModelData, co);
+
+  const buf = await generateLenderPacketPDF(lp, ls);
+  const raw = buf.toString("latin1");
+  const verdict = ls.verdict.status;
+  const headline = LENDER_READINESS_COACHING_HEADLINES[verdict];
+
+  check("lender packet PDF buffer starts with %PDF-", buf.subarray(0, 5).toString() === "%PDF-");
+  check("lender packet PDF buffer is non-trivial in size", buf.length > 4096);
+
+  // PDFKit compresses content streams by default and applies font
+  // subsetting, so the literal coaching headline rarely appears in the
+  // raw byte stream. We rely on the source-scan above to prove the
+  // call-site is wired through the helper, and assert only the
+  // negative invariant in the byte stream: the legacy raw-verdict
+  // headlines that we replaced must not appear in the PDF, regardless
+  // of which verdict the engine chose for this fixture.
+  void verdict;
+  void headline;
+  for (const v of VERDICTS) {
+    check(
+      `lender packet PDF does not emit legacy "Lender Readiness: ${v}" headline`,
+      !raw.includes(`Lender Readiness: ${v}`),
+    );
+  }
+}
+
+function testTask751MailerRendersCoachingHeadline(): void {
+  console.log("\n— Task #751 mailer.ts review-feedback render uses coaching headline —");
+
+  // We don't actually send mail in tests; instead we source-grep the
+  // single helper-call site to prove both the HTML cell and the plain
+  // text line route through `lenderReadinessCoachingHeadline`. The
+  // dedicated mailer-review tests already cover the rendered shape end
+  // to end; this guard prevents the call sites from being unwrapped.
+  const src = readSrc("src/lib/mailer.ts");
+
+  // HTML cell wraps the verdict in escapeHtml(lenderReadinessCoachingHeadline(...)).
+  check(
+    "mailer.ts wraps the verdict for the HTML metrics table via the coaching helper",
+    /escapeHtml\(\s*lenderReadinessCoachingHeadline\(\s*data\.metrics\.lenderReadiness\s*\)\s*\)/.test(
+      src,
+    ),
+  );
+  // Plain-text line uses the coaching helper directly.
+  check(
+    "mailer.ts plain-text `Lending Readiness:` line uses the coaching helper",
+    /Lending Readiness:\s*\$\{lenderReadinessCoachingHeadline\(data\.metrics\.lenderReadiness\)\}/.test(
+      src,
+    ),
+  );
+}
+
 async function main(): Promise<void> {
   console.log("=== Task #742 — lender-ready exports use coaching headlines ===");
 
@@ -262,6 +562,12 @@ async function main(): Promise<void> {
     await testExcelRenderForVerdict(v);
     await testPdfRenderForVerdict(v);
   }
+
+  console.log("\n=== Task #751 — coaching headlines on lender packet, founder summary, mailer ===");
+  testTask751SourceCoverage();
+  testTask751MailerRendersCoachingHeadline();
+  await testTask751NarrativeBuilders();
+  await testTask751LenderPacketPdfRender();
 
   console.log(`\nResults: ${passed} passed, ${failed} failed`);
   if (failed > 0) {
