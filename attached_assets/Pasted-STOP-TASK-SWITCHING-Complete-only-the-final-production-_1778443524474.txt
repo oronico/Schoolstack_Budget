@@ -1,0 +1,117 @@
+STOP TASK SWITCHING. Complete only the final production E2E launch smoke test.
+
+Do not work on Task #703.
+Do not add features.
+Do not change runtime code unless a P0 launch blocker is discovered.
+Do not classify this as complete until the actual browser-based launch scenarios are tested.
+
+Production URL:
+https://budget.schoolstack.ai/underwriting
+
+Required browser tests:
+
+1. Beginner microschool scenario
+Run in incognito/private browser:
+- Launch Test Academy
+- Microschool
+- New school
+- 30 students
+- 15% annual growth
+- $12,000 tuition
+- $0 public funding
+- $0 philanthropy
+- 12 students per teacher
+- $55,000 teacher salary
+- $65,000 admin salary
+- $4,000 monthly rent
+- $12,000 utilities
+- $8,000 insurance
+- $8,000 curriculum
+- $12,000 other OpEx
+- $0 beginning cash
+- founder unpaid
+- no lease
+- no occupancy documentation
+- no insurance path
+
+Confirm:
+- full UI flow completes
+- readiness analysis runs
+- risks are shown
+- export downloads
+- downloaded workbook opens
+- no NaN, undefined, #REF!, #DIV/0!, #VALUE!
+- revenue is credible, not fantasy revenue
+
+2. Operating school scenario
+Run in production UI:
+- Actuals Test School
+- Operating school
+- 45 students
+- $11,000 tuition
+- 85% retention
+- $40,000 beginning cash
+- $5,000 monthly rent
+- founder paid
+- $20,000 existing debt
+- $6,000 annual debt service
+
+Confirm:
+- flow completes
+- debt affects readiness language or estimated DSCR
+- export downloads and opens
+- no fantasy revenue
+
+3. Public funding delay scenario
+Run in production UI:
+- ESA Timing Test School
+- private school or microschool
+- 25 students
+- $5,000 tuition
+- $8,000 ESA/public funding
+- public funding pending, if field exists
+- cannot withstand 90-day delay, if field exists
+- $10,000 beginning cash
+- $3,500 monthly rent
+- founder unpaid Year 1
+
+Confirm:
+- public funding timing risk appears
+- no approval / declined / ineligible language
+- export downloads and opens
+
+4. Mobile viewport
+Use Playwright or browser DevTools:
+- 375 × 812
+- 430 × 932
+
+Confirm:
+- /underwriting loads
+- fields are tappable
+- step navigation works
+- readiness analysis button reachable
+- export button reachable
+- no horizontal scroll blocking use
+- no overlapping cards/buttons
+
+5. Update proof pack
+Update:
+docs/ONE_DAY_LAUNCH_PROOF_PACK.md
+
+Add:
+Final Browser-Based E2E Smoke Test
+
+Include:
+- timestamp
+- browser used
+- desktop scenario results
+- mobile scenario result
+- workbook download/open result
+- console errors
+- bugs found by severity
+- final verdict
+
+Allowed final verdict:
+GO WITH WATCH ITEMS only if all P0s are clear.
+
+Do not say this is complete if browser-based scenario tests were not run.
