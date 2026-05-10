@@ -207,6 +207,89 @@ async function main(): Promise<void> {
     bad.slice(0, 5).join("; "),
   );
 
+  // ── Task #743 — Summary tab mirrors the Monthly Cash Flow callouts ──
+  console.log("\n--- Summary tab Monthly Cash Snapshot tie-in ---");
+  const summaryWs = wb.worksheets.find(w => w.name === "Summary");
+  check("Summary sheet present (single-year)", !!summaryWs);
+  if (summaryWs) {
+    const sumSectionRow = findRow(summaryWs, /year 1 monthly cash snapshot/i);
+    check("Summary has 'YEAR 1 MONTHLY CASH SNAPSHOT' section", sumSectionRow !== null);
+
+    const sumTroughMonthRow = findRow(summaryWs, "Cash Trough Month");
+    const sumTroughBalRow = findRow(summaryWs, "Trough Cash Balance");
+    const sumYr1EndRow = findRow(summaryWs, "Year 1 Ending Cash");
+    check("Summary has 'Cash Trough Month' row", sumTroughMonthRow !== null);
+    check("Summary has 'Trough Cash Balance' row", sumTroughBalRow !== null);
+    check("Summary has 'Year 1 Ending Cash' row", sumYr1EndRow !== null);
+
+    // Locate the source rows on the Monthly Cash Flow sheet.
+    const cfTroughMonthRow = findRow(ws, "Cash Trough Month");
+    const cfTroughBalRow = findRow(ws, "Trough Cash Balance");
+    const cfYr1EndRow = findRow(ws, "Year 1 Ending Cash");
+
+    // Each Summary cell should be a formula reference back to the
+    // corresponding Monthly Cash Flow cell, and the cached numeric
+    // result should equal the value on the source sheet.
+    if (sumTroughBalRow !== null && cfTroughBalRow !== null) {
+      const sumCell = summaryWs.getCell(sumTroughBalRow, 2);
+      const formula = (sumCell.value && typeof sumCell.value === "object" && "formula" in sumCell.value) ? (sumCell.value as { formula: string }).formula : "";
+      check(
+        "Summary trough balance is a formula reference to Monthly Cash Flow",
+        formula.includes("Monthly Cash Flow") && formula.includes(`B${cfTroughBalRow}`),
+        `formula=${formula}`,
+      );
+      const sumVal = getNumeric(sumCell);
+      const cfVal = getNumeric(ws.getCell(cfTroughBalRow, 2));
+      check(
+        "Summary trough balance numeric matches Monthly Cash Flow",
+        sumVal !== null && cfVal !== null && Math.abs(sumVal - cfVal) <= 1,
+        `summary=${sumVal}, cashflow=${cfVal}`,
+      );
+      check(
+        "Summary trough balance has a fill applied (traffic-light)",
+        !!sumCell.fill && sumCell.fill.type === "pattern",
+      );
+    }
+
+    if (sumYr1EndRow !== null && cfYr1EndRow !== null) {
+      const sumCell = summaryWs.getCell(sumYr1EndRow, 2);
+      const formula = (sumCell.value && typeof sumCell.value === "object" && "formula" in sumCell.value) ? (sumCell.value as { formula: string }).formula : "";
+      check(
+        "Summary Year 1 Ending Cash is a formula reference to Monthly Cash Flow",
+        formula.includes("Monthly Cash Flow") && formula.includes(`B${cfYr1EndRow}`),
+        `formula=${formula}`,
+      );
+      const sumVal = getNumeric(sumCell);
+      const cfVal = getNumeric(ws.getCell(cfYr1EndRow, 2));
+      check(
+        "Summary Year 1 Ending Cash numeric matches Monthly Cash Flow",
+        sumVal !== null && cfVal !== null && Math.abs(sumVal - cfVal) <= 1,
+        `summary=${sumVal}, cashflow=${cfVal}`,
+      );
+      check(
+        "Summary Year 1 Ending Cash has a fill applied (traffic-light)",
+        !!sumCell.fill && sumCell.fill.type === "pattern",
+      );
+    }
+
+    if (sumTroughMonthRow !== null && cfTroughMonthRow !== null) {
+      const sumText = getText(summaryWs.getCell(sumTroughMonthRow, 2));
+      const cfText = getText(ws.getCell(cfTroughMonthRow, 2));
+      check(
+        "Summary trough month label matches Monthly Cash Flow",
+        sumText.length > 0 && sumText === cfText,
+        `summary='${sumText}', cashflow='${cfText}'`,
+      );
+    }
+
+    const sumBad = scanForBadCells(summaryWs);
+    check(
+      "Summary sheet has no NaN / formula errors",
+      sumBad.length === 0,
+      sumBad.slice(0, 5).join("; "),
+    );
+  }
+
   // Five-year regression guard: the sheet must NOT appear when
   // generateWorkbook runs against the original 5-year fixture.
   const fiveYearBuf = await generateWorkbook(JSON.parse(JSON.stringify(microschoolStartup)));

@@ -822,6 +822,16 @@ function precomputeFinancials(
 // Each per-stream Annual Total cell uses a direct formula reference back
 // to the matching Financial Model row so the sheet can never drift from
 // the P&L. Includes a trough-month callout and an Ending Cash highlight.
+interface MonthlyCashSnapshot {
+  troughMonthRow: number;
+  troughBalanceRow: number;
+  year1EndingRow: number;
+  troughCash: number;
+  endingCash: number;
+  startingCash: number;
+  troughMonthLabel: string;
+}
+
 function buildMonthlyCashFlowTab(
   ws: ExcelJS.Worksheet,
   sp: SchoolProfile,
@@ -830,7 +840,7 @@ function buildMonthlyCashFlowTab(
   enrollment: number[],
   startingCash: number,
   fmRows: { revenueRow: number; staffRow: number; expenseRow: number; mgmtFeeRow: number | null; capDebtRow: number; totalExpRow: number; netIncomeRow: number },
-): void {
+): MonthlyCashSnapshot {
   const fyStart = sp.fiscalYearStartMonth || 7;
   const isPartial = sp.isPartialFirstYear || false;
   const opMonths = isPartial ? Math.max(1, Math.min(12, sp.year1OperatingMonths || 10)) : 12;
@@ -1152,6 +1162,7 @@ function buildMonthlyCashFlowTab(
   ws.getCell(r, 2).font = BOLD_FONT;
   ws.getCell(r, 2).border = THIN_BORDER;
   ws.mergeCells(r, 2, r, 4);
+  const troughMonthRow = r;
 
   r++;
   ws.getCell(r, 1).value = "Trough Cash Balance";
@@ -1160,6 +1171,7 @@ function buildMonthlyCashFlowTab(
   ws.getCell(r, 2).numFmt = CURRENCY_FORMAT;
   styleBoldDataCell(ws.getCell(r, 2));
   applyHealthFill(ws.getCell(r, 2), minCash, { green: Math.max(startingCash * 0.25, 1), amber: 0 });
+  const troughBalanceRow = r;
 
   r++;
   ws.getCell(r, 1).value = "Year 1 Ending Cash";
@@ -1168,6 +1180,7 @@ function buildMonthlyCashFlowTab(
   ws.getCell(r, 2).numFmt = CURRENCY_FORMAT;
   styleBoldDataCell(ws.getCell(r, 2));
   applyHealthFill(ws.getCell(r, 2), endingMonthly[11], { green: Math.max(startingCash * 0.25, 1), amber: 0 });
+  const year1EndingRow = r;
 
   r += 2;
   ws.getCell(r, 1).value = "Year 1 operates for " + opMonths + " of 12 months" + (isPartial ? " (partial-year start)" : "") + ". Revenue and operating expenses are spread evenly across the operating window; capital and debt service are spread across all 12 months. Annual totals are tied directly to the Financial Model sheet.";
@@ -1177,6 +1190,16 @@ function buildMonthlyCashFlowTab(
   ws.getRow(r).height = 28;
 
   setPrintArea(ws, r, 14);
+
+  return {
+    troughMonthRow,
+    troughBalanceRow,
+    year1EndingRow,
+    troughCash: Math.round(minCash),
+    endingCash: Math.round(endingMonthly[11]),
+    startingCash,
+    troughMonthLabel: `${minMonthLabel} (Month ${minIdx + 1})`,
+  };
 }
 
 function toTitleCase(label: string): string {
@@ -1259,13 +1282,14 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
 
     const mgmtOffset = sp.hasManagementFee ? 1 : 0;
 
+    let monthlyCashSnapshot: MonthlyCashSnapshot | null = null;
     if (monthlyCashFlowWs) {
       // Financial Model row layout (mirrors buildPnLTab):
       //   row 2 = Total Revenue, row 3 = Personnel, row 4 = Operating
       //   Expenses, row 5 = Management Fee (if hasManagementFee), then
       //   Capital & Debt, Total Expenses, Net Income.
       const startingCash = data.priorYearSnapshot?.endingCash ?? data.currentYearProjection?.currentCash ?? 0;
-      buildMonthlyCashFlowTab(
+      monthlyCashSnapshot = buildMonthlyCashFlowTab(
         monthlyCashFlowWs,
         sp,
         precomputed,
@@ -1290,6 +1314,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
       fmTotalExpRow: 6 + mgmtOffset, fmNIRow: 7 + mgmtOffset, fmCumNIRow: 8 + mgmtOffset, fmReserveRow: 9 + mgmtOffset,
       studentsRef: (cl) => `'Revenue Schedule'!${cl}2`,
       revenueMix,
+      monthlyCash: monthlyCashSnapshot ?? undefined,
     }, consultantData, precomputed, enrollmentByYear);
 
     if (consultantData) {
@@ -2640,6 +2665,11 @@ interface SummaryLayout {
   fmReserveRow: number;
   studentsRef: (colLetter: string) => string;
   revenueMix?: { tuitionPct: number[]; publicPct: number[]; philanthropyPct: number[] };
+  // Task #743 — when the workbook is in single-year mode the Monthly
+  // Cash Flow sheet exists; the Summary mirrors its trough callout and
+  // Year 1 ending-cash highlight so the lender packet doesn't require
+  // sheet-flipping to spot the cash trough.
+  monthlyCash?: MonthlyCashSnapshot;
 }
 
 function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount: number, cols: number, yearHeaders: string[], layout: SummaryLayout, consultant?: ConsultantSummary, precomputed?: PrecomputedFinancials, enrollment?: number[]) {
@@ -2793,6 +2823,51 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
     cell.numFmt = "0.0"; styleBoldDataCell(cell);
     if (precomputed) {
       applyHealthFill(cell, reserveVal, { green: 3, amber: 2 });
+    }
+  }
+
+  if (layout.monthlyCash) {
+    // Task #743 — mirror the Monthly Cash Flow trough callout + Year 1
+    // ending cash on the Summary so a lender reviewing the packet can
+    // spot the cash trough without flipping sheets. Cells link back to
+    // the source rows on the Monthly Cash Flow tab so any edit there
+    // flows through, and the same green/amber/red traffic-light
+    // thresholds are applied here as on that sheet.
+    const mc = layout.monthlyCash;
+    const mcTab = "'Monthly Cash Flow'";
+    const greenThreshold = Math.max(mc.startingCash * 0.25, 1);
+
+    r += 2;
+    styleSectionRow(ws, r, cols);
+    ws.getCell(r, 1).value = "YEAR 1 MONTHLY CASH SNAPSHOT";
+
+    r++;
+    ws.getCell(r, 1).value = "Cash Trough Month"; ws.getCell(r, 1).font = NORMAL_FONT;
+    {
+      const cell = ws.getCell(r, 2);
+      cell.value = { formula: `${mcTab}!B${mc.troughMonthRow}`, result: mc.troughMonthLabel };
+      cell.font = BOLD_FONT;
+      cell.border = THIN_BORDER;
+    }
+
+    r++;
+    ws.getCell(r, 1).value = "Trough Cash Balance"; ws.getCell(r, 1).font = NORMAL_FONT;
+    {
+      const cell = ws.getCell(r, 2);
+      setFormula(cell, `${mcTab}!B${mc.troughBalanceRow}`, mc.troughCash);
+      cell.numFmt = CURRENCY_FORMAT;
+      styleBoldDataCell(cell);
+      applyHealthFill(cell, mc.troughCash, { green: greenThreshold, amber: 0 });
+    }
+
+    r++;
+    ws.getCell(r, 1).value = "Year 1 Ending Cash"; ws.getCell(r, 1).font = NORMAL_FONT;
+    {
+      const cell = ws.getCell(r, 2);
+      setFormula(cell, `${mcTab}!B${mc.year1EndingRow}`, mc.endingCash);
+      cell.numFmt = CURRENCY_FORMAT;
+      styleBoldDataCell(cell);
+      applyHealthFill(cell, mc.endingCash, { green: greenThreshold, amber: 0 });
     }
   }
 
