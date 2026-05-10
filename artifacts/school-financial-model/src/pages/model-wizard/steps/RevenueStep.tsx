@@ -6,6 +6,7 @@ import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { RationaleField } from "@/components/coaching/RationaleField";
 import { AssumptionConfidenceCard } from "@/components/wizard/AssumptionConfidenceCard";
+import { SeededFromActualsBadge } from "@/components/wizard/SeededFromActualsBadge";
 import { ConceptExplainer } from "@/components/coaching/ConceptExplainer";
 import { cn, formatCurrency } from "@/lib/utils";
 import { formatPerStudent } from "@/lib/per-student-lens";
@@ -803,6 +804,37 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             </div>
           </div>
         )}
+
+        {/* Task #703 / T3 — when Y1 revenue was seeded from prior-year
+            actuals (operating school + non-zero priorYearSnapshot tuition),
+            surface the seeded badge with a one-click reset that restores
+            the first tuition_and_fees row's Y1 amount to the prior-year
+            value. Mirrors the EnrollmentStep wiring so the founder sees
+            the same provenance signal on every Y1 input that was pre-filled. */}
+        {schoolStage === "operating_school" &&
+          (() => {
+            const py = watch("priorYearSnapshot") as { tuitionRevenue?: number } | undefined;
+            const pyTuition = Number(py?.tuitionRevenue) || 0;
+            if (pyTuition <= 0) return null;
+            const rows = (watch("revenueRows") as RevenueRowData[] | undefined) ?? [];
+            const firstTuitionIdx = rows.findIndex((r) => r.category === "tuition_and_fees");
+            if (firstTuitionIdx < 0) return null;
+            return (
+              <SeededFromActualsBadge
+                actualLabel={formatCurrency(pyTuition)}
+                onResetToActual={() => {
+                  const updated = rows.map((r, i) => {
+                    if (i !== firstTuitionIdx) return r;
+                    const amounts = [...((r.amounts ?? []) as number[])];
+                    while (amounts.length < 5) amounts.push(0);
+                    amounts[0] = pyTuition;
+                    return { ...r, amounts };
+                  });
+                  setValue("revenueRows", updated, { shouldDirty: true });
+                }}
+              />
+            );
+          })()}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <RevenueSourceCheck

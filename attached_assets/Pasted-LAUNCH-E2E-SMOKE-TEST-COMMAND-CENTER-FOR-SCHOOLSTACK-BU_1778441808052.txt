@@ -1,0 +1,374 @@
+LAUNCH E2E SMOKE TEST COMMAND CENTER FOR SCHOOLSTACK BUDGET
+
+Context:
+SchoolStack Budget launches within 24 hours for the loan program. Production infrastructure is already mostly green. The purpose of this task is to run focused end-to-end smoke tests, identify launch-blocking bugs, document watch items, and prepare the app for a controlled launch.
+
+Do not add new features.
+Do not restructure the wizard.
+Do not change core finance formulas unless a test proves a launch-blocking defect.
+Do not build full CFO mode, underwriting workflow, grant narrative engine, or new database tables.
+Do not expand scope.
+
+Primary production URL:
+https://budget.schoolstack.ai
+
+Critical public route:
+https://budget.schoolstack.ai/underwriting
+
+API:
+https://budget.schoolstack.ai/api/ready
+https://schoolstackbudget.up.railway.app/api/ready
+
+Goal:
+Confirm that a school founder can:
+1. Open the app.
+2. Complete the public budget wizard.
+3. Understand the readiness feedback.
+4. Download a valid workbook.
+5. Use the app on mobile.
+6. Avoid misleading loan approval or lender-decision language.
+7. Experience no launch-blocking technical failures.
+
+PHASE 1. Infrastructure verification
+
+Run production probes:
+
+curl -i https://budget.schoolstack.ai
+curl -i https://budget.schoolstack.ai/underwriting
+curl -i https://budget.schoolstack.ai/api/health
+curl -i https://budget.schoolstack.ai/api/ready
+curl -i https://schoolstackbudget.up.railway.app/health
+curl -i https://schoolstackbudget.up.railway.app/api/ready
+
+Pass criteria:
+- Frontend returns HTTP 200.
+- /underwriting returns HTTP 200.
+- /api/ready returns {"status":"ok","db":"connected"}.
+- Railway /health returns {"status":"ok","migrations":"ok"} or equivalent healthy response.
+- No 502, 503, timeout, redirect-to-register, or database disconnected response.
+
+If any fail, mark NO GO and stop.
+
+PHASE 2. Browser console and route smoke
+
+Open production in a real browser or Playwright:
+
+Routes to test:
+- /
+- /underwriting
+- /login
+- /register
+- /forgot-password
+- /privacy
+- /terms
+- /resources
+- /dashboard while logged out
+- /admin while logged out
+
+Pass criteria:
+- Public routes load.
+- Protected routes redirect safely.
+- No blank screens.
+- No uncaught console errors.
+- No missing chunk or failed asset loads.
+- No redirect loop.
+- No scary or misleading loan-decision language.
+
+PHASE 3. Beginner microschool E2E
+
+Run a full incognito/private guest workflow at:
+
+https://budget.schoolstack.ai/underwriting
+
+Use this model:
+
+School: Launch Test Academy
+Type: Microschool
+Stage: New school
+Students: 30
+Annual growth: 15%
+Tuition: $12,000
+Public funding: $0
+Philanthropy: $0
+Students per teacher: 12
+Teacher salary: $55,000
+Admin salary: $65,000
+Rent: $4,000/month
+Utilities: $12,000/year
+Insurance: $8,000/year
+Curriculum: $8,000/year
+Other OpEx: $12,000/year
+Beginning cash: $0
+Founder unpaid Year 1
+No lease
+No occupancy documentation
+No insurance path
+
+Pass criteria:
+- No login required.
+- No redirect to /register.
+- Step navigation works.
+- Refresh mid-flow preserves progress if localStorage is expected.
+- Readiness analysis runs.
+- Analysis returns useful founder-safe coaching.
+- Analysis flags obvious risks:
+  - founder unpaid
+  - no enrollment evidence or low validation
+  - no lease
+  - no occupancy documentation
+  - no insurance path
+  - low or zero beginning cash
+  - high staffing burden if applicable
+- It does not say approved, declined, rejected, ineligible, failed, pass/fail, loan approval, or credit decision.
+- Export downloads.
+
+PHASE 4. Workbook validation
+
+For the workbook downloaded from the beginner microschool scenario:
+
+Open in Excel or Google Sheets.
+
+Pass criteria:
+- Workbook opens.
+- No corruption warning.
+- No undefined.
+- No NaN.
+- No #REF!.
+- No #DIV/0!.
+- No #VALUE!.
+- School name appears correctly.
+- Year 1 revenue is credible.
+- For 30 students, $12,000 tuition, and 95% collection, Year 1 tuition revenue should be approximately $342,000.
+- Year 5 revenue should be credible, not millions.
+- Export labels are founder-facing:
+  - Founder Planning Workbook
+  - 1-Year Operating Budget
+  - 5-Year Financial Model
+  - Lender Conversation Snapshot
+- No founder-facing export says:
+  - credit memo
+  - underwriting decision
+  - loan approval packet
+  - approval packet
+
+If revenue is inflated into the millions for the default scenario, mark NO GO.
+
+PHASE 5. Operating school E2E
+
+Run a second production workflow:
+
+School: Actuals Test School
+Type: Private school or microschool
+Stage: Operating school
+Current enrollment: 45
+Tuition: $11,000
+Retention: 85%
+Beginning cash: $40,000
+Rent: $5,000/month
+Founder paid: yes
+Existing debt: $20,000 balance
+Annual debt service: $6,000
+
+Pass criteria:
+- Operating school path makes sense.
+- It does not feel like a brand-new startup path only.
+- Existing debt affects readiness language or estimated DSCR.
+- Beginning cash affects runway/cash commentary.
+- Export still works.
+- No fantasy revenue.
+- No broken workbook.
+
+PHASE 6. Public funding delay scenario
+
+Run a third workflow:
+
+School: ESA Timing Test School
+Type: Microschool or private school
+Stage: New school
+Students: 25
+Tuition: $5,000
+Public funding / ESA: $8,000
+Public funding status: pending, if field exists
+Can withstand 90-day delay: no, if field exists
+Beginning cash: $10,000
+Rent: $3,500/month
+Founder unpaid Year 1
+
+Pass criteria:
+- Analysis warns about public funding timing or funding-delay risk.
+- Tone is coaching-oriented, not punitive.
+- Export works.
+- Revenue math is credible.
+- No language implies funding approval.
+
+PHASE 7. Mobile E2E
+
+Run mobile viewport smoke test at:
+- 375 × 812
+- 390 × 844 or 430 × 932
+
+Test /underwriting.
+
+Pass criteria:
+- Inputs are tappable.
+- Dropdowns work.
+- Step navigation works.
+- Back/Next buttons are visible.
+- Readiness analysis button is reachable.
+- Export button is reachable.
+- Cards do not overlap.
+- No horizontal scrolling that blocks use.
+- Text is readable.
+- Footer/header do not cover buttons.
+
+PHASE 8. Founder-facing language sweep
+
+Search production-visible code and export labels for banned founder-facing terms:
+
+approved
+declined
+ineligible
+failed
+fail
+pass/fail
+credit decision
+underwriting decision
+loan approval
+approval packet
+credit memo
+bank determination
+rejected
+rejection
+
+Allowed exceptions:
+- internal tests
+- non-founder API status messages
+- system errors like “password reset failed”
+- legal/privacy contexts if unavoidable
+
+If founder-facing language uses these terms in readiness, exports, coaching, PDFs, or workbook labels, replace with founder-safe alternatives:
+
+- worth strengthening
+- needs more clarity
+- may raise questions
+- model needs support
+- useful for loan-readiness conversations
+- a lender or funder may ask about this
+- your model gets stronger when...
+
+PHASE 9. Storage/upload smoke, if upload is launch-path
+
+If evidence upload is visible to production users, run a small upload smoke test:
+
+- Upload a small PNG or PDF.
+- Confirm signed URL creation.
+- Confirm upload succeeds.
+- Confirm file can be retrieved.
+- Confirm no MODULE_NOT_FOUND for @google-cloud/storage or google-auth-library.
+- Confirm no raw base64 is saved into model JSON.
+
+If evidence upload is not launch-path for tomorrow, do not block launch. Leave as Watch Item #4.
+
+PHASE 10. Existing automated checks
+
+Run these if time allows:
+
+pnpm --filter @workspace/school-financial-model run build
+pnpm --filter @workspace/api-server run build
+pnpm --filter @workspace/api-server run qa:smoke-arithmetic
+pnpm --filter @workspace/api-server run qa:excel
+pnpm --filter @workspace/api-server run qa:formula-results
+pnpm --filter @workspace/school-financial-model run test
+pnpm --filter @workspace/api-server run test
+
+Also run typecheck:
+
+pnpm run typecheck
+
+If typecheck fails:
+- Identify exact files.
+- Confirm whether any failing file is in the launch path.
+- If unrelated and pre-existing, document as watch item.
+- If related to /underwriting, exports, consultant analysis, API readiness, storage, or finance engine, mark NO GO.
+
+PHASE 11. Bug classification
+
+Every bug found must be classified:
+
+P0 Launch Blocker:
+- /underwriting unavailable
+- redirect to login/register
+- API /ready fails
+- readiness analysis fails
+- export fails
+- workbook corrupt
+- broken revenue math
+- NaN/undefined/broken formulas
+- mobile unusable
+- scary credit-decision language appears
+- Railway crash loop
+- MODULE_NOT_FOUND in production
+
+P1 Fix Before Announcement If Easy:
+- confusing field label
+- missing helper text in key place
+- export label inconsistency
+- non-blocking console warning
+- minor mobile spacing issue
+- unclear readiness copy
+
+P2 Post-Launch:
+- advanced CFO mode
+- board narrative improvements
+- grant narrative improvements
+- full assumption-confidence architecture
+- engine-level DSCR improvement
+- export reconciliation drift already documented
+- known *_new e2e flake
+
+Do not fix P2 today unless there is zero risk and zero deployment impact.
+
+PHASE 12. Proof pack update
+
+Update:
+docs/ONE_DAY_LAUNCH_PROOF_PACK.md
+
+Add section:
+“Final E2E Smoke Test Results”
+
+Include:
+- timestamp
+- production URLs tested
+- browser/device used
+- beginner microschool scenario result
+- operating school scenario result
+- public funding delay scenario result
+- mobile result
+- readiness analysis result
+- Excel export result
+- workbook-open result
+- console errors
+- language sweep result
+- storage/upload result, if tested
+- bugs found by severity
+- final verdict
+
+Verdict options:
+- GO WITH WATCH ITEMS
+- NO GO
+
+Use GO WITH WATCH ITEMS only if:
+- all P0 launch blockers are clear
+- remaining issues are documented watch items
+
+Do not use “clean GO” if watch items remain.
+
+Final deliverable:
+Return a concise launch report with:
+1. Final verdict.
+2. P0 blockers, if any.
+3. P1 fixes completed.
+4. Remaining watch items.
+5. Exact URLs tested.
+6. Whether proof pack was updated.
+7. Whether runtime code changed.
