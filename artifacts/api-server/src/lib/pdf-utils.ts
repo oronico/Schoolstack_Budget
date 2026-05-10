@@ -19,6 +19,10 @@ export const BRAND = {
 export type PDFDoc = InstanceType<typeof PDFDocument>;
 
 export function createDoc(): PDFDoc {
+  // Test hook: when SCHOOLSTACK_PDF_TEST_UNCOMPRESSED=1, disable PDF
+  // content-stream deflate compression so render-time tests can grep the
+  // emitted text. Production PDFs always run compressed (default true).
+  const testUncompressed = process.env.SCHOOLSTACK_PDF_TEST_UNCOMPRESSED === "1";
   const doc = new PDFDocument({
     size: "LETTER",
     margins: { top: 50, bottom: 50, left: 50, right: 50 },
@@ -28,6 +32,7 @@ export function createDoc(): PDFDoc {
       Creator: "SchoolStack Budget",
     },
     bufferPages: true,
+    compress: !testUncompressed,
   });
   return doc;
 }

@@ -487,41 +487,225 @@ async function testTask751NarrativeBuilders(): Promise<void> {
   );
 }
 
-async function testTask751LenderPacketPdfRender(): Promise<void> {
-  console.log("\n— Task #751 lender packet PDF cover badge + summary use coaching headline —");
+/**
+ * Task #754 — decode the rendered PDF (with PDFKit's `compress: false`
+ * exposed via the `SCHOOLSTACK_PDF_TEST_UNCOMPRESSED` test hook on
+ * `createDoc`) so we can grep the coaching headline as actual rendered
+ * text, not just byte-stream needles.
+ *
+ * PDFKit emits text on the page as `(literal) Tj` or
+ * `[(part1) <kerning> (part2) ...] TJ` operators inside the page
+ * content stream. With compression disabled, those operators are
+ * readable in the raw bytes. This extractor walks every `(...)` string
+ * literal in the buffer, decodes PDF string escapes (including octal
+ * escapes for high-byte WinAnsi chars like the em-dash 0x97), and
+ * concatenates them with spaces. That gives us a single text blob we
+ * can substring-search for the coaching headline.
+ *
+ * We deliberately do not pull in `pdf-parse` or another decoder
+ * dependency — PDFKit's own uncompressed output is enough to prove the
+ * headline reaches the page.
+ */
+function extractPdfText(buf: Buffer): string {
+  const raw = buf.toString("latin1");
+  const out: string[] = [];
+  let i = 0;
+  const n = raw.length;
+  while (i < n) {
+    const ch = raw.charCodeAt(i);
+    if (ch === 0x28 /* '(' */) {
+      // Walk to the matching ')' tracking nested parens and escapes.
+      let depth = 1;
+      let j = i + 1;
+      let s = "";
+      while (j < n && depth > 0) {
+        const c = raw[j];
+        if (c === "\\") {
+          const next = raw[j + 1];
+          if (next === undefined) break;
+          if (next >= "0" && next <= "7") {
+            // Octal escape, 1-3 digits.
+            let k = j + 1;
+            let oct = "";
+            while (k < n && k < j + 4 && raw[k] >= "0" && raw[k] <= "7") {
+              oct += raw[k];
+              k++;
+            }
+            s += String.fromCharCode(parseInt(oct, 8));
+            j = k;
+            continue;
+          }
+          switch (next) {
+            case "n": s += "\n"; break;
+            case "r": s += "\r"; break;
+            case "t": s += "\t"; break;
+            case "b": s += "\b"; break;
+            case "f": s += "\f"; break;
+            case "(": s += "("; break;
+            case ")": s += ")"; break;
+            case "\\": s += "\\"; break;
+            default: s += next; break;
+          }
+          j += 2;
+          continue;
+        }
+        if (c === "(") {
+          depth++;
+          s += c;
+          j++;
+          continue;
+        }
+        if (c === ")") {
+          depth--;
+          if (depth === 0) {
+            j++;
+            break;
+          }
+          s += c;
+          j++;
+          continue;
+        }
+        s += c;
+        j++;
+      }
+      // Only collect strings that look like plain text (skip binary
+      // glyph-id strings PDFKit also embeds for embedded fonts; for
+      // standard Type 1 Helvetica there are none of those).
+      if (s.length > 0) out.push(s);
+      i = j;
+      continue;
+    }
+    if (ch === 0x3c /* '<' */) {
+      // Hex string: <ABCD...>. PDFKit's TJ arrays for standard Type 1
+      // Helvetica contain hex-encoded WinAnsi byte sequences. Decode
+      // pairs of hex digits (skipping whitespace) into latin1 chars.
+      let j = i + 1;
+      let s = "";
+      let nibble = "";
+      while (j < n) {
+        const c = raw[j];
+        if (c === ">") {
+          j++;
+          break;
+        }
+        if (/[0-9a-fA-F]/.test(c)) {
+          nibble += c;
+          if (nibble.length === 2) {
+            s += String.fromCharCode(parseInt(nibble, 16));
+            nibble = "";
+          }
+        }
+        j++;
+      }
+      if (nibble.length === 1) {
+        // Odd nibble count → pad with trailing 0 per PDF spec.
+        s += String.fromCharCode(parseInt(nibble + "0", 16));
+      }
+      if (s.length > 0) out.push(s);
+      i = j;
+      continue;
+    }
+    i++;
+  }
+  return out.join(" ");
+}
+
+async function testTask754LenderPacketPdfRender(): Promise<void> {
+  console.log(
+    "\n— Task #754 lender packet PDF: decoded text contains coaching headline for every verdict —",
+  );
 
   const model = buildNarrativeFixtureModel();
   const co = await runConsultantEngine(model);
 
-  // Build for the engine-derived verdict (whatever it computes for this
-  // fixture). We assert that whichever verdict came back, the coaching
-  // headline appears in the generated PDF byte stream and the legacy
-  // raw-verdict headlines do not.
-  const lp = buildLenderPacket(model as ModelData, co, 1);
-  const ls = buildLenderSummary(model as ModelData, co);
+  // Build the packet + summary once, then mutate the verdict per
+  // iteration so we exercise the cover badge and the lender summary
+  // page for all three verdicts without re-running the engine.
+  const baseLp = buildLenderPacket(model as ModelData, co, 1);
+  const baseLs = buildLenderSummary(model as ModelData, co);
 
-  const buf = await generateLenderPacketPDF(lp, ls);
-  const raw = buf.toString("latin1");
-  const verdict = ls.verdict.status;
-  const headline = LENDER_READINESS_COACHING_HEADLINES[verdict];
+  const prevEnv = process.env.SCHOOLSTACK_PDF_TEST_UNCOMPRESSED;
+  process.env.SCHOOLSTACK_PDF_TEST_UNCOMPRESSED = "1";
+  try {
+    for (const verdict of VERDICTS) {
+      const lp = JSON.parse(JSON.stringify(baseLp)) as typeof baseLp;
+      lp.lenderReadiness.status = verdict;
+      const ls = {
+        ...baseLs,
+        verdict: { ...baseLs.verdict, status: verdict },
+      };
 
-  check("lender packet PDF buffer starts with %PDF-", buf.subarray(0, 5).toString() === "%PDF-");
-  check("lender packet PDF buffer is non-trivial in size", buf.length > 4096);
+      const buf = await generateLenderPacketPDF(lp, ls);
+      check(
+        `[${verdict}] lender packet PDF buffer starts with %PDF-`,
+        buf.subarray(0, 5).toString() === "%PDF-",
+      );
+      check(
+        `[${verdict}] lender packet PDF buffer is non-trivial in size`,
+        buf.length > 4096,
+      );
 
-  // PDFKit compresses content streams by default and applies font
-  // subsetting, so the literal coaching headline rarely appears in the
-  // raw byte stream. We rely on the source-scan above to prove the
-  // call-site is wired through the helper, and assert only the
-  // negative invariant in the byte stream: the legacy raw-verdict
-  // headlines that we replaced must not appear in the PDF, regardless
-  // of which verdict the engine chose for this fixture.
-  void verdict;
-  void headline;
-  for (const v of VERDICTS) {
-    check(
-      `lender packet PDF does not emit legacy "Lender Readiness: ${v}" headline`,
-      !raw.includes(`Lender Readiness: ${v}`),
-    );
+      const text = extractPdfText(buf);
+      const headline = LENDER_READINESS_COACHING_HEADLINES[verdict];
+
+      // Em-dash (U+2014) is encoded as WinAnsi byte 0x97 in PDFKit's
+      // standard Type 1 fonts. Match against both the original Unicode
+      // form and the WinAnsi-decoded form so the assertion works
+      // regardless of which path the encoder took.
+      const headlineWinAnsi = headline.replace(/\u2014/g, "\x97").replace(/\u2013/g, "\x96");
+      // PDFKit emits per-glyph kerning inside `[...] TJ` arrays, which
+      // splits a single word across multiple hex chunks. We join those
+      // chunks with spaces in `extractPdfText`, so a substring like
+      // "Ready to share" can land in the decoded blob as
+      // "Ready to sha re". Strip whitespace from both haystack and
+      // needle so the substring check survives kerning splits.
+      const stripWs = (s: string) => s.replace(/\s+/g, "");
+      const textNoWs = stripWs(text);
+      const present =
+        textNoWs.includes(stripWs(headline)) ||
+        textNoWs.includes(stripWs(headlineWinAnsi)) ||
+        // Fall back to the two halves around the em-dash: if PDFKit
+        // ever splits the run for kerning, both halves will still
+        // appear individually in the decoded text.
+        headline
+          .split(/[\u2014\u2013]/)
+          .map((part) => stripWs(part))
+          .filter((part) => part.length > 0)
+          .every((part) => textNoWs.includes(part));
+
+      check(
+        `[${verdict}] cover badge + lender summary headline "${headline}" appears in decoded PDF text`,
+        present,
+        `decoded text length ${text.length}`,
+      );
+
+      // The lender summary page renders the headline once and the cover
+      // page renders it again — when the summary is supplied the doc
+      // contains both. So the headline string (or the kerning-split
+      // halves) should appear at least twice in the decoded text.
+      const occurrences = stripWs(headline.split(/[\u2014\u2013]/)[0]);
+      const matches = textNoWs.split(occurrences).length - 1;
+      check(
+        `[${verdict}] coaching headline appears at least twice (cover badge + summary page)`,
+        matches >= 2,
+        `found ${matches} occurrence(s) of "${occurrences}"`,
+      );
+
+      // Negative invariant retained: legacy raw-verdict headline
+      // template must never appear in the decoded text either.
+      for (const v of VERDICTS) {
+        check(
+          `[${verdict}] PDF text does not contain legacy "Lender Readiness: ${v}" headline`,
+          !text.includes(`Lender Readiness: ${v}`),
+        );
+      }
+    }
+  } finally {
+    if (prevEnv === undefined) {
+      delete process.env.SCHOOLSTACK_PDF_TEST_UNCOMPRESSED;
+    } else {
+      process.env.SCHOOLSTACK_PDF_TEST_UNCOMPRESSED = prevEnv;
+    }
   }
 }
 
@@ -567,7 +751,7 @@ async function main(): Promise<void> {
   testTask751SourceCoverage();
   testTask751MailerRendersCoachingHeadline();
   await testTask751NarrativeBuilders();
-  await testTask751LenderPacketPdfRender();
+  await testTask754LenderPacketPdfRender();
 
   console.log(`\nResults: ${passed} passed, ${failed} failed`);
   if (failed > 0) {

@@ -1,0 +1,163 @@
+FINAL HUMAN E2E SMOKE TEST FOR SCHOOLSTACK BUDGET LAUNCH
+
+Context:
+Production infrastructure is already green:
+- budget.schoolstack.ai returns HTTP 200
+- /underwriting returns HTTP 200
+- /api/ready returns HTTP 200 with db connected
+- Railway /health returns HTTP 200 with migrations ok
+- Railway /api/ready returns HTTP 200 with db connected
+
+Do not add features.
+Do not restructure the wizard.
+Do not touch finance formulas unless the smoke test exposes a launch-blocking defect.
+This is a final launch-path verification.
+
+Goal:
+Confirm a real founder can use the public app before launch.
+
+Test URL:
+https://budget.schoolstack.ai/underwriting
+
+PHASE 1. Incognito guest founder test
+
+Open /underwriting in a fresh incognito/private browser session.
+
+Confirm:
+1. Page loads.
+2. No redirect to /register.
+3. No login required.
+4. No console errors.
+5. No scary lender/approval language.
+6. No Plaid or ACH language.
+7. Step navigation works.
+
+Use this test model:
+
+School: Launch Test Academy
+Type: Microschool
+Stage: New school
+Students: 30
+Annual growth: 15%
+Tuition: $12,000
+Public funding: $0
+Philanthropy: $0
+Students per teacher: 12
+Teacher salary: $55,000
+Admin salary: $65,000
+Rent: $4,000/month
+Utilities: $12,000/year
+Insurance: $8,000/year
+Curriculum: $8,000/year
+Other OpEx: $12,000/year
+Beginning cash: $0
+Founder unpaid Year 1
+No lease yet
+No occupancy documentation yet
+No insurance yet
+
+PHASE 2. Readiness analysis
+
+Run readiness analysis.
+
+Confirm:
+1. Analysis returns successfully.
+2. It does not say approved, declined, ineligible, rejected, or pass/fail.
+3. It flags real risks:
+   - no founder compensation
+   - limited enrollment evidence if applicable
+   - no lease
+   - no occupancy documentation
+   - no insurance path
+   - low cash or zero beginning cash
+   - high staffing burden if applicable
+4. Revenue is credible, not inflated into millions for Year 1.
+5. The tone is coaching-oriented and founder-safe.
+
+PHASE 3. Excel export
+
+Download the Excel workbook.
+
+Confirm:
+1. Download starts.
+2. File opens in Excel or Google Sheets.
+3. No corruption warning.
+4. No undefined.
+5. No NaN.
+6. No #REF!.
+7. No #DIV/0!.
+8. No #VALUE!.
+9. School name appears correctly.
+10. Year 1 tuition revenue is roughly $342,000 if using 30 students, $12,000 tuition, and 95% collection.
+11. No founder-facing export label says credit memo, underwriting decision, approval packet, or loan approval.
+
+PHASE 4. Mobile smoke test
+
+Run one mobile viewport test:
+- width: 390px or 430px
+
+Confirm:
+1. /underwriting loads.
+2. Inputs are usable.
+3. Buttons are visible.
+4. Step navigation works.
+5. Readiness analysis button is reachable.
+6. Export button is reachable.
+7. No overlapping text/cards.
+8. No horizontal scrolling that blocks use.
+
+PHASE 5. Optional operating school quick test, only if time permits
+
+Run a shorter operating school scenario:
+
+School: Actuals Test School
+Stage: Operating school
+Current enrollment: 45
+Tuition: $11,000
+Retention: 85%
+Beginning cash: $40,000
+Rent: $5,000/month
+Founder paid: yes
+Existing debt: $20,000
+Annual debt service: $6,000
+
+Confirm:
+1. Existing debt affects readiness language or estimated DSCR.
+2. Export still works.
+3. Model does not show fantasy revenue.
+
+PHASE 6. Update proof pack
+
+Update:
+docs/ONE_DAY_LAUNCH_PROOF_PACK.md
+
+Add a final section:
+“Final Human Founder-Flow Smoke Test”
+
+Include:
+- timestamp
+- browser used
+- desktop result
+- mobile result
+- readiness analysis result
+- Excel export result
+- workbook-open result
+- console error result
+- any watch items
+- final verdict
+
+Verdict language:
+Use “GO WITH WATCH ITEMS” if all launch-path items pass.
+
+Do not call this a clean GO if watch items remain.
+
+Launch blockers:
+- /underwriting redirects to register
+- readiness analysis fails
+- Excel export fails
+- workbook will not open
+- broken formulas
+- fantasy revenue
+- mobile flow unusable
+- loan approval or decline language appears
+- Railway /api/ready fails
