@@ -2,6 +2,7 @@ import app from "./app";
 import { cleanupExpiredRateLimits } from "./lib/rate-limiter";
 import { cleanupOldErrorLogs } from "./routes/errors";
 import { cleanupExpiredPendingSignups } from "./routes/auth";
+import { runOrphanUploadsCleanup } from "./scripts/cleanup-orphan-uploads";
 import { pool, db, runMigrations } from "@workspace/db";
 import { recordErrorLog } from "./lib/error-log";
 import { applyMigrations as runApplyMigrations } from "./lib/apply-migrations";
@@ -130,7 +131,47 @@ const port = Number(process.env["PORT"] || "8080");
 const GRACEFUL_SHUTDOWN_TIMEOUT_MS = 15_000;
 let server: Server | undefined;
 let cleanupTimer: ReturnType<typeof setInterval>;
+let orphanUploadsTimer: ReturnType<typeof setInterval>;
 let isShuttingDown = false;
+
+// Task #757 — schedule the orphan-uploads sweeper.
+//
+// Goal: keep App Storage costs flat by deleting evidence files that no
+// surviving model still references. The sweeper itself was added in
+// task #736 and is normally invoked by hand via
+// `pnpm --filter @workspace/api-server run cleanup:orphan-uploads`.
+// Running it in-process here means production gets a recurring sweep
+// without depending on a separately-configured Replit Scheduled
+// Deployment that an operator could forget to set up.
+//
+// In production we run daily with --execute. In every other env we
+// stay in dry-run mode so local/test runs never touch a shared bucket.
+// Each run prints its progress lines plus one tagged JSON summary
+// (`[orphan-uploads-summary] {...}`) so operators can grep deployment
+// logs to confirm the sweep ran and how many objects it removed. See
+// `docs/operations/orphan-uploads-sweeper.md` for the runbook.
+const ORPHAN_UPLOADS_INTERVAL_MS = 24 * 60 * 60 * 1000; // daily
+const ORPHAN_UPLOADS_FIRST_RUN_DELAY_MS = 10 * 60 * 1000; // 10 min after boot
+let orphanUploadsRunning = false;
+
+async function runScheduledOrphanUploadsSweep(): Promise<void> {
+  if (orphanUploadsRunning) {
+    console.log("[orphan-uploads-scheduler] previous sweep still running — skipping this tick");
+    return;
+  }
+  orphanUploadsRunning = true;
+  try {
+    const summary = await runOrphanUploadsCleanup({
+      execute: isProduction,
+      logger: (msg) => console.log(`[orphan-uploads-scheduler] ${msg}`),
+    });
+    console.log(`[orphan-uploads-summary] ${JSON.stringify(summary)}`);
+  } catch (err) {
+    console.error("[orphan-uploads-scheduler] sweep failed:", err);
+  } finally {
+    orphanUploadsRunning = false;
+  }
+}
 
 function drainAndExit(forceTimer: ReturnType<typeof setTimeout>) {
   console.log("[shutdown] Draining database pool...");
@@ -168,6 +209,7 @@ function gracefulShutdown(signal: string) {
   forceTimer.unref();
 
   if (cleanupTimer) clearInterval(cleanupTimer);
+  if (orphanUploadsTimer) clearInterval(orphanUploadsTimer);
 
   if (!server || !server.listening) {
     console.log("[shutdown] Server not yet listening, skipping server.close.");
@@ -210,3 +252,13 @@ cleanupTimer = setInterval(() => {
   // (and their bcrypt'd password hashes) don't accumulate forever.
   cleanupExpiredPendingSignups().catch(() => {});
 }, 300_000);
+
+// Task #757 — daily orphan-uploads sweep. Defer the first run by a few
+// minutes so we don't pile DB + bucket I/O onto the boot sequence (and
+// so the server stays responsive to the deployment health check).
+setTimeout(() => {
+  void runScheduledOrphanUploadsSweep();
+  orphanUploadsTimer = setInterval(() => {
+    void runScheduledOrphanUploadsSweep();
+  }, ORPHAN_UPLOADS_INTERVAL_MS);
+}, ORPHAN_UPLOADS_FIRST_RUN_DELAY_MS).unref();

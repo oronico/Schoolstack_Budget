@@ -9,7 +9,7 @@
 // clean up inline going forward; this script catches the historical
 // backlog plus anything that slipped past a failed inline delete.
 //
-// Usage:
+// Usage (CLI):
 //   pnpm --filter @workspace/api-server run cleanup:orphan-uploads          (dry run)
 //   pnpm --filter @workspace/api-server run cleanup:orphan-uploads -- --execute
 //
@@ -17,6 +17,17 @@
 // not touch the bucket. Pass `--execute` (or `--no-dry-run`) to
 // actually delete the orphans. The script always logs the full list
 // of candidate orphans before deleting any of them.
+//
+// Task #757 — the same logic is also called on a recurring schedule
+// from `src/index.ts` (see `runOrphanUploadsCleanup`). Whenever the
+// in-process scheduler runs, it emits a single tagged summary line
+// (`[orphan-uploads-summary] {...}`) into the deployment logs so an
+// operator can grep production logs to confirm the sweeper is healthy.
+//
+// Task #758 — the pure helpers `extractEvidenceObjectPaths` and
+// `identifyOrphanObjectPaths` are exported so unit tests can exercise
+// the sweeper's identify-orphans rule without standing up GCS or
+// Postgres.
 
 import { db } from "@workspace/db";
 import { financialModelsTable } from "@workspace/db/schema";
@@ -89,15 +100,53 @@ export function identifyOrphanObjectPaths(
   return orphans;
 }
 
-async function main(): Promise<void> {
-  const flags = parseFlags(process.argv);
-  const mode = flags.execute ? "EXECUTE" : "DRY-RUN";
-  console.log(`[cleanup-orphan-uploads] mode=${mode}`);
+export interface OrphanCleanupSummary {
+  mode: "dry-run" | "execute";
+  scannedModels: number;
+  referencedPaths: number;
+  bucketObjects: number;
+  orphans: number;
+  considered: number;
+  deleted: number;
+  failed: number;
+  durationMs: number;
+}
+
+export interface OrphanCleanupOptions {
+  execute?: boolean;
+  limit?: number;
+  /**
+   * Logger used for human-readable progress lines. Defaults to `console.log`
+   * for CLI use; the in-process scheduler injects a prefixed logger so the
+   * lines are easy to find in deployment logs.
+   */
+  logger?: (msg: string) => void;
+}
+
+/**
+ * Reusable entry point for the orphan-uploads sweeper. Returns a
+ * structured summary so callers (CLI, scheduler, future tooling) can
+ * decide what to do with the result. Never throws — failures bubble
+ * up via the promise rejection.
+ */
+export async function runOrphanUploadsCleanup(
+  options: OrphanCleanupOptions = {},
+): Promise<OrphanCleanupSummary> {
+  const execute = options.execute === true;
+  const limit =
+    options.limit !== undefined && Number.isFinite(options.limit) && options.limit > 0
+      ? options.limit
+      : Number.POSITIVE_INFINITY;
+  const log = options.logger ?? ((msg: string) => console.log(msg));
+
+  const startedAt = Date.now();
+  const mode = execute ? "EXECUTE" : "DRY-RUN";
+  log(`[cleanup-orphan-uploads] mode=${mode}`);
 
   const storage = new ObjectStorageService();
 
   // 1. Collect every objectPath any model row references today.
-  console.log("[cleanup-orphan-uploads] loading referenced objectPaths from financial_models…");
+  log("[cleanup-orphan-uploads] loading referenced objectPaths from financial_models…");
   const rows = await db
     .select({ id: financialModelsTable.id, data: financialModelsTable.data })
     .from(financialModelsTable);
@@ -105,58 +154,71 @@ async function main(): Promise<void> {
   for (const row of rows) {
     for (const p of extractEvidenceObjectPaths(row.data)) referenced.add(p);
   }
-  console.log(
+  log(
     `[cleanup-orphan-uploads] scanned ${rows.length} models, ${referenced.size} referenced objectPaths`,
   );
 
   // 2. List every uploads/* object that actually exists in the bucket.
-  console.log("[cleanup-orphan-uploads] listing uploads/* in App Storage…");
+  log("[cleanup-orphan-uploads] listing uploads/* in App Storage…");
   const inBucket = await storage.listUploadObjectPaths();
-  console.log(`[cleanup-orphan-uploads] bucket holds ${inBucket.length} uploads/* objects`);
+  log(`[cleanup-orphan-uploads] bucket holds ${inBucket.length} uploads/* objects`);
 
   // 3. Diff: anything in the bucket that no model references is an orphan.
-  const orphans: string[] = [];
-  for (const p of inBucket) {
-    if (!referenced.has(p)) orphans.push(p);
-  }
-  console.log(`[cleanup-orphan-uploads] identified ${orphans.length} orphan object(s)`);
+  const orphans = identifyOrphanObjectPaths(inBucket, referenced);
+  log(`[cleanup-orphan-uploads] identified ${orphans.length} orphan object(s)`);
 
   const slice = orphans.slice(
     0,
-    Number.isFinite(flags.limit) ? flags.limit : orphans.length,
+    Number.isFinite(limit) ? limit : orphans.length,
   );
   for (const p of slice) {
-    console.log(`  ${flags.execute ? "DELETE" : "would delete"}  ${p}`);
+    log(`  ${execute ? "DELETE" : "would delete"}  ${p}`);
   }
   if (slice.length < orphans.length) {
-    console.log(
-      `  …and ${orphans.length - slice.length} more (raise --limit to include them)`,
+    log(
+      `  …and ${orphans.length - slice.length} more (raise limit to include them)`,
     );
-  }
-
-  // 4. In dry-run mode, stop here. In execute mode, delete one-by-one.
-  if (!flags.execute) {
-    console.log("[cleanup-orphan-uploads] dry-run complete — no objects deleted.");
-    console.log("[cleanup-orphan-uploads] re-run with --execute to actually delete.");
-    return;
   }
 
   let deleted = 0;
   let failed = 0;
-  for (const p of slice) {
-    const ok = await storage.deleteObjectEntity(p);
-    if (ok) deleted++;
-    else failed++;
+  if (!execute) {
+    log("[cleanup-orphan-uploads] dry-run complete — no objects deleted.");
+  } else {
+    for (const p of slice) {
+      const ok = await storage.deleteObjectEntity(p);
+      if (ok) deleted++;
+      else failed++;
+    }
+    log(
+      `[cleanup-orphan-uploads] done — deleted=${deleted} failed=${failed} of ${slice.length} candidate(s)`,
+    );
   }
-  console.log(
-    `[cleanup-orphan-uploads] done — deleted=${deleted} failed=${failed} of ${slice.length} candidate(s)`,
-  );
+
+  return {
+    mode: execute ? "execute" : "dry-run",
+    scannedModels: rows.length,
+    referencedPaths: referenced.size,
+    bucketObjects: inBucket.length,
+    orphans: orphans.length,
+    considered: slice.length,
+    deleted,
+    failed,
+    durationMs: Date.now() - startedAt,
+  };
+}
+
+async function main(): Promise<void> {
+  const flags = parseFlags(process.argv);
+  await runOrphanUploadsCleanup({ execute: flags.execute, limit: flags.limit });
 }
 
 // Task #758 — only auto-run when invoked directly (e.g. via the
 // `cleanup:orphan-uploads` pnpm script). Tests import this module to
 // exercise `extractEvidenceObjectPaths` / `identifyOrphanObjectPaths`
 // in isolation and must not trigger a real bucket sweep on import.
+// Task #757's scheduler also imports `runOrphanUploadsCleanup` from
+// `src/index.ts` and similarly relies on this guard.
 const invokedDirectly = (() => {
   const entry = process.argv[1];
   if (!entry) return false;
