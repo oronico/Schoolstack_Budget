@@ -82,3 +82,50 @@ function redactValue(value: unknown): unknown {
   }
   return value;
 }
+
+// Task #786 — Key-based redaction can't catch secrets that show up as
+// substrings inside `error_message` / `error_stack` (e.g. a Postgres
+// error that echoes the offending row, or a stack frame whose locals
+// were serialized into the message). The patterns below mask values
+// that LOOK like one of the secret shapes we already strip by key.
+//
+// Each pattern is intentionally narrow — we'd rather leave a bit of
+// context untouched than corrupt unrelated text. Order matters where
+// patterns could overlap (Bearer before generic JWT, etc.).
+const SENSITIVE_STRING_PATTERNS: ReadonlyArray<{ name: string; pattern: RegExp; replacement: string }> = [
+  // `appstorage://bucket/path/to/file.pdf` — our object-storage refs.
+  { name: "storage_ref", pattern: /appstorage:\/\/[^\s"'<>)]+/gi, replacement: "appstorage://[REDACTED]" },
+  // `Bearer <token>` — Authorization header echoed into a stack frame.
+  { name: "bearer", pattern: /Bearer\s+[A-Za-z0-9._\-+/=]+/g, replacement: "Bearer [REDACTED]" },
+  // Stripe-style bank account tokens.
+  { name: "btok", pattern: /\bbtok_[A-Za-z0-9]+/g, replacement: "btok_[REDACTED]" },
+  // Plaid access tokens (access-sandbox-..., access-production-...).
+  { name: "plaid", pattern: /\baccess-(?:sandbox|development|production)-[A-Za-z0-9-]+/g, replacement: "access-[REDACTED]" },
+  // bcrypt hashes — `$2a$`, `$2b$`, `$2y$` followed by the cost + 53 base64-ish chars.
+  { name: "bcrypt", pattern: /\$2[aby]\$\d{1,2}\$[./A-Za-z0-9]{53}/g, replacement: "$2a$[REDACTED]" },
+  // JWTs: three base64url segments separated by dots. Constrain each
+  // segment length so we don't eat ordinary `a.b.c` text.
+  { name: "jwt", pattern: /\b[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g, replacement: "[REDACTED_JWT]" },
+  // SSN — `123-45-6789`.
+  { name: "ssn", pattern: /\b\d{3}-\d{2}-\d{4}\b/g, replacement: "[REDACTED_SSN]" },
+  // EIN — `12-3456789`.
+  { name: "ein", pattern: /\b\d{2}-\d{7}\b/g, replacement: "[REDACTED_EIN]" },
+];
+
+/**
+ * Mask substrings inside a free-form string that look like one of the
+ * sensitive shapes we already strip by key (JWTs, bcrypt hashes,
+ * `appstorage://` refs, EIN/SSN, `btok_`/`Bearer` tokens). Used by
+ * `recordErrorLog` on `errorMessage` and `errorStack` so a Postgres
+ * error that echoes the offending row, or a stack frame whose locals
+ * were serialized into the message, doesn't smuggle a secret past the
+ * key-based redactor.
+ */
+export function scrubSensitiveString(input: string | null | undefined): string | null {
+  if (input === null || input === undefined) return null;
+  let out = String(input);
+  for (const { pattern, replacement } of SENSITIVE_STRING_PATTERNS) {
+    out = out.replace(pattern, replacement);
+  }
+  return out;
+}

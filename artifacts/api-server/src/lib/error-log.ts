@@ -20,7 +20,7 @@
 
 import { db } from "@workspace/db";
 import { errorLogsTable, type InsertErrorLog } from "@workspace/db/schema";
-import { redactSensitivePayload } from "./redact-sensitive";
+import { redactSensitivePayload, scrubSensitiveString } from "./redact-sensitive";
 
 const MAX_MESSAGE_LEN = 2000;
 const MAX_STACK_LEN = 5000;
@@ -47,10 +47,16 @@ export async function recordErrorLog(input: RecordErrorLogInput): Promise<void> 
   if (!db) {
     throw new Error("recordErrorLog: database is not configured");
   }
+  // Task #786 — Scrub sensitive substrings (JWTs, bcrypt hashes,
+  // `appstorage://` refs, EIN/SSN, `btok_`/`Bearer` tokens) out of
+  // the message and stack BEFORE we truncate, so a secret that
+  // straddles a slice boundary still gets masked.
+  const scrubbedMessage = scrubSensitiveString(String(input.errorMessage)) ?? "";
+  const scrubbedStack = input.errorStack ? scrubSensitiveString(String(input.errorStack)) : null;
   const row: InsertErrorLog = {
     userId: input.userId ?? null,
-    errorMessage: String(input.errorMessage).slice(0, MAX_MESSAGE_LEN),
-    errorStack: input.errorStack ? String(input.errorStack).slice(0, MAX_STACK_LEN) : null,
+    errorMessage: scrubbedMessage.slice(0, MAX_MESSAGE_LEN),
+    errorStack: scrubbedStack ? scrubbedStack.slice(0, MAX_STACK_LEN) : null,
     route: input.route ? String(input.route).slice(0, MAX_ROUTE_LEN) : null,
     requestBody: redactSensitivePayload(input.requestBody),
   };

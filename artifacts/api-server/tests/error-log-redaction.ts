@@ -34,6 +34,7 @@ import { recordErrorLog } from "../src/lib/error-log.js";
 import {
   FORBIDDEN_SENSITIVE_KEYS,
   redactSensitivePayload,
+  scrubSensitiveString,
 } from "../src/lib/redact-sensitive.js";
 
 let passed = 0;
@@ -156,6 +157,84 @@ function runRedactorUnitTests(): void {
 }
 
 // ---------------------------------------------------------------------------
+// 1b. Unit tests for scrubSensitiveString (Task #786)
+// ---------------------------------------------------------------------------
+const FAKE_JWT =
+  "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+const FAKE_BCRYPT = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+const FAKE_STORAGE = "appstorage://uw/42/990.pdf";
+const FAKE_BTOK = "btok_1FGhZ7Lkdj2k3l4m5n6o7p8q";
+const FAKE_BEARER = "Bearer abc.def.ghi-jkl_mno";
+const FAKE_PLAID = "access-sandbox-1234abcd-aaaa-bbbb-cccc-1234567890ab";
+const FAKE_EIN = "12-3456789";
+const FAKE_SSN = "123-45-6789";
+
+function runStringScrubberUnitTests(): void {
+  console.log("\n— string scrubber unit tests (Task #786)");
+
+  check("null input returns null", scrubSensitiveString(null) === null);
+  check("undefined input returns null", scrubSensitiveString(undefined) === null);
+
+  const cases: Array<[string, string]> = [
+    ["JWT", FAKE_JWT],
+    ["bcrypt hash", FAKE_BCRYPT],
+    ["appstorage ref", FAKE_STORAGE],
+    ["btok_", FAKE_BTOK],
+    ["Bearer token", FAKE_BEARER],
+    ["plaid token", FAKE_PLAID],
+    ["EIN", FAKE_EIN],
+    ["SSN", FAKE_SSN],
+  ];
+  for (const [label, secret] of cases) {
+    const out = scrubSensitiveString(`prefix ${secret} suffix`) ?? "";
+    check(
+      `${label} masked from free-form string`,
+      !out.includes(secret) && out.includes("prefix") && out.includes("suffix"),
+      `out=${out}`,
+    );
+  }
+
+  // Realistic Postgres-style error message that echoes the offending row.
+  const pgMsg =
+    `duplicate key value violates unique constraint "users_email_key" ` +
+    `Key (email, password_hash)=(a@b.com, ${FAKE_BCRYPT}) already exists.`;
+  const pgScrubbed = scrubSensitiveString(pgMsg) ?? "";
+  check(
+    "Postgres-style error message scrubbed of bcrypt hash",
+    !pgScrubbed.includes(FAKE_BCRYPT) && pgScrubbed.includes("duplicate key"),
+    `out=${pgScrubbed}`,
+  );
+
+  // Realistic stack frame whose locals were serialized into the message.
+  const stack =
+    `Error: failed to verify document\n` +
+    `    at handler (uw.ts:42:10) { storageRef: '${FAKE_STORAGE}', token: '${FAKE_JWT}' }\n` +
+    `    at next (router.js:1:1)`;
+  const stackScrubbed = scrubSensitiveString(stack) ?? "";
+  check(
+    "stack frame scrubbed of storage ref",
+    !stackScrubbed.includes(FAKE_STORAGE),
+    `out=${stackScrubbed}`,
+  );
+  check(
+    "stack frame scrubbed of JWT",
+    !stackScrubbed.includes(FAKE_JWT),
+    `out=${stackScrubbed}`,
+  );
+  check(
+    "stack frame keeps non-sensitive frames",
+    stackScrubbed.includes("at handler (uw.ts:42:10)") && stackScrubbed.includes("at next (router.js:1:1)"),
+  );
+
+  // Innocuous text shouldn't be mangled.
+  const innocuous = "User clicked button at 3.14.15 on /api/v1/foo — no PII here.";
+  check(
+    "innocuous text passes through unchanged",
+    scrubSensitiveString(innocuous) === innocuous,
+  );
+}
+
+// ---------------------------------------------------------------------------
 // 2. Static guard: no raw inserts into errorLogsTable outside the chokepoint
 // ---------------------------------------------------------------------------
 function runStaticGuard(): void {
@@ -242,10 +321,14 @@ async function runIntegrationTest(): Promise<void> {
       },
     });
 
-    // -- Write site #3: nested arrays.
+    // -- Write site #3: nested arrays + secrets embedded in message/stack (Task #786).
     await recordErrorLog({
       userId: null,
-      errorMessage: `snapshot-${marker}`,
+      errorMessage: `snapshot-${marker} JWT=${FAKE_JWT} hash=${FAKE_BCRYPT}`,
+      errorStack:
+        `Error: snapshot-${marker}\n` +
+        `    at handler (uw.ts:1:1) { storageRef: '${FAKE_STORAGE}', token: '${FAKE_BEARER}' }\n` +
+        `    at next (router.js:1:1)`,
       route: route3,
       requestBody: {
         documents: [
@@ -280,6 +363,41 @@ async function runIntegrationTest(): Promise<void> {
     );
     check("row #1 preserved error_message", row1?.errorMessage === `boom-${marker}`);
 
+    // Task #786 — assert the scrubber ran against errorMessage / errorStack on row #3.
+    const row3 = rows.find((r) => r.route === route3);
+    const persistedMsg = row3?.errorMessage ?? "";
+    const persistedStack = row3?.errorStack ?? "";
+    check(
+      "row #3 errorMessage scrubbed of fake JWT",
+      !persistedMsg.includes(FAKE_JWT),
+      `errorMessage=${persistedMsg}`,
+    );
+    check(
+      "row #3 errorMessage scrubbed of bcrypt hash",
+      !persistedMsg.includes(FAKE_BCRYPT),
+      `errorMessage=${persistedMsg}`,
+    );
+    check(
+      "row #3 errorMessage preserves non-sensitive marker",
+      persistedMsg.includes(`snapshot-${marker}`),
+      `errorMessage=${persistedMsg}`,
+    );
+    check(
+      "row #3 errorStack scrubbed of storage ref",
+      !persistedStack.includes(FAKE_STORAGE),
+      `errorStack=${persistedStack}`,
+    );
+    check(
+      "row #3 errorStack scrubbed of Bearer token",
+      !persistedStack.includes(FAKE_BEARER),
+      `errorStack=${persistedStack}`,
+    );
+    check(
+      "row #3 errorStack preserves frame metadata",
+      persistedStack.includes("at handler (uw.ts:1:1)") && persistedStack.includes("at next (router.js:1:1)"),
+      `errorStack=${persistedStack}`,
+    );
+
     // Cleanup.
     for (const route of [route1, route2, route3]) {
       await db.delete(errorLogsTable).where(
@@ -303,6 +421,7 @@ async function runIntegrationTest(): Promise<void> {
 
 async function main(): Promise<void> {
   runRedactorUnitTests();
+  runStringScrubberUnitTests();
   runStaticGuard();
   await runIntegrationTest();
 
