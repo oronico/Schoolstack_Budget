@@ -6,6 +6,21 @@ SchoolStack Budget is a full-stack web application designed to help school found
 
 I prefer iterative development with clear communication on significant changes. Please ask before making major architectural decisions or implementing new features that might diverge from the current design patterns. I appreciate concise explanations and a focus on functional programming principles where applicable.
 
+## Revenue terminology contract (do not conflate)
+
+The founder thinks about money in three distinct layers. Code, copy, and audits must keep them separate:
+
+1. **Seat price × Students = Gross educational program value.** "Tuition" in this layer means the *posted price of a seat* — what each enrolled child's education is worth in dollars. It is NOT a revenue source.
+2. **Revenue Sources** (what actually pays for those seats — the mix can vary per child):
+   - Family-paid tuition
+   - ESA / voucher / scholarship (external funding paid on behalf of a family)
+   - Public per-pupil funding
+   - Philanthropy / grants
+   - Other revenue
+   
+   For a single seat priced at $12,000, one child may be 100% family-paid, another may be 60% ESA + 40% family, another 100% scholarship. **Tuition is tuition; the funding mix varies.** Never assume one student = one funding source. Never sum gross tuition AND ESA/voucher revenue for the same child without an explicit offset, or you will double-count.
+3. **Expected Cash = Revenue Sources adjusted for collection rate and timing.** This is what actually lands in the bank, after delinquency, billing schedule, reimbursement lag, and receipt timing. Do not call accrual revenue "cash" and do not call expected cash "revenue".
+
 # System Architecture
 
 ## Brand System
