@@ -15,3 +15,5 @@ export * from "./underwriting-metrics-snapshots";
 export * from "./eligibility-gate-results";
 export * from "./audit-log";
 export * from "./coach-surface-overrides";
+export * from "./borrower-entities";
+export * from "./founder-profiles";

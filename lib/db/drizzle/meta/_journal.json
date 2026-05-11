@@ -50,6 +50,13 @@
       "when": 1778510379129,
       "tag": "0006_coach_surface_overrides",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1778518436117,
+      "tag": "0007_friendly_thunderbolt",
+      "breakpoints": true
     }
   ]
 }
