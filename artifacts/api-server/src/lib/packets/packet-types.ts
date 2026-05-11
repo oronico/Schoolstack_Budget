@@ -188,6 +188,7 @@ export const BOARD_SECTIONS: SectionId[] = [
   "staffing_plan",
   "expense_summary",
   "five_year_projection",
+  "prior_year_actuals",
   "health_assessment",
   "key_strengths",
   "key_risks",

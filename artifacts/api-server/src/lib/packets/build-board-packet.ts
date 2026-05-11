@@ -207,6 +207,15 @@ const BOARD_PACKET_SECTIONS: SectionId[] = [
   "executive_summary",
   "school_overview",
   "five_year_projection",
+  // Task #724 — render the prior-year-vs-Year-1 comparison tables (revenue,
+  // expenses, net income) on the board PDF. Lenders already see this block
+  // (with the "(Actual)" / "(Projected)" column headers added in Task #710);
+  // trustees of an operating school benefit from the same side-by-side view.
+  // `buildPriorYearActuals` returns `included: false` when the model has no
+  // `priorYearSnapshot`, so pre-opening models gracefully omit the section
+  // instead of printing an empty block (the PDF render loop skips
+  // `!section.included`).
+  "prior_year_actuals",
   // Personnel/Staffing Plan section follows the financial projection so the
   // board sees the team that will deliver the model. Task #322 also surfaces
   // the wage-base cap savings sentence here (appended inside
