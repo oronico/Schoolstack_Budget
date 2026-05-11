@@ -736,6 +736,106 @@ function splitFounderDraft(text: string): string[] {
     .filter((p) => p.length > 0);
 }
 
+// Task #746 — figure-drift lint for founder-edited drafts.
+//
+// The auto-built canonical commentaries are guarded by a figure-allowlist
+// test that asserts every numeric token in the rendered prose appears in
+// `commentary.allowedFigures`. Founder-edited drafts intentionally bypass
+// that guard (it does not apply to hand-written prose). This client-side
+// lint mirrors the same extraction patterns the guard test uses, so we
+// can warn (non-blocking) when a founder-typed token does not appear on
+// the canonical allow-list — a likely sign of stale figures pasted from
+// an older draft.
+//
+// Patterns mirror `extractFigures` in
+// `artifacts/api-server/src/lib/packets/__tests__/build-narrative-commentary.test.ts`
+// and the `FigureScribe.absorb` regexes in
+// `artifacts/api-server/src/lib/packets/build-narrative-commentary.ts`.
+function extractFounderFigureTokens(text: string): string[] {
+  if (!text) return [];
+  const out: string[] = [];
+  const patterns: RegExp[] = [
+    /\(?\$\d[\d,]*(?:\.\d+)?\)?/g,
+    /\d+(?:\.\d+)?%/g,
+    /-?\d+(?:\.\d+)?x\b/gi,
+    /Year\s+\d+/g,
+    /\d+\s+months\b/g,
+  ];
+  for (const re of patterns) {
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) out.push(m[0]);
+  }
+  // Strip the dimensional matches we already collected, then look for any
+  // bare numbers (e.g. "12 students", "30 seats") in the residual.
+  let residual = text;
+  const stripOrder = [...new Set(out)].sort((a, b) => b.length - a.length);
+  for (const tok of stripOrder) residual = residual.split(tok).join(" ");
+  const bareIntRe = /(?<![\w.,$])(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(?![\w%x])/g;
+  let m: RegExpExecArray | null;
+  while ((m = bareIntRe.exec(residual)) !== null) out.push(m[1]);
+  return out;
+}
+
+type FigureCategory =
+  | "currency"
+  | "percent"
+  | "ratio"
+  | "year"
+  | "months"
+  | "number";
+
+function categorizeFigureToken(tok: string): FigureCategory {
+  if (/^\(?\$/.test(tok)) return "currency";
+  if (/%$/.test(tok)) return "percent";
+  if (/x$/i.test(tok)) return "ratio";
+  if (/^Year\s/.test(tok)) return "year";
+  if (/months$/.test(tok)) return "months";
+  return "number";
+}
+
+interface FigureDriftWarning {
+  /** Verbatim founder-typed token that did not appear on the allow-list. */
+  founderValue: string;
+  /** The shape of the token (currency / %, etc.) — used to surface a
+   *  reasonable list of canonical figures to compare against. */
+  category: FigureCategory;
+  /** Canonical figures from the allow-list of the same shape. Empty list
+   *  means the engine produced no figures of that category to compare. */
+  canonicalCandidates: string[];
+}
+
+/**
+ * Returns a list of figure-drift warnings for a founder-edited draft.
+ * Each warning carries the founder token plus the canonical figures of
+ * the same shape so the UI can render "you wrote X · model has Y".
+ *
+ * Non-blocking by design: the founder may legitimately cite anecdotes,
+ * prior-year context, or rounded prose figures the canonical engine
+ * does not emit. The lint just surfaces the mismatch as a chip.
+ */
+export function findFigureDriftWarnings(
+  founderText: string,
+  allowedFigures: readonly string[],
+): FigureDriftWarning[] {
+  const trimmed = (founderText || "").trim();
+  if (!trimmed) return [];
+  const allowed = new Set(allowedFigures);
+  const tokens = extractFounderFigureTokens(trimmed);
+  const seen = new Set<string>();
+  const warnings: FigureDriftWarning[] = [];
+  for (const tok of tokens) {
+    if (allowed.has(tok)) continue;
+    if (seen.has(tok)) continue;
+    seen.add(tok);
+    const category = categorizeFigureToken(tok);
+    const canonicalCandidates = allowedFigures.filter(
+      (f) => categorizeFigureToken(f) === category,
+    );
+    warnings.push({ founderValue: tok, category, canonicalCandidates });
+  }
+  return warnings;
+}
+
 function AudienceDraftsSection({
   narrative,
   consultantData,
@@ -816,9 +916,15 @@ function AudienceDraftsSection({
   // `buildBoardCommentary` / `buildGrantCommentary` /
   // `buildLenderCommentary` helpers that the PDF render path uses, so
   // an empty audience draft renders identically here and in the PDF.
+  // `allowedFigures` is the canonical figure-allowlist for each audience,
+  // used by the Task #746 figure-drift lint to flag stale numbers in a
+  // founder draft.
   const narrativeCommentaries =
     ((consultantData as Record<string, unknown> | undefined)?.narrativeCommentaries as
-      | Record<AudienceKey, { paragraphs?: string[] } | undefined>
+      | Record<
+          AudienceKey,
+          { paragraphs?: string[]; allowedFigures?: string[] } | undefined
+        >
       | undefined) || undefined;
 
   return (
@@ -837,6 +943,17 @@ function AudienceDraftsSection({
       <div className="space-y-4">
         {AUDIENCE_DEFS.map((def) => {
           const Icon = def.icon;
+          const founderText = (audienceDrafts[def.key] || "").trim();
+          const allowedFigures =
+            narrativeCommentaries?.[def.key]?.allowedFigures;
+          // Suppress the lint until the consultant response has actually
+          // delivered an allow-list for this audience. Without that guard,
+          // a missing/loading payload would treat every figure in the
+          // founder draft as drift and flicker false positives.
+          const driftWarnings =
+            founderText.length > 0 && allowedFigures && allowedFigures.length > 0
+              ? findFigureDriftWarnings(founderText, allowedFigures)
+              : [];
           return (
             <div
               key={def.key}
@@ -880,6 +997,7 @@ function AudienceDraftsSection({
                 data-testid={`audience-draft-textarea-${def.key}`}
                 {...(register(`budgetNarrative.audienceDrafts.${def.key}`) as Record<string, unknown>)}
               />
+              <FigureDriftLint audienceKey={def.key} warnings={driftWarnings} />
             </div>
           );
         })}
@@ -898,6 +1016,94 @@ function AudienceDraftsSection({
         audienceDrafts={audienceDrafts}
         narrativeCommentaries={narrativeCommentaries}
       />
+    </div>
+  );
+}
+
+// Task #746 — non-blocking warning chips for figures in the founder
+// draft that don't appear on the canonical allow-list for that
+// audience. Founders can still ship intentional figures (e.g.
+// anecdotes, prior-year context); the chip is informational only.
+function FigureDriftLint({
+  audienceKey,
+  warnings,
+}: {
+  audienceKey: AudienceKey;
+  warnings: FigureDriftWarning[];
+}) {
+  if (warnings.length === 0) return null;
+  const labelFor = (c: FigureCategory): string => {
+    switch (c) {
+      case "currency":
+        return "dollar figures";
+      case "percent":
+        return "percentages";
+      case "ratio":
+        return "ratios";
+      case "year":
+        return "year labels";
+      case "months":
+        return "month counts";
+      case "number":
+        return "numbers";
+    }
+  };
+  return (
+    <div
+      className="border border-amber-300 bg-amber-50 rounded-lg p-3 space-y-2"
+      data-testid={`figure-drift-lint-${audienceKey}`}
+      role="status"
+    >
+      <div className="flex items-start gap-2">
+        <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+        <div className="text-xs text-amber-900">
+          <span className="font-semibold">
+            {warnings.length === 1
+              ? "1 figure in your draft doesn't match the model"
+              : `${warnings.length} figures in your draft don't match the model`}
+          </span>
+          <span className="block text-amber-800 mt-0.5">
+            This is non-blocking — you can still ship intentional figures
+            (anecdotes, prior-year context). Double-check anything that
+            should reconcile to the canonical engine.
+          </span>
+        </div>
+      </div>
+      <ul className="space-y-1.5">
+        {warnings.map((w, i) => (
+          <li
+            key={`${w.founderValue}-${i}`}
+            className="flex flex-wrap items-center gap-2 text-[11px]"
+            data-testid={`figure-drift-chip-${audienceKey}-${i}`}
+          >
+            <span
+              className="inline-flex items-center gap-1 font-mono font-semibold bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full"
+              data-testid={`figure-drift-founder-${audienceKey}-${i}`}
+            >
+              You wrote: {w.founderValue}
+            </span>
+            <span className="text-amber-700">
+              {w.canonicalCandidates.length > 0 ? (
+                <>
+                  Model {labelFor(w.category)}:{" "}
+                  <span
+                    className="font-mono text-amber-900"
+                    data-testid={`figure-drift-canonical-${audienceKey}-${i}`}
+                  >
+                    {w.canonicalCandidates.slice(0, 6).join(", ")}
+                    {w.canonicalCandidates.length > 6 ? ", …" : ""}
+                  </span>
+                </>
+              ) : (
+                <span data-testid={`figure-drift-canonical-${audienceKey}-${i}`}>
+                  No matching {labelFor(w.category)} in the canonical engine
+                  for this audience.
+                </span>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
