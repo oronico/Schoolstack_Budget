@@ -1887,6 +1887,37 @@ function RevenueLineItem({
             <p className="text-sm text-destructive font-medium animate-in fade-in mt-1">{rowErrors.category.message || "Please select a revenue category"}</p>
           )}
 
+          {/* Task #647 — restricted-funds toggle for philanthropy rows.
+              Founders flag capital-campaign / program-restricted gifts so
+              the engine excludes them from unrestricted operating cash
+              (DSCR + runway). Defaults to inferred state from the row id
+              (restricted_*) so legacy models keep behavior. */}
+          {row.category === "philanthropy" && (
+            <div className="mt-3 pt-3 border-t border-border/40">
+              <label
+                className="flex items-start gap-2 cursor-pointer"
+                title="Restricted gifts (capital campaigns, program- or scholarship-restricted funds) can't be spent on general operations, so we exclude them from DSCR and runway calculations."
+              >
+                <input
+                  data-testid={`revenue-row-${row.id}-restricted`}
+                  type="checkbox"
+                  checked={row.isRestricted ?? row.id.startsWith("restricted_")}
+                  onChange={(e) => onFieldChange("isRestricted", e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-foreground">Restricted (capital/program)</span>
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+                    These dollars are earmarked and can't cover operating costs, so we leave them out of DSCR and runway.
+                  </p>
+                </div>
+              </label>
+            </div>
+          )}
+
           {/* Task #704 (Phase 6): recurring vs one-time + evidence-source
               row inputs. Surfaced in the row body so a founder marking a
               row as one-time (e.g. launch grant) or attaching an evidence

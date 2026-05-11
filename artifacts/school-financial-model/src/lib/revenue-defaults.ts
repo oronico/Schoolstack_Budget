@@ -207,6 +207,12 @@ export interface RevenueRowData {
   // as "recurring".
   recurringType?: "recurring" | "one_time";
   evidenceSource?: string;
+  // Task #647 — founder-flagged restricted philanthropy (capital campaign,
+  // program-restricted, scholarship-restricted gifts). When true, the engine
+  // excludes the row from unrestricted operating cash used by DSCR/runway.
+  // Undefined = inferred from the row id (`restricted_*` prefix), preserving
+  // legacy behavior.
+  isRestricted?: boolean;
 }
 
 const DEPOSIT_TIMING_TO_FREQUENCY: Record<string, PaymentFrequency> = {
