@@ -667,6 +667,51 @@ function isImageMime(mime: string | undefined): boolean {
   return m === "image/png" || m === "image/jpeg" || m === "image/jpg";
 }
 
+function isPdfFile(file: AppendixFileLike): boolean {
+  if ((file.mimeType || "").toLowerCase() === "application/pdf") return true;
+  const name = (file.name || "").toLowerCase();
+  return name.endsWith(".pdf");
+}
+
+// Task #761 — lazy-load the mupdf wasm module so the API server's
+// cold-start cost is unaffected when no PDFs need to be rasterized.
+// The module is only paid for the first time a packet is generated
+// that has a PDF evidence attachment.
+let mupdfModulePromise: Promise<typeof import("mupdf")> | null = null;
+function getMupdf(): Promise<typeof import("mupdf")> {
+  if (!mupdfModulePromise) {
+    mupdfModulePromise = import("mupdf");
+  }
+  return mupdfModulePromise;
+}
+
+/** Task #761 — rasterize the first page of a PDF to a PNG thumbnail
+ *  using mupdf-wasm. Returns null on any failure so the caller can
+ *  fall back to the file-type indicator badge. */
+async function rasterizePdfFirstPage(bytes: Buffer): Promise<Buffer | null> {
+  try {
+    const mupdf = await getMupdf();
+    const doc = mupdf.Document.openDocument(bytes, "application/pdf");
+    try {
+      if (doc.countPages() < 1) return null;
+      const page = doc.loadPage(0);
+      // 0.5x source-pixel scale produces a thumbnail roughly the size
+      // of a fingernail at typical letter / A4 page dimensions, plenty
+      // of detail at the 56pt rendered box without bloating the embed.
+      const matrix = mupdf.Matrix.scale(0.5, 0.5);
+      const pixmap = page.toPixmap(matrix, mupdf.ColorSpace.DeviceRGB, false, true);
+      const png = pixmap.asPNG();
+      return Buffer.from(png);
+    } finally {
+      // Document objects hold wasm memory; let the GC clean up if a
+      // .destroy() helper isn't available on this version.
+      (doc as unknown as { destroy?: () => void }).destroy?.();
+    }
+  } catch {
+    return null;
+  }
+}
+
 function fileTypeBadgeLabel(file: AppendixFileLike): string {
   const name = (file.name || "").toLowerCase();
   const ext = name.includes(".") ? name.slice(name.lastIndexOf(".") + 1) : "";
@@ -732,7 +777,7 @@ async function renderAssumptionsEvidenceAppendix(
   subSection(doc, "Evidence Files");
   doc.font("Helvetica").fontSize(9).fillColor(BRAND.darkGray);
   doc.text(
-    `${rows.length} file${rows.length === 1 ? "" : "s"} attached by the founder. Image attachments preview inline; other file types show a type indicator with a clickable download link.`,
+    `${rows.length} file${rows.length === 1 ? "" : "s"} attached by the founder. Image and PDF attachments preview inline; other file types show a type indicator with a clickable download link.`,
     {
       width: doc.page.width - doc.page.margins.left - doc.page.margins.right,
     },
@@ -740,15 +785,23 @@ async function renderAssumptionsEvidenceAppendix(
   doc.moveDown(0.3);
 
   // Task #732 — fetch image bytes up front so each row can render its
-  // thumbnail. PDFs / DOCX / etc. degrade to a file-type indicator
-  // badge. We respect a per-file size cap and a per-packet total
-  // byte budget so a stack of large attachments can't balloon the
-  // packet beyond what email gateways will accept.
+  // thumbnail. Task #761 extends the same path to PDF attachments,
+  // where the first page is rasterized via mupdf-wasm into a PNG
+  // thumbnail (leases / signed MOUs are the most common attachment
+  // type, so this is the highest-impact preview to add). All other
+  // file types degrade to the file-type indicator badge. We respect a
+  // per-file size cap and a per-packet total byte budget so a stack
+  // of large attachments can't balloon the packet beyond what email
+  // gateways will accept; the budget is charged against the source
+  // file size, not the rendered thumbnail, so the rasterizer can't
+  // sneak past it.
   let bytesUsed = 0;
   const thumbnails = new Map<AppendixFileLike, Buffer | null>();
   for (const { file } of rows) {
     if (!file.objectPath) continue;
-    if (!isImageMime(file.mimeType)) continue;
+    const isImage = isImageMime(file.mimeType);
+    const isPdf = !isImage && isPdfFile(file);
+    if (!isImage && !isPdf) continue;
     if (typeof file.size === "number" && file.size > EVIDENCE_THUMBNAIL_MAX_BYTES) continue;
     if (bytesUsed >= EVIDENCE_THUMBNAIL_TOTAL_BUDGET_BYTES) break;
     try {
@@ -757,7 +810,14 @@ async function renderAssumptionsEvidenceAppendix(
       if (bytes.length > EVIDENCE_THUMBNAIL_MAX_BYTES) continue;
       if (bytesUsed + bytes.length > EVIDENCE_THUMBNAIL_TOTAL_BUDGET_BYTES) continue;
       bytesUsed += bytes.length;
-      thumbnails.set(file, bytes);
+      if (isPdf) {
+        const png = await rasterizePdfFirstPage(bytes);
+        if (png && png.length > 0) thumbnails.set(file, png);
+        // mupdf failed (encrypted PDF, malformed bytes, etc.) —
+        // intentionally fall through to the file-type badge.
+      } else {
+        thumbnails.set(file, bytes);
+      }
     } catch {
       // Loader failed — fall back to file-type badge for this row.
     }

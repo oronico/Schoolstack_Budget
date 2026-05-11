@@ -12,6 +12,12 @@
 // embedded at end of packet" / "Available on request"). The same
 // merge step is wired into the board packet generator so trustees see
 // identical behavior — exercised in tests/board-packet-evidence-embed.ts.
+//
+// Task #761 — PDF attachments now also render an inline first-page
+// thumbnail in the Evidence Files appendix (rasterized via mupdf-wasm)
+// instead of the legacy "PDF" type-indicator badge. The thumbnail
+// shares the existing 5 MB / 25 MB byte budget and degrades to the
+// badge on any rasterization failure.
 
 import { generateLenderPacketPDF, setEvidenceBytesLoader } from "../src/lib/packets/lender-packet-pdf.js";
 import { generateBoardPacketPDF } from "../src/lib/packets/board-packet-pdf.js";
@@ -159,6 +165,11 @@ async function main() {
   // (lease, MOU, signed quotes) so the bytes can be merged onto the
   // end of the packet via pdf-lib. The DOCX manifest entry stays a
   // type-badge-only row because DOCX cannot be embedded.
+  // Task #761 — the same PDF bytes also drive the inline first-page
+  // thumbnail in the Evidence Files appendix (rasterized via
+  // mupdf-wasm). The 2-page pdf-lib document below is a real,
+  // mupdf-parseable PDF, so both the merge step and the rasterizer
+  // exercise it.
   // 1×1 transparent PNG.
   const tinyPng = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
@@ -166,7 +177,8 @@ async function main() {
   );
   // Build a tiny valid 2-page PDF via pdf-lib so the merge step can
   // append real pages onto the packet and we can assert the page
-  // count grew by exactly the embedded PDF's page count.
+  // count grew by exactly the embedded PDF's page count. mupdf can
+  // also rasterize this document for the Task #761 thumbnail path.
   const tinyPdfDoc = await PDFDocument.create();
   tinyPdfDoc.addPage([300, 400]);
   tinyPdfDoc.addPage([300, 400]);
@@ -182,13 +194,16 @@ async function main() {
 
   const thumbBuffer = await generateLenderPacketPDF(packet);
   check(
-    "appendix renders successfully when image bytes are injected",
+    "appendix renders successfully when image and PDF bytes are injected",
     thumbBuffer.subarray(0, 5).toString("ascii") === "%PDF-" && thumbBuffer.length > 5000,
     `length=${thumbBuffer.length}`,
   );
   // The loader is now consulted for both image attachments (thumbnail
-  // render) and PDF attachments (merge at end of packet). DOCX is not
-  // a recognized embed type so the loader is never asked for it.
+  // render) and PDF attachments (merge at end of packet, plus
+  // first-page thumbnail rasterization). DOCX is not a recognized
+  // embed type so the loader is never asked for it. Lease.pdf may be
+  // fetched twice (once for the merge step, once for the thumbnail);
+  // we deduplicate via a set before asserting which paths were hit.
   const fetchedSet = new Set(fetched);
   check(
     "loader is consulted for image and PDF attachments (DOCX still uses the type badge)",
@@ -214,6 +229,21 @@ async function main() {
     "page count grows by the embedded PDF's page count",
     mergedPages === noMergePages + 2,
     `noMerge=${noMergePages} merged=${mergedPages}`,
+  );
+
+  // Task #761 — failure path: rasterizer (and the Task #722 merge
+  // step) are handed garbage bytes that neither mupdf nor pdf-lib
+  // can decode. The appendix must still render (degrades to file-type
+  // badge) without throwing.
+  setEvidenceBytesLoader(async (objectPath: string) => {
+    if (objectPath.endsWith("lease-uuid")) return Buffer.from("not a real pdf");
+    return null;
+  });
+  const badPdfBuffer = await generateLenderPacketPDF(packet);
+  check(
+    "appendix degrades gracefully when PDF bytes cannot be rasterized",
+    badPdfBuffer.subarray(0, 5).toString("ascii") === "%PDF-" && badPdfBuffer.length > 5000,
+    `length=${badPdfBuffer.length}`,
   );
 
   // Reset to the default loader so later tests in the suite see a
