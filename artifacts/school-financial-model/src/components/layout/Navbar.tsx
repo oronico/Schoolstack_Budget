@@ -1,10 +1,17 @@
 import { Link } from "wouter";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { LogOut, LayoutDashboard, Settings, HelpCircle, BookOpen, UserCog, ChevronDown, MessageSquare } from "lucide-react";
+import { LogOut, LayoutDashboard, HelpCircle, BookOpen, UserCog, ChevronDown, MessageSquare } from "lucide-react";
 import { BudgetPrimer } from "@/components/coaching/BudgetPrimer";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { SOLUTION_LINK_SUMMARIES } from "@/data/solution-pages";
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
+}
 
 function SolutionsMenu() {
   const [open, setOpen] = useState(false);
@@ -252,24 +259,26 @@ export function Navbar() {
                       </div>
                     )}
                   </div>
-                  <div className="hidden sm:block text-right ml-2">
-                    <p className="text-sm font-semibold leading-none">{user.name}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{user.email}</p>
-                  </div>
-                  <div className="relative" ref={settingsRef}>
+                  <div className="relative ml-1" ref={settingsRef}>
                     <button
                       onClick={() => {
                         setShowSettings(!showSettings);
                         setShowHelp(false);
                       }}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-black/5 transition-colors"
-                      title="Settings"
+                      className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary hover:bg-primary/15 transition-colors"
+                      title={`${user.name} — account menu`}
+                      aria-label={`${user.name} — open account menu`}
                       aria-expanded={showSettings}
+                      data-testid="navbar-account-menu-trigger"
                     >
-                      <Settings className="h-4 w-4" aria-hidden="true" />
+                      {getInitials(user.name)}
                     </button>
                     {showSettings && (
-                      <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-border bg-background shadow-xl animate-in fade-in slide-in-from-top-1 duration-150 z-50">
+                      <div className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-border bg-background shadow-xl animate-in fade-in slide-in-from-top-1 duration-150 z-50">
+                        <div className="px-4 py-3 border-b border-border">
+                          <p className="text-sm font-semibold leading-tight truncate" title={user.name}>{user.name}</p>
+                          <p className="text-xs text-muted-foreground mt-1 truncate" title={user.email}>{user.email}</p>
+                        </div>
                         <Link
                           href="/settings"
                           onClick={() => {
@@ -277,7 +286,7 @@ export function Navbar() {
                             trackCoachingEvent("founder_persona_changed", { source: "navbar_settings" });
                           }}
                           data-testid="navbar-settings-link"
-                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-black/5 rounded-t-xl transition-colors"
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-black/5 transition-colors"
                         >
                           <UserCog className="h-3.5 w-3.5" aria-hidden="true" />
                           Account settings
