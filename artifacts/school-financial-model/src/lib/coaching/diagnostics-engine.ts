@@ -1,5 +1,15 @@
 import { isSingleYearModel, type FullModelData } from "@/pages/model-wizard/schema";
-import { computeAnnualDebt, DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE, DEFAULT_COLA_PCT, assertEveryNextStep } from "@workspace/finance";
+import {
+  computeAnnualDebt,
+  computeRevenueRowAmountsForYear,
+  DEFAULT_BENEFITS_RATE,
+  DEFAULT_PAYROLL_TAX_RATE,
+  DEFAULT_COLA_PCT,
+  assertEveryNextStep,
+  type RevenueRowAmountsRowLike,
+  type RevenueRowAmountsSchoolProfileLike,
+  type TuitionTierLike,
+} from "@workspace/finance";
 import { computeQuickLevers } from "@/lib/scenario-engine";
 
 // Task #658 — engine ownership map.
@@ -157,28 +167,31 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
   let grantRevenue = 0;
   let publicY1Revenue = 0;
 
+  // Task #641 — Year-1 (and Y2-Y5) revenue row math is centralised in
+  // `computeRevenueRowAmountsForYear` so the consultant engine, dashboard
+  // snapshot, and this diagnostics engine all bucket dollars the same
+  // way (tuition tiers, grade-band per-pupil, percent-of-base, offsets).
+  const rqRows = revenueRows as RevenueRowAmountsRowLike[];
+  const tuitionTiers = (data.tuitionTiers ?? undefined) as
+    | TuitionTierLike[]
+    | undefined;
+  const schoolProfile = sp as RevenueRowAmountsSchoolProfileLike | undefined;
   for (let y = 0; y < 5; y++) {
     const students = enrollment[y] || y1Students;
-    const rowVals = new Map<string, number>();
-    for (const r of revenueRows) {
-      if (!r.enabled || r.driverType === "percent_of_base") continue;
-      const val = driverVal(r.amounts, y, r.driverType, students, r.escalationRate, costInflation);
-      rowVals.set(r.id, val);
-    }
-    for (const r of revenueRows) {
-      if (!r.enabled || r.driverType !== "percent_of_base") continue;
-      const baseVal = rowVals.get(r.percentBase || "") || 0;
-      let pctVal = r.amounts?.[y] ?? 0;
-      if (r.escalationRate && r.escalationRate !== 0 && y > 0) {
-        pctVal = (r.amounts?.[0] ?? 0) * Math.pow(1 + r.escalationRate / 100, y);
-      }
-      rowVals.set(r.id, baseVal * (pctVal / 100));
-    }
+    const rowVals = computeRevenueRowAmountsForYear(
+      rqRows,
+      y,
+      students,
+      tuitionTiers,
+      schoolProfile,
+    );
     for (const r of revenueRows) {
       if (!r.enabled) continue;
       const v = rowVals.get(r.id) || 0;
-      if (r.category === "tuition_offsets") revenueByYear[y] -= Math.abs(v);
-      else revenueByYear[y] += v;
+      // The shared helper already sign-flips tuition_offsets to negative,
+      // so adding `v` directly produces the same net as the prior
+      // `-= Math.abs(v)` for offsets and `+= v` for everything else.
+      revenueByYear[y] += v;
       if (y === 0 && (r.category === "grants_contributions" || r.category === "philanthropy")) {
         grantRevenue += v;
       }

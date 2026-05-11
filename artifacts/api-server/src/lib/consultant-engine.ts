@@ -496,113 +496,23 @@ interface RevenueBreakdown {
   philanthropy: number;
 }
 
-function computeTuitionWithTiers(
-  grossTuitionPerStudent: number,
-  yearIdx: number,
-  totalStudents: number,
-  tuitionTiers?: TuitionTier[],
-): number {
-  if (!tuitionTiers || tuitionTiers.length === 0) {
-    return grossTuitionPerStudent * totalStudents;
-  }
-
-  let rawTierTotal = 0;
-  for (const tier of tuitionTiers) {
-    rawTierTotal += tier.studentCounts?.[yearIdx] ?? 0;
-  }
-
-  if (rawTierTotal === 0) {
-    return grossTuitionPerStudent * totalStudents;
-  }
-
-  const scaleFactor = rawTierTotal > totalStudents ? totalStudents / rawTierTotal : 1;
-
-  let totalTuition = 0;
-  let allocatedStudents = 0;
-  for (const tier of tuitionTiers) {
-    const rawCount = tier.studentCounts?.[yearIdx] ?? 0;
-    const scaledCount = rawCount * scaleFactor;
-    allocatedStudents += scaledCount;
-    const discount = (tier.discountPercent || 0) / 100;
-    totalTuition += scaledCount * grossTuitionPerStudent * (1 - discount);
-  }
-
-  const remainingStudents = totalStudents - allocatedStudents;
-  if (remainingStudents > 0) {
-    totalTuition += remainingStudents * grossTuitionPerStudent;
-  }
-
-  return totalTuition;
-}
-
-function computeGradeBandRevenueConsultant(sp: SchoolProfile, y: number): number {
-  const gbe = sp.gradeBandEnrollment;
-  const gbp = sp.gradeBandPerPupil;
-  if (!gbe || !gbp) return 0;
-  const k5e = gbe.k5?.[y] ?? 0;
-  const m68e = gbe.m68?.[y] ?? 0;
-  const h912e = gbe.h912?.[y] ?? 0;
-  if (k5e + m68e + h912e === 0) return 0;
-  let total = k5e * (gbp.k5 || 0) + m68e * (gbp.m68 || 0) + h912e * (gbp.h912 || 0);
-  if (sp.enrollmentRevenueMethod === "ada") {
-    const adm = sp.priorYearADM || 0;
-    const ada = sp.priorYearADA || 0;
-    total *= adm > 0 ? Math.min(ada / adm, 1) : 0.95;
-  }
-  return total;
-}
-
-function hasGradeBandConsultant(sp?: SchoolProfile): boolean {
-  if (!sp?.gradeBandEnrollment || !sp?.gradeBandPerPupil) return false;
-  const gbe = sp.gradeBandEnrollment;
-  const gbp = sp.gradeBandPerPupil;
-  const hasEnrollment = [gbe.k5, gbe.m68, gbe.h912].some(
-    (arr) => arr && arr.some((v) => (v ?? 0) > 0),
-  );
-  return hasEnrollment && ((gbp.k5 || 0) + (gbp.m68 || 0) + (gbp.h912 || 0) > 0);
-}
-
+// Task #641 — Year-N revenue row math (driver expansion + tuition tiers
+// + grade-band per-pupil + percent-of-base + offsets sign flip) is owned
+// by `computeRevenueRowAmountsForYear` in `@workspace/finance`. This
+// wrapper just buckets the resulting per-row dollars into the
+// categorical breakdown the consultant engine needs.
 function computeRevenueForYear(rows: RevenueRow[], yearIdx: number, students: number, tuitionTiers?: TuitionTier[], sp?: SchoolProfile): RevenueBreakdown {
-  const rowValues = new Map<string, number>();
-
-  for (const row of rows) {
-    if (!row.enabled || row.driverType === "percent_of_base") continue;
-
-    if (row.id === "state_local_perpupil" && sp && hasGradeBandConsultant(sp)) {
-      rowValues.set(row.id, computeGradeBandRevenueConsultant(sp, yearIdx));
-    } else if (row.id === "gross_tuition" && row.driverType === "per_student" && tuitionTiers && tuitionTiers.length > 0) {
-      let perStudentAmount: number;
-      if (row.escalationRate !== undefined && row.escalationRate !== 0 && yearIdx > 0) {
-        perStudentAmount = (row.amounts?.[0] ?? 0) * Math.pow(1 + row.escalationRate / 100, yearIdx);
-      } else {
-        perStudentAmount = row.amounts?.[yearIdx] ?? 0;
-      }
-      rowValues.set(row.id, computeTuitionWithTiers(perStudentAmount, yearIdx, students, tuitionTiers));
-    } else {
-      rowValues.set(row.id, computeDriverValue(row.amounts, yearIdx, row.driverType, students, row.escalationRate));
-    }
-  }
-
-  for (const row of rows) {
-    if (!row.enabled || row.driverType !== "percent_of_base") continue;
-    const baseVal = rowValues.get(row.percentBase || "") || 0;
-    let pctVal: number;
-    if (row.escalationRate !== undefined && row.escalationRate !== 0 && yearIdx > 0) {
-      pctVal = (row.amounts?.[0] ?? 0) * Math.pow(1 + row.escalationRate / 100, yearIdx);
-    } else {
-      pctVal = row.amounts?.[yearIdx] ?? 0;
-    }
-    const percentage = pctVal / 100;
-    rowValues.set(row.id, baseVal * percentage);
-  }
+  const rowValues = computeRevenueRowAmountsForYear(rows, yearIdx, students, tuitionTiers, sp);
 
   let tuition = 0, publicFunding = 0, philanthropy = 0;
   for (const row of rows) {
     if (!row.enabled) continue;
     const val = rowValues.get(row.id) || 0;
     switch (row.category) {
-      case "tuition_and_fees": case "other_revenue": tuition += val; break;
-      case "tuition_offsets": tuition -= Math.abs(val); break;
+      // Offsets are already sign-flipped to negative inside the helper,
+      // so adding the value into the tuition bucket nets to the same
+      // contracted-tuition figure the previous local copy produced.
+      case "tuition_and_fees": case "other_revenue": case "tuition_offsets": tuition += val; break;
       case "public_funding": case "school_choice": publicFunding += val; break;
       case "grants_contributions": case "philanthropy": philanthropy += val; break;
     }
