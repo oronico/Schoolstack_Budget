@@ -1495,6 +1495,55 @@ export function CustomScenarioCard({
                 return null;
               })()}
               {(() => {
+                // Un-mapped revenue/expense gap chips — same reconciliation
+                // signal the editor surfaces (Task #495) and the wizard's
+                // upload summary card (Task #402). Mirroring it here on the
+                // read-only saved-actuals summary keeps founders from being
+                // misled into thinking the recognized categories are the
+                // whole picture when they only glance at the saved snapshot
+                // without opening the editor. Suppression rules match the
+                // editor: skipped when no totals were parsed, skipped when
+                // both sides reconcile (gap fields are undefined).
+                const totals = accountingExportInfo?.totals;
+                if (!totals) return null;
+                const recon = computeCategorySubtotalReconciliation(totals);
+                if (
+                  recon.revenueGap === undefined &&
+                  recon.expenseGap === undefined
+                ) {
+                  return null;
+                }
+                return (
+                  <div
+                    className="flex flex-wrap items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50/60 px-2 py-1.5"
+                    data-testid={`custom-scenario-actuals-summary-export-gap-${idx}`}
+                    title="The recognized category subtotals don't add up to the headline total - your chart of accounts likely has buckets we didn't map."
+                  >
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-900/80">
+                      Un-mapped:
+                    </span>
+                    {recon.revenueGap !== undefined && (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] text-amber-900"
+                        data-testid={`custom-scenario-actuals-summary-export-gap-revenue-${idx}`}
+                      >
+                        <span className="text-amber-800">Other revenue</span>
+                        <span className="font-semibold">{fmtActualVal(recon.revenueGap, "money")}</span>
+                      </span>
+                    )}
+                    {recon.expenseGap !== undefined && (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] text-amber-900"
+                        data-testid={`custom-scenario-actuals-summary-export-gap-expense-${idx}`}
+                      >
+                        <span className="text-amber-800">Other expense</span>
+                        <span className="font-semibold">{fmtActualVal(recon.expenseGap, "money")}</span>
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
+              {(() => {
                 // Per-field provenance pills only render when the saved
                 // snapshot recorded *any* source — that's the only case
                 // where the books-vs-typed distinction is meaningful.
