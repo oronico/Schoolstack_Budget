@@ -49,7 +49,7 @@ function parseFlags(argv: string[]): CliFlags {
   return out;
 }
 
-function extractEvidenceObjectPaths(data: unknown): string[] {
+export function extractEvidenceObjectPaths(data: unknown): string[] {
   const out: string[] = [];
   if (!data || typeof data !== "object") return out;
   const confidence = (data as Record<string, unknown>).assumptionConfidence;
@@ -65,6 +65,28 @@ function extractEvidenceObjectPaths(data: unknown): string[] {
     }
   }
   return out;
+}
+
+/**
+ * Task #758 — pure diff helper extracted so the unit test can exercise
+ * the sweeper's identify-orphans rule against a fake bucket listing
+ * + a fake referenced-paths set without standing up GCS or Postgres.
+ *
+ * An object in the bucket counts as an orphan iff no model row
+ * references its `/objects/<id>` path. The set comparison is exact
+ * (no normalization) so callers must pass the same shape the script
+ * itself uses (`/objects/uploads/<owner>/<uuid>`).
+ */
+export function identifyOrphanObjectPaths(
+  inBucket: Iterable<string>,
+  referenced: ReadonlySet<string> | Iterable<string>,
+): string[] {
+  const refSet = referenced instanceof Set ? referenced : new Set(referenced);
+  const orphans: string[] = [];
+  for (const p of inBucket) {
+    if (!refSet.has(p)) orphans.push(p);
+  }
+  return orphans;
 }
 
 async function main(): Promise<void> {
@@ -131,9 +153,26 @@ async function main(): Promise<void> {
   );
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((err) => {
-    console.error("[cleanup-orphan-uploads] fatal error:", err);
-    process.exit(1);
-  });
+// Task #758 — only auto-run when invoked directly (e.g. via the
+// `cleanup:orphan-uploads` pnpm script). Tests import this module to
+// exercise `extractEvidenceObjectPaths` / `identifyOrphanObjectPaths`
+// in isolation and must not trigger a real bucket sweep on import.
+const invokedDirectly = (() => {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    const url = new URL(`file://${entry}`).href;
+    return import.meta.url === url || import.meta.url.endsWith(entry);
+  } catch {
+    return import.meta.url.endsWith(entry);
+  }
+})();
+
+if (invokedDirectly) {
+  main()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error("[cleanup-orphan-uploads] fatal error:", err);
+      process.exit(1);
+    });
+}
