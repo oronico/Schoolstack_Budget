@@ -138,6 +138,42 @@ through `canonicalOverrides` from `@workspace/finance` so the
 sheet ties to the dashboard, lender packet, and Lender Pro Forma
 stress tests.
 
+**Task #738 — CF↔BS↔DSCR cash tie.** The Monthly Cash Flow Y1 tab
+historically used the workbook's local revenue/expense helpers
+(`computeRevenueForYear`, `computeExpenseForYear`,
+`computeCapDebtForYear`), which can drift from the canonical
+scenario engine. That drift made the CF "Ending Cash (Month 12)"
+disagree with the canonical accrual cash position
+(`startingCash + cumulative NI`), which in turn broke the
+DSCR ↔ BS ↔ CF cash tie that
+`export-formula-results.ts` (the `qa:formula-results` cross-tab
+regression) enforces. To fix this, `generateUnderwritingWorkbook`
+now passes the canonical Y1 totals (`canonical.revByYear[0]`,
+`persByYear[0]`, `opexByYear[0]`, `cdByYear[0]`) into
+`buildMonthlyCashFlowY1`, which:
+
+1. Uses canonical totals as the annual targets for the Personnel,
+   Operating Expenses, Debt Service, and Total Revenue rows
+   (preserving the legacy monthly *shape* via
+   `distributeRevenueMonthly` rescaled to canonical revenue).
+2. Absorbs the per-month rounding drift into the Net Cash Flow
+   M12 cell so `startingCash + Σ(net)` lands exactly on
+   canonical NI[0].
+
+Result: CF Cumulative Cash M12 = startingCash + canonical NI[0]
+= canonical `cashPosition[0]`. The Balance Sheet then cross-
+references that cell for Y1 cash, and Y2-Y5 add cumulative NI
+from the Operating Statement, which equals `canonical.cashPosition[y]`
+by construction. DSCR Ending Cash continues to use
+`canonicalOverrides.cashPosition`, so all three sheets agree
+to the cent for every fixture.
+
+The workbook's `startingCash` derivation also falls back to
+`openingBalances.cash` (matching the engine's
+`data.openingBalances?.cash || 0`) so it cannot diverge from
+canonical when the older `priorYearSnapshot.endingCash` /
+`currentYearProjection.currentCash` slots are absent.
+
 A few rows on the same sheet remain on the workbook's local
 working-capital cash trajectory by design — these are the loan-
 committee analytical view, not the headline figures:

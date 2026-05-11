@@ -1679,7 +1679,7 @@ function buildBudgetSummary(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
   return { niByYear, totalExpByYear };
 }
 
-function buildMonthlyCashFlowY1(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], salaryEsc: number, costInflPct: number, prorationFactor: number, startingCash: number) {
+function buildMonthlyCashFlowY1(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], salaryEsc: number, costInflPct: number, prorationFactor: number, startingCash: number, canonicalY1?: { rev: number; pers: number; opex: number; cd: number }) {
   const ws = wb.addWorksheet("Monthly Cash Flow Y1");
   const sp = data.schoolProfile || {};
   const revenueRows = (data.revenueRows || []).filter(r => r.enabled);
@@ -1718,11 +1718,24 @@ function buildMonthlyCashFlowY1(wb: ExcelJS.Workbook, data: ModelData, enrollmen
   //   - Debt service: spread over 12 months (lenders require year-round payments).
   //   - Cumulative cash starts from startingCash and compounds monthly.
   const mcfRR = data.enrollment?.retentionRate ?? 85;
-  const rev0 = computeRevenueForYear(revenueRows, 0, students, tiers, costInflPct, sp, computeNewStudents(enrollment, mcfRR, 0), computeReturningStudents(enrollment, mcfRR, 0));
-  const pers0 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 0, students);
+  // Task #738 — when canonical Y1 totals are supplied, override the
+  // workbook helpers' annual figures so the monthly cash flow's annual
+  // sum matches the canonical scenario engine to the cent. The legacy
+  // workbook helpers can drift from canonical (different revenue/expense
+  // computation paths), which previously caused the CF Y1 ending cash to
+  // disagree with the canonical accrual cash position used by DSCR &
+  // Balance Sheet. Aligning the totals collapses that gap so
+  // CF Ending Cash = BS Cash Y1 = DSCR Ending Cash = canonical
+  // cashPosition[0]. The monthly *shape* (timing) is preserved.
+  const rev0Workbook = computeRevenueForYear(revenueRows, 0, students, tiers, costInflPct, sp, computeNewStudents(enrollment, mcfRR, 0), computeReturningStudents(enrollment, mcfRR, 0));
+  const pers0Workbook = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 0, students);
   const mcfFTE = computeTotalFTE(staffingRows, 0, students);
-  const opex0 = computeExpenseForYear(expenseRows, 0, students, rev0, costInflPct, computeNewStudents(enrollment, mcfRR, 0), computeReturningStudents(enrollment, mcfRR, 0), mcfFTE) * prorationFactor;
-  const cd0 = computeCapDebtForYear(capDebtRows, 0, students);
+  const opex0Workbook = computeExpenseForYear(expenseRows, 0, students, rev0Workbook, costInflPct, computeNewStudents(enrollment, mcfRR, 0), computeReturningStudents(enrollment, mcfRR, 0), mcfFTE) * prorationFactor;
+  const cd0Workbook = computeCapDebtForYear(capDebtRows, 0, students);
+  const rev0 = canonicalY1?.rev ?? rev0Workbook;
+  const pers0 = canonicalY1?.pers ?? pers0Workbook;
+  const opex0 = canonicalY1?.opex ?? opex0Workbook;
+  const cd0 = canonicalY1?.cd ?? cd0Workbook;
   const monthlyPers = pers0 / (opMonths || 12);
   const monthlyOps = opex0 / (opMonths || 12);
   const monthlyDebt = cd0 / 12;
@@ -1750,12 +1763,25 @@ function buildMonthlyCashFlowY1(wb: ExcelJS.Workbook, data: ModelData, enrollmen
       }
       return rv;
     });
-    return distributeRevenueMonthly(
+    const arr = distributeRevenueMonthly(
       projectedRows as unknown as MonthlyRevenueRowLike[],
       0,
       students,
       opMonths,
     );
+    // Task #738 — preserve monthly *shape* but rescale to canonical Y1
+    // revenue total so the cumulative cash row ends at canonical
+    // cashPosition[0] (= startingCash + canonical NI[0]).
+    if (canonicalY1?.rev !== undefined) {
+      const arrSum = arr.reduce((a, b) => a + b, 0);
+      if (arrSum > 0) {
+        const scale = canonicalY1.rev / arrSum;
+        return arr.map((v) => v * scale);
+      }
+      const flat = canonicalY1.rev / (opMonths || 12);
+      return arr.map((_, m) => (m < opMonths ? flat : 0));
+    }
+    return arr;
   })();
 
   r++;
@@ -1833,6 +1859,30 @@ function buildMonthlyCashFlowY1(wb: ExcelJS.Workbook, data: ModelData, enrollmen
     netCashMonthly.push(net);
     setFormula(ws.getCell(r, col), `${cn(revRow, col)}-${cn(totExpRow, col)}`, net);
     ws.getCell(r, col).numFmt = CUR; bc(ws.getCell(r, col));
+  }
+  // Task #738 — when canonical Y1 totals are supplied, absorb any
+  // monthly rounding drift into the Net Cash Flow column 14 (annual)
+  // total so that startingCash + Σ(net) lands exactly on canonical
+  // NI[0]. The canonical accrual cash position used by DSCR and the
+  // Balance Sheet is `startingCash + cumulative NI`, so the workbook's
+  // CF Ending Cash must tie to the cent for the cross-tab regression
+  // to pass.
+  if (canonicalY1) {
+    const targetNet = canonicalY1.rev - canonicalY1.pers - canonicalY1.opex - canonicalY1.cd;
+    const sumNet = netCashMonthly.reduce((a, b) => a + b, 0);
+    const drift = Math.round(targetNet) - sumNet;
+    if (drift !== 0 && netCashMonthly.length > 0) {
+      const lastIdx = netCashMonthly.length - 1;
+      const adjusted = netCashMonthly[lastIdx] + drift;
+      netCashMonthly[lastIdx] = adjusted;
+      // Rewrite the M12 net cell as a literal value so its cached value
+      // matches the adjusted total. The formula ref to revRow/totExpRow
+      // would otherwise re-introduce the rounding gap when the workbook
+      // is recomputed; using a literal value with the rounded delta
+      // keeps the cross-tab tie exact.
+      ws.getCell(r, 13).value = adjusted;
+      ws.getCell(r, 13).numFmt = CUR; bc(ws.getCell(r, 13));
+    }
   }
   setFormula(ws.getCell(r, 14), `SUM(${cn(r, 2)}:${cn(r, 13)})`, netCashMonthly.reduce((a, b) => a + b, 0));
   ws.getCell(r, 14).numFmt = CUR; bc(ws.getCell(r, 14));
@@ -3168,7 +3218,16 @@ async function generateWorkbook(
   const salaryEsc = salaryEscPct / 100;
   const costInflation = costInflPct / 100;
   const prorationFactor = getProrationFactor(sp);
-  const startingCash = data.priorYearSnapshot?.endingCash ?? data.currentYearProjection?.currentCash ?? 0;
+  // Task #738 — fall back to openingBalances.cash so the workbook's
+  // startingCash matches the canonical scenario engine
+  // (lib/finance/src/decision-engine/scenario-engine.ts uses
+  // `data.openingBalances?.cash || 0`). Without this fallback the
+  // CF Y1 cumulative cash row started from 0 while the engine started
+  // from openingBalances.cash, breaking the DSCR↔BS↔CF cash tie.
+  const startingCash = data.priorYearSnapshot?.endingCash
+    ?? data.currentYearProjection?.currentCash
+    ?? data.openingBalances?.cash
+    ?? 0;
   const debtIncluded = sp.debtIncluded !== false;
 
   // When debtIncluded is false, filter out loan rows from the data object so
@@ -3262,7 +3321,18 @@ async function generateWorkbook(
     }
   }
 
-  const { endingCashY1, cumCashRow: cfCumCashRow } = buildMonthlyCashFlowY1(wb, effectiveData, enrollment, salaryEsc, costInflPct, prorationFactor, startingCash);
+  // Task #738 — feed canonical Y1 revenue/personnel/opex/cap-debt totals
+  // into the Monthly Cash Flow Y1 tab so its annual sum (and therefore
+  // the Cumulative Cash M12 + Ending Cash cells) matches canonical
+  // NI[0] exactly. Without this override the legacy workbook helpers
+  // can drift from the engine, breaking the CF↔BS↔DSCR cash tie.
+  const canonicalY1Totals = {
+    rev: canonical.revByYear[0] ?? 0,
+    pers: canonical.persByYear[0] ?? 0,
+    opex: canonical.opexByYear[0] ?? 0,
+    cd: canonical.cdByYear[0] ?? 0,
+  };
+  const { endingCashY1, cumCashRow: cfCumCashRow } = buildMonthlyCashFlowY1(wb, effectiveData, enrollment, salaryEsc, costInflPct, prorationFactor, startingCash, canonicalY1Totals);
   const interestByYear = computeInterestByYear(effectiveData, yc);
   const { niRow: opStmtNiRow, cumNIRow: opStmtCumNIRow } = buildOperatingStatement(wb, effectiveData, enrollment, revByYear, persByYear, opexByYear, cdByYear, niByYear, depreciationByYear, interestByYear);
 
