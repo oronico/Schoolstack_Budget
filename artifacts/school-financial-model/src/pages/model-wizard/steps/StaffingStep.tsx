@@ -124,7 +124,7 @@ const QUICK_FINDER_STORAGE_PREFIX = "staffing-quick-finder-filter:";
  * "founder-comp normalization adjustment" surfaced on lender packets and
  * the consultant analysis lender skim tab.
  */
-function FounderCompPanel({
+export function FounderCompPanel({
   schoolType,
   stateCode,
   colaRate,
