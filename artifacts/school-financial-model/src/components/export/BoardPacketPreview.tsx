@@ -5,6 +5,8 @@ import { InsightCallout } from "@/components/coaching/InsightCallout";
 import { buildForecastFilterQuery } from "@/lib/forecast-accuracy-query";
 import { CashRunwayCard, type CashRunwayView } from "./CashRunwayCard";
 import { CommentaryBlock } from "./LenderPacketPreview";
+import { ActualVsProjectedBadge } from "@/components/wizard/ActualVsProjectedBadge";
+import { AssumptionConfidenceRollupCard } from "@/components/wizard/AssumptionConfidenceRollupCard";
 
 /**
  * Task #617 - board-ready narrative commentary block returned alongside
@@ -102,6 +104,11 @@ interface BoardPacket {
   // Task #617 - board commentary block, surfaced as the lead block in
   // both the in-app preview and the downloaded PDF.
   boardCommentary?: NarrativeCommentary;
+  // Task #720 — per-assumption confidence map exposed on the board
+  // packet so the in-app preview can render the same Assumptions
+  // Confidence rollup the PDF does (with the Actual / Projected pill on
+  // the headline). Optional so older cached responses keep rendering.
+  assumptionConfidence?: Record<string, { confidence: string; evidenceNote?: string }>;
 }
 
 export function BoardPacketPreview({
@@ -230,7 +237,22 @@ export function BoardPacketPreview({
               regenerating={regenerating}
             />
           )}
-          <OutlookBanner outlook={packet.financialOutlook} narrative={packet.narrative} />
+          <OutlookBanner
+            outlook={packet.financialOutlook}
+            narrative={packet.narrative}
+            provenance={packet.provenance ?? "assumptions"}
+          />
+          {/* Task #720 — Assumptions Confidence rollup mirrors the
+              board PDF section (with the Actual / Projected pill on the
+              headline) so the in-app preview matches the downloaded
+              packet. The rollup component handles the empty / Needs
+              Support posture gracefully when no keys are tagged. */}
+          <div className="mt-4">
+            <AssumptionConfidenceRollupCard
+              data={{ assumptionConfidence: packet.assumptionConfidence }}
+              provenance={packet.provenance ?? "assumptions"}
+            />
+          </div>
           <CashRunwayCard cash={packet.cashRunway} variant="board" />
           <RiskCards risks={packet.topRisks} />
           {packet.focusAreas.length > 0 && <FocusAreaCards areas={packet.focusAreas} />}
@@ -317,9 +339,14 @@ function Header({
 function OutlookBanner({
   outlook,
   narrative,
+  provenance,
 }: {
   outlook: BoardPacket["financialOutlook"];
   narrative: NarrativeSummary;
+  // Task #720 — drives the inline Actual / Projected pill next to the
+  // outlook headline so the in-app preview matches the board PDF, which
+  // anchors the same indicator on its 5-Year Outlook headline.
+  provenance: "actuals" | "assumptions";
 }) {
   const bg =
     outlook.status === "healthy"
@@ -340,9 +367,15 @@ function OutlookBanner({
   return (
     <div className="mt-6 space-y-4">
       <div className={`rounded-xl border p-4 ${bg}`}>
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
           {icon}
           <span className="font-bold text-sm">{outlook.headline}</span>
+          {/* Task #720 — Actual / Projected pill anchored on the
+              outlook headline, mirroring the board PDF (drawn beside
+              the Financial Outlook headline in board-packet-pdf.ts). */}
+          <ActualVsProjectedBadge
+            kind={provenance === "actuals" ? "actual" : "projected"}
+          />
         </div>
         <p className="text-sm text-muted-foreground">{outlook.summary}</p>
       </div>

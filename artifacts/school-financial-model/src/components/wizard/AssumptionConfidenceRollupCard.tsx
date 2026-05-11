@@ -4,6 +4,7 @@ import {
   computeAssumptionConfidenceRollup,
   type AssumptionConfidenceStatus,
 } from "@workspace/finance";
+import { ActualVsProjectedBadge } from "./ActualVsProjectedBadge";
 
 // Task #703 — Assumptions Confidence rollup card on the Review step.
 //
@@ -36,8 +37,17 @@ const STATUS_THEME: Record<
 
 export function AssumptionConfidenceRollupCard({
   data,
+  provenance,
 }: {
   data: { assumptionConfidence?: Record<string, { confidence: string; evidenceNote?: string }> | undefined };
+  /**
+   * Task #720 — when supplied, render the same Actual / Projected pill
+   * the wizard Review screen and board PDF show next to the rollup
+   * status, so the in-app preview stays visually consistent with the
+   * downloaded packet. Optional so the existing Review-step caller keeps
+   * its current chrome unchanged.
+   */
+  provenance?: "actuals" | "assumptions";
 }) {
   const rollup = computeAssumptionConfidenceRollup(data);
   const theme = STATUS_THEME[rollup.status];
@@ -64,6 +74,12 @@ export function AssumptionConfidenceRollupCard({
               >
                 {rollup.status}
               </span>
+              {provenance && (
+                <ActualVsProjectedBadge
+                  className="ml-2 align-middle"
+                  kind={provenance === "actuals" ? "actual" : "projected"}
+                />
+              )}
             </h3>
           </div>
         </div>
