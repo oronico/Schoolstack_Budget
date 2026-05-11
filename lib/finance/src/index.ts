@@ -341,6 +341,12 @@ export {
   type AssumptionConfidenceLevel,
   type AssumptionConfidenceEntry,
   type AssumptionEvidenceFile,
+  classifyEvidenceFileEmbed,
+  EVIDENCE_INLINE_PREVIEW_MAX_BYTES,
+  EVIDENCE_ATTACHMENT_MAX_BYTES,
+  EVIDENCE_INLINE_PREVIEW_MIMES,
+  type EvidenceFileEmbedClassification,
+  type EvidenceFileEmbedDisposition,
   type HeadlineMetricKey,
   type MetricDriverInfo,
 } from "./assumption-registry.js";

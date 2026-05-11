@@ -10,6 +10,7 @@ import { useUpdateModel } from "@workspace/api-client-react";
 import { useConflictBanner } from "@/components/ConflictReloadBanner";
 import { Link } from "wouter";
 import { LenderPacketPreview } from "../../../components/export/LenderPacketPreview";
+import { LenderAttachmentsPreview } from "../../../components/export/LenderAttachmentsPreview";
 import { BoardPacketPreview } from "../../../components/export/BoardPacketPreview";
 import { PacketAttachmentsPreview } from "../../../components/export/PacketAttachmentsPreview";
 import { ChestertonDashboard } from "../../../components/chesterton/ChestertonDashboard";
@@ -403,6 +404,8 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         </div>
       )}
       <PacketAttachmentsPreview />
+      <LenderAttachmentsPreview />
+
       <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="relative" data-testid="lender-packet-card-wrapper">
           <ExportCard

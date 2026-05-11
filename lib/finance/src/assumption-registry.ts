@@ -529,6 +529,112 @@ export interface AssumptionConfidenceEntry {
   evidenceFiles?: AssumptionEvidenceFile[];
 }
 
+/** Task #723 — eligibility rules shared by the wizard preview and the
+ *  lender-packet PDF appendix renderer so the founder sees the same
+ *  classification on screen that they'll get in their downloaded PDF.
+ *  Mirrors the `EVIDENCE_THUMBNAIL_MAX_BYTES` (image thumbnail cap) and
+ *  `EVIDENCE_ATTACHMENT_MAX_BYTES` (PDF embed/merge cap) constants in
+ *  `artifacts/api-server/src/lib/packets/lender-packet-pdf.ts`, plus
+ *  the `evidenceAttachmentDisposition` switch that renderer uses to
+ *  decide what each row's manifest line should say. */
+export const EVIDENCE_INLINE_PREVIEW_MAX_BYTES = 5 * 1024 * 1024;
+export const EVIDENCE_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
+export const EVIDENCE_INLINE_PREVIEW_MIMES: readonly string[] = [
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+];
+
+export type EvidenceFileEmbedDisposition =
+  /** PNG/JPEG image within the 5 MB thumbnail cap — renders as a
+   *  thumbnail at the top of the row in the Evidence Files appendix. */
+  | "embed_inline"
+  /** PDF within the 10 MB attachment cap — full PDF body is merged onto
+   *  the end of the lender packet so the reviewer can flip straight to
+   *  the source document. */
+  | "append_link"
+  /** File exceeds the size cap that applies to its type (5 MB for
+   *  images, 10 MB for PDFs / other attachments). The file shows up in
+   *  the Evidence Files manifest as "available on request" but the body
+   *  is NOT shipped inside the packet. */
+  | "too_large"
+  /** File type can't be inlined (DOCX/XLSX/PPTX/HEIC/WEBP/etc.). The
+   *  manifest still lists it with a download link, but no preview /
+   *  appended body. */
+  | "unsupported";
+
+export interface EvidenceFileEmbedClassification {
+  disposition: EvidenceFileEmbedDisposition;
+  /** Short founder-facing badge label. */
+  label: string;
+  /** One-line explanation suitable for tooltips / aria. */
+  description: string;
+}
+
+function isPdfFile(mime: string, name: string): boolean {
+  if (mime === "application/pdf") return true;
+  return name.toLowerCase().endsWith(".pdf");
+}
+
+export function classifyEvidenceFileEmbed(file: {
+  mimeType?: string;
+  name?: string;
+  size?: number;
+}): EvidenceFileEmbedClassification {
+  const mime = (file.mimeType || "").toLowerCase();
+  const name = file.name || "";
+  const size = typeof file.size === "number" ? file.size : 0;
+  const isInlineImage = EVIDENCE_INLINE_PREVIEW_MIMES.includes(mime);
+  const isPdf = isPdfFile(mime, name);
+
+  if (isPdf) {
+    if (size > EVIDENCE_ATTACHMENT_MAX_BYTES) {
+      return {
+        disposition: "too_large",
+        label: "Too large — listed only",
+        description: `PDF is over the ${Math.round(EVIDENCE_ATTACHMENT_MAX_BYTES / (1024 * 1024))} MB embed cap. The lender packet will list it as "available on request" instead of appending it.`,
+      };
+    }
+    return {
+      disposition: "append_link",
+      label: "Will append at end",
+      description:
+        "Full PDF will be merged onto the end of the lender packet so the reviewer can flip straight to it.",
+    };
+  }
+
+  if (isInlineImage) {
+    if (size > EVIDENCE_INLINE_PREVIEW_MAX_BYTES) {
+      return {
+        disposition: "too_large",
+        label: "Too large — listed only",
+        description: `Image is over the ${Math.round(EVIDENCE_INLINE_PREVIEW_MAX_BYTES / (1024 * 1024))} MB preview cap. The lender packet will list it as "available on request" instead of showing the thumbnail.`,
+      };
+    }
+    return {
+      disposition: "embed_inline",
+      label: "Will preview inline",
+      description:
+        "Renders as a thumbnail in the lender packet's Evidence Files appendix.",
+    };
+  }
+
+  if (size > EVIDENCE_ATTACHMENT_MAX_BYTES) {
+    return {
+      disposition: "too_large",
+      label: "Too large — listed only",
+      description: `File is over the ${Math.round(EVIDENCE_ATTACHMENT_MAX_BYTES / (1024 * 1024))} MB embed cap. The lender packet will list it as "available on request" instead of inlining it.`,
+    };
+  }
+
+  return {
+    disposition: "unsupported",
+    label: "Format not supported",
+    description:
+      "This file type can't be inlined (only PDFs and PNG/JPEG images are). The lender packet will list it as \"available on request\" with a download link.",
+  };
+}
+
 export const ASSUMPTION_CONFIDENCE_LEVELS: AssumptionConfidenceLevel[] = [
   "actuals",
   "signed_agreement",

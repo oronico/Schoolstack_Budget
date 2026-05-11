@@ -16,6 +16,9 @@ import {
   isEstimateWithoutEvidence,
   HIGH_IMPACT_CONFIDENCE_KEYS,
   computeAssumptionConfidenceRollup,
+  classifyEvidenceFileEmbed,
+  EVIDENCE_INLINE_PREVIEW_MAX_BYTES,
+  EVIDENCE_ATTACHMENT_MAX_BYTES as SHARED_EVIDENCE_ATTACHMENT_MAX_BYTES,
   type AssumptionKey,
 } from "@workspace/finance";
 import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "../benchmark-thresholds";
@@ -556,14 +559,21 @@ export function setEvidenceBytesLoader(loader: EvidenceBytesLoader | null): void
 // packet (25 MB) so a founder who attached a stack of 50 MB photos
 // can't blow up memory or balloon the packet PDF beyond what email
 // gateways will accept.
-const EVIDENCE_THUMBNAIL_MAX_BYTES = 5 * 1024 * 1024;
+// Task #723 — per-file inline-preview cap is shared with the wizard's
+// pre-export preview via @workspace/finance so the founder sees the
+// same eligibility classification on screen that they'll get in the
+// PDF appendix. Total per-packet budget stays local to the renderer.
+const EVIDENCE_THUMBNAIL_MAX_BYTES = EVIDENCE_INLINE_PREVIEW_MAX_BYTES;
 const EVIDENCE_THUMBNAIL_TOTAL_BUDGET_BYTES = 25 * 1024 * 1024;
 // Task #722 — per-file cap (10 MB) for PDF attachments merged onto the
 // end of the packet. Files exceeding the cap fall back to the manifest
 // entry with an "available on request" note instead of being embedded.
 // A separate total budget guards against a stack of borderline-cap PDFs
 // from inflating the packet beyond what email gateways accept.
-const EVIDENCE_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
+// Task #723 — sourced from @workspace/finance so the wizard's
+// pre-export attachments preview classifies each file with the same
+// caps the renderer enforces.
+const EVIDENCE_ATTACHMENT_MAX_BYTES = SHARED_EVIDENCE_ATTACHMENT_MAX_BYTES;
 const EVIDENCE_ATTACHMENT_TOTAL_BUDGET_BYTES = 50 * 1024 * 1024;
 const THUMBNAIL_BOX = 56;
 const THUMBNAIL_GAP = 10;
@@ -575,16 +585,27 @@ function isPdfAttachment(file: AppendixFileLike): boolean {
   return name.endsWith(".pdf");
 }
 
+// Task #723 — disposition is derived from the shared
+// `classifyEvidenceFileEmbed` helper so the wizard preview surface and
+// the renderer can never disagree about what each file will do.
 type EvidenceDisposition = "image" | "embedded-pdf" | "oversized" | "unsupported";
 
 function evidenceAttachmentDisposition(file: AppendixFileLike): EvidenceDisposition {
-  const oversizedByDeclared =
-    typeof file.size === "number" && file.size > EVIDENCE_ATTACHMENT_MAX_BYTES;
-  if (isPdfAttachment(file)) {
-    return oversizedByDeclared ? "oversized" : "embedded-pdf";
+  const klass = classifyEvidenceFileEmbed({
+    mimeType: file.mimeType,
+    name: file.name,
+    size: file.size,
+  });
+  switch (klass.disposition) {
+    case "embed_inline":
+      return "image";
+    case "append_link":
+      return "embedded-pdf";
+    case "too_large":
+      return "oversized";
+    case "unsupported":
+      return "unsupported";
   }
-  if (isImageMime(file.mimeType)) return "image";
-  return oversizedByDeclared ? "oversized" : "unsupported";
 }
 
 /**
@@ -908,7 +929,13 @@ async function renderAssumptionsEvidenceAppendix(
       dispositionNote = "Preview embedded above.";
       dispositionColor = BRAND.teal;
     } else if (disposition === "oversized") {
-      dispositionNote = "Available on request — exceeds 10 MB embed cap.";
+      // Task #723 — message uses the type-appropriate cap so an
+      // oversized image (5 MB thumbnail cap) doesn't get blamed on the
+      // 10 MB PDF/attachment cap.
+      const capMb = isImageMime(file.mimeType)
+        ? Math.round(EVIDENCE_THUMBNAIL_MAX_BYTES / (1024 * 1024))
+        : Math.round(EVIDENCE_ATTACHMENT_MAX_BYTES / (1024 * 1024));
+      dispositionNote = `Available on request — exceeds ${capMb} MB embed cap.`;
       dispositionColor = BRAND.amber;
     } else if (disposition === "unsupported") {
       dispositionNote = "Available on request — file type cannot be inlined.";
