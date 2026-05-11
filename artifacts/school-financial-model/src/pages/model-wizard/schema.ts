@@ -1084,17 +1084,27 @@ export const fullModelSchema = z.object({
         // flow (Task #714); only the `objectPath` reference is kept in
         // the model JSON. Task #729 dropped the legacy inline
         // `dataBase64` payload after migrating existing rows.
+        // Task #733 — caps mirror MAX_EVIDENCE_FILE_BYTES /
+        // MAX_EVIDENCE_FILES_PER_ROW in
+        // artifacts/school-financial-model/src/components/wizard/AssumptionConfidenceCard.tsx
+        // and the server-side validator in artifacts/api-server/src/routes/models.ts.
+        // Keep the three in sync.
         evidenceFiles: z
           .array(
             z.object({
               id: z.string(),
               name: z.string(),
               mimeType: z.string(),
-              size: z.number().int().nonnegative(),
+              size: z
+                .number()
+                .int()
+                .nonnegative()
+                .max(25 * 1024 * 1024, "Each evidence file must be 25 MB or smaller"),
               uploadedAt: z.string(),
               objectPath: z.string().optional(),
             }),
           )
+          .max(25, "You can attach up to 25 evidence files per assumption")
           .optional(),
       }),
     )

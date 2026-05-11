@@ -4300,11 +4300,15 @@ contentType); the file bytes are PUT to the returned URL.
  * @summary Request a presigned URL for evidence file upload
  */
 
+export const requestUploadUrlBodySizeMax = 26214400;
+
 export const RequestUploadUrlBody = zod.object({
   name: zod.string().min(1),
-  size: zod.number().min(1),
+  size: zod.number().min(1).max(requestUploadUrlBodySizeMax),
   contentType: zod.string().min(1),
 });
+
+export const requestUploadUrlResponseMetadataSizeMax = 26214400;
 
 export const RequestUploadUrlResponse = zod.object({
   uploadURL: zod.string().url(),
@@ -4312,7 +4316,7 @@ export const RequestUploadUrlResponse = zod.object({
   metadata: zod
     .object({
       name: zod.string().min(1),
-      size: zod.number().min(1),
+      size: zod.number().min(1).max(requestUploadUrlResponseMetadataSizeMax),
       contentType: zod.string().min(1),
     })
     .optional(),

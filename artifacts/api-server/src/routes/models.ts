@@ -203,6 +203,52 @@ function sendBinary(res: Response, buffer: Buffer | ArrayBuffer | Uint8Array, co
   res.end(buf);
 }
 
+// Task #733 — enforce the AssumptionConfidenceCard caps on the server
+// so a misbehaving / malicious client can't record arbitrary evidence
+// metadata (e.g. claim a 5 GB lease PDF or stuff 500 fake attachments
+// in a single row) and bloat exports / break the lender PDF appendix.
+// Mirrors MAX_EVIDENCE_FILE_BYTES / MAX_EVIDENCE_FILES_PER_ROW in
+// artifacts/school-financial-model/src/components/wizard/AssumptionConfidenceCard.tsx
+// and the matching `.max(...)` on the wizard schema's evidenceFiles
+// array. Keep all three in sync.
+const MAX_EVIDENCE_FILE_BYTES = 25 * 1024 * 1024;
+const MAX_EVIDENCE_FILES_PER_ROW = 25;
+
+function validateEvidenceFiles(
+  data: Record<string, unknown> | undefined,
+): { ok: true } | { ok: false; error: string } {
+  if (!data || typeof data !== "object") return { ok: true };
+  const conf = (data as Record<string, unknown>).assumptionConfidence;
+  if (!conf || typeof conf !== "object") return { ok: true };
+  for (const [key, raw] of Object.entries(conf as Record<string, unknown>)) {
+    const entry = raw as Record<string, unknown> | null | undefined;
+    if (!entry || typeof entry !== "object") continue;
+    const files = entry.evidenceFiles;
+    if (files === undefined || files === null) continue;
+    if (!Array.isArray(files)) {
+      return { ok: false, error: `assumptionConfidence.${key}.evidenceFiles must be an array.` };
+    }
+    if (files.length > MAX_EVIDENCE_FILES_PER_ROW) {
+      return {
+        ok: false,
+        error: `assumptionConfidence.${key}.evidenceFiles has ${files.length} files; the cap is ${MAX_EVIDENCE_FILES_PER_ROW} per assumption.`,
+      };
+    }
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i] as Record<string, unknown> | null | undefined;
+      if (!f || typeof f !== "object") continue;
+      const size = f.size;
+      if (typeof size === "number" && Number.isFinite(size) && size > MAX_EVIDENCE_FILE_BYTES) {
+        return {
+          ok: false,
+          error: `assumptionConfidence.${key}.evidenceFiles[${i}].size is ${size} bytes; the per-file cap is ${MAX_EVIDENCE_FILE_BYTES} bytes (25 MB).`,
+        };
+      }
+    }
+  }
+  return { ok: true };
+}
+
 function normalizeModelData(data: Record<string, unknown>): Record<string, unknown> {
   const normalized = { ...data };
   if (Array.isArray(normalized.revenueRows)) {
@@ -401,6 +447,11 @@ router.post("/models", authMiddleware, async (req: AuthRequest, res) => {
       return;
     }
     const rawData = (req.body as Record<string, unknown>).data as Record<string, unknown> | undefined;
+    const evidenceCheck = validateEvidenceFiles(rawData);
+    if (!evidenceCheck.ok) {
+      res.status(400).json({ error: evidenceCheck.error, code: "evidence_cap_exceeded" });
+      return;
+    }
     const normalizedData = normalizeModelData(rawData ?? {});
     const rowCols = extractRowColumns(normalizedData);
 
@@ -498,6 +549,11 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
       return;
     }
     const rawData = (req.body as Record<string, unknown>).data as Record<string, unknown> | undefined;
+    const evidenceCheck = validateEvidenceFiles(rawData);
+    if (!evidenceCheck.ok) {
+      res.status(400).json({ error: evidenceCheck.error, code: "evidence_cap_exceeded" });
+      return;
+    }
     const normalizedData = normalizeModelData(rawData ?? {});
 
     // Single-year mode is one-way. Once a model has been promoted to

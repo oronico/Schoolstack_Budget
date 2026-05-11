@@ -772,6 +772,11 @@ components:
         size:
           type: integer
           minimum: 1
+          # Task #733 — keep in sync with MAX_EVIDENCE_FILE_BYTES in
+          # artifacts/school-financial-model/src/components/wizard/AssumptionConfidenceCard.tsx
+          # and the matching cap on assumptionConfidence.evidenceFiles[*].size
+          # validated server-side in routes/models.ts. 25 MB = 26214400 bytes.
+          maximum: 26214400
         contentType:
           type: string
           minLength: 1

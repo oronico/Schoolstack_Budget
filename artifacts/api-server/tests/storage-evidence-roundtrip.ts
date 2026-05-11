@@ -182,6 +182,24 @@ async function postModel(
   return (await res.json()) as ModelRow;
 }
 
+// Variant of `postModel` that surfaces the raw status + body so tests
+// can assert on validation failures without crashing on non-201s.
+async function postModelRaw(
+  baseUrl: string,
+  token: string,
+  body: { name: string; data: Record<string, unknown> },
+): Promise<{ status: number; body: string }> {
+  const res = await fetch(`${baseUrl}/api/models`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  return { status: res.status, body: await res.text() };
+}
+
 async function getModel(baseUrl: string, token: string, id: number): Promise<ModelRow> {
   const res = await fetch(`${baseUrl}/api/models/${id}`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -501,6 +519,77 @@ async function main(): Promise<void> {
       "every bulk-attached file kept its objectPath through the round-trip",
       Array.isArray(bulkFiles) &&
         bulkFiles.every((f) => typeof f.objectPath === "string"),
+    );
+
+    // -----------------------------------------------------------------
+    // 9. Task #733 — server-side rejection of fake-sized evidence
+    //    files. The wizard caps at 25 MB / 25 files per row, but a
+    //    misbehaving client could otherwise post arbitrary metadata
+    //    (claim a 5 GB lease PDF, list 500 attachments) and bloat
+    //    exports / break the lender PDF appendix. The model save
+    //    path and the request-url endpoint must both refuse anything
+    //    above the documented caps.
+    // -----------------------------------------------------------------
+    const oversizeRequest = await requestUploadUrl(baseUrl, {
+      name: "too-big.pdf",
+      size: MAX_EVIDENCE_FILE_BYTES + 1,
+      contentType: "application/pdf",
+    });
+    eq2(
+      "request-url rejects size > 25 MB with 400",
+      oversizeRequest.status,
+      400,
+    );
+
+    const oversizeFile = {
+      id: "oversize",
+      name: "fake-huge.pdf",
+      mimeType: "application/pdf",
+      size: MAX_EVIDENCE_FILE_BYTES + 1,
+      uploadedAt: new Date().toISOString(),
+      objectPath: probeBody.objectPath,
+    };
+    const oversizeSave = await postModelRaw(baseUrl, token, {
+      name: "Oversize Evidence Model",
+      data: buildModelData([oversizeFile]),
+    });
+    eq2(
+      "POST /models rejects an evidence file claiming size > 25 MB with 400",
+      oversizeSave.status,
+      400,
+    );
+    check(
+      "POST /models rejection mentions the per-file size cap",
+      oversizeSave.body.includes("evidence_cap_exceeded") ||
+        oversizeSave.body.includes("25"),
+      `body=${oversizeSave.body.slice(0, 200)}`,
+    );
+
+    const tooManyFiles = Array.from(
+      { length: MAX_EVIDENCE_FILES_PER_ROW + 1 },
+      (_, i) => ({
+        id: `too-many-${i}`,
+        name: `attachment-${i}.png`,
+        mimeType: "image/png",
+        size: TINY_PNG_BYTES.length,
+        uploadedAt: new Date().toISOString(),
+        objectPath: probeBody.objectPath,
+      }),
+    );
+    const tooManySave = await postModelRaw(baseUrl, token, {
+      name: "Too Many Evidence Model",
+      data: buildModelData(tooManyFiles),
+    });
+    eq2(
+      "POST /models rejects > 25 evidence files in a single assumption row with 400",
+      tooManySave.status,
+      400,
+    );
+    check(
+      "POST /models rejection mentions the per-row file count cap",
+      tooManySave.body.includes("evidence_cap_exceeded") ||
+        tooManySave.body.includes("25"),
+      `body=${tooManySave.body.slice(0, 200)}`,
     );
   } finally {
     if (userId !== null) {
