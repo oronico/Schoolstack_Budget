@@ -318,6 +318,27 @@ short-copy fixes that don't block launch:
 4. `RevenueStep.tsx:74, :93` — coaching strings that conflate seat price
    with revenue.
 
+**Resolved 2026-05-11 (post-audit polish pass):**
+
+- `ExportStep.tsx:253` and `:288` — both error surfaces now read
+  "We couldn't generate that export — try again, or open a model with
+  revenue and expenses entered."
+- `SharedModelPage.tsx:752` — guest PDF error now reads "We couldn't
+  put together that PDF right now — refresh and try again."
+- `EnrollmentStep.tsx` — added a teal seat-vs-payer anchor callout
+  (`data-testid="enrollment-seat-vs-payer-anchor"`) immediately below
+  the WhyThisMatters block, naming the 3-layer terminology contract
+  (capacity here → seat price + payer next).
+- `RevenueStep.tsx:77` — tuition fundingHint rewritten to distinguish
+  seat price from revenue and to call out ESA/voucher payer mechanics.
+- `RevenueStep.tsx:96` — school_choice tip rewritten to clarify that
+  states / scholarship orgs disburse the funds on behalf of families
+  on a different cash-timing cadence.
+
+Founder-voice and lender-readiness coaching guard suites still pass
+(66/66) with the new copy; wizard-step suites pass (36/36); typecheck
+clean.
+
 ---
 
 ## P1 fixes (next polish sprint)

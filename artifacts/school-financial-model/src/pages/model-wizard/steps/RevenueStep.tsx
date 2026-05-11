@@ -71,7 +71,7 @@ const CATEGORY_GUIDANCE: Record<RevenueCategory, CategoryGuidance> = {
     tip: "Your primary income: tuition, registration fees, activity fees, and other charges families pay.",
     common: true,
     fundingHint: {
-      tuition_based: "This is typically your largest revenue source - 70-90% of total revenue for private and micro schools.",
+      tuition_based: "Tuition is your seat price. For a tuition-funded school, families pay 70–90% of it directly — but if you accept ESA or vouchers, the same seat may be paid by the state, not the family. Use the Revenue rows to record who actually pays.",
       charter_public_funded: "Charter schools may charge fees for extracurriculars and materials, but tuition is not the main source.",
       hybrid_mixed: "Tuition supplements your public funding. Common for schools with both public per-pupil funding and family-paid tuition.",
     },
@@ -90,7 +90,7 @@ const CATEGORY_GUIDANCE: Record<RevenueCategory, CategoryGuidance> = {
     },
   },
   school_choice: {
-    tip: "ESA vouchers, tax-credit scholarships, and education savings accounts families use to pay tuition.",
+    tip: "ESAs, vouchers, and tax-credit scholarships are funded by states or scholarship organizations on behalf of families. The agency disburses the money — often quarterly — so cash timing differs from family-paid tuition.",
     common: false,
     fundingHint: {
       tuition_based: "Growing revenue source - check if your state has an ESA or voucher program.",

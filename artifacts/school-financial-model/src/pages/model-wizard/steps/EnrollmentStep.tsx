@@ -826,6 +826,27 @@ export function EnrollmentStep({ focus }: { focus?: string } = {}) {
         />
       )}
 
+      {/* Task #847 (P0 polish): seat-price-vs-payer anchor.
+          The 3-layer terminology contract (capacity → seat price → who pays)
+          starts here, on the very step where seats are defined. The next
+          step (Revenue) turns each seat into a price and a payer. Without
+          this anchor, founders conflate "what we charge" with "what cash
+          comes in" and miss ESA/voucher/scholarship payer mechanics. */}
+      <div
+        className="flex items-start gap-3 p-4 bg-teal-50/70 border border-teal-200/70 rounded-2xl"
+        data-testid="enrollment-seat-vs-payer-anchor"
+      >
+        <School className="h-4 w-4 text-teal-700 mt-0.5 flex-shrink-0" />
+        <p className="text-xs text-teal-900 leading-relaxed">
+          <span className="font-semibold">How this connects to revenue.</span>{" "}
+          The number of students you enroll sets the <em>capacity</em> of your
+          school. The next step turns that into revenue — what you charge per
+          seat, and who actually pays for the seat (families, ESA, voucher,
+          charter funding, or scholarship). Capacity here, seat price and
+          payer next.
+        </p>
+      </div>
+
       {/* Task #703 — Assumptions-first launch checklist (new schools only).
           Task #711 — `focused` is set when the founder arrived from the
           dashboard's Launch readiness card so the checklist scrolls into

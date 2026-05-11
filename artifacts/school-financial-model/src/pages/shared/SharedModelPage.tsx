@@ -747,7 +747,7 @@ function DecisionComparisonBlock({
       if (!res.ok) {
         const errText = await res.text().catch(() => "");
         throw new Error(
-          `PDF generation failed (${res.status})${errText ? `: ${errText.slice(0, 200)}` : ""}`,
+          `We couldn't put together that PDF right now — refresh and try again. (${res.status}${errText ? `: ${errText.slice(0, 200)}` : ""})`,
         );
       }
       const blob = await res.blob();
@@ -766,7 +766,7 @@ function DecisionComparisonBlock({
       window.URL.revokeObjectURL(url);
       link.remove();
     } catch (err) {
-      setDownloadError(err instanceof Error ? err.message : "Failed to download PDF.");
+      setDownloadError(err instanceof Error ? err.message : "We couldn't put together that PDF right now — refresh and try again.");
     } finally {
       setDownloading(false);
     }

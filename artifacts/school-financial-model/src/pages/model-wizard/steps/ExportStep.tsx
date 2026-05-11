@@ -247,7 +247,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
 
-      if (!res.ok) throw new Error("Export failed");
+      if (!res.ok) throw new Error("We couldn't generate that export — try again, or open a model with revenue and expenses entered.");
 
       const blob = await res.blob();
       const disposition = res.headers.get("content-disposition") || "";
@@ -282,7 +282,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
       trackExport();
     } catch (e) {
       console.error(e);
-      alert("Failed to export. Please try again.");
+      alert("We couldn't generate that export — try again, or open a model with revenue and expenses entered.");
     } finally {
       setLoading(null);
     }
