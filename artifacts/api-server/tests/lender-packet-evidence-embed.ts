@@ -253,7 +253,15 @@ async function main() {
   // Task #722 — board packet must mirror the lender behavior end to
   // end: PDF attachments get merged onto the end of the packet, image
   // attachments still inline as thumbnails in the shared appendix.
+  // Task #828 — and the Task #761 PDF first-page preview path must
+  // also flow through the board render. Capture which object paths the
+  // loader is asked for during the board render so we can assert the
+  // rasterizer is consulted for the PDF row (not just the merge step
+  // — the rasterizer fires from inside renderAssumptionsEvidenceAppendix
+  // which runs via the shared renderAssumptionsConfidenceSection).
+  const boardFetched: string[] = [];
   setEvidenceBytesLoader(async (objectPath: string) => {
+    boardFetched.push(objectPath);
     if (objectPath.endsWith("site-photo-uuid")) return tinyPng;
     if (objectPath.endsWith("lease-uuid")) return tinyPdfBytes;
     return null;
@@ -271,6 +279,29 @@ async function main() {
     boardWithMerge.subarray(0, 5).toString("ascii") === "%PDF-" &&
       boardWithMerge.length > 5000,
     `length=${boardWithMerge.length}`,
+  );
+  // Task #828 — assert exact fetch counts so we prove the Task #761
+  // rasterizer path actually runs on the board side (not just the
+  // Task #722 merge step). lease.pdf must be fetched TWICE: once by
+  // collectEvidencePdfsForPacket for the end-of-packet merge, and a
+  // second time from inside renderAssumptionsEvidenceAppendix to
+  // rasterize the first page. site-photo.png must be fetched ONCE
+  // (the appendix thumbnail; the merge step ignores image MIME types).
+  // Counting deduplicated paths only proves "loader was asked for X",
+  // which would still pass if the rasterizer was silently skipped on
+  // the board side — that's the regression the per-fetch count
+  // protects against.
+  const leaseFetches = boardFetched.filter((p) => p.endsWith("lease-uuid")).length;
+  const photoFetches = boardFetched.filter((p) => p.endsWith("site-photo-uuid")).length;
+  check(
+    "board packet rasterizes PDF evidence first page (loader fetches lease.pdf twice: merge + rasterizer)",
+    leaseFetches === 2,
+    `leaseFetches=${leaseFetches} boardFetched=${JSON.stringify(boardFetched)}`,
+  );
+  check(
+    "board packet appendix loads image evidence thumbnail",
+    photoFetches === 1,
+    `photoFetches=${photoFetches} boardFetched=${JSON.stringify(boardFetched)}`,
   );
   setEvidenceBytesLoader(null);
   const boardNoMerge = await generateBoardPacketPDF(boardPacket);
