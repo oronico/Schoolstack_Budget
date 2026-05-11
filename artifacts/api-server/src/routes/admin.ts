@@ -5,6 +5,7 @@ import {
   financialModelsTable,
   exportsTable,
   eventsTable,
+  coachSurfaceOverridesTable,
 } from "@workspace/db/schema";
 import { count, countDistinct, gte, desc, sql, eq, and, inArray } from "drizzle-orm";
 import { authMiddleware, type AuthRequest } from "../middlewares/auth";
@@ -1097,28 +1098,90 @@ router.get(
       const counts = new Map<string, number>();
       for (const r of rows) counts.set(r.eventName, r.count);
 
-      const surfaces = COACHING_FUNNEL_SURFACES.map((s) => {
+      // Pull admin snooze/retire decisions (Task #430). Retired surfaces
+      // drop out of the funnel entirely; active snoozes suppress the
+      // amber "looks dead" badge and surface a "snoozed by … until …"
+      // hint instead. Expired snoozes (snoozedUntil <= now) are ignored
+      // so the badge can re-appear without the admin having to clear
+      // the row by hand.
+      const overrideRows = await db
+        .select({
+          surfaceKey: coachSurfaceOverridesTable.surfaceKey,
+          action: coachSurfaceOverridesTable.action,
+          snoozedUntil: coachSurfaceOverridesTable.snoozedUntil,
+          actorEmail: coachSurfaceOverridesTable.actorEmail,
+          updatedAt: coachSurfaceOverridesTable.updatedAt,
+        })
+        .from(coachSurfaceOverridesTable);
+      const now = Date.now();
+      const overrides = new Map<
+        string,
+        {
+          action: "snooze" | "retire";
+          snoozedUntil: Date | null;
+          actorEmail: string | null;
+          updatedAt: Date;
+        }
+      >();
+      for (const o of overrideRows) {
+        if (o.action === "retire") {
+          overrides.set(o.surfaceKey, {
+            action: "retire",
+            snoozedUntil: null,
+            actorEmail: o.actorEmail,
+            updatedAt: o.updatedAt,
+          });
+        } else if (
+          o.action === "snooze" &&
+          o.snoozedUntil &&
+          o.snoozedUntil.getTime() > now
+        ) {
+          overrides.set(o.surfaceKey, {
+            action: "snooze",
+            snoozedUntil: o.snoozedUntil,
+            actorEmail: o.actorEmail,
+            updatedAt: o.updatedAt,
+          });
+        }
+      }
+
+      const surfaces = COACHING_FUNNEL_SURFACES.flatMap((s) => {
+        const override = overrides.get(s.key);
+        // Retired surfaces are hidden from the funnel entirely.
+        if (override?.action === "retire") return [];
         const shown = counts.get(s.shown) || 0;
         const engaged = counts.get(s.engaged) || 0;
         const dismissed = s.dismissed ? counts.get(s.dismissed) || 0 : null;
         const engagementRate = shown > 0 ? engaged / shown : 0;
-        return {
-          key: s.key,
-          label: s.label,
-          shown,
-          engaged,
-          dismissed,
-          engagementRate,
-          dismissalRate:
-            s.dismissed && shown > 0 ? (dismissed ?? 0) / shown : null,
-          sourcePath: s.sourcePath,
-          // Statistically meaningful low engagement: enough impressions
-          // to trust the rate, and rate below the floor. The admin UI
-          // sorts these to the top and shows an amber "looks dead" badge.
-          lowEngagement:
-            shown > LOW_ENGAGEMENT_MIN_IMPRESSIONS &&
-            engagementRate < LOW_ENGAGEMENT_MAX_RATE,
-        };
+        const isSnoozed = override?.action === "snooze";
+        return [
+          {
+            key: s.key,
+            label: s.label,
+            shown,
+            engaged,
+            dismissed,
+            engagementRate,
+            dismissalRate:
+              s.dismissed && shown > 0 ? (dismissed ?? 0) / shown : null,
+            sourcePath: s.sourcePath,
+            // Statistically meaningful low engagement: enough impressions
+            // to trust the rate, and rate below the floor. The admin UI
+            // sorts these to the top and shows an amber "looks dead" badge.
+            // While a snooze is active we suppress the badge — the
+            // snooze hint takes its place.
+            lowEngagement:
+              !isSnoozed &&
+              shown > LOW_ENGAGEMENT_MIN_IMPRESSIONS &&
+              engagementRate < LOW_ENGAGEMENT_MAX_RATE,
+            snooze: isSnoozed
+              ? {
+                  until: override!.snoozedUntil!.toISOString(),
+                  by: override!.actorEmail,
+                }
+              : null,
+          },
+        ];
       });
 
       res.json({
@@ -1133,6 +1196,107 @@ router.get(
     } catch (err) {
       console.error("Coaching funnel analytics error:", err);
       res.status(500).json({ error: "Failed to fetch coaching funnel data." });
+    }
+  },
+);
+
+// Snooze / retire a coach surface (Task #430). Upserts on `surfaceKey`
+// so flipping a surface from snoozed to retired (or extending a snooze)
+// stays a single row. The admin's id + email are snapshotted into the
+// row so the UI can render "snoozed by <admin> until <date>" without a
+// join, and so attribution survives if the user is later removed.
+const SNOOZE_DAYS = 7;
+const VALID_SURFACE_KEYS = new Set(COACHING_FUNNEL_SURFACES.map((s) => s.key));
+
+router.post(
+  "/admin/coaching-funnel/overrides",
+  authMiddleware,
+  adminMiddleware,
+  async (req: AuthRequest, res) => {
+    try {
+      const body = (req.body ?? {}) as {
+        surfaceKey?: unknown;
+        action?: unknown;
+      };
+      const surfaceKey =
+        typeof body.surfaceKey === "string" ? body.surfaceKey : "";
+      const action = typeof body.action === "string" ? body.action : "";
+      if (!VALID_SURFACE_KEYS.has(surfaceKey)) {
+        res.status(400).json({ error: "Unknown surface key." });
+        return;
+      }
+      if (action !== "snooze" && action !== "retire") {
+        res
+          .status(400)
+          .json({ error: "Action must be 'snooze' or 'retire'." });
+        return;
+      }
+
+      const [actor] = await db
+        .select({ id: usersTable.id, email: usersTable.email })
+        .from(usersTable)
+        .where(eq(usersTable.id, req.userId!))
+        .limit(1);
+
+      const snoozedUntil =
+        action === "snooze"
+          ? new Date(Date.now() + SNOOZE_DAYS * 24 * 60 * 60 * 1000)
+          : null;
+      const nowDate = new Date();
+
+      await db
+        .insert(coachSurfaceOverridesTable)
+        .values({
+          surfaceKey,
+          action,
+          snoozedUntil,
+          actorUserId: actor?.id ?? null,
+          actorEmail: actor?.email ?? null,
+        })
+        .onConflictDoUpdate({
+          target: coachSurfaceOverridesTable.surfaceKey,
+          set: {
+            action,
+            snoozedUntil,
+            actorUserId: actor?.id ?? null,
+            actorEmail: actor?.email ?? null,
+            updatedAt: nowDate,
+          },
+        });
+
+      res.json({
+        surfaceKey,
+        action,
+        snoozedUntil: snoozedUntil ? snoozedUntil.toISOString() : null,
+        actorEmail: actor?.email ?? null,
+      });
+    } catch (err) {
+      console.error("Coaching funnel override error:", err);
+      res.status(500).json({ error: "Failed to save coach surface override." });
+    }
+  },
+);
+
+// Clear an override (e.g. an admin un-snoozes or un-retires a surface).
+router.delete(
+  "/admin/coaching-funnel/overrides/:surfaceKey",
+  authMiddleware,
+  adminMiddleware,
+  async (req: AuthRequest, res) => {
+    try {
+      const rawKey = req.params.surfaceKey;
+      const surfaceKey = typeof rawKey === "string" ? rawKey : "";
+      if (!VALID_SURFACE_KEYS.has(surfaceKey)) {
+        res.status(400).json({ error: "Unknown surface key." });
+        return;
+      }
+      await db
+        .delete(coachSurfaceOverridesTable)
+        .where(eq(coachSurfaceOverridesTable.surfaceKey, surfaceKey));
+      res.json({ surfaceKey, cleared: true });
+    } catch (err) {
+      console.error("Coaching funnel override clear error:", err);
+      res.status(500).json({ error: "Failed to clear coach surface override." });
     }
   },
 );

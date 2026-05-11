@@ -1943,7 +1943,12 @@ interface CoachingFunnelSurface {
   sourcePath: string;
   // True when impressions cleared the floor (proves it's not noise) and
   // engagement is below the floor — i.e. the surface looks dead.
+  // Suppressed while an admin snooze is active (Task #430).
   lowEngagement: boolean;
+  // Set when an admin has snoozed this surface from the dashboard.
+  // While present, the amber "looks dead" badge is hidden and a
+  // "snoozed by <admin> until <date>" hint takes its place.
+  snooze: { until: string; by: string | null } | null;
 }
 
 interface CoachingFunnelResponse {
@@ -2129,10 +2134,20 @@ function CoachingFunnelSection() {
   const [data, setData] = useState<CoachingFunnelResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Per-surface "saving" flag so we can disable the snooze/retire buttons
+  // while the override request is in-flight (Task #430).
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
+
+  const reload = useCallback(async () => {
+    const res = await fetch("/api/admin/coaching-funnel");
+    if (!res.ok) throw new Error("Failed to fetch coaching funnel");
+    const json = (await res.json()) as CoachingFunnelResponse;
+    setData(json);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    async function load() {
+    (async () => {
       try {
         const res = await fetch("/api/admin/coaching-funnel");
         if (!res.ok) throw new Error("Failed to fetch coaching funnel");
@@ -2143,12 +2158,51 @@ function CoachingFunnelSection() {
       } finally {
         if (!cancelled) setLoading(false);
       }
-    }
-    load();
+    })();
     return () => {
       cancelled = true;
     };
   }, []);
+
+  const applyOverride = useCallback(
+    async (surfaceKey: string, action: "snooze" | "retire") => {
+      setPendingKey(surfaceKey);
+      try {
+        const res = await fetch("/api/admin/coaching-funnel/overrides", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ surfaceKey, action }),
+        });
+        if (!res.ok) throw new Error("Failed to save override");
+        await reload();
+      } catch {
+        // Surface a soft inline error without unmounting the section.
+        setError("Failed to update coach surface. Please try again.");
+      } finally {
+        setPendingKey(null);
+      }
+    },
+    [reload],
+  );
+
+  const clearOverride = useCallback(
+    async (surfaceKey: string) => {
+      setPendingKey(surfaceKey);
+      try {
+        const res = await fetch(
+          `/api/admin/coaching-funnel/overrides/${encodeURIComponent(surfaceKey)}`,
+          { method: "DELETE" },
+        );
+        if (!res.ok) throw new Error("Failed to clear override");
+        await reload();
+      } catch {
+        setError("Failed to clear coach surface override. Please try again.");
+      } finally {
+        setPendingKey(null);
+      }
+    },
+    [reload],
+  );
 
   if (loading) {
     return (
@@ -2194,6 +2248,7 @@ function CoachingFunnelSection() {
                   key={s.key}
                   data-testid={`coaching-surface-${s.key}`}
                   data-low-engagement={s.lowEngagement ? "true" : "false"}
+                  data-snoozed={s.snooze ? "true" : "false"}
                   className="space-y-2 border-b border-border/40 last:border-0 pb-5 last:pb-0"
                 >
                   <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -2205,6 +2260,22 @@ function CoachingFunnelSection() {
                         <LowEngagementBadge
                           surface={s}
                           threshold={data.lowEngagementThreshold}
+                        />
+                      )}
+                      {s.snooze && (
+                        <SnoozeHint
+                          surface={s}
+                          onClear={() => clearOverride(s.key)}
+                          pending={pendingKey === s.key}
+                        />
+                      )}
+                      {(s.lowEngagement || s.snooze) && (
+                        <SurfaceOverrideControls
+                          surfaceKey={s.key}
+                          isSnoozed={Boolean(s.snooze)}
+                          pending={pendingKey === s.key}
+                          onSnooze={() => applyOverride(s.key, "snooze")}
+                          onRetire={() => applyOverride(s.key, "retire")}
                         />
                       )}
                     </div>
@@ -2343,6 +2414,86 @@ function LowEngagementBadge({
         </button>
       </TooltipContent>
     </Tooltip>
+  );
+}
+
+// Snooze + retire affordances next to the "looks dead" badge (Task #430).
+// Rendered only for flagged or already-snoozed surfaces so the table
+// stays quiet for healthy surfaces. Buttons are disabled while a request
+// for this surface is in flight.
+function SurfaceOverrideControls({
+  surfaceKey,
+  isSnoozed,
+  pending,
+  onSnooze,
+  onRetire,
+}: {
+  surfaceKey: string;
+  isSnoozed: boolean;
+  pending: boolean;
+  onSnooze: () => void;
+  onRetire: () => void;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <button
+        type="button"
+        onClick={onSnooze}
+        disabled={pending}
+        data-testid={`coach-surface-snooze-${surfaceKey}`}
+        className="inline-flex items-center rounded-full border border-border bg-background px-2 py-0.5 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:border-foreground/40 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
+        {isSnoozed ? "Snooze 7 more days" : "Snooze 7 days"}
+      </button>
+      <button
+        type="button"
+        onClick={onRetire}
+        disabled={pending}
+        data-testid={`coach-surface-retire-${surfaceKey}`}
+        className="inline-flex items-center rounded-full border border-border bg-background px-2 py-0.5 text-[11px] font-medium text-muted-foreground hover:text-destructive hover:border-destructive/40 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+      >
+        Retire
+      </button>
+    </span>
+  );
+}
+
+// "Snoozed by <admin> until <date>" hint that takes the badge's place
+// while a snooze is active (Task #430). Includes an inline "End snooze"
+// affordance so admins can lift the override without waiting for it to
+// expire.
+function SnoozeHint({
+  surface,
+  onClear,
+  pending,
+}: {
+  surface: CoachingFunnelSurface;
+  onClear: () => void;
+  pending: boolean;
+}) {
+  if (!surface.snooze) return null;
+  const until = new Date(surface.snooze.until);
+  const untilLabel = Number.isNaN(until.getTime())
+    ? surface.snooze.until
+    : format(until, "MMM d");
+  const by = surface.snooze.by ?? "an admin";
+  return (
+    <span
+      data-testid={`coach-surface-snoozed-${surface.key}`}
+      className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600"
+    >
+      <Clock className="h-3 w-3" aria-hidden="true" />
+      Snoozed by {by} until {untilLabel}
+      <button
+        type="button"
+        onClick={onClear}
+        disabled={pending}
+        data-testid={`coach-surface-unsnooze-${surface.key}`}
+        className="text-[10px] underline decoration-dotted underline-offset-2 hover:decoration-solid disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+      >
+        End snooze
+      </button>
+    </span>
   );
 }
 

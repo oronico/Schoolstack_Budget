@@ -43,6 +43,13 @@
       "when": 1778159217707,
       "tag": "0005_simple_mysterio",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778510379129,
+      "tag": "0006_coach_surface_overrides",
+      "breakpoints": true
     }
   ]
 }
