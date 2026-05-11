@@ -125,6 +125,7 @@ export {
   DEFAULT_ESA_DELAY_MONTHS,
   DEFAULT_RENT_SHOCK_PCT,
   computeLenderStressTests,
+  computeCustomLenderStressTest,
   minStructuralDscr,
   type LenderStressScenarioId,
   type LenderStressScenarioMeta,
@@ -132,6 +133,8 @@ export {
   type LenderStressTestBaseline,
   type LenderStressTestResults,
   type LenderStressTestOptions,
+  type CustomStressKnob,
+  type CustomStressTestInput,
 } from "./decision-engine/lender-stress-tests.js";
 
 export {

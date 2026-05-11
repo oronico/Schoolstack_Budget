@@ -20,6 +20,7 @@
  */
 import {
   computeLenderStressTests,
+  computeCustomLenderStressTest,
   LENDER_STRESS_SCENARIOS,
   minStructuralDscr,
 } from "../lender-stress-tests.js";
@@ -289,6 +290,96 @@ check(
       `delta.minDscr=${minus20.deltaVsBase.minDscr}`,
     );
   }
+}
+
+// ─── Custom stress test ───────────────────────────────────────────────
+// Task #673 — `computeCustomLenderStressTest` runs a single user-tunable
+// scenario through the same engine, so a custom -10% enrollment scoped to
+// all five years must reproduce the canonical `enrollment_minus_10` result.
+{
+  const battery = computeLenderStressTests(microschool);
+  const canonical = battery.scenarios.find((s) => s.id === "enrollment_minus_10")!;
+  const custom = computeCustomLenderStressTest(microschool, {
+    knob: "enrollment_pct",
+    value: -10,
+    startYear: 1,
+    endYear: 5,
+  });
+  check(
+    "Custom enrollment -10%/Y1-5 matches canonical enrollment_minus_10 net income",
+    custom.netIncome.every((n, i) => approxEq(n, canonical.netIncome[i])),
+    `custom=${custom.netIncome.join(",")} canonical=${canonical.netIncome.join(",")}`,
+  );
+  check(
+    "Custom enrollment -10%/Y1-5 matches canonical DSCR",
+    custom.dscr.every((d, i) => approxEq(d, canonical.dscr[i])),
+    `custom=${custom.dscr.join(",")} canonical=${canonical.dscr.join(",")}`,
+  );
+
+  // Narrowing the range to a single year must hurt less than scoping it
+  // across all five years (assuming a downside scenario like -20% enrollment).
+  const wholeRun = computeCustomLenderStressTest(microschool, {
+    knob: "enrollment_pct",
+    value: -20,
+    startYear: 1,
+    endYear: 5,
+  });
+  const justY1 = computeCustomLenderStressTest(microschool, {
+    knob: "enrollment_pct",
+    value: -20,
+    startYear: 1,
+    endYear: 1,
+  });
+  check(
+    "Custom enrollment scoped to Y1 only is less harmful than Y1-Y5",
+    justY1.deltaVsBase.y5NetIncome >= wholeRun.deltaVsBase.y5NetIncome,
+    `y5 delta justY1=${justY1.deltaVsBase.y5NetIncome} whole=${wholeRun.deltaVsBase.y5NetIncome}`,
+  );
+
+  // Founder salary knob: bumping comp well above the as-planned draw must
+  // strictly worsen Y1 net income.
+  const baseY1 = computeBaseFinancials(microschool).netIncome[0] ?? 0;
+  const highSalary = computeCustomLenderStressTest(microschool, {
+    knob: "founder_salary_dollars",
+    value: 250_000,
+    startYear: 1,
+    endYear: 5,
+  });
+  check(
+    "Custom founder salary bump strictly reduces Y1 net income vs base",
+    (highSalary.netIncome[0] ?? 0) < baseY1,
+    `customY1=${highSalary.netIncome[0]} baseY1=${baseY1}`,
+  );
+
+  // ESA delay knob: months > 0 across Y1 should match the canonical
+  // ESA-delay sign (Y1 NI strictly lower than base) on a charter fixture
+  // that has public-funding revenue.
+  const charterCustom = computeCustomLenderStressTest(charter, {
+    knob: "esa_delay_months",
+    value: 3,
+    startYear: 1,
+    endYear: 1,
+  });
+  const charterBattery = computeLenderStressTests(charter);
+  const charterCanonical = charterBattery.scenarios.find((s) => s.id === "esa_delay_3mo")!;
+  check(
+    "Custom ESA delay 3mo / Y1 matches canonical esa_delay_3mo on charter",
+    charterCustom.netIncome.every((n, i) => approxEq(n, charterCanonical.netIncome[i])),
+    `custom=${charterCustom.netIncome.join(",")} canonical=${charterCanonical.netIncome.join(",")}`,
+  );
+
+  // Year range is normalized: end < start should clamp to the start.
+  const clamped = computeCustomLenderStressTest(microschool, {
+    knob: "rent_pct",
+    value: 25,
+    startYear: 3,
+    endYear: 1,
+  });
+  check(
+    "Custom scenario tolerates inverted year range (clamps end to start)",
+    Number.isFinite(clamped.netIncome[0]),
+    `result=${JSON.stringify(clamped.netIncome)}`,
+  );
 }
 
 // ─── Report ──────────────────────────────────────────────────────────

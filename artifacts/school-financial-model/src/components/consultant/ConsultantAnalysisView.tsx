@@ -38,6 +38,14 @@ import {
 import { cn } from "@/lib/utils";
 import type { ConsultantOutput } from "@workspace/api-client-react";
 import { SchoolProfileLendingLabIntent } from "@workspace/api-client-react";
+import {
+  computeCustomLenderStressTest,
+  type CustomStressKnob,
+  type DecisionEngineModelData,
+  type LenderStressScenarioResult,
+} from "@workspace/finance";
+
+type FullModelData = DecisionEngineModelData;
 import { KPI_FORMULAS } from "@/lib/coaching/kpi-formulas";
 import { KpiFormulaDrawer } from "@/components/coaching/ExplainerDrawer";
 import { WhyThisNumber } from "@/components/coaching/WhyThisNumber";
@@ -252,6 +260,245 @@ function generateHealthSummary(data: ConsultantOutput): string {
   }
   const fallbackSnippet = anyMetricName ? ` We looked at ${anyMetricName} and more.` : "";
   return `We've reviewed your financial model and have some observations to share.${fallbackSnippet}${riskDetail} Let's walk through the key findings together.`;
+}
+
+interface KnobConfig {
+  label: string;
+  unit: string;
+  step: number;
+  defaultValue: number;
+  min?: number;
+  max?: number;
+  helper: string;
+}
+
+const CUSTOM_STRESS_KNOBS: Record<CustomStressKnob, KnobConfig> = {
+  enrollment_pct: {
+    label: "Enrollment change",
+    unit: "%",
+    step: 1,
+    defaultValue: -15,
+    min: -100,
+    max: 100,
+    helper: "Negative = students you don't get. e.g. -15 models a 15% miss.",
+  },
+  rent_pct: {
+    label: "Rent / facility change",
+    unit: "%",
+    step: 1,
+    defaultValue: 30,
+    min: -50,
+    max: 200,
+    helper: "Positive = lease bump or surprise CAM/utilities.",
+  },
+  esa_delay_months: {
+    label: "ESA / public funding delay",
+    unit: "mo",
+    step: 1,
+    defaultValue: 4,
+    min: 0,
+    max: 12,
+    helper: "Months of public-funding receipts that arrive late in each year of the range.",
+  },
+  founder_salary_dollars: {
+    label: "Founder salary",
+    unit: "$/yr",
+    step: 5000,
+    defaultValue: 80000,
+    min: 0,
+    max: 500000,
+    helper: "Annual founder comp to assume across all five years (year range isn't available for this knob — the staffing roster carries one rate per role).",
+  },
+};
+
+/** Knobs that respect the year-range selectors. The founder-salary knob is
+ *  intentionally excluded — see the helper copy + scenario metadata. */
+const KNOBS_WITH_YEAR_RANGE: ReadonlySet<CustomStressKnob> = new Set<CustomStressKnob>([
+  "enrollment_pct",
+  "rent_pct",
+  "esa_delay_months",
+]);
+
+function CustomStressTestForm({ modelData }: { modelData?: FullModelData }) {
+  const [knob, setKnob] = useState<CustomStressKnob>("enrollment_pct");
+  const [value, setValue] = useState<number>(CUSTOM_STRESS_KNOBS.enrollment_pct.defaultValue);
+  const [startYear, setStartYear] = useState<number>(1);
+  const [endYear, setEndYear] = useState<number>(5);
+  const [result, setResult] = useState<LenderStressScenarioResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const cfg = CUSTOM_STRESS_KNOBS[knob];
+  const yearRangeEnabled = KNOBS_WITH_YEAR_RANGE.has(knob);
+
+  const onKnobChange = (next: CustomStressKnob) => {
+    setKnob(next);
+    setValue(CUSTOM_STRESS_KNOBS[next].defaultValue);
+    if (!KNOBS_WITH_YEAR_RANGE.has(next)) {
+      setStartYear(1);
+      setEndYear(5);
+    }
+    setResult(null);
+    setError(null);
+  };
+
+  const handleRun = () => {
+    if (!modelData) {
+      setError("Model data isn't available yet — finish the wizard steps and try again.");
+      return;
+    }
+    const effectiveStart = yearRangeEnabled ? startYear : 1;
+    const effectiveEnd = yearRangeEnabled ? endYear : 5;
+    if (yearRangeEnabled && endYear < startYear) {
+      setError("End year must be the same as or after the start year.");
+      return;
+    }
+    try {
+      const r = computeCustomLenderStressTest(modelData, {
+        knob,
+        value,
+        startYear: effectiveStart,
+        endYear: effectiveEnd,
+      });
+      setResult(r);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not run custom scenario.");
+    }
+  };
+
+  const structural = result ? result.dscr.filter((d) => d !== 0) : [];
+  const minDscr = structural.length ? Math.min(...structural) : null;
+  const minEndCash = result ? Math.min(...result.endingCash) : 0;
+  const niDelta = result?.deltaVsBase.y1NetIncome ?? 0;
+
+  return (
+    <div
+      className="mt-5 rounded-xl border border-dashed border-amber-300 bg-amber-50/50 p-4"
+      data-testid="custom-stress-test-form"
+    >
+      <div className="flex items-start gap-2 mb-3">
+        <Lightbulb className="h-4 w-4 text-amber-700 mt-0.5 shrink-0" />
+        <div>
+          <h4 className="font-semibold text-sm text-amber-900">Run your own scenario</h4>
+          <p className="text-xs text-amber-900/70 mt-0.5">
+            Pick one knob and a year range. We'll run it through the same engine the standard battery uses. Results aren't saved.
+          </p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+        <label className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">What changes</span>
+          <select
+            value={knob}
+            onChange={(e) => onKnobChange(e.target.value as CustomStressKnob)}
+            className="rounded-lg border border-border/60 bg-white px-2.5 py-1.5 text-sm"
+            data-testid="custom-stress-knob"
+          >
+            <option value="enrollment_pct">Enrollment %</option>
+            <option value="rent_pct">Rent / facility %</option>
+            <option value="esa_delay_months">ESA delay (months)</option>
+            <option value="founder_salary_dollars">Founder salary ($/yr)</option>
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {cfg.label} ({cfg.unit})
+          </span>
+          <input
+            type="number"
+            value={Number.isFinite(value) ? value : 0}
+            step={cfg.step}
+            min={cfg.min}
+            max={cfg.max}
+            onChange={(e) => setValue(Number(e.target.value))}
+            className="rounded-lg border border-border/60 bg-white px-2.5 py-1.5 text-sm tabular-nums"
+            data-testid="custom-stress-value"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Start year</span>
+          <select
+            value={yearRangeEnabled ? startYear : 1}
+            onChange={(e) => setStartYear(Number(e.target.value))}
+            disabled={!yearRangeEnabled}
+            className="rounded-lg border border-border/60 bg-white px-2.5 py-1.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            data-testid="custom-stress-start-year"
+          >
+            {[1, 2, 3, 4, 5].map((y) => (
+              <option key={y} value={y}>Year {y}</option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">End year</span>
+          <select
+            value={yearRangeEnabled ? endYear : 5}
+            onChange={(e) => setEndYear(Number(e.target.value))}
+            disabled={!yearRangeEnabled}
+            className="rounded-lg border border-border/60 bg-white px-2.5 py-1.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            data-testid="custom-stress-end-year"
+          >
+            {[1, 2, 3, 4, 5].map((y) => (
+              <option key={y} value={y}>Year {y}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+        <p className="text-[11px] text-muted-foreground">{cfg.helper}</p>
+        <button
+          type="button"
+          onClick={handleRun}
+          disabled={!modelData}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          data-testid="custom-stress-run"
+        >
+          <Activity className="h-3.5 w-3.5" />
+          Run custom scenario
+        </button>
+      </div>
+      {error && (
+        <p className="text-xs text-rose-700 mb-2" data-testid="custom-stress-error">{error}</p>
+      )}
+      {result && (
+        <div
+          className="overflow-hidden rounded-xl border border-amber-200 bg-white"
+          data-testid="custom-stress-result"
+        >
+          <table className="w-full text-sm">
+            <tbody>
+              <tr className="align-top">
+                <td className="px-4 py-2.5">
+                  <div className="font-semibold text-xs text-foreground">{result.name}</div>
+                  <div className="text-[11px] text-muted-foreground leading-snug mt-0.5">{result.description}</div>
+                </td>
+                <td className="text-right px-4 py-2.5 font-semibold text-xs whitespace-nowrap">
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Min DSCR</div>
+                  {minDscr === null ? "N/A" : `${minDscr.toFixed(2)}x`}
+                </td>
+                <td className="text-right px-4 py-2.5 font-semibold text-xs whitespace-nowrap">
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Min cash</div>
+                  {fmtCurrency(minEndCash)}
+                </td>
+                <td className="text-right px-4 py-2.5 font-semibold text-xs whitespace-nowrap">
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Runway</div>
+                  {result.cashRunwayMonths.toFixed(1)} mo
+                </td>
+                <td className={cn("text-right px-4 py-2.5 font-semibold text-xs whitespace-nowrap", niDelta < 0 ? "text-rose-700" : "text-green-700")}>
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Y1 NI Δ</div>
+                  {niDelta >= 0 ? "+" : ""}{fmtCurrency(niDelta)}
+                </td>
+                <td className="text-right px-4 py-2.5 font-semibold text-xs whitespace-nowrap">
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Break-even</div>
+                  {result.breakEvenYear === null ? "Never" : `Year ${result.breakEvenYear}`}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jumpToStep, exportStepNumber = 9, revenueStepNumber = 4, lendingLabIntent, hasLoan, modelData }: ConsultantAnalysisViewProps) {
@@ -1465,6 +1712,7 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
               </tbody>
             </table>
           </div>
+          <CustomStressTestForm modelData={modelData as FullModelData | undefined} />
         </div>
       )}
 

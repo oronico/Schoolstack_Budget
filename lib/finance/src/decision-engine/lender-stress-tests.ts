@@ -225,42 +225,251 @@ function buildResult(
   };
 }
 
-/** Clone the model and scale every enrollment year by `(1 + pct/100)`,
- *  rounded to whole students. */
-function withEnrollmentDelta(data: FullModelData, pct: number): FullModelData {
+/** Returns true when 1-indexed `year` falls within the inclusive
+ *  `[startYear, endYear]` window. Indices outside 1..5 are ignored. */
+function inYearRange(year: number, startYear: number, endYear: number): boolean {
+  return year >= startYear && year <= endYear;
+}
+
+/** Clone the model and scale enrollment years within `[startYear, endYear]`
+ *  (1-indexed, inclusive) by `(1 + pct/100)`, rounded to whole students. */
+function withEnrollmentDelta(
+  data: FullModelData,
+  pct: number,
+  startYear = 1,
+  endYear = 5,
+): FullModelData {
   const factor = 1 + pct / 100;
   const enrollment: Record<string, unknown> = { ...(data.enrollment || {}) };
-  for (const k of ["year1", "year2", "year3", "year4", "year5"]) {
+  for (let y = 1; y <= 5; y++) {
+    if (!inYearRange(y, startYear, endYear)) continue;
+    const k = `year${y}`;
     const v = enrollment[k];
     if (typeof v === "number") enrollment[k] = Math.max(0, Math.round(v * factor));
   }
   return { ...data, enrollment: enrollment as FullModelData["enrollment"] };
 }
 
-/** Clone the model and reduce Year-1 amounts on public-funding / ESA /
- *  school-choice revenue rows by `pct` (e.g. 25 for a 3-month delay). */
-function withEsaDelay(data: FullModelData, pct: number): FullModelData {
+/** Clone the model and reduce per-year amounts on public-funding / ESA /
+ *  school-choice revenue rows by `pct` across the year range
+ *  (1-indexed, inclusive). The canonical battery uses `startYear=endYear=1`
+ *  to model a Year-1 disbursement delay; custom callers can widen the
+ *  window to model a multi-year funding shortfall. */
+function withEsaDelay(
+  data: FullModelData,
+  pct: number,
+  startYear = 1,
+  endYear = 1,
+): FullModelData {
   const factor = 1 - pct / 100;
   const targetCats = new Set(["public_funding", "school_choice"]);
   const revenueRows: RevenueRowLike[] = (data.revenueRows || []).map((r) => {
     if (!r.category || !targetCats.has(r.category)) return r;
     const amounts = r.amounts ? [...r.amounts] : undefined;
-    if (amounts && amounts.length > 0) amounts[0] = (amounts[0] || 0) * factor;
+    if (amounts) {
+      for (let y = 1; y <= amounts.length; y++) {
+        if (!inYearRange(y, startYear, endYear)) continue;
+        amounts[y - 1] = (amounts[y - 1] || 0) * factor;
+      }
+    }
     return { ...r, amounts };
   });
   return { ...data, revenueRows };
 }
 
 /** Clone the model and scale every `occupancy_facility` expense row by
- *  `(1 + pct/100)` across all five years. */
-function withRentShock(data: FullModelData, pct: number): FullModelData {
+ *  `(1 + pct/100)` across the year range (1-indexed, inclusive). */
+function withRentShock(
+  data: FullModelData,
+  pct: number,
+  startYear = 1,
+  endYear = 5,
+): FullModelData {
   const factor = 1 + pct / 100;
   const expenseRows: ExpenseRowLike[] = (data.expenseRows || []).map((r) => {
     if (r.category !== "occupancy_facility") return r;
-    const amounts = r.amounts ? r.amounts.map((a) => (a || 0) * factor) : undefined;
+    const amounts = r.amounts
+      ? r.amounts.map((a, idx) =>
+          inYearRange(idx + 1, startYear, endYear) ? (a || 0) * factor : a,
+        )
+      : undefined;
     return { ...r, amounts };
   });
   return { ...data, expenseRows };
+}
+
+/** Clone the model and override the founder/leader staffing-row's
+ *  annualized rate so the engine's reported staffing-cost (and downstream
+ *  net income / DSCR / runway) reflects `dollars` per year. We mutate the
+ *  highest-paid `school_leadership` row — the same heuristic
+ *  `findFounderRow` and the founder-comp normalizer use — and clear the
+ *  legacy `staffing.founderSalary` so the per-year resolver doesn't
+ *  shadow it. We also mirror the value into `staffing.reportedFounderComp`
+ *  so the lender-view normalization delta is computed against the new
+ *  baseline rather than the original. The year-range arg is intentionally
+ *  not honored here (the staffing roster carries one rate per role,
+ *  escalated by COLA across years); callers passing a narrower range get
+ *  a scenario covering all five years and the UI labels it accordingly. */
+function withFounderSalary(
+  data: FullModelData,
+  dollars: number,
+  _startYear = 1,
+  _endYear = 5,
+): FullModelData {
+  const safeDollars = Math.max(0, dollars);
+  const staffing = (data.staffing ?? {}) as Record<string, unknown>;
+  const next: number[] = Array.from({ length: 5 }, () => safeDollars);
+
+  const rows = data.staffingRows ? [...data.staffingRows] : [];
+  let founderIdx = -1;
+  let bestScore = -Infinity;
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (r.functionCategory !== "school_leadership") continue;
+    const score = (r.fte || 0) * (r.annualizedRate || 0);
+    if (score > bestScore) {
+      bestScore = score;
+      founderIdx = i;
+    }
+  }
+  if (founderIdx >= 0) {
+    const founder = rows[founderIdx];
+    const fte = founder.fte && founder.fte > 0 ? founder.fte : 1;
+    rows[founderIdx] = { ...founder, fte, annualizedRate: safeDollars / fte };
+  }
+
+  return {
+    ...data,
+    staffingRows: rows,
+    staffing: {
+      ...staffing,
+      reportedFounderComp: next,
+      founderSalary: undefined,
+    } as FullModelData["staffing"],
+  };
+}
+
+/** Knob a founder can pick on the consultant view's custom stress-test
+ *  form. Each maps onto one of the same `with…` mutators the canonical
+ *  battery uses, so custom + standard scenarios share identical math. */
+export type CustomStressKnob =
+  | "enrollment_pct"
+  | "rent_pct"
+  | "esa_delay_months"
+  | "founder_salary_dollars";
+
+export interface CustomStressTestInput {
+  knob: CustomStressKnob;
+  /** Knob-dependent value:
+   *  - `enrollment_pct`: signed pct (e.g. -15 for a 15% miss)
+   *  - `rent_pct`: signed pct (e.g. 30 for a +30% lease bump)
+   *  - `esa_delay_months`: months delayed (1..12)
+   *  - `founder_salary_dollars`: absolute annual salary $ for the range */
+  value: number;
+  /** Inclusive 1-indexed start year (1..5). */
+  startYear: number;
+  /** Inclusive 1-indexed end year (1..5). Must be >= `startYear`. */
+  endYear: number;
+}
+
+function clampYear(y: number): number {
+  if (!Number.isFinite(y)) return 1;
+  return Math.min(5, Math.max(1, Math.round(y)));
+}
+
+function describeYearRange(startYear: number, endYear: number): string {
+  return startYear === endYear
+    ? `Year ${startYear}`
+    : `Years ${startYear}-${endYear}`;
+}
+
+function buildCustomMeta(input: CustomStressTestInput): LenderStressScenarioMeta {
+  const range = describeYearRange(input.startYear, input.endYear);
+  switch (input.knob) {
+    case "enrollment_pct": {
+      const sign = input.value >= 0 ? "+" : "";
+      return {
+        id: "custom" as LenderStressScenarioId,
+        name: `Custom: Enrollment ${sign}${input.value}% (${range})`,
+        description: `Enrollment scaled by ${sign}${input.value}% across ${range.toLowerCase()}, holding other assumptions constant.`,
+      };
+    }
+    case "rent_pct": {
+      const sign = input.value >= 0 ? "+" : "";
+      return {
+        id: "custom" as LenderStressScenarioId,
+        name: `Custom: Rent ${sign}${input.value}% (${range})`,
+        description: `Occupancy / facility expense rows escalated by ${sign}${input.value}% across ${range.toLowerCase()}.`,
+      };
+    }
+    case "esa_delay_months": {
+      const months = Math.max(0, Math.min(12, Math.round(input.value)));
+      const pct = Math.round((months / 12) * 100);
+      return {
+        id: "custom" as LenderStressScenarioId,
+        name: `Custom: ESA delay ${months} mo (${range})`,
+        description: `ESA / public-funding receipts reduced by ~${pct}% (≈ ${months} months delayed) across ${range.toLowerCase()}.`,
+      };
+    }
+    case "founder_salary_dollars": {
+      const fmt = new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 0,
+      });
+      return {
+        id: "custom" as LenderStressScenarioId,
+        name: `Custom: Founder salary ${fmt.format(input.value)} (Years 1-5)`,
+        description: `Founder compensation set to ${fmt.format(input.value)}/yr across all five years, replacing the as-planned draw. (Year-range scoping isn't available for this knob — the staffing roster carries one rate per role.)`,
+      };
+    }
+  }
+}
+
+/**
+ * Run a single user-tunable scenario alongside the fixed lender battery.
+ * Re-uses the same model mutators + canonical scenario engine that
+ * {@link computeLenderStressTests} drives, so a custom 12% enrollment miss
+ * and the standard −10% scenario are computed by the exact same math.
+ *
+ * Result is read-only / not persisted — callers should treat it as a
+ * derived view that is recomputed on every render.
+ */
+export function computeCustomLenderStressTest(
+  data: FullModelData,
+  input: CustomStressTestInput,
+): LenderStressScenarioResult {
+  const startYear = clampYear(input.startYear);
+  const endYear = Math.max(startYear, clampYear(input.endYear));
+  const safeInput: CustomStressTestInput = { ...input, startYear, endYear };
+  const baseMetrics = computeBaseFinancials(data);
+  let scenarioMetrics: ScenarioMetrics;
+  switch (safeInput.knob) {
+    case "enrollment_pct":
+      scenarioMetrics = computeBaseFinancials(
+        withEnrollmentDelta(data, safeInput.value, startYear, endYear),
+      );
+      break;
+    case "rent_pct":
+      scenarioMetrics = computeBaseFinancials(
+        withRentShock(data, safeInput.value, startYear, endYear),
+      );
+      break;
+    case "esa_delay_months": {
+      const months = Math.max(0, Math.min(12, safeInput.value));
+      const pct = (months / 12) * 100;
+      scenarioMetrics = computeBaseFinancials(
+        withEsaDelay(data, pct, startYear, endYear),
+      );
+      break;
+    }
+    case "founder_salary_dollars":
+      scenarioMetrics = computeBaseFinancials(
+        withFounderSalary(data, Math.max(0, safeInput.value), startYear, endYear),
+      );
+      break;
+  }
+  return buildResult(buildCustomMeta(safeInput), scenarioMetrics, baseMetrics);
 }
 
 /**
