@@ -51,6 +51,12 @@ import { generateWorkbook as generateLegacyWorkbook } from "../src/lib/excel-exp
 import { generateFormulaWorkbook } from "../src/lib/formula-export.js";
 import { generateLenderProFormaWorkbook } from "../src/lib/lender-proforma-export.js";
 import { generateUnderwritingWorkbook } from "../src/lib/underwriting-workbook.js";
+import {
+  generateChestertonOperatingManual,
+  CHESTERTON_TAB_NAMES,
+} from "../src/lib/packets/chesterton-operating-manual.js";
+import { generateSingleYearBudget } from "../src/lib/underwriting-export.js";
+import { CHESTERTON_ACADEMY_CSN_WIZARD_DEMO } from "../src/lib/demo-models/index.js";
 import { microschoolStartup } from "./sample-payloads.js";
 
 let passed = 0;
@@ -254,6 +260,42 @@ const UNDERWRITING_SINGLE_YEAR_SHEETS = UNDERWRITING_FIVE_YEAR_SHEETS.map((n) =>
   n === "5-Year Operating Stmt" ? "Year 1 Operating Stmt" : n,
 );
 
+// Chesterton Operating Manual fixture. The CSN Operating Manual builder
+// (`generateChestertonOperatingManual`) reads exclusively from
+// `data.chesterton.*` (phaseEnrollment, salarySchedule, fundraisingGoals,
+// giftChart, recruitingPipeline, prospectiveFacilities, priestlyOutreach,
+// keyInfluencers — see ChestertonModelInput) and ignores the standard
+// ModelData rows. CHESTERTON_ACADEMY_CSN_WIZARD_DEMO.data is the
+// canonical seeded payload that populates every chesterton.* field the
+// builder reads, so it exercises every tab's row-aware branch.
+//
+// Because the Chesterton builder reads exclusively from the chesterton
+// block (and not from the variant-specific microschoolStartup fixture),
+// every variant in the matrix below resolves to the same Chesterton
+// payload — the variant axis is irrelevant for this builder. We still
+// run it across all variants so the format gets the same parse + sheet
+// + populated-cell coverage as everything else.
+function chestertonFixture(): FixturePayload {
+  return JSON.parse(
+    JSON.stringify(CHESTERTON_ACADEMY_CSN_WIZARD_DEMO.data),
+  ) as FixturePayload;
+}
+
+// Sheet lists for the two added builders. Chesterton: every CSN tab
+// from CHESTERTON_TAB_NAMES (GETTING STARTED through Parent Handout) —
+// the builder always emits all 11 tabs regardless of which chesterton.*
+// rows are populated. Single-Year Budget: the four buildSY* sheets plus
+// the always-on Decision History tab the builder appends at the end.
+const CHESTERTON_SHEETS = [...CHESTERTON_TAB_NAMES];
+const SINGLE_YEAR_BUDGET_SHEETS = [
+  "Assumptions",
+  "Revenue",
+  "Personnel",
+  "Operating Expenses",
+  "P&L Summary",
+  "Decision History",
+];
+
 const FORMATS: FormatSpec[] = [
   {
     label: "Legacy 5-year workbook (excel-export.ts)",
@@ -298,6 +340,42 @@ const FORMATS: FormatSpec[] = [
       five_year_with_debt: UNDERWRITING_FIVE_YEAR_SHEETS,
       single_year: UNDERWRITING_SINGLE_YEAR_SHEETS,
       no_debt: UNDERWRITING_FIVE_YEAR_SHEETS,
+    },
+  },
+  {
+    label: "Chesterton Operating Manual workbook (chesterton-operating-manual.ts)",
+    // The Chesterton builder reads exclusively from `data.chesterton.*`
+    // and ignores the variant-specific microschoolStartup fixture, so
+    // we substitute the canonical CSN-wizard payload here. Every variant
+    // therefore exercises the same Chesterton workbook — the variant
+    // axis is irrelevant for this format but keeping it in the matrix
+    // gives consistent parse + populated-cell coverage.
+    buildBuffer: async (_data) => {
+      // generateChestertonOperatingManual returns an ExcelJS.Workbook
+      // (the route layer serializes it). Serialize here so the smoke
+      // test exercises the same write path Excel sees.
+      const wb = await generateChestertonOperatingManual(
+        chestertonFixture() as Parameters<typeof generateChestertonOperatingManual>[0],
+      );
+      const ab = await wb.xlsx.writeBuffer();
+      return Buffer.from(ab);
+    },
+    requiredSheetsByVariant: {
+      five_year_with_debt: CHESTERTON_SHEETS,
+      single_year: CHESTERTON_SHEETS,
+      no_debt: CHESTERTON_SHEETS,
+    },
+  },
+  {
+    label: "Single-Year Budget workbook (underwriting-export.ts)",
+    // generateSingleYearBudget always renders a single year (yearIndex 0
+    // here), so its sheet set is identical regardless of the upstream
+    // model's modelDuration or debt configuration.
+    buildBuffer: async (data) => generateSingleYearBudget(data, 0),
+    requiredSheetsByVariant: {
+      five_year_with_debt: SINGLE_YEAR_BUDGET_SHEETS,
+      single_year: SINGLE_YEAR_BUDGET_SHEETS,
+      no_debt: SINGLE_YEAR_BUDGET_SHEETS,
     },
   },
 ];
