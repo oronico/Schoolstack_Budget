@@ -26,10 +26,25 @@
 import {
   aggregateRosterCapSavings,
   buildRosterCapInsightText,
+  computeYear1MonthlyCashFlow,
+  findLowestCashMonth,
+  type MonthlyRevenueRowLike,
   type PayrollTaxComponent,
 } from "@workspace/finance";
 import { runConsultantEngine } from "../../consultant-engine.js";
-import type { ModelData } from "../../workbook-helpers.js";
+import {
+  computeCapDebtForYear,
+  computeDebtServiceForYear,
+  computeExpenseForYear,
+  computeNewStudents,
+  computePersonnelForYear,
+  computeReturningStudents,
+  computeRevenueForYear,
+  computeTotalFTE,
+  getEnrollmentArray,
+  normalizeStaffingRow,
+  type ModelData,
+} from "../../workbook-helpers.js";
 import { buildPacketData } from "../build-packet-data.js";
 import type { PacketInsight, PacketType } from "../packet-types.js";
 
@@ -455,6 +470,242 @@ async function run(): Promise<void> {
     "active-only OH payload emits no inline notes on linkedAssumptions",
     (activeRevenue?.linkedAssumptions ?? []).every((a) => a.note === undefined),
     `linkedAssumptions were: ${JSON.stringify(activeRevenue?.linkedAssumptions ?? [])}`,
+  );
+
+  // ---- 6. Task #677 — per-year "Lowest Cash Month by Year" table ---------
+  // Task #662 added a per-year trough table to the cash_flow section so
+  // lenders can see the cash low point in every modeled year, not just
+  // the global trough. Lock that table down with structural assertions
+  // (one row per modeled year, expected month + amount) and a parity
+  // check that re-derives each row using the same dashboard helpers
+  // (`computeYear1MonthlyCashFlow` + `findLowestCashMonth`) buildCashFlow
+  // calls internally — so a refactor that swaps in a different helper or
+  // drops a year is caught here.
+  function lowestCashFixture(enrollment: {
+    year1: number; year2: number; year3: number; year4: number; year5: number;
+  }, schoolName: string): Record<string, unknown> {
+    return {
+      schoolProfile: {
+        schoolName,
+        state: "WA",
+        schoolType: "microschool",
+        entityType: "llc_single",
+        schoolStage: "new_school",
+        fundingProfile: "tuition_based",
+        openingYear: 2026,
+        currentStudents: 0,
+        maxCapacity: 50,
+        fiscalYearStartMonth: 7,
+        isPartialFirstYear: false,
+        year1OperatingMonths: 12,
+        ownershipType: "rent",
+        monthlyRent: 2000,
+        annualRentEscalation: 3,
+        debtIncluded: false,
+      },
+      enrollment,
+      revenueRows: [
+        {
+          id: "r1",
+          category: "tuition_and_fees",
+          lineItem: "Tuition",
+          enabled: true,
+          driverType: "per_student",
+          amounts: [12000, 12360, 12731, 13113, 13506],
+          billingMonths: 12,
+        },
+      ],
+      staffingRows: [],
+      expenseRows: [
+        {
+          id: "e1",
+          category: "occupancy_facility",
+          lineItem: "Rent",
+          enabled: true,
+          driverType: "monthly",
+          amounts: [2000, 2060, 2122, 2186, 2251],
+        },
+      ],
+      capitalAndDebtRows: [],
+      facilities: { annualSalaryIncrease: 3, generalCostInflation: 2.5 },
+      openingBalances: { cash: 0 },
+    };
+  }
+
+  // Mirror of build-packet-data's `computeYearlyData` — kept locally so
+  // this test exercises the same helpers (`computePersonnelForYear`,
+  // `computeExpenseForYear`, ...) the dashboard + packet share rather
+  // than asserting against the values buildCashFlow itself produced.
+  function deriveExpectedTroughs(model: Record<string, unknown>): {
+    year: number; monthLabel: string; amount: number;
+  }[] {
+    const md = model as unknown as ModelData;
+    const enrollment = getEnrollmentArray(md.enrollment);
+    const sp = md.schoolProfile!;
+    const fyStart = sp.fiscalYearStartMonth || 7;
+    const opMonths = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 10) : 12;
+    const normalized = (md.staffingRows || []).map(
+      (r) => normalizeStaffingRow(r as unknown as Record<string, unknown>),
+    );
+    const fac = (md as unknown as { facilities?: Record<string, unknown> }).facilities;
+    const salaryEsc = ((fac?.annualSalaryIncrease as number | undefined) ?? 0) / 100;
+    const costInflPct = fac?.generalCostInflation as number | undefined;
+    const pktRR = (md.enrollment as Record<string, unknown> | undefined)?.retentionRate as number | undefined ?? 85;
+    const startingCash = md.openingBalances?.cash ?? 0;
+
+    const out: { year: number; monthLabel: string; amount: number }[] = [];
+    let runningOpening = startingCash;
+    for (let y = 0; y < 5; y++) {
+      const students = enrollment[y] || 0;
+      const ns = computeNewStudents(enrollment, pktRR, y);
+      const rs = computeReturningStudents(enrollment, pktRR, y);
+      const totalRevenue = computeRevenueForYear(md.revenueRows || [], y, students, md.tuitionTiers, costInflPct, sp);
+      if (totalRevenue <= 0) break;
+      const totalStaffing = computePersonnelForYear(normalized, salaryEsc, 1, y, students);
+      const fte = computeTotalFTE(normalized, y, students);
+      const opex = computeExpenseForYear(md.expenseRows || [], y, students, totalRevenue, costInflPct, ns, rs, fte);
+      const capDebt = computeCapDebtForYear(md.capitalAndDebtRows || [], y, students);
+      const debtService = computeDebtServiceForYear(md.capitalAndDebtRows || [], y);
+      const totalExpenses = totalStaffing + opex + capDebt;
+      const series = computeYear1MonthlyCashFlow({
+        revenueRows: (md.revenueRows || []) as unknown as MonthlyRevenueRowLike[],
+        yearIndex: y,
+        students,
+        annualPersonnel: totalStaffing,
+        annualOpex: totalExpenses - totalStaffing - debtService,
+        annualDebt: debtService,
+        openingCash: runningOpening,
+        opMonths: y === 0 ? opMonths : 12,
+      });
+      const t = findLowestCashMonth(series.cumulative, fyStart);
+      if (t) out.push({ year: y, monthLabel: t.monthLabel, amount: t.amount });
+      runningOpening = series.cumulative[series.cumulative.length - 1];
+    }
+    return out;
+  }
+
+  // (a) Full 5-year model — table has 5 rows, one per modeled year, and
+  // each row's month + amount matches the dashboard helpers.
+  const full5Year = lowestCashFixture(
+    { year1: 12, year2: 18, year3: 22, year4: 25, year5: 25 },
+    "Trough Test School",
+  );
+  const full5ConsultantOutput = await runConsultantEngine(full5Year);
+  const full5Packet = buildPacketData({
+    modelData: full5Year as unknown as ModelData,
+    consultantOutput: full5ConsultantOutput,
+    modelId: 1,
+    packetType: "lender",
+    personaComfort: "comfortable",
+  });
+  const full5CashFlow = full5Packet.sections.find((s) => s.id === "cash_flow");
+  check(
+    "lender packet cash_flow section is present",
+    !!full5CashFlow,
+    "the cash_flow section is required for the per-year trough table to exist",
+  );
+  const full5Table = (full5CashFlow?.tables ?? []).find(
+    (t) => t.title === "Lowest Cash Month by Year",
+  );
+  check(
+    "cash_flow surfaces a 'Lowest Cash Month by Year' table",
+    !!full5Table,
+    `tables were: ${JSON.stringify((full5CashFlow?.tables ?? []).map((t) => t.title))}`,
+  );
+  check(
+    "Lowest Cash Month by Year table headers are [Year, Month, Ending Cash]",
+    !!full5Table &&
+      full5Table.headers.length === 3 &&
+      full5Table.headers[0] === "Year" &&
+      full5Table.headers[1] === "Month" &&
+      full5Table.headers[2] === "Ending Cash",
+    `headers were: ${JSON.stringify(full5Table?.headers ?? [])}`,
+  );
+
+  const expectedFull5 = deriveExpectedTroughs(full5Year);
+  check(
+    "per-year trough table has one row per modeled year (5)",
+    !!full5Table && full5Table.rows.length === expectedFull5.length && full5Table.rows.length === 5,
+    `expected 5 rows, got ${full5Table?.rows.length ?? 0}; derived ${expectedFull5.length}`,
+  );
+  if (full5Table && expectedFull5.length === full5Table.rows.length) {
+    for (let i = 0; i < expectedFull5.length; i++) {
+      const exp = expectedFull5[i];
+      const row = full5Table.rows[i];
+      check(
+        `Year ${exp.year + 1} row label is "Year ${exp.year + 1}"`,
+        row.label === `Year ${exp.year + 1}`,
+        `row label was "${row.label}"`,
+      );
+      check(
+        `Year ${exp.year + 1} row month matches dashboard helper (${exp.monthLabel})`,
+        row.values[0] === exp.monthLabel,
+        `row month was "${row.values[0]}"`,
+      );
+      // The packet renders amounts via the local `fmt()` helper, so
+      // re-derive its formatting here rather than re-importing it.
+      const fmtAmount = (n: number): string => {
+        if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+        if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+        return `$${n.toFixed(0)}`;
+      };
+      const expectedAmount = fmtAmount(exp.amount);
+      check(
+        `Year ${exp.year + 1} row ending-cash matches dashboard helper (${expectedAmount})`,
+        row.values[1] === expectedAmount,
+        `row amount was "${row.values[1]}"`,
+      );
+      check(
+        `Year ${exp.year + 1} row isBold flag matches negative-cash signal`,
+        row.isBold === (exp.amount < 0),
+        `isBold was ${row.isBold} for amount ${exp.amount}`,
+      );
+    }
+  }
+
+  // (b) Negative case: years 4–5 have no enrollment / revenue, so they
+  // must be omitted from the per-year table — never rendered as zeros.
+  const partial3Year = lowestCashFixture(
+    { year1: 12, year2: 18, year3: 22, year4: 0, year5: 0 },
+    "Three-Year-Only Trough School",
+  );
+  const partial3ConsultantOutput = await runConsultantEngine(partial3Year);
+  const partial3Packet = buildPacketData({
+    modelData: partial3Year as unknown as ModelData,
+    consultantOutput: partial3ConsultantOutput,
+    modelId: 1,
+    packetType: "lender",
+    personaComfort: "comfortable",
+  });
+  const partial3CashFlow = partial3Packet.sections.find((s) => s.id === "cash_flow");
+  const partial3Table = (partial3CashFlow?.tables ?? []).find(
+    (t) => t.title === "Lowest Cash Month by Year",
+  );
+  check(
+    "partial-model cash_flow still surfaces the per-year trough table",
+    !!partial3Table,
+    `tables were: ${JSON.stringify((partial3CashFlow?.tables ?? []).map((t) => t.title))}`,
+  );
+  check(
+    "unmodeled years (no revenue) are omitted from the per-year table",
+    !!partial3Table && partial3Table.rows.length === 3,
+    `expected 3 rows for years 1-3, got ${partial3Table?.rows.length ?? 0}: ${JSON.stringify(
+      partial3Table?.rows.map((r) => r.label) ?? [],
+    )}`,
+  );
+  check(
+    "partial-model row labels are exactly Year 1, Year 2, Year 3",
+    !!partial3Table &&
+      partial3Table.rows[0]?.label === "Year 1" &&
+      partial3Table.rows[1]?.label === "Year 2" &&
+      partial3Table.rows[2]?.label === "Year 3",
+    `labels were: ${JSON.stringify(partial3Table?.rows.map((r) => r.label) ?? [])}`,
+  );
+  check(
+    "partial-model table never includes a Year 4 / Year 5 row zeroed out",
+    !!partial3Table &&
+      !partial3Table.rows.some((r) => r.label === "Year 4" || r.label === "Year 5"),
+    `labels were: ${JSON.stringify(partial3Table?.rows.map((r) => r.label) ?? [])}`,
   );
 
   // ---- summary -----------------------------------------------------------
