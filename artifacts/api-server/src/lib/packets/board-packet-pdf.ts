@@ -12,7 +12,7 @@ import type { CashRunwayView } from "./build-cash-runway";
 import type { PacketSection, LinkedMetric } from "./packet-types";
 import { renderForecastAccuracySection } from "./forecast-accuracy-pdf.js";
 import { cashStatusBadgeLabel, renderCashRunwaySection } from "./cash-runway-pdf.js";
-import { renderNarrativeCommentarySection, renderAssumptionsConfidenceSection } from "./lender-packet-pdf.js";
+import { renderNarrativeCommentarySection, renderAssumptionsConfidenceSection, renderLenderStressTestsSection } from "./lender-packet-pdf.js";
 import { buildFounderSummary, type FounderSummary } from "./build-founder-summary.js";
 import type { ConsultantOutput } from "../consultant-engine.js";
 import type { ModelData } from "../workbook-helpers.js";
@@ -108,6 +108,13 @@ export async function generateBoardPacketPDF(
     packet.grantCommentary,
     packet.audienceDrafts?.grant,
   );
+
+  // Task #674 — same standardized lender stress-test battery the lender
+  // packet shows. Trustees care about DSCR / runway under downside just
+  // as much as the lender does, and pulling from the same canonical
+  // `consultantOutput.lenderStressTests` (and reusing the same renderer)
+  // means the figures reconcile bit-for-bit between the two packets.
+  renderLenderStressTestsSection(doc, packet.lenderStressTests);
 
   // Forecast accuracy roll-up for the board: shows projected vs. actual on
   // the decisions we pursued so trustees can calibrate confidence in the

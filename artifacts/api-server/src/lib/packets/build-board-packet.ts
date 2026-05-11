@@ -17,6 +17,7 @@ import {
   type ForecastAccuracyFilter,
   type ForecastAccuracyRollup,
   type DecisionEngineModelData,
+  type LenderStressTestResults,
 } from "@workspace/finance";
 import { buildPacketData } from "./build-packet-data";
 import {
@@ -200,6 +201,14 @@ export interface BoardPacket extends PacketData {
     string,
     { confidence: "actuals" | "signed_agreement" | "quote" | "research" | "estimate"; evidenceNote?: string }
   >;
+  /**
+   * Task #674 — fixed lender stress-test battery (-10/-20% enrollment, ESA
+   * delay, rent shock, founder normalization). Mirrored from the lender
+   * packet so trustees see the same standardized downside view; numbers
+   * reconcile bit-for-bit because both packets pull straight off
+   * `consultantOutput.lenderStressTests`.
+   */
+  lenderStressTests: LenderStressTestResults;
 }
 
 const BOARD_PACKET_SECTIONS: SectionId[] = [
@@ -382,6 +391,11 @@ export function buildBoardPacket(
     // the two appendices.
     grantCommentary: buildGrantCommentary(narrativeBundle),
     audienceDrafts,
+    // Task #674 — pull-through from the consultant output so the board
+    // PDF renders the same standardized downside battery as the lender
+    // packet. Both surfaces read the same canonical engine result, so
+    // the numbers reconcile bit-for-bit.
+    lenderStressTests: consultantOutput.lenderStressTests,
   };
 }
 

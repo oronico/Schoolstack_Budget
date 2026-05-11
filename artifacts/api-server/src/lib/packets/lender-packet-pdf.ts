@@ -974,7 +974,7 @@ function renderProgramBreakEvenSection(doc: PDFDoc, programs: ProgramBreakEven[]
   }
 }
 
-function renderLenderStressTestsSection(doc: PDFDoc, stress: LenderStressTestResults) {
+export function renderLenderStressTestsSection(doc: PDFDoc, stress: LenderStressTestResults) {
   ensureSpace(doc, 80);
   sectionTitle(doc, "Standard Lender Stress Tests");
   bodyText(
