@@ -51,8 +51,12 @@ import {
   computeDecisionImpactFromPersisted,
   coercePersistedDecisionOverrides,
   isDecisionType,
+  computeBaseFinancials,
+  computeDownsideBand,
   type DecisionImpact,
   type DecisionType as DecisionEngineDecisionType,
+  type DownsideBand,
+  type DecisionEngineModelData,
 } from "@workspace/finance";
 import type { Response } from "express";
 
@@ -2094,6 +2098,38 @@ router.get("/shared/:token", sharedLinkRateLimiter, async (req, res) => {
     // single-year founders never confirmed those values.
     const isSingleYear = (profile?.modelDuration as string | undefined) === "single_year";
 
+    // Task #626 — Break-even & downside parity with the founder dashboard,
+    // scenario planner, lender PDF, and underwriting workbook (Task #612).
+    // Computed server-side from the canonical engine so we can publish only
+    // the aggregates the public share page needs (per-year break-even
+    // students/utilization, max capacity, planned enrollment, and the
+    // -10% / -20% downside band) without leaking raw model inputs over the
+    // unauthenticated /shared/:token surface.
+    let breakEvenDownside: {
+      breakEvenStudents: Array<number | null>;
+      breakEvenUtilization: Array<number | null>;
+      maxCapacity: number | null;
+      enrollment: number[];
+      downsideBand: DownsideBand;
+    } | null = null;
+    try {
+      const engineData = data as unknown as DecisionEngineModelData;
+      const baseMetrics = computeBaseFinancials(engineData);
+      const downsideBand = computeDownsideBand(engineData);
+      const maxCapRaw = profile?.maxCapacity;
+      const maxCapacity =
+        typeof maxCapRaw === "number" && maxCapRaw > 0 ? maxCapRaw : null;
+      breakEvenDownside = {
+        breakEvenStudents: baseMetrics.breakEvenStudents,
+        breakEvenUtilization: baseMetrics.breakEvenUtilization,
+        maxCapacity,
+        enrollment: baseMetrics.enrollment,
+        downsideBand,
+      };
+    } catch (err) {
+      console.error("Failed to precompute break-even/downside for share link", { token, error: err });
+    }
+
     res.json({
       schoolName,
       state,
@@ -2128,6 +2164,11 @@ router.get("/shared/:token", sharedLinkRateLimiter, async (req, res) => {
         ((data as Record<string, unknown>).assumptionConfidence as
           | Record<string, { confidence: string; evidenceNote?: string }>
           | undefined) || {},
+      // Task #626 — precomputed break-even & downside aggregates so the
+      // shared page can render the same "Break-even & downside" card as the
+      // dashboard. `null` if engine compute throws (e.g. malformed legacy
+      // data); the client silently skips the section in that case.
+      breakEvenDownside,
     });
   } catch (err) {
     console.error("Get shared model error:", err);

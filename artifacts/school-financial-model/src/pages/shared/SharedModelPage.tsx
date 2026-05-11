@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams } from "wouter";
-import { TrendingUp, TrendingDown, Users, DollarSign, Shield, Clock, AlertTriangle, ArrowRightLeft, Download, ExternalLink, Loader2, Plus, XCircle } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, DollarSign, Shield, Clock, AlertTriangle, ArrowRightLeft, Download, ExternalLink, Loader2, Plus, XCircle, Target } from "lucide-react";
 import { MAX_COMPARE_KEYS } from "@/lib/share-comparison";
 import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "@/lib/benchmark-thresholds";
 import { SEOHead } from "@/components/SEOHead";
@@ -67,6 +67,22 @@ interface SharedModelData {
     string,
     { confidence: "actuals" | "signed_agreement" | "quote" | "research" | "estimate"; evidenceNote?: string }
   >;
+  // Task #626 — server-precomputed Break-even & downside aggregates so the
+  // shared page can render the same card founders see on the dashboard,
+  // scenario planner, lender PDF, and underwriting workbook (Task #612). The
+  // numbers come from the canonical engine (`computeBaseFinancials` +
+  // `computeDownsideBand`) so every surface stays in sync. `null` (or
+  // omitted on older share links predating this layer) hides the section.
+  breakEvenDownside?: {
+    breakEvenStudents: Array<number | null>;
+    breakEvenUtilization: Array<number | null>;
+    maxCapacity: number | null;
+    enrollment: number[];
+    downsideBand: {
+      minus10: { enrollment: number[]; dscr: number[]; endingCash: number[] };
+      minus20: { enrollment: number[]; dscr: number[]; endingCash: number[] };
+    };
+  } | null;
 }
 
 // Task #659 — Assumptions Confidence section. Mirrors the lender PDF /
@@ -162,6 +178,159 @@ function AssumptionsConfidenceSection({ data }: { data: SharedModelData }) {
             </div>
           </div>
         ))}
+      </div>
+    </section>
+  );
+}
+
+// Task #626 — Break-even & downside section. Mirrors the founder dashboard's
+// `BreakEvenDownsideCard` (Task #612) so a recipient opening a /shared/:token
+// link sees the same Y1 break-even students, utilization vs max capacity, and
+// -10% / -20% enrollment downside DSCR + ending cash as the founder, lender
+// PDF, and underwriting workbook. The numbers are precomputed server-side
+// from the canonical engine (`computeBaseFinancials` + `computeDownsideBand`)
+// so every surface stays in sync — no per-line-item model inputs leak over
+// the public share endpoint.
+function BreakEvenDownsideSection({ data }: { data: SharedModelData }) {
+  const bed = data.breakEvenDownside;
+  if (!bed) return null;
+
+  const beY1 = bed.breakEvenStudents[0];
+  const utilY1 = bed.breakEvenUtilization[0];
+  const plannedY1 = bed.enrollment[0] ?? 0;
+
+  const fmtBe = (n: number | null | undefined) =>
+    n === null || n === undefined ? "—" : Math.round(n).toLocaleString();
+  const fmtUtil = (n: number | null | undefined) =>
+    n === null || n === undefined ? "—" : `${(n * 100).toFixed(0)}%`;
+  const fmtDscr = (n: number | null | undefined) =>
+    n === null || n === undefined || n === 0 ? "—" : `${n.toFixed(2)}x`;
+
+  let status: "above" | "at" | "below" | "unknown" = "unknown";
+  let statusLabel = "";
+  let statusClass = "";
+  let statusCopy = "";
+  if (beY1 !== null && beY1 !== undefined && plannedY1 > 0) {
+    const cushion = plannedY1 - beY1;
+    const pctCushion = cushion / beY1;
+    if (cushion < 0) {
+      status = "below";
+      statusLabel = "Below break-even";
+      statusClass = "bg-red-50 text-red-800 border-red-200";
+      statusCopy = `Planned enrollment is ${Math.abs(cushion)} students short of the ${beY1} needed to cover costs in Year 1.`;
+    } else if (pctCushion < 0.05) {
+      status = "at";
+      statusLabel = "At break-even";
+      statusClass = "bg-amber-50 text-amber-800 border-amber-200";
+      statusCopy = `Planned enrollment is right at the break-even line — only ${cushion} students of cushion above the ${beY1} needed.`;
+    } else {
+      status = "above";
+      statusLabel = "Above break-even";
+      statusClass = "bg-emerald-50 text-emerald-800 border-emerald-200";
+      statusCopy = `Planned enrollment is ${cushion} students (${(pctCushion * 100).toFixed(0)}%) above the ${beY1} needed to cover Year 1 costs.`;
+    }
+  }
+
+  return (
+    <section
+      className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8"
+      data-testid="shared-break-even-downside"
+    >
+      <div className="mb-4">
+        <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+          <Target className="h-4 w-4 text-amber-600" />
+          Break-even &amp; downside
+        </h2>
+        <p className="text-sm text-slate-600 mt-1">
+          Students needed to cover costs in Year 1 and what happens if
+          enrollment slips.
+        </p>
+      </div>
+
+      {status !== "unknown" && (
+        <div
+          data-testid={`shared-break-even-status-${status}`}
+          className={`mb-4 border rounded-lg px-3 py-2 text-sm ${statusClass}`}
+        >
+          <span className="font-semibold">{statusLabel}.</span> {statusCopy}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+        <div
+          data-testid="shared-break-even-students-y1"
+          className="bg-slate-50 border border-slate-200 rounded-xl p-4"
+        >
+          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+            Year 1 break-even students
+          </p>
+          <p className="font-bold text-2xl text-slate-800 mt-1">
+            {fmtBe(beY1)}
+          </p>
+          <p className="text-[11px] text-slate-500 mt-1">
+            Planned: {plannedY1} students
+          </p>
+        </div>
+        <div
+          data-testid="shared-break-even-utilization-y1"
+          className="bg-slate-50 border border-slate-200 rounded-xl p-4"
+        >
+          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+            Year 1 utilization to break even
+          </p>
+          <p className="font-bold text-2xl text-slate-800 mt-1">
+            {fmtUtil(utilY1)}
+          </p>
+          <p className="text-[11px] text-slate-500 mt-1">
+            {utilY1 === null || utilY1 === undefined
+              ? "Set max capacity to see utilization"
+              : `of stated max capacity${bed.maxCapacity ? ` (${bed.maxCapacity})` : ""}`}
+          </p>
+        </div>
+      </div>
+
+      <div className="border-t border-slate-200 pt-3">
+        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+          <TrendingDown className="h-3.5 w-3.5" />
+          Downside enrollment band — Year 1
+        </h3>
+        <div className="overflow-x-auto">
+          <table
+            data-testid="shared-downside-band-table"
+            className="w-full text-sm"
+          >
+            <thead>
+              <tr className="text-xs text-slate-500 border-b border-slate-200">
+                <th className="text-left py-1.5 font-medium">Scenario</th>
+                <th className="text-right py-1.5 font-medium">Students</th>
+                <th className="text-right py-1.5 font-medium">DSCR</th>
+                <th className="text-right py-1.5 font-medium">Ending cash</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { label: "If 10% fewer", d: bed.downsideBand.minus10 },
+                { label: "If 20% fewer", d: bed.downsideBand.minus20 },
+              ].map((row) => (
+                <tr
+                  key={row.label}
+                  className="border-b border-slate-100 last:border-b-0"
+                >
+                  <td className="py-2 text-slate-700">{row.label}</td>
+                  <td className="py-2 text-right tabular-nums text-slate-800">
+                    {row.d.enrollment[0] ?? 0}
+                  </td>
+                  <td className="py-2 text-right tabular-nums text-slate-800">
+                    {fmtDscr(row.d.dscr[0])}
+                  </td>
+                  <td className="py-2 text-right tabular-nums text-slate-800">
+                    {fmt(row.d.endingCash[0] ?? 0)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
   );
@@ -912,6 +1081,8 @@ export function SharedModelPage() {
           <h2 className="text-lg font-bold text-slate-800 mb-4">Expense Breakdown</h2>
           <ExpenseBreakdownSection data={data} />
         </section>
+
+        <BreakEvenDownsideSection data={data} />
 
         <AssumptionsConfidenceSection data={data} />
 
