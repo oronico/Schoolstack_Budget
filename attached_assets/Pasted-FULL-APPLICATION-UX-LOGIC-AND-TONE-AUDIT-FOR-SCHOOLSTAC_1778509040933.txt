@@ -1,0 +1,421 @@
+FULL APPLICATION UX, LOGIC, AND TONE AUDIT FOR SCHOOLSTACK BUDGET
+
+Context:
+SchoolStack Budget launches for school founders. It is not a bank portal. It is a school-facing financial planning and modeling tool that helps inexperienced entrepreneurs learn budgeting and financial modeling, while producing credible outputs for boards, funders, grants, landlords, lenders, and internal planning.
+
+Goal:
+Review the full application experience and confirm we have not missed anything essential. The app should be warm, logical, founder-safe, and advanced enough to serve a wide variety of school types and user sophistication levels.
+
+Do not add major features.
+Do not restructure the wizard.
+Do not change core formulas unless a logic defect is found.
+Do not add underwriting workflow or loan origination behavior.
+This is an audit and polish pass, not a rebuild.
+
+Current product promise:
+A school founder should be able to:
+1. Learn the financial concepts as they go.
+2. Enter actuals if available.
+3. Build assumptions if actuals are not available.
+4. Understand whether the model is realistic.
+5. See cash pressure before it happens.
+6. Export a credible workbook or summary for external conversations.
+
+AUDIT DIMENSIONS
+
+1. Audience fit
+
+Review whether the app works for:
+
+A. Beginner founder
+- Has never built a budget
+- Does not know accounting vocabulary
+- Needs plain-English explanations
+- Needs examples and guardrails
+- Should not feel judged or embarrassed
+
+B. Experienced operator
+- Wants faster data entry
+- Understands budgeting
+- Needs flexible assumptions
+- Wants to check the math quickly
+
+C. CFO / finance advisor
+- Needs line-item logic
+- Wants traceability
+- Needs formulas, assumptions, ratios, cash flow, and export quality
+
+D. Board member
+- Needs clear summary, risks, assumptions, and decision points
+
+E. Funder / grant reviewer
+- Needs use of funds, sustainability, one-time vs recurring costs, and revenue quality
+
+F. Lender / landlord
+- Needs repayment capacity, cash runway, facility burden, staffing burden, and credible assumptions
+
+Acceptance:
+The experience should support all audiences without making the beginner feel overwhelmed or the expert feel slowed down.
+
+2. Warmth and tone audit
+
+Founder-facing copy should be:
+- clear
+- warm
+- serious
+- nonjudgmental
+- practical
+- encouraging without being fluffy
+- honest without sounding punitive
+
+Use language like:
+- “Here’s what this means.”
+- “This may need more clarity.”
+- “A funder or lender may ask about this.”
+- “Your model gets stronger when...”
+- “This is worth revisiting before sharing externally.”
+- “This does not mean your plan is weak. It means this assumption needs more support.”
+
+Avoid founder-facing language like:
+- approved
+- declined
+- rejected
+- failed
+- pass/fail
+- ineligible
+- credit decision
+- underwriting decision
+- loan approval
+- approval packet
+- bank determination
+
+Acceptance:
+Every warning must include a constructive next step.
+
+Bad:
+“Staffing costs are too high.”
+
+Better:
+“Staffing is 72% of revenue. That may leave too little room for rent, curriculum, and reserves. Consider phasing one role later, increasing enrollment, or adjusting compensation assumptions.”
+
+3. Step-by-step logic audit
+
+Review the full wizard flow and answer:
+
+- Does each step have a clear purpose?
+- Does each step build logically on the previous one?
+- Are beginners told why the step matters?
+- Are experts able to move quickly?
+- Are required fields truly required?
+- Are optional fields clearly optional?
+- Are assumptions separated from actuals?
+- Are actuals clearly used to seed projections?
+- Are there any duplicate or confusing questions?
+- Are there any hidden calculations that should be explained?
+
+Audit these steps:
+- Story
+- School Details
+- Actuals Intake
+- Enrollment
+- Revenue
+- Staffing
+- Expenses
+- Capital & Financing
+- Assumptions & Sensitivity
+- Review
+- Consultant
+- Lender Narrative
+- Export
+- Public /underwriting guest wizard
+
+Acceptance:
+No step should feel random, punitive, duplicative, or overly technical without explanation.
+
+4. Revenue logic audit
+
+This is critical.
+
+Make sure the app clearly teaches:
+
+Tuition is often the price of a seat.
+Revenue is the money actually received to pay for that seat.
+
+Review all revenue-related UI and exports for confusing language.
+
+The app should clearly separate:
+- annual seat price
+- family-paid tuition
+- ESA / voucher / scholarship funding
+- charter / public per-pupil funding
+- philanthropy / grants
+- other revenue
+- collection rate
+- timing of cash receipt
+- confirmed vs projected revenue
+
+Add or verify this kind of helper text:
+“Think of this in two parts: the price of a seat and who pays for it. Some schools charge families directly. Some receive ESA, voucher, scholarship, or public funds. Some use philanthropy to close the gap. This section helps you show where the money actually comes from.”
+
+Acceptance:
+A new leader should not confuse tuition, funding, and revenue.
+
+5. Actuals vs projections audit
+
+Operating schools should feel different from startups.
+
+For operating schools:
+- actual enrollment should be captured
+- prior-year revenue should be captured
+- prior-year expenses should be captured
+- ending cash should be captured
+- actuals should seed projections where appropriate
+- actuals should be visibly labeled as actuals
+
+For new schools:
+- assumptions should be visibly labeled as assumptions
+- the app should explain that assumptions are normal for launch planning
+- the app should ask what evidence supports assumptions
+
+Acceptance:
+The user should understand the difference between:
+- “This happened”
+- “We expect this”
+- “We are estimating this”
+
+6. Enrollment logic audit
+
+Enrollment drives the whole model.
+
+Review:
+- year-by-year enrollment
+- current enrollment
+- projected enrollment
+- waitlist
+- deposits
+- signed agreements
+- retention
+- capacity
+- growth rate
+- break-even enrollment
+
+The app should gently flag:
+- aggressive enrollment growth
+- projections with weak evidence
+- enrollment above capacity
+- break-even too close to capacity
+- low retention for operating schools
+
+Acceptance:
+The model should not let a founder build fantasy enrollment without being coached.
+
+7. Staffing and founder compensation audit
+
+Review:
+- teacher staffing
+- admin staffing
+- founder compensation
+- unpaid labor
+- benefits
+- payroll tax
+- contractor vs employee distinction
+- students per teacher
+- staffing as percentage of revenue
+
+The app should teach:
+“Many founders start unpaid. That may be realistic temporarily, but a sustainable school eventually needs to pay the people doing the work.”
+
+Acceptance:
+A model that only works because the founder is unpaid should be flagged warmly but clearly.
+
+8. Facility and expense audit
+
+Review:
+- rent
+- utilities
+- insurance
+- lease status
+- occupancy documentation
+- fire/code status
+- donated/shared space
+- residential/home-based assumptions
+- fixed vs variable expenses
+- startup vs ongoing expenses
+
+The app should teach:
+“Facility costs are usually fixed. If enrollment is lower than expected, rent does not shrink.”
+
+Acceptance:
+Facility burden should be visible and explained.
+
+9. Cash-flow logic audit
+
+Annual profit is not enough.
+
+Review whether the app clearly shows:
+- beginning cash
+- monthly cash received
+- monthly cash paid
+- ending cash
+- lowest cash month
+- months below zero
+- summer gap
+- delayed public funding
+- tuition timing
+- payroll timing
+- rent timing
+- debt timing
+
+Acceptance:
+The app should be able to say:
+“Your annual budget may look balanced, but cash gets tight because expenses arrive before revenue.”
+
+10. Review and Consultant audit
+
+Review whether the Review and Consultant steps answer:
+
+- What does the model say?
+- What looks strong?
+- What needs more clarity?
+- What could create cash pressure?
+- What assumption is most fragile?
+- What should the founder fix first?
+- What will a board, funder, lender, or landlord ask?
+
+Acceptance:
+The output should feel like a smart advisor, not a rejection letter.
+
+11. Export audit
+
+Review all exports and labels.
+
+Founder-facing export labels should be:
+- Founder Planning Workbook
+- 1-Year Operating Budget
+- 5-Year Financial Model
+- Board and Funder Summary
+- Lender Conversation Snapshot
+
+Avoid:
+- credit memo
+- underwriting decision
+- loan approval packet
+- approval packet
+
+For the workbook, verify:
+- no stray placeholder values
+- no unexplained “7” values
+- no NaN
+- no undefined
+- no #REF!
+- no #DIV/0!
+- no #VALUE!
+- no #NAME?
+- formulas trace to assumptions where possible
+- tuition, public funding, and philanthropy are separated
+- monthly totals reconcile
+- revenue math is credible
+- exports open in Excel or Google Sheets
+
+Acceptance:
+The export should be serious enough to share externally and clear enough for the founder to understand.
+
+12. Audience-specific output audit
+
+Confirm the app can support these external conversations:
+
+Board:
+- What are we planning?
+- What decisions need approval?
+- What risks should we monitor?
+- What assumptions matter most?
+
+Funder / grant:
+- What will funding enable?
+- Is the funding one-time or recurring?
+- How does the school sustain beyond the grant?
+- What outcomes or capacity will the funding support?
+
+Lender / landlord:
+- What is the repayment source?
+- What supports affordability?
+- What happens if enrollment is lower?
+- What cash cushion exists?
+- What is the facility burden?
+
+Acceptance:
+The app should not need to become a separate tool for each audience, but the outputs should make those conversations easier.
+
+13. Logic gap scan
+
+Find and report:
+- confusing labels
+- missing helper text
+- duplicated questions
+- fields that do not affect the model
+- model values that do not match user inputs
+- assumptions that are not explained
+- exports that do not match UI values
+- tone that feels cold, punitive, or bank-like
+- math that is not traceable
+- scenarios that generate unrealistic outputs
+
+Classify issues:
+
+P0 Launch Blocker:
+- broken public wizard
+- analysis fails
+- export fails
+- workbook corrupt
+- fantasy revenue
+- broken formulas
+- scary approval/decline language
+- mobile unusable
+- values entered by user do not appear in export
+
+P1 Fix Before Broad Promotion:
+- confusing revenue language
+- tuition/funding conflation
+- missing beginner helper text
+- unclear export label
+- minor workbook traceability issue
+- important warning lacks next step
+- mobile cosmetic issue that does not block use
+
+P2 Post-Launch:
+- advanced CFO mode improvements
+- richer board/funder narratives
+- more assumption confidence detail
+- more charts
+- more automated scenario comparisons
+
+14. Deliverable
+
+Create:
+docs/FULL_APPLICATION_POLISH_AUDIT.md
+
+Include:
+- summary verdict
+- audience fit findings
+- warmth/tone findings
+- logic findings by wizard step
+- revenue clarity findings
+- actuals/projections findings
+- export findings
+- P0 blockers
+- P1 fixes
+- P2 backlog
+- recommended launch language
+- recommended post-launch sprint plan
+
+Also update:
+docs/ONE_DAY_LAUNCH_PROOF_PACK.md
+
+Add a short note:
+“Full application polish audit completed. No P0 blockers found,” or list P0 blockers if any.
+
+Final verdict options:
+- GO WITH WATCH ITEMS
+- NO GO
+
+Do not say clean GO if watch items remain.

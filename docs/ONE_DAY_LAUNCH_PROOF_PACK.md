@@ -13,6 +13,14 @@
 > #5 = set `ALLOWED_ORIGINS` explicitly in Railway after launch; #6 = mobile 375 px
 > 14 px overflow — all non-blocking).
 
+> **2026-05-11 update — Full application polish audit completed.** No P0 launch
+> blockers found. Four P0 watch items are short-copy fixes (two error toasts
+> still surface the word "failed" to founders; two revenue-coaching strings
+> conflate seat price with revenue; the Enrollment step is missing the
+> seat-price-vs-payer anchor). Eight P1 items and a P2 backlog are tracked
+> in `docs/FULL_APPLICATION_POLISH_AUDIT.md`. **Verdict remains GO WITH
+> WATCH ITEMS.**
+
 ---
 
 ## 0. The 10 confirmations the launch lead asked for
