@@ -105,6 +105,7 @@ export interface ChestertonModelInput {
     bookSupplyFee?: number;
     financialAidPct?: number;
     startingTeacherSalary?: number;
+    adminSalaryGrowthRate?: number;
     benefitsFirstYearAmount?: number;
     attritionRate?: number;
     totalFundraisingGoal?: number;
@@ -811,9 +812,24 @@ function buildProjections(
   row += 2;
 
   // ── ADMINISTRATIVE SALARIES — verbatim role labels from source workbook
-  // (rows 49-56 of "1 - 5 YR  FINANCIAL PROJECTIONS"). Cost cells are
-  // founder-editable inputs (default 0) so a hiring plan rolls up into
-  // the Total Admin Salaries subtotal that feeds Operating Expense.
+  // (rows 49-56 of "1 - 5 YR  FINANCIAL PROJECTIONS"). Year 0 (col B,
+  // pre-launch) defaults to $0 since admins are typically not yet on
+  // payroll. Year 1 (col C) is pre-filled with the CSN-recommended
+  // starting salary for each role; Years 2-6 escalate Year 1 by the
+  // admin salary growth rate (default 3%, configurable via
+  // `chesterton.adminSalaryGrowthRate`). Every cell remains a
+  // founder-editable input/formula so per-role overrides flow through
+  // to the Total Admin Salaries subtotal that feeds Operating Expense.
+  const adminGrowth = data.chesterton?.adminSalaryGrowthRate ?? 0.03;
+  const ADMIN_RECOMMENDED_Y1: Record<string, number> = {
+    "Headmaster Admin Salary": 65000,
+    "Executive Director": 60000,
+    "Advancement Director": 50000,
+    "School Administrator": 40000,
+    "Marketing/Communications": 40000,
+    "Business Manager / Accountant": 45000,
+    "Admissions": 40000,
+  };
   sec(ws, row, 8);
   ws.getCell(`A${row}`).value = "Administrative Salaries";
   row += 1;
@@ -828,11 +844,33 @@ function buildProjections(
     "Admissions",
   ]) {
     ws.getCell(`A${row}`).value = role;
+    const startSalary = ADMIN_RECOMMENDED_Y1[role] ?? 0;
     for (let col = 2; col <= 8; col++) {
       const c = ws.getCell(row, col);
-      c.value = 0;
       c.numFmt = CUR;
-      inputCell(c);
+      if (col === 2) {
+        // Year 0 — pre-launch, no admin payroll yet.
+        c.value = 0;
+        inputCell(c);
+      } else if (col === 3) {
+        // Year 1 — CSN-recommended starting salary (founder-editable).
+        c.value = startSalary;
+        inputCell(c);
+      } else {
+        // Years 2-6 — escalate Year 1 by admin growth rate. Founders
+        // can override individual cells; the formula references the
+        // Year-1 input cell so per-role Year-1 overrides cascade.
+        const offset = col - 3;
+        // Round to whole dollars so the cached result matches the
+        // ROUND() formula on recompute (HyperFormula round-trip
+        // tolerance is 1e-6, well below $1).
+        const escVal = Math.round(startSalary * Math.pow(1 + adminGrowth, offset));
+        setFormula(
+          c,
+          `=ROUND(${cellName(row, 3)}*(1+${adminGrowth})^${offset},0)`,
+          escVal,
+        );
+      }
     }
     row += 1;
   }

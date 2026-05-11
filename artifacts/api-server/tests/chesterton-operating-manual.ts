@@ -1137,7 +1137,7 @@ const wbPerturbed = await generateChestertonOperatingManual(perturbed);
     "FUNDRAISING GOALS: Year-1 Operating Gap pulls INDEX(Fundraising_Gap,1,2)",
     gapCell,
     "=INDEX(Fundraising_Gap,1,2)",
-    300, // perturbed sample Y1 gap = OpEx 101100 − Net Tuition+Fees 100800
+    340300, // perturbed sample Y1 gap = OpEx 441100 − Net Tuition+Fees 100800
   );
 
   const tfgCell2 = readFormula(fund2, `C${tfgRow}`);
@@ -1161,7 +1161,7 @@ const wbPerturbed = await generateChestertonOperatingManual(perturbed);
     "FUNDRAISING GOALS: Surplus / (Shortfall) = TFG − INDEX(Fundraising_Gap,1,2)",
     surplusCell,
     "=TFG-INDEX(Fundraising_Gap,1,2)",
-    (600000 + 300000 + 200000) - 300,
+    (600000 + 300000 + 200000) - 340300,
   );
 
   const statusCellVal = readFormula(fund2, `C${statusRow}`);
@@ -1258,18 +1258,53 @@ const wbPerturbed = await generateChestertonOperatingManual(perturbed);
   //   aid (15%) = -16200; book = 750*12 = 9000; net = 100800.
   //   Faculty Y1 = AvgSalary 10000 × periods (2+1+3=6) × 1 section = 60000.
   //   G&A Y1 = sum(factors)=3425 × 12 students = 41100.
-  //   OpEx Y1 = 0 admin + 60000 faculty + 41100 G&A = 101100.
-  //   Gap Y1 = 101100 − 100800 = 300.
+  //   Admin Y1 = SUM of CSN-recommended starting salaries
+  //     (65000+60000+50000+40000+40000+45000+40000) = 340000.
+  //   OpEx Y1 = 340000 admin + 60000 faculty + 41100 G&A = 441100.
+  //   Gap Y1 = 441100 − 100800 = 340300.
 
-  // Total Admin Salaries Y1 — SUM of admin column, all founder inputs default 0.
-  // setFormula() caches a zero result as the string "0" so the workbook
-  // round-trips cleanly; that's what readFormula will return here.
+  // Total Admin Salaries Y1 — SUM of admin column. Year-1 cells are
+  // pre-filled with CSN-recommended starting salaries per role, so the
+  // cached subtotal reflects that sum (no longer 0).
   const adminY1 = readFormula(proj2, `C${totalAdminRow}`);
   expectFormula(
-    "PROJECTIONS: Total Admin Salaries Y1 sums the admin column",
+    "PROJECTIONS: Total Admin Salaries Y1 sums the CSN-recommended starting salaries",
     adminY1,
     `=SUM(C${totalAdminRow - 7}:C${totalAdminRow - 1})`,
-    "0",
+    340000,
+  );
+
+  // Each admin row Y1 cell is a founder-editable input pre-filled with
+  // its CSN-recommended starting salary; Years 2-6 escalate Year 1 by
+  // the admin salary growth rate (default 3%).
+  const headmasterRow = findRow("Headmaster Admin Salary");
+  const headmasterY1Val = proj2.getCell(`C${headmasterRow}`).value;
+  expect(
+    "PROJECTIONS: Headmaster Admin Salary Y1 = $65,000 (CSN-recommended)",
+    headmasterY1Val === 65000,
+    65000,
+    headmasterY1Val,
+  );
+  const headmasterY0Val = proj2.getCell(`B${headmasterRow}`).value;
+  expect(
+    "PROJECTIONS: Headmaster Admin Salary Y0 (pre-launch) defaults to $0",
+    headmasterY0Val === 0,
+    0,
+    headmasterY0Val,
+  );
+  const headmasterY2 = readFormula(proj2, `D${headmasterRow}`);
+  expectFormula(
+    "PROJECTIONS: Headmaster Admin Salary Y2 escalates Y1 by 3% growth",
+    headmasterY2,
+    `=ROUND(C${headmasterRow}*(1+0.03)^1,0)`,
+    Math.round(65000 * 1.03),
+  );
+  const headmasterY6 = readFormula(proj2, `H${headmasterRow}`);
+  expectFormula(
+    "PROJECTIONS: Headmaster Admin Salary Y6 escalates Y1 by 3% growth ^5",
+    headmasterY6,
+    `=ROUND(C${headmasterRow}*(1+0.03)^5,0)`,
+    Math.round(65000 * Math.pow(1.03, 5)),
   );
 
   // Total G&A Y1 — SUM of G&A column.
@@ -1297,7 +1332,7 @@ const wbPerturbed = await generateChestertonOperatingManual(perturbed);
     "PROJECTIONS: Total Operating Expense Y1 = admin + faculty + G&A",
     opExY1,
     `=C${totalAdminRow}+C${totalFacultyRow}+C${totalGaRow}`,
-    101100,
+    441100,
   );
 
   // Fundraising Gap Y1 = OpEx − Net Tuition + Fees.
@@ -1306,7 +1341,7 @@ const wbPerturbed = await generateChestertonOperatingManual(perturbed);
     "PROJECTIONS: Fundraising Gap Y1 = Operating Expense − Net Revenue",
     gapY1,
     `=C${operatingExpenseRow}-C${netRevRow}`,
-    101100 - 100800,
+    441100 - 100800,
   );
 
   // Avg Cost per Student Y1 = OpEx / Enrollment.
@@ -1316,7 +1351,7 @@ const wbPerturbed = await generateChestertonOperatingManual(perturbed);
     "PROJECTIONS: Avg Cost per Student Y1 = OpEx / Enrollment",
     avgCostY1,
     `=IFERROR(C${operatingExpenseRow}/C${totalEnrollmentRow},0)`,
-    101100 / 12,
+    441100 / 12,
   );
 
   // Avg Tuition per Student Y1 = Net Revenue / Enrollment.
@@ -1336,7 +1371,7 @@ const wbPerturbed = await generateChestertonOperatingManual(perturbed);
     "PROJECTIONS: Fundraising Gap per Student Y1 = Gap / Enrollment",
     gapPerStuY1,
     `=IFERROR(C${fundraisingGapRow}/C${totalEnrollmentRow},0)`,
-    300 / 12,
+    340300 / 12,
   );
 
   // Fundraising donations as % of budget Y1 = Gap / OpEx.
@@ -1346,7 +1381,7 @@ const wbPerturbed = await generateChestertonOperatingManual(perturbed);
     "PROJECTIONS: Fundraising donations as % of budget Y1 = Gap / OpEx",
     fundPctY1,
     `=IFERROR(C${fundraisingGapRow}/C${operatingExpenseRow},0)`,
-    300 / 101100,
+    340300 / 441100,
   );
 
   // Tuition revenue as % of budget Y1 = Net Revenue / OpEx.
@@ -1356,7 +1391,7 @@ const wbPerturbed = await generateChestertonOperatingManual(perturbed);
     "PROJECTIONS: Tuition revenue as % of budget Y1 = Net Revenue / OpEx",
     tuitionPctY1,
     `=IFERROR(C${netRevRow}/C${operatingExpenseRow},0)`,
-    100800 / 101100,
+    100800 / 441100,
   );
 
   // Y/Y Enrollment Y1 = enrollment(Y1) − enrollment(Y0).
@@ -1386,7 +1421,7 @@ const wbPerturbed = await generateChestertonOperatingManual(perturbed);
     "PROJECTIONS: Y/Y Operating Cost Y1 = curr − prior",
     yyOpExY1,
     `=C${operatingExpenseRow}-B${operatingExpenseRow}`,
-    101100 - 0,
+    441100 - 0,
   );
 }
 
@@ -1541,13 +1576,13 @@ const wbPerturbed = await generateChestertonOperatingManual(perturbed);
     "PARENT HANDOUT: Projected operating expense pulls Year-1 OpEx from projections tab",
     readFormula(handout2, "F9"),
     `=${sheetRef}!$C$${opExRow}`,
-    101100,
+    441100,
   );
   expectFormula(
     "PARENT HANDOUT: Mininum fundraising need pulls Year-1 fundraising gap",
     readFormula(handout2, "F10"),
     `=${sheetRef}!$C$${gapRow}`,
-    300,
+    340300,
   );
   const cashCell = readFormula(handout2, "F11");
   expect(
@@ -1560,7 +1595,7 @@ const wbPerturbed = await generateChestertonOperatingManual(perturbed);
     "PARENT HANDOUT: TOTAL MINIMUM FUNDRAISING = fundraising gap + static cash reserves",
     readFormula(handout2, "F12"),
     `=${sheetRef}!$C$${gapRow}+37080`,
-    300 + 37080,
+    340300 + 37080,
   );
 }
 
