@@ -8,7 +8,7 @@ import {
   type PDFDoc, BRAND,
 } from "../pdf-utils.js";
 import type { LenderPacket, RiskMitigant, BudgetNarrativeData, FlaggedAssumptionExport, BreakEvenDownsideExport } from "./build-lender-packet";
-import type { LenderStressTestResults } from "@workspace/finance";
+import type { LenderStressTestResults, ProgramBreakEven } from "@workspace/finance";
 import {
   ASSUMPTION_REGISTRY,
   ASSUMPTION_CONFIDENCE_LABELS,
@@ -89,6 +89,11 @@ export async function generateLenderPacketPDF(
   // realized actuals exist — first-time founders without a track record
   // shouldn't get a half-empty section in their lender packet.
   renderBreakEvenDownsideSection(doc, packet.breakEvenDownside);
+
+  // Task #668 — per-program break-even table for Year 1. Lenders ask
+  // "which programs carry the school?" — this section answers it with
+  // the same numbers the planner shows on screen.
+  renderProgramBreakEvenSection(doc, packet.programBreakEvenY1);
 
   // Task #616 — fixed lender stress-test battery. Identical numbers appear
   // on the founder dashboard, consultant view, and lender pro-forma
@@ -919,6 +924,54 @@ function renderSensitivityGridSection(doc: PDFDoc, grid: BreakEvenDownsideExport
   }
   doc.y = y + 4;
   doc.fillColor(BRAND.black).font("Helvetica");
+}
+
+// Task #668 — per-program break-even for Year 1. Renders a table showing,
+// for each program: enrollment, students needed to break even on its
+// allocated fixed-cost share, the allocated fixed cost itself, the
+// surplus / subsidy contribution, and a Carries / Subsidised flag. Same
+// canonical numbers the planner UI shows on screen. Skipped silently
+// when the founder has not defined any programs (single-program schools
+// or pre-program models).
+function renderProgramBreakEvenSection(doc: PDFDoc, programs: ProgramBreakEven[]) {
+  if (!programs || programs.length === 0) return;
+
+  ensureSpace(doc, 80);
+  sectionTitle(doc, "Per-Program Break-Even (Year 1)");
+  bodyText(
+    doc,
+    "Allocates Year 1 fixed costs (staffing, facility, debt service, fixed opex) across programs by share of enrollment. " +
+      "\"Students needed\" is the count required for each program to cover its allocated fixed cost at current tuition and variable cost. " +
+      "Programs with positive surplus are carrying the school; negative surplus means the program is being subsidised by the rest of the portfolio.",
+  );
+  doc.moveDown(0.3);
+
+  const carriers = programs.filter((p) => p.carriesSchool).length;
+  const subsidised = programs.length - carriers;
+  doc.font("Helvetica-Oblique").fontSize(9).fillColor(BRAND.darkGray);
+  doc.text(
+    `${carriers} of ${programs.length} program${programs.length === 1 ? "" : "s"} ${carriers === 1 ? "is" : "are"} carrying the school in Year 1; ${subsidised} ${subsidised === 1 ? "is" : "are"} subsidised.`,
+  );
+  doc.font("Helvetica").fillColor(BRAND.black);
+  doc.moveDown(0.4);
+
+  for (const p of programs) {
+    ensureSpace(doc, 20);
+    const needed = p.breakEvenStudents === null ? "N/A" : `${p.breakEvenStudents}`;
+    const status = p.carriesSchool ? "Carrying" : "Subsidised";
+    const statusColor = p.carriesSchool ? BRAND.green : BRAND.amber;
+    doc.font("Helvetica-Bold").fontSize(9).fillColor(BRAND.navy);
+    doc.text(p.programName, doc.page.margins.left, doc.y);
+    doc.font("Helvetica").fontSize(9).fillColor(BRAND.black);
+    labelValue(doc, "  Enrolled (Y1):", `${p.enrollment}`);
+    labelValue(doc, "  Students needed to break even:", needed);
+    labelValue(doc, "  Allocated fixed cost:", fmtCurrency(p.allocatedFixedCost));
+    labelValue(doc, "  Surplus / (subsidy):", fmtCurrency(p.surplus));
+    doc.font("Helvetica-Bold").fontSize(9).fillColor(statusColor);
+    doc.text(`  ${status}`, doc.page.margins.left, doc.y);
+    doc.font("Helvetica").fillColor(BRAND.black);
+    doc.moveDown(0.4);
+  }
 }
 
 function renderLenderStressTestsSection(doc: PDFDoc, stress: LenderStressTestResults) {

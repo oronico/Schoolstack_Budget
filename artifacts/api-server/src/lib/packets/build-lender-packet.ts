@@ -7,12 +7,14 @@ import {
   filterForecastAccuracy,
   computeBaseFinancials,
   computeDownsideBand,
+  computeProgramBreakEven,
   computeSensitivityGrid,
   type ForecastAccuracyFilter,
   type ForecastAccuracyRollup,
   type DecisionEngineModelData,
   type DownsideBand,
   type LenderStressTestResults,
+  type ProgramBreakEven,
   type SensitivityGrid,
 } from "@workspace/finance";
 import { buildPacketData } from "./build-packet-data";
@@ -122,6 +124,17 @@ export interface LenderPacket extends PacketData {
    * The PDF renderer surfaces this as the "Break-even & Downside" section.
    */
   breakEvenDownside: BreakEvenDownsideExport;
+  /**
+   * Task #668 — per-program break-even for Year 1. Surfaces "which programs
+   * carry the school?" in the lender packet PDF (the planner already shows
+   * this on screen). For each program: students enrolled, students needed
+   * to break even on its allocated fixed-cost share, the allocated fixed
+   * cost itself, and the surplus / subsidy the program contributes today.
+   * Computed from the canonical `computeProgramBreakEven` helper so the
+   * dashboard, scenario planner, and lender PDF all reconcile. Empty array
+   * when the founder has not defined any programs.
+   */
+  programBreakEvenY1: ProgramBreakEven[];
   /**
    * Task #616 — fixed lender stress-test battery (-10/-20% enrollment, ESA
    * delay, rent shock, founder normalization). Pulled straight off
@@ -270,6 +283,15 @@ export function buildLenderPacket(
     sensitivityGrid,
   };
 
+  // Task #668 — per-program break-even for Year 1. Same canonical helper the
+  // scenario planner UI uses so the lender packet, dashboard, and planner all
+  // agree on which programs carry vs subsidise the school.
+  const programBreakEvenY1: ProgramBreakEven[] = computeProgramBreakEven(
+    engineData,
+    baseMetrics,
+    0,
+  );
+
   return {
     ...basePacket,
     sections: enrichedSections,
@@ -288,6 +310,7 @@ export function buildLenderPacket(
     forecastAccuracyFilter: normalizedFilter,
     forecastAccuracyUnfilteredCount: fullForecastAccuracy.entries.length,
     breakEvenDownside,
+    programBreakEvenY1,
     // Task #616 — pull-through from the consultant output. The engine
     // already ran the stress battery off the same canonical model the rest
     // of the packet is built from, so reusing that result keeps every
