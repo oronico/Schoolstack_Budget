@@ -26,6 +26,7 @@ import {
   type RevenueRowAmountsSchoolProfileLike,
   type TuitionTierLike,
 } from "./revenue-quality.js";
+import { isRestrictedRevenueRow } from "./restricted-revenue.js";
 
 export type PrivateRevenueSourceBucket =
   | "esa"
@@ -103,6 +104,17 @@ export const CHARTER_BUCKET_COLORS: Record<CharterRevenueSourceBucket, string> =
 
 export function isCharterSchoolType(schoolType?: string): boolean {
   return schoolType === "charter_school";
+}
+
+/**
+ * Identify the bucket that holds donor-driven philanthropy gifts for a
+ * given taxonomy. Used by the dashboard's revenue-mix card to surface the
+ * restricted-vs-unrestricted philanthropy split.
+ */
+export function getPhilanthropyBucket(
+  schoolType?: string,
+): RevenueSourceBucket {
+  return isCharterSchoolType(schoolType) ? "other_grants" : "fundraising";
 }
 
 export function getBucketOrder(
@@ -264,6 +276,15 @@ export interface RevenueSourceMixYear {
   total: number;
   /** Percentages in [0, 100], summing to ~100 when total > 0. */
   sharesByBucket: Map<RevenueSourceBucket, number>;
+  /**
+   * Restricted dollars per bucket (subset of `totalsByBucket`). Restricted
+   * gifts are donor-earmarked and excluded from operating cash, so the UI
+   * surfaces them as a separate band within the philanthropy bucket. Most
+   * buckets will be 0 — only philanthropy-style buckets typically carry
+   * restricted dollars (`fundraising` for private, `other_grants` /
+   * `csp_grant` for charter).
+   */
+  restrictedByBucket: Map<RevenueSourceBucket, number>;
 }
 
 export interface RevenueSourceMixResult {
@@ -309,7 +330,11 @@ export function computeRevenueSourceMix(
     );
 
     const totals = new Map<RevenueSourceBucket, number>();
-    for (const b of buckets) totals.set(b, 0);
+    const restricted = new Map<RevenueSourceBucket, number>();
+    for (const b of buckets) {
+      totals.set(b, 0);
+      restricted.set(b, 0);
+    }
 
     for (const row of rows) {
       if (!row.enabled || !row.id) continue;
@@ -330,6 +355,10 @@ export function computeRevenueSourceMix(
       if (!bucket) continue;
       const cur = totals.get(bucket) || 0;
       totals.set(bucket, cur + amount);
+      if (isRestrictedRevenueRow(row) && amount > 0) {
+        const curR = restricted.get(bucket) || 0;
+        restricted.set(bucket, curR + amount);
+      }
     }
 
     let total = 0;
@@ -346,6 +375,7 @@ export function computeRevenueSourceMix(
       totalsByBucket: totals,
       total,
       sharesByBucket: shares,
+      restrictedByBucket: restricted,
     });
   }
 

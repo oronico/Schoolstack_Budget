@@ -351,6 +351,7 @@ export {
   classifyRevenueRow,
   computeRevenueSourceMix,
   isCharterSchoolType,
+  getPhilanthropyBucket,
   getBucketOrder,
   getBucketLabel,
   getBucketColor,

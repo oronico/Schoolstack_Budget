@@ -3,6 +3,7 @@ import {
   computeRevenueSourceMix,
   getBucketColor,
   getBucketLabel,
+  getPhilanthropyBucket,
   type RevenueSourceBucket,
   type RevenueRowAmountsRowLike,
   type TuitionTierLike,
@@ -66,6 +67,17 @@ export function RevenueMixCard({
     return result.buckets.filter((b) => (y1.totalsByBucket.get(b) ?? 0) > 0);
   }, [result, y1]);
 
+  const philanthropyBucket = getPhilanthropyBucket(schoolType);
+  const philanthropyTotal = y1?.totalsByBucket.get(philanthropyBucket) ?? 0;
+  const philanthropyRestricted =
+    y1?.restrictedByBucket.get(philanthropyBucket) ?? 0;
+  const restrictedShareOfPhilanthropy =
+    philanthropyTotal > 0
+      ? (philanthropyRestricted / philanthropyTotal) * 100
+      : 0;
+  const philanthropyLabel = getBucketLabel(philanthropyBucket, schoolType);
+  const restrictedTooltip = `Restricted gifts are donor-earmarked (capital, program, scholarship) and excluded from operating cash, so they don't count toward DSCR or runway.`;
+
   if (!y1 || y1.total <= 0) {
     return (
       <div
@@ -107,13 +119,50 @@ export function RevenueMixCard({
         {visibleBuckets.map((b) => {
           const share = y1.sharesByBucket.get(b) ?? 0;
           if (share <= 0) return null;
+          const color = getBucketColor(b, schoolType);
+          // Split the philanthropy bucket into unrestricted | restricted so
+          // the donor-earmarked portion reads visually as a separate band.
+          if (b === philanthropyBucket && philanthropyRestricted > 0) {
+            const restrictedSlice =
+              y1.total > 0
+                ? (philanthropyRestricted / y1.total) * 100
+                : 0;
+            const unrestrictedSlice = Math.max(0, share - restrictedSlice);
+            return (
+              <div
+                key={b}
+                data-testid={`${testId}-y1-segment-${b}`}
+                className="flex h-full"
+                style={{ width: `${share}%` }}
+                title={`${getBucketLabel(b, schoolType)}: ${pct(share)} (${pct(restrictedShareOfPhilanthropy)} restricted)`}
+              >
+                {unrestrictedSlice > 0 && (
+                  <div
+                    data-testid={`${testId}-y1-segment-${b}-unrestricted`}
+                    style={{
+                      width: `${(unrestrictedSlice / share) * 100}%`,
+                      backgroundColor: color,
+                    }}
+                  />
+                )}
+                <div
+                  data-testid={`${testId}-y1-segment-${b}-restricted`}
+                  style={{
+                    width: `${(restrictedSlice / share) * 100}%`,
+                    backgroundImage: `repeating-linear-gradient(45deg, ${color} 0 4px, rgba(0,0,0,0.35) 4px 8px)`,
+                  }}
+                  title={`Restricted ${getBucketLabel(b, schoolType).toLowerCase()}: ${pct(restrictedShareOfPhilanthropy)} of philanthropy`}
+                />
+              </div>
+            );
+          }
           return (
             <div
               key={b}
               data-testid={`${testId}-y1-segment-${b}`}
               style={{
                 width: `${share}%`,
-                backgroundColor: getBucketColor(b, schoolType),
+                backgroundColor: color,
               }}
               title={`${getBucketLabel(b, schoolType)}: ${pct(share)}`}
             />
@@ -126,31 +175,59 @@ export function RevenueMixCard({
         {visibleBuckets.map((b) => {
           const share = y1.sharesByBucket.get(b) ?? 0;
           const dollars = y1.totalsByBucket.get(b) ?? 0;
+          const showRestrictedNote =
+            b === philanthropyBucket && philanthropyRestricted > 0;
           return (
             <li
               key={b}
               data-testid={`${testId}-row-${b}`}
-              className="flex items-center justify-between text-xs"
+              className="text-xs"
             >
-              <span className="flex items-center gap-2 min-w-0">
-                <span
-                  className="inline-block h-2.5 w-2.5 rounded-sm shrink-0"
-                  style={{ backgroundColor: getBucketColor(b, schoolType) }}
-                  aria-hidden="true"
-                />
-                <span className="font-medium text-foreground truncate">
-                  {getBucketLabel(b, schoolType)}
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-2 min-w-0">
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-sm shrink-0"
+                    style={{ backgroundColor: getBucketColor(b, schoolType) }}
+                    aria-hidden="true"
+                  />
+                  <span className="font-medium text-foreground truncate">
+                    {getBucketLabel(b, schoolType)}
+                  </span>
                 </span>
-              </span>
-              <span className="text-muted-foreground tabular-nums">
-                <span
-                  data-testid={`${testId}-pct-${b}`}
-                  className="font-semibold text-foreground"
+                <span className="text-muted-foreground tabular-nums">
+                  <span
+                    data-testid={`${testId}-pct-${b}`}
+                    className="font-semibold text-foreground"
+                  >
+                    {pct(share)}
+                  </span>
+                  <span className="ml-2">{formatCurrency(dollars)}</span>
+                </span>
+              </div>
+              {showRestrictedNote && (
+                <p
+                  data-testid={`${testId}-philanthropy-restricted-note`}
+                  className="mt-1 ml-[18px] text-[11px] text-muted-foreground leading-snug"
+                  title={restrictedTooltip}
                 >
-                  {pct(share)}
-                </span>
-                <span className="ml-2">{formatCurrency(dollars)}</span>
-              </span>
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-2 w-2 rounded-sm mr-1.5 align-middle"
+                    style={{
+                      backgroundImage: `repeating-linear-gradient(45deg, ${getBucketColor(b, schoolType)} 0 3px, rgba(0,0,0,0.35) 3px 6px)`,
+                    }}
+                  />
+                  <span
+                    data-testid={`${testId}-philanthropy-restricted-pct`}
+                    className="font-semibold text-foreground"
+                  >
+                    {pct(restrictedShareOfPhilanthropy)}
+                  </span>{" "}
+                  of {philanthropyLabel.toLowerCase()} is restricted (
+                  {formatCurrency(philanthropyRestricted)}) — excluded from
+                  operating cash
+                </p>
+              )}
             </li>
           );
         })}

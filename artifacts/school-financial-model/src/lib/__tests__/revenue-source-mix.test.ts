@@ -239,6 +239,98 @@ describe("computeRevenueSourceMix", () => {
     expect(y1.totalsByBucket.get("csp_grant")).toBe(250_000);
   });
 
+  it("tracks restricted philanthropy separately within the fundraising bucket", () => {
+    const rows = [
+      {
+        id: "gross_tuition",
+        enabled: true,
+        category: "tuition_and_fees",
+        driverType: "per_student",
+        amounts: [10_000, 10_000, 10_000, 10_000, 10_000],
+      },
+      {
+        id: "donations_fundraising",
+        enabled: true,
+        category: "philanthropy",
+        driverType: "annual_fixed",
+        amounts: [40_000, 40_000, 40_000, 40_000, 40_000],
+      },
+      {
+        id: "restricted_capital",
+        enabled: true,
+        category: "philanthropy",
+        driverType: "annual_fixed",
+        amounts: [60_000, 60_000, 60_000, 60_000, 60_000],
+      },
+      {
+        id: "board_giving",
+        enabled: true,
+        category: "philanthropy",
+        driverType: "annual_fixed",
+        isRestricted: true,
+        amounts: [50_000, 50_000, 50_000, 50_000, 50_000],
+      },
+    ];
+    const result = computeRevenueSourceMix({
+      rows,
+      yearCount: 5,
+      studentsByYear: [100, 100, 100, 100, 100],
+    });
+    const y1 = result.years[0];
+    // 40k unrestricted + 60k restricted_capital + 50k restricted board giving
+    expect(y1.totalsByBucket.get("fundraising")).toBe(150_000);
+    expect(y1.restrictedByBucket.get("fundraising")).toBe(110_000);
+    // No restricted dollars in any other bucket
+    expect(y1.restrictedByBucket.get("private_pay")).toBe(0);
+  });
+
+  it("flags charter restricted philanthropy under other_grants", () => {
+    const rows = [
+      {
+        id: "state_local_perpupil",
+        enabled: true,
+        category: "public_funding",
+        driverType: "per_student",
+        amounts: [9_000, 9_000, 9_000, 9_000, 9_000],
+      },
+      {
+        id: "restricted_program",
+        enabled: true,
+        category: "philanthropy",
+        driverType: "annual_fixed",
+        amounts: [80_000, 80_000, 80_000, 80_000, 80_000],
+      },
+    ];
+    const result = computeRevenueSourceMix({
+      rows,
+      yearCount: 5,
+      studentsByYear: [200, 200, 200, 200, 200],
+      schoolType: "charter_school",
+    });
+    const y1 = result.years[0];
+    expect(y1.totalsByBucket.get("other_grants")).toBe(80_000);
+    expect(y1.restrictedByBucket.get("other_grants")).toBe(80_000);
+  });
+
+  it("returns zero restricted dollars when no rows are restricted", () => {
+    const rows = [
+      {
+        id: "donations_fundraising",
+        enabled: true,
+        category: "philanthropy",
+        driverType: "annual_fixed",
+        amounts: [25_000, 25_000, 25_000, 25_000, 25_000],
+      },
+    ];
+    const result = computeRevenueSourceMix({
+      rows,
+      yearCount: 1,
+      studentsByYear: [50],
+    });
+    expect(result.years[0].totalsByBucket.get("fundraising")).toBe(25_000);
+    expect(result.years[0].restrictedByBucket.get("fundraising")).toBe(0);
+  });
+
   it("returns zero shares when total revenue is zero", () => {
     const result = computeRevenueSourceMix({
       rows: [],
