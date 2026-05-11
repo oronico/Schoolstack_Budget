@@ -1417,12 +1417,21 @@ export function ModelWizardPage() {
                 rate: overrides.tuitionEscalationPct,
               },
             } as FullModelData;
-            // Single-transaction write to RHF so consumers see one consistent
-            // post-extend snapshot (and the autosave debounce fires once).
-            methods.reset(next);
+            // Task #568 — mirror the Task #518 fix on the ExportStep handler.
+            // DO NOT call `methods.reset(next)` before awaiting `saveModel`.
+            // `methods.reset` clears `dirtyFields`, so the wizard's autosave
+            // path (`performSave`) — which is the thing that would otherwise
+            // flip `saveError` to "conflict" on a 409 — bails out before it
+            // ever runs. Combined with the local catch only `console.error`-ing,
+            // a stale top-banner extend would silently overwrite or silently
+            // no-op with no banner shown. Defer the reset (and the step jump)
+            // until after `saveModel` resolves successfully; on a 409 set
+            // `saveError` to "conflict" so the wizard's already-rendered
+            // `<ConflictReloadBanner />` fires.
             if (modelId) {
               await saveModel({ data: next as unknown as Record<string, unknown> });
             }
+            methods.reset(next);
             // Land on Enrollment so the founder reviews the seeded ramp.
             const enrollmentStepId = stepIdByTitle("Enrollment");
             if (enrollmentStepId > 0) {
@@ -1431,7 +1440,12 @@ export function ModelWizardPage() {
             }
             setShowExtendModal(false);
           } catch (err) {
-            console.error("Failed to extend to 5-year:", err);
+            const status = (err as { status?: number })?.status;
+            if (status === 409) {
+              setSaveError("conflict");
+            } else {
+              console.error("Failed to extend to 5-year:", err);
+            }
           } finally {
             setExtending(false);
           }

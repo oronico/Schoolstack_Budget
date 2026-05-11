@@ -358,6 +358,69 @@ test("ExportStep: a stale Extend-to-5-year save surfaces the shared banner", asy
   }
 });
 
+// Task #568 — the wizard renders a SECOND "Extend to 5-year" entry point
+// in the top banner (`data-testid="banner-extend-to-five-year"`) shown
+// above the step rail whenever `isSingleYearModel` returns true. It opens
+// the same `ExtendToFiveYearModal` as the ExportStep button covered above,
+// but routes through a *different* `onConfirm` declared inline in
+// `model-wizard/index.tsx`. Before this fix that handler called
+// `methods.reset(next)` BEFORE awaiting `saveModel`, which cleared
+// `dirtyFields` and short-circuited the wizard's autosave-driven 409
+// handler. The local catch only `console.error`-ed, so a stale top-banner
+// extend silently dropped — exactly the bug Task #518 closed for ExportStep,
+// just on the other surface. The fix defers the reset until after
+// `saveModel` resolves and on a 409 sets `saveError` to "conflict" so the
+// wizard's already-rendered `<ConflictReloadBanner />` fires.
+test("Wizard top banner: a stale Extend-to-5-year save surfaces the shared banner", async ({
+  browser,
+  request,
+}) => {
+  const { token, modelId } = await seedModel(request, {
+    currentStep: 1,
+    modelDuration: "single_year",
+    emailPrefix: "playwright-conflict-banner",
+  });
+
+  const page = await openTab(browser, token, `/model/${modelId}`, { modelId });
+
+  try {
+    // Wait for the top banner's Extend button — proves the wizard has
+    // hydrated and the customFetch cache is seeded with version 1.
+    const extendCta = page.getByTestId("banner-extend-to-five-year");
+    await expect(extendCta).toBeVisible({ timeout: 20_000 });
+
+    // Bump the server out-of-band so the next mutation lands with a
+    // stale If-Match.
+    await bumpServerVersion(request, token, modelId);
+
+    // Open the modal and confirm. The handler under test calls saveModel
+    // and on a 409 must flip `saveError` to "conflict".
+    await extendCta.click();
+    const confirmButton = page.getByRole("button", {
+      name: /^Extend to 5-Year$/,
+    });
+    await expect(confirmButton).toBeVisible({ timeout: 10_000 });
+    await confirmButton.click();
+
+    const banner = page.getByTestId("conflict-reload-banner").first();
+    await expect(banner).toBeVisible({ timeout: 15_000 });
+    await expect(banner).toContainText("Your other tab made changes");
+    await expect(
+      page.getByTestId("conflict-reload-button").first(),
+    ).toBeVisible();
+
+    // Server-side: the stale extend must NOT have landed. The model
+    // should still be marked single-year (modelDuration unchanged).
+    const after = await fetchModel(request, token, modelId);
+    const profile = after.data.schoolProfile as
+      | { modelDuration?: string }
+      | undefined;
+    expect(profile?.modelDuration).toBe("single_year");
+  } finally {
+    await page.context().close();
+  }
+});
+
 test("UndoLastAppliedDecisionBanner: a stale undo click surfaces the shared banner", async ({
   browser,
   request,
