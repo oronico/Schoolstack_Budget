@@ -41,10 +41,11 @@
 //     export (which inserts a "Monthly Cash Flow" sheet).
 //   - no_debt:             debtIncluded:false + capitalAndDebtRows
 //     stripped of loans. Triggers underwriting's effectiveData filter
-//     that drops loan rows from every downstream tab. The Debt Schedule
-//     sheet itself is still emitted (header rows only) — this matches
-//     current builder behavior, which always renders the tab so the
-//     workbook layout stays stable.
+//     that drops loan rows from every downstream tab. Task #780 — the
+//     Debt Schedule worksheet is now omitted entirely when the model has
+//     no loans and no flat debt rows; the Cover ToC and Instructions
+//     list omit the entry too. The no_debt variant asserts the tab is
+//     ABSENT (see UNDERWRITING_NO_DEBT_SHEETS).
 
 import ExcelJS from "exceljs";
 import { generateWorkbook as generateLegacyWorkbook } from "../src/lib/excel-export.js";
@@ -89,6 +90,11 @@ interface FormatSpec {
   // or future sheets) — those are fine. Missing any sheet in this list
   // fails the check.
   requiredSheetsByVariant: Record<string, string[]>;
+  // Task #780 — sheets that must NOT be present per variant id. Used to
+  // assert conditional tabs are actually dropped (e.g. Debt Schedule on
+  // a no-debt model). Optional; missing entries default to no forbidden
+  // sheets.
+  forbiddenSheetsByVariant?: Record<string, string[]>;
   buildBuffer: (data: FixturePayload) => Promise<Buffer>;
 }
 
@@ -226,10 +232,10 @@ const LENDER_SHEETS = [
 
 // Underwriting V2 tab list from getTabNames(yc) + the always-on
 // Financial Health (added by addDashboardSheet) and Decision History
-// (added at the very end). The Debt Schedule sheet is intentionally kept
-// in the no-debt expectation list because buildDebtSchedule unconditionally
-// adds the worksheet and writes its header block — only the loan content
-// is filtered out when debtIncluded === false.
+// (added at the very end). Task #780 — buildDebtSchedule now skips the
+// worksheet entirely when the model has no loans and no flat debt rows,
+// and getTabNames omits the Cover ToC + Instructions entry to match. The
+// no-debt variant asserts the tab is absent via UNDERWRITING_NO_DEBT_SHEETS.
 const UNDERWRITING_FIVE_YEAR_SHEETS = [
   "Instructions",
   "Cover",
@@ -258,6 +264,12 @@ const UNDERWRITING_FIVE_YEAR_SHEETS = [
 ];
 const UNDERWRITING_SINGLE_YEAR_SHEETS = UNDERWRITING_FIVE_YEAR_SHEETS.map((n) =>
   n === "5-Year Operating Stmt" ? "Year 1 Operating Stmt" : n,
+);
+// Task #780 — no_debt variant drops the Debt Schedule worksheet because
+// the model has no loans and no flat debt rows. The list also serves as
+// the source of truth for the absent-sheet assertion below.
+const UNDERWRITING_NO_DEBT_SHEETS = UNDERWRITING_FIVE_YEAR_SHEETS.filter(
+  (n) => n !== "Debt Schedule",
 );
 
 // Chesterton Operating Manual fixture. The CSN Operating Manual builder
@@ -339,7 +351,14 @@ const FORMATS: FormatSpec[] = [
     requiredSheetsByVariant: {
       five_year_with_debt: UNDERWRITING_FIVE_YEAR_SHEETS,
       single_year: UNDERWRITING_SINGLE_YEAR_SHEETS,
-      no_debt: UNDERWRITING_FIVE_YEAR_SHEETS,
+      no_debt: UNDERWRITING_NO_DEBT_SHEETS,
+    },
+    // Task #780 — sheets that must NOT appear, per variant. Allows the
+    // no_debt variant to assert the Debt Schedule worksheet was dropped.
+    forbiddenSheetsByVariant: {
+      five_year_with_debt: [],
+      single_year: [],
+      no_debt: ["Debt Schedule"],
     },
   },
   {
@@ -439,6 +458,16 @@ async function smokeFormatVariant(spec: FormatSpec, variant: Variant): Promise<v
     check(
       `[${variant.id}] workbook contains expected sheet "${name}"`,
       sheetNames.includes(name),
+      `available: ${JSON.stringify(sheetNames)}`,
+    );
+  }
+
+  // Task #780 — assert any forbidden sheets for this variant are absent.
+  const forbidden = spec.forbiddenSheetsByVariant?.[variant.id] ?? [];
+  for (const name of forbidden) {
+    check(
+      `[${variant.id}] workbook does NOT contain sheet "${name}"`,
+      !sheetNames.includes(name),
       `available: ${JSON.stringify(sheetNames)}`,
     );
   }

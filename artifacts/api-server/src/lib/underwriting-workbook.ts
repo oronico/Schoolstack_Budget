@@ -50,7 +50,20 @@ function operatingStmtTabName(yc: number): string {
   return yc === 1 ? "Year 1 Operating Stmt" : "5-Year Operating Stmt";
 }
 
-function getTabNames(yc: number, hasFounderSummary = false): string[] {
+// Task #780 — the Debt Schedule tab is now conditional. When the model
+// has no loans and no flat debt rows (i.e. nothing to schedule), the
+// builder omits the worksheet and the Cover ToC + Instructions list
+// drop the entry so a lender doesn't open an empty header-only tab.
+function modelHasDebtSchedule(data: ModelData): boolean {
+  const sp = data.schoolProfile || {};
+  const debtIncluded = sp.debtIncluded !== false;
+  const capDebtRows = (data.capitalAndDebtRows || []).filter(r => r.enabled !== false);
+  const hasLoans = debtIncluded && capDebtRows.some(r => r.isLoan);
+  const hasFlatDebt = capDebtRows.some(r => !r.isLoan && (r.flatAnnualDebtService || 0) > 0);
+  return hasLoans || hasFlatDebt;
+}
+
+function getTabNames(yc: number, hasFounderSummary = false, hasDebtSchedule = true): string[] {
   // Task #660 - "Plain-English Summary" tab is only included when the
   // caller passed a prebuilt founder summary (i.e. the export route ran
   // the canonical engine first). Older callers and unit tests that
@@ -62,7 +75,9 @@ function getTabNames(yc: number, hasFounderSummary = false): string[] {
     "Assumptions", "Program Profile",
     "Enrollment Drivers", "Tuition & Funding", "Staffing Drivers", "OpEx Drivers", "Capital Stack",
     "Enrollment Tuition Fcst", "Staffing Costs Fcst", "Budget Detail", "Budget Summary",
-    "Monthly Cash Flow Y1", operatingStmtTabName(yc), "Debt Schedule", "Balance Sheet",
+    "Monthly Cash Flow Y1", operatingStmtTabName(yc),
+    ...(hasDebtSchedule ? ["Debt Schedule"] : []),
+    "Balance Sheet",
     "DSCR & Covenants", "Sources & Uses", "Scenarios", "Lender Snapshot", "Financial Health",
     "Budget Narrative", "Assumptions Confidence",
   ];
@@ -82,11 +97,11 @@ function getOpMonths(sp: SchoolProfile): number {
   return 12;
 }
 
-function buildCover(wb: ExcelJS.Workbook, data: ModelData, hasFounderSummary = false) {
+function buildCover(wb: ExcelJS.Workbook, data: ModelData, hasFounderSummary = false, hasDebtSchedule = true) {
   const ws = wb.addWorksheet("Cover");
   const sp = data.schoolProfile || {};
   const yc = getYearCount(data);
-  const TAB_NAMES = getTabNames(yc, hasFounderSummary);
+  const TAB_NAMES = getTabNames(yc, hasFounderSummary, hasDebtSchedule);
   ws.columns = [{ width: 4 }, { width: 40 }, { width: 40 }, { width: 4 }];
   printSetup(ws);
 
@@ -142,12 +157,12 @@ function buildCover(wb: ExcelJS.Workbook, data: ModelData, hasFounderSummary = f
   ws.getCell(r, 2).alignment = { horizontal: "center" };
 }
 
-function buildInstructions(wb: ExcelJS.Workbook, data: ModelData, hasFounderSummary = false) {
+function buildInstructions(wb: ExcelJS.Workbook, data: ModelData, hasFounderSummary = false, hasDebtSchedule = true) {
   const sp = data.schoolProfile || {} as SchoolProfile;
   const yc = getYearCount(data);
   addInstructionsSheet(wb, {
     workbookType: "underwriting",
-    tabNames: getTabNames(yc, hasFounderSummary),
+    tabNames: getTabNames(yc, hasFounderSummary, hasDebtSchedule),
     schoolName: sp.schoolName || undefined,
     schoolType: sp.entityType || undefined,
   });
@@ -2126,10 +2141,31 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
 
 function buildDebtSchedule(wb: ExcelJS.Workbook, data: ModelData) {
   const yc = getYearCount(data);
-  const ws = wb.addWorksheet("Debt Schedule");
   const sp = data.schoolProfile || {};
   const capDebtRows = (data.capitalAndDebtRows || []).filter(r => r.enabled);
   const loans = capDebtRows.filter(r => r.isLoan);
+  const flatDebtRowsCheck = capDebtRows.filter(r => !r.isLoan && (r.flatAnnualDebtService || 0) > 0);
+
+  // Task #780 — when the model has no loans and no flat debt rows, skip
+  // the worksheet entirely. The Cover ToC and Instructions list also
+  // omit the entry (see modelHasDebtSchedule). Cross-tab references in
+  // Balance Sheet / Operating Stmt / DSCR degrade gracefully:
+  //   - Balance Sheet's Long-Term Debt row is gated on
+  //     hasDebtRef (debtBalanceRow > 0) and falls back to literal zeros.
+  //   - Operating Stmt and DSCR consume the in-memory interestByYear /
+  //     debtServiceByYear arrays returned here, never the worksheet,
+  //     so an all-zeros payload simply renders zero interest / DSC.
+  if (loans.length === 0 && flatDebtRowsCheck.length === 0) {
+    return {
+      debtByYear: [0, 0, 0, 0, 0],
+      interestByYear: [0, 0, 0, 0, 0],
+      principalByYear: [0, 0, 0, 0, 0],
+      balanceByYear: [0, 0, 0, 0, 0],
+      debtBalanceRow: -1,
+    };
+  }
+
+  const ws = wb.addWorksheet("Debt Schedule");
   const yLabels = yearLabels(sp.openingYear, yc);
   ws.columns = [{ width: 28 }, ...Array(yc).fill({ width: 16 })];
   printSetup(ws);
@@ -3249,8 +3285,9 @@ async function generateWorkbook(
   // tab is actually rendered, so smoke tests that build the workbook
   // without a summary do not see an orphan ToC link.
   const hasFounderSummary = founderSummary !== undefined;
-  buildInstructions(wb, data, hasFounderSummary);
-  buildCover(wb, data, hasFounderSummary);
+  const hasDebtSchedule = modelHasDebtSchedule(effectiveData);
+  buildInstructions(wb, data, hasFounderSummary, hasDebtSchedule);
+  buildCover(wb, data, hasFounderSummary, hasDebtSchedule);
   if (founderSummary) {
     buildFounderSummaryTab(wb, founderSummary);
   }
