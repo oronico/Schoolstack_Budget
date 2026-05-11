@@ -9,9 +9,10 @@ import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 interface ConsultantStepProps {
   jumpToStep?: (step: number) => void;
   modelId: number | null;
+  revenueStepNumber?: number;
 }
 
-export function ConsultantStep({ jumpToStep, modelId }: ConsultantStepProps) {
+export function ConsultantStep({ jumpToStep, modelId, revenueStepNumber }: ConsultantStepProps) {
   const { watch, getValues } = useFormContext();
   const entityType = watch("schoolProfile.entityType");
   const schoolType = watch("schoolProfile.schoolType");
@@ -87,6 +88,7 @@ export function ConsultantStep({ jumpToStep, modelId }: ConsultantStepProps) {
         cumNiLabel={cumNiLabel}
         modelId={modelId ?? undefined}
         jumpToStep={jumpToStep}
+        revenueStepNumber={revenueStepNumber}
         lendingLabIntent={lendingLabIntent}
         hasLoan={hasLoan}
         modelData={getValues()}

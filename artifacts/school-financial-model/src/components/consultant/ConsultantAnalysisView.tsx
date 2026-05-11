@@ -41,7 +41,7 @@ import { SchoolProfileLendingLabIntent } from "@workspace/api-client-react";
 import { KPI_FORMULAS } from "@/lib/coaching/kpi-formulas";
 import { KpiFormulaDrawer } from "@/components/coaching/ExplainerDrawer";
 import { WhyThisNumber } from "@/components/coaching/WhyThisNumber";
-import type { HeadlineMetricKey } from "@workspace/finance";
+import { inferRevenueQuality, type HeadlineMetricKey, type RevenueQuality } from "@workspace/finance";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { lenderReadinessCoachingHeadline } from "@/lib/coaching/lender-readiness-coaching";
 import { TopIssuesPanel } from "./TopIssuesPanel";
@@ -174,6 +174,13 @@ interface ConsultantAnalysisViewProps {
   modelId?: number;
   jumpToStep?: (step: number) => void;
   exportStepNumber?: number;
+  /** Resolved 1-based wizard index of the Revenue step. Used by the
+   *  "Hard revenue only" explainer's "Edit on Revenue step →" affordance.
+   *  Wizard step indices are dynamic (Actuals Intake / Chesterton paths
+   *  insert extra steps), so the caller must resolve this from
+   *  `visibleSteps` rather than relying on a hardcoded constant.
+   *  Defaults to `4` for legacy callers / tests. */
+  revenueStepNumber?: number;
   lendingLabIntent?: SchoolProfileLendingLabIntent;
   hasLoan?: boolean;
   /** Raw model data, used by the per-metric "Why this number?" popover so
@@ -247,7 +254,7 @@ function generateHealthSummary(data: ConsultantOutput): string {
   return `We've reviewed your financial model and have some observations to share.${fallbackSnippet}${riskDetail} Let's walk through the key findings together.`;
 }
 
-export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jumpToStep, exportStepNumber = 9, lendingLabIntent, hasLoan, modelData }: ConsultantAnalysisViewProps) {
+export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jumpToStep, exportStepNumber = 9, revenueStepNumber = 4, lendingLabIntent, hasLoan, modelData }: ConsultantAnalysisViewProps) {
   const [openKpi, setOpenKpi] = useState<string | null>(null);
   const [sensitivityTab, setSensitivityTab] = useState<"revenue" | "expense">("revenue");
   const lendingRelevant = lendingLabIntent === SchoolProfileLendingLabIntent.plan_to_apply || lendingLabIntent === SchoolProfileLendingLabIntent.want_to_understand || hasLoan;
@@ -763,6 +770,170 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
           </div>
         </div>
       )}
+
+      {(() => {
+        // Task #645 — "Hard revenue only" wizard explainer. The scenario
+        // already shows up in the consultant stress-test table and the
+        // lender packet PDF, but founders skim past the row without
+        // understanding what it simulates or whether they passed. This
+        // card pulls the engine's matching `stressTests` entry, scores it
+        // against healthy thresholds, and lists the donor/policy rows the
+        // engine zeros out so the founder can jump back and edit them.
+        const hardRow = stressTests?.find((s) => s.scenario === "Hard revenue only");
+        if (!hardRow) return null;
+
+        const md = (modelData ?? {}) as { revenueRows?: Array<{ id?: string; category?: string; enabled?: boolean; revenueQuality?: RevenueQuality }> };
+        const allRows = md.revenueRows ?? [];
+        const droppedRows = allRows
+          .filter((r) => r.enabled !== false)
+          .map((r) => ({ row: r, quality: inferRevenueQuality(r) }))
+          .filter((x) => x.quality === "donor_dependent" || x.quality === "policy_dependent");
+
+        type ToneKey = "good" | "watch" | "alert" | "na";
+        const TONE_CLS: Record<ToneKey, { badge: string; dot: string; text: string }> = {
+          good: { badge: "bg-emerald-100 text-emerald-900 border-emerald-200", dot: "bg-emerald-600", text: "text-emerald-700" },
+          watch: { badge: "bg-amber-100 text-amber-900 border-amber-200", dot: "bg-amber-500", text: "text-amber-700" },
+          alert: { badge: "bg-rose-100 text-rose-900 border-rose-200", dot: "bg-rose-600", text: "text-rose-700" },
+          na: { badge: "bg-muted text-muted-foreground border-border", dot: "bg-muted-foreground/50", text: "text-muted-foreground" },
+        };
+
+        const reserveTone: ToneKey =
+          hardRow.reserveMonths === undefined || hardRow.reserveMonths === null
+            ? "na"
+            : hardRow.reserveMonths >= 3
+              ? "good"
+              : hardRow.reserveMonths >= 1
+                ? "watch"
+                : "alert";
+        const dscrTone: ToneKey =
+          hardRow.dscr === undefined || hardRow.dscr === null
+            ? "na"
+            : hardRow.dscr >= 1.2
+              ? "good"
+              : hardRow.dscr >= 1.0
+                ? "watch"
+                : "alert";
+        const runwayTone: ToneKey =
+          hardRow.runwayMonths === undefined || hardRow.runwayMonths === null
+            ? "na"
+            : hardRow.runwayMonths >= 12
+              ? "good"
+              : hardRow.runwayMonths >= 6
+                ? "watch"
+                : "alert";
+        const order: Record<ToneKey, number> = { good: 0, na: 1, watch: 2, alert: 3 };
+        const overall: ToneKey = ([reserveTone, dscrTone, runwayTone] as ToneKey[])
+          .reduce((worst, t) => (order[t] > order[worst] ? t : worst), "good");
+        const overallLabel =
+          overall === "alert" ? "Doesn't pass" : overall === "watch" ? "Borderline" : overall === "na" ? "Not measurable" : "Passes";
+
+        const RQ_LABEL: Record<"donor_dependent" | "policy_dependent", string> = {
+          donor_dependent: "Donor-Dependent",
+          policy_dependent: "Policy-Dependent",
+        };
+
+        return (
+          <div
+            data-testid="hard-revenue-only-explainer"
+            className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <ShieldAlert className="h-5 w-5 text-amber-700" />
+              <h3 className="font-display font-bold text-lg text-foreground">
+                "Hard revenue only" stress test
+              </h3>
+              <span
+                data-testid="hard-revenue-only-overall"
+                className={cn("ml-auto inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide border", TONE_CLS[overall].badge)}
+              >
+                <span className={cn("inline-block w-1.5 h-1.5 rounded-full", TONE_CLS[overall].dot)} />
+                {overallLabel}
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+              This scenario asks: <span className="font-semibold text-foreground">if every dollar of philanthropy and every dollar of public per-pupil / voucher / ESA funding disappeared, would the school still cover its bills?</span>{" "}
+              Lenders run it because donors can pull back and policy can change overnight — they want to see that signed enrollment contracts alone keep the lights on. We zero out every revenue row tagged
+              <span className="font-semibold text-foreground"> Donor-Dependent</span> or
+              <span className="font-semibold text-foreground"> Policy-Dependent</span>, then re-run the model.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+              <div className="rounded-xl border border-border/60 bg-secondary/20 p-4">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Reserve (months)</div>
+                <div className={cn("text-2xl font-bold tabular-nums", TONE_CLS[reserveTone].text)}>
+                  {hardRow.reserveMonths === undefined || hardRow.reserveMonths === null ? "—" : hardRow.reserveMonths.toFixed(1)}
+                </div>
+                <div className="text-[11px] text-muted-foreground mt-1">Healthy ≥ 3 · Watch 1–3 · Alert &lt; 1</div>
+              </div>
+              <div className="rounded-xl border border-border/60 bg-secondary/20 p-4">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Year 1 DSCR</div>
+                <div className={cn("text-2xl font-bold tabular-nums", TONE_CLS[dscrTone].text)}>
+                  {hardRow.dscr === undefined || hardRow.dscr === null ? "N/A" : `${hardRow.dscr.toFixed(2)}x`}
+                </div>
+                <div className="text-[11px] text-muted-foreground mt-1">
+                  {hardRow.dscr === undefined || hardRow.dscr === null
+                    ? "No debt service modeled"
+                    : "Healthy ≥ 1.2x · Watch 1.0–1.2x · Alert < 1.0x"}
+                </div>
+              </div>
+              <div className="rounded-xl border border-border/60 bg-secondary/20 p-4">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Cash runway</div>
+                <div className={cn("text-2xl font-bold tabular-nums", TONE_CLS[runwayTone].text)}>
+                  {hardRow.runwayMonths === undefined || hardRow.runwayMonths === null
+                    ? "—"
+                    : hardRow.runwayMonths >= 60
+                      ? "60+ mo"
+                      : `${hardRow.runwayMonths} mo`}
+                </div>
+                <div className="text-[11px] text-muted-foreground mt-1">Healthy ≥ 12 · Watch 6–12 · Alert &lt; 6</div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border/60 bg-secondary/10 p-4">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <div className="text-xs font-semibold text-foreground">
+                  Rows zeroed in this scenario
+                  <span className="ml-1.5 text-muted-foreground font-normal">
+                    ({droppedRows.length})
+                  </span>
+                </div>
+                {jumpToStep && droppedRows.length > 0 && (
+                  <button
+                    type="button"
+                    data-testid="hard-revenue-only-jump-to-revenue"
+                    onClick={() => jumpToStep(revenueStepNumber)}
+                    className="text-xs font-semibold text-primary hover:underline"
+                  >
+                    Edit on Revenue step →
+                  </button>
+                )}
+              </div>
+              {droppedRows.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Your model has no revenue tagged Donor-Dependent or Policy-Dependent — this stress test produces the same result as your base case.
+                </p>
+              ) : (
+                <ul className="flex flex-wrap gap-1.5" data-testid="hard-revenue-only-dropped-rows">
+                  {droppedRows.map(({ row, quality }, idx) => (
+                    <li
+                      key={row.id ?? `${quality}-${idx}`}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] border",
+                        quality === "donor_dependent"
+                          ? "bg-amber-50 border-amber-200 text-amber-900"
+                          : "bg-teal-50 border-teal-200 text-teal-900",
+                      )}
+                    >
+                      <span className="font-mono text-[10px] opacity-70">{row.id}</span>
+                      <span className="font-semibold">· {RQ_LABEL[quality as "donor_dependent" | "policy_dependent"]}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {revChartData && revChartData.length > 0 && (
         <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
