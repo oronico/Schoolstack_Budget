@@ -18,6 +18,7 @@ import {
   AlertCircle,
   Bookmark,
   ChevronDown,
+  Check,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +34,7 @@ import {
   encodeOverridesToHash,
   decodeOverridesFromHash,
   isEmptyOverrides,
+  overridesEqual,
   type WhatIfOverrides,
   type WhatIfImpact,
 } from "@/lib/whatif-engine";
@@ -308,6 +310,25 @@ export function WhatIfDrawer({
   const { toast } = useToast();
 
   const savedScenarios = customScenarios ?? [];
+
+  // Index of the saved scenario whose overrides exactly match the live
+  // local overrides — drives both the trigger label ("Saved scenarios ·
+  // Slower lease ramp") and the check-mark on the matching popover row.
+  // We match against `overrides` (not the debounced copy) so the
+  // indicator clears the instant the founder nudges a slider, rather
+  // than lingering for the 80ms debounce window.
+  const activeScenarioIndex = useMemo(() => {
+    if (savedScenarios.length === 0) return -1;
+    if (isEmptyOverrides(overrides)) return -1;
+    for (let i = 0; i < savedScenarios.length; i++) {
+      if (overridesEqual(overrides, savedScenarios[i].overrides as WhatIfOverrides)) {
+        return i;
+      }
+    }
+    return -1;
+  }, [savedScenarios, overrides]);
+  const activeScenarioName =
+    activeScenarioIndex >= 0 ? savedScenarios[activeScenarioIndex].name : null;
 
   // Close the "Saved scenarios" popover on outside click and on Escape so
   // it behaves like a normal menu inside the drawer dialog.
@@ -655,7 +676,11 @@ export function WhatIfDrawer({
                 )}
               >
                 <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
-                <span>Saved scenarios</span>
+                <span data-testid="whatif-saved-scenarios-trigger-label">
+                  {activeScenarioName
+                    ? `Saved scenarios · ${activeScenarioName}`
+                    : "Saved scenarios"}
+                </span>
                 {savedScenarios.length > 0 && (
                   <span
                     data-testid="whatif-saved-scenarios-count"
@@ -698,25 +723,57 @@ export function WhatIfDrawer({
                     </div>
                   ) : (
                     <ul className="max-h-[260px] overflow-y-auto py-1">
-                      {savedScenarios.map((cs, i) => (
-                        <li key={`${cs.name}-${cs.createdAt}`}>
-                          <button
-                            type="button"
-                            role="option"
-                            aria-selected={false}
-                            onClick={() => hydrateFromSavedScenario(cs)}
-                            data-testid={`whatif-saved-scenario-${i}`}
-                            className="w-full flex items-start justify-between gap-3 px-3 py-2 text-left hover:bg-muted transition-colors"
-                          >
-                            <span className="font-medium text-sm text-foreground truncate">
-                              {cs.name}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground shrink-0 mt-0.5 font-mono">
-                              {fmtSavedDate(cs.createdAt)}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
+                      {savedScenarios.map((cs, i) => {
+                        const isActive = i === activeScenarioIndex;
+                        return (
+                          <li key={`${cs.name}-${cs.createdAt}`}>
+                            <button
+                              type="button"
+                              role="option"
+                              aria-selected={isActive}
+                              onClick={() => hydrateFromSavedScenario(cs)}
+                              data-testid={`whatif-saved-scenario-${i}`}
+                              data-active={isActive ? "true" : undefined}
+                              className={cn(
+                                "w-full flex items-start justify-between gap-3 px-3 py-2 text-left transition-colors",
+                                isActive
+                                  ? "bg-amber-50 hover:bg-amber-100"
+                                  : "hover:bg-muted",
+                              )}
+                            >
+                              <span className="flex items-start gap-1.5 min-w-0">
+                                <Check
+                                  className={cn(
+                                    "h-3.5 w-3.5 shrink-0 mt-0.5",
+                                    isActive
+                                      ? "text-amber-700"
+                                      : "text-transparent",
+                                  )}
+                                  data-testid={
+                                    isActive
+                                      ? `whatif-saved-scenario-${i}-active`
+                                      : undefined
+                                  }
+                                  aria-hidden={!isActive}
+                                />
+                                <span
+                                  className={cn(
+                                    "font-medium text-sm truncate",
+                                    isActive
+                                      ? "text-amber-900"
+                                      : "text-foreground",
+                                  )}
+                                >
+                                  {cs.name}
+                                </span>
+                              </span>
+                              <span className="text-[10px] text-muted-foreground shrink-0 mt-0.5 font-mono">
+                                {fmtSavedDate(cs.createdAt)}
+                              </span>
+                            </button>
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
                 </div>

@@ -38,6 +38,63 @@ export interface WhatIfImpact {
 
 export const EMPTY_OVERRIDES: WhatIfOverrides = {};
 
+// Deep-equal comparison of two `WhatIfOverrides` payloads. Used by the
+// planner drawer to figure out whether the live local overrides exactly
+// match a saved scenario so it can render the scenario's name on the
+// "Saved scenarios" trigger and check-mark the matching popover row. We
+// normalize each field the same way `isEmptyOverrides` does (treating
+// `undefined`, `0`, and an all-zero `enrollmentDelta` as the canonical
+// "no override" value) so a saved scenario with `{ retentionRate: 85 }`
+// still matches live overrides shaped like
+// `{ retentionRate: 85, tuitionDeltaPerStudent: 0 }` — otherwise a
+// freshly-loaded saved scenario would appear "tweaked" the moment the
+// drawer normalizes its state.
+export function overridesEqual(
+  a: WhatIfOverrides | undefined | null,
+  b: WhatIfOverrides | undefined | null,
+): boolean {
+  const aEmpty = isEmptyOverrides(a);
+  const bEmpty = isEmptyOverrides(b);
+  if (aEmpty && bEmpty) return true;
+  if (aEmpty !== bEmpty) return false;
+  const x = a as WhatIfOverrides;
+  const y = b as WhatIfOverrides;
+  const enrA = x.enrollmentDelta ?? [0, 0, 0, 0, 0];
+  const enrB = y.enrollmentDelta ?? [0, 0, 0, 0, 0];
+  for (let i = 0; i < 5; i++) {
+    if ((enrA[i] ?? 0) !== (enrB[i] ?? 0)) return false;
+  }
+  const numKeys: Array<keyof WhatIfOverrides> = [
+    "retentionRate",
+    "tuitionDeltaPerStudent",
+    "monthlyRent",
+    "rentEscalation",
+    "rentChangeStartYear",
+    "sqftDelta",
+    "oneTimeFitOut",
+  ];
+  // Treat `undefined` and `0` as the same value for fields where 0 means
+  // "no override" (matches `isEmptyOverrides`). For `retentionRate`,
+  // `monthlyRent`, `rentEscalation`, `rentChangeStartYear` an explicit
+  // value (including 0) is meaningful, so we compare strictly.
+  const zeroMeansEmpty: ReadonlySet<keyof WhatIfOverrides> = new Set([
+    "tuitionDeltaPerStudent",
+    "sqftDelta",
+    "oneTimeFitOut",
+  ]);
+  for (const k of numKeys) {
+    const va = x[k];
+    const vb = y[k];
+    if (zeroMeansEmpty.has(k)) {
+      if ((va ?? 0) !== (vb ?? 0)) return false;
+    } else {
+      if (va === undefined && vb === undefined) continue;
+      if (va !== vb) return false;
+    }
+  }
+  return true;
+}
+
 export function isEmptyOverrides(o: WhatIfOverrides | undefined | null): boolean {
   if (!o) return true;
   if (o.enrollmentDelta && o.enrollmentDelta.some((v) => v !== 0)) return false;

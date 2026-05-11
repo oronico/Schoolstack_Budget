@@ -6,6 +6,7 @@ export {
   decodeOverridesFromHash,
   encodeOverridesToHash,
   isEmptyOverrides,
+  overridesEqual,
   EMPTY_OVERRIDES,
   type WhatIfOverrides,
   type WhatIfImpact,

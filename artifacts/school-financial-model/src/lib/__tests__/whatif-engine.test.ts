@@ -6,6 +6,7 @@ import {
   encodeOverridesToHash,
   decodeOverridesFromHash,
   isEmptyOverrides,
+  overridesEqual,
   type WhatIfOverrides,
 } from "../whatif-engine";
 import { computeBaseFinancials } from "../scenario-engine";
@@ -68,6 +69,58 @@ describe("whatif-engine: isEmptyOverrides", () => {
 
   it("treats zero fit-out as empty", () => {
     expect(isEmptyOverrides({ oneTimeFitOut: 0 })).toBe(true);
+  });
+});
+
+describe("whatif-engine: overridesEqual", () => {
+  it("treats undefined / null / empty as equivalent", () => {
+    expect(overridesEqual(undefined, undefined)).toBe(true);
+    expect(overridesEqual(null, undefined)).toBe(true);
+    expect(overridesEqual({}, undefined)).toBe(true);
+    expect(overridesEqual({ enrollmentDelta: [0, 0, 0, 0, 0] }, {})).toBe(true);
+  });
+
+  it("matches identical override payloads", () => {
+    const a: WhatIfOverrides = {
+      enrollmentDelta: [5, 0, 0, 0, 0],
+      retentionRate: 88,
+      monthlyRent: 12000,
+    };
+    const b: WhatIfOverrides = {
+      enrollmentDelta: [5, 0, 0, 0, 0],
+      retentionRate: 88,
+      monthlyRent: 12000,
+    };
+    expect(overridesEqual(a, b)).toBe(true);
+  });
+
+  it("treats undefined and 0 as equivalent for zero-meaning fields", () => {
+    expect(
+      overridesEqual(
+        { retentionRate: 88 },
+        { retentionRate: 88, tuitionDeltaPerStudent: 0, sqftDelta: 0, oneTimeFitOut: 0 },
+      ),
+    ).toBe(true);
+  });
+
+  it("returns false when any value differs", () => {
+    expect(
+      overridesEqual({ retentionRate: 88 }, { retentionRate: 90 }),
+    ).toBe(false);
+    expect(
+      overridesEqual(
+        { enrollmentDelta: [5, 0, 0, 0, 0] },
+        { enrollmentDelta: [5, 1, 0, 0, 0] },
+      ),
+    ).toBe(false);
+    expect(
+      overridesEqual({ monthlyRent: 12000 }, { monthlyRent: 12500 }),
+    ).toBe(false);
+  });
+
+  it("distinguishes empty from non-empty", () => {
+    expect(overridesEqual({}, { retentionRate: 88 })).toBe(false);
+    expect(overridesEqual({ monthlyRent: 12000 }, {})).toBe(false);
   });
 });
 
