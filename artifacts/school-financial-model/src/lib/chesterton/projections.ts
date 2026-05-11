@@ -14,6 +14,11 @@ export interface ChestertonProjectionRow {
   netRevenue: number;
   operatingExpense: number;
   fundraisingGap: number;
+  // Subtotals that roll up into operatingExpense, exposed so the dashboard
+  // can show founders what's driving the gap without re-opening the workbook.
+  facultyCost: number;
+  adminSalaries: number;
+  generalAdmin: number;
 }
 
 export interface ChestertonProjections {
@@ -125,6 +130,9 @@ export function computeChestertonProjections(data: ChestertonData | undefined): 
       netRevenue,
       operatingExpense,
       fundraisingGap,
+      facultyCost: faculty,
+      adminSalaries,
+      generalAdmin: ga,
     });
   }
 

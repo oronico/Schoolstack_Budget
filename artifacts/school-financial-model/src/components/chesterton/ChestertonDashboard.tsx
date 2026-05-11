@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { AlertTriangle, BarChart3 } from "lucide-react";
+import { Fragment, useMemo, useState } from "react";
+import { AlertTriangle, BarChart3, ChevronDown, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { computeChestertonProjections } from "@/lib/chesterton/projections";
 import type { ChestertonData } from "../../pages/model-wizard/schema";
@@ -16,6 +16,11 @@ interface RowSpec {
   emphasis?: boolean;
 }
 
+interface BreakdownSpec {
+  key: "facultyCost" | "adminSalaries" | "generalAdmin";
+  label: string;
+}
+
 const ROWS: RowSpec[] = [
   { key: "enrollment", label: "Total Enrollment", format: "number" },
   { key: "netRevenue", label: "Net Tuition + Fees", format: "currency" },
@@ -23,9 +28,16 @@ const ROWS: RowSpec[] = [
   { key: "fundraisingGap", label: "Fundraising Gap", format: "currency", emphasis: true },
 ];
 
+const OPERATING_EXPENSE_BREAKDOWN: BreakdownSpec[] = [
+  { key: "facultyCost", label: "Faculty" },
+  { key: "adminSalaries", label: "Admin Salaries" },
+  { key: "generalAdmin", label: "G&A" },
+];
+
 export function ChestertonDashboard({ chesterton, schoolName }: Props) {
   const projections = useMemo(() => computeChestertonProjections(chesterton), [chesterton]);
   const tfg = projections.totalFundraisingGoal;
+  const [showOpExpenseBreakdown, setShowOpExpenseBreakdown] = useState(false);
 
   return (
     <div
@@ -65,40 +77,83 @@ export function ChestertonDashboard({ chesterton, schoolName }: Props) {
             </tr>
           </thead>
           <tbody>
-            {ROWS.map(spec => (
-              <tr
-                key={spec.key}
-                className={`border-b border-border ${spec.emphasis ? "font-semibold" : ""}`}
-                data-testid={`chesterton-dashboard-row-${spec.key}`}
-              >
-                <td className="p-2 sticky left-0 bg-white">{spec.label}</td>
-                {projections.rows.map(r => {
-                  const value = r[spec.key];
-                  const overGoal =
-                    spec.key === "fundraisingGap" && tfg > 0 && value > tfg;
-                  const text =
-                    spec.format === "currency" ? formatCurrency(value) : String(value);
-                  return (
-                    <td
-                      key={r.yearIndex}
-                      className={`p-2 text-center ${overGoal ? "bg-amber-50 text-amber-900" : ""}`}
-                      data-testid={`chesterton-dashboard-cell-${spec.key}-yr-${r.yearIndex}`}
-                    >
-                      <span className="inline-flex items-center gap-1">
-                        {overGoal && (
-                          <AlertTriangle
-                            className="h-3.5 w-3.5 text-amber-600"
-                            data-testid={`chesterton-dashboard-gap-warning-yr-${r.yearIndex}`}
-                            aria-label="Fundraising gap exceeds Total Fundraising Goal"
-                          />
-                        )}
-                        {text}
-                      </span>
+            {ROWS.map(spec => {
+              const isOpExpense = spec.key === "operatingExpense";
+              const ChevronIcon = showOpExpenseBreakdown ? ChevronDown : ChevronRight;
+              return (
+                <Fragment key={spec.key}>
+                  <tr
+                    className={`border-b border-border ${spec.emphasis ? "font-semibold" : ""}`}
+                    data-testid={`chesterton-dashboard-row-${spec.key}`}
+                  >
+                    <td className="p-2 sticky left-0 bg-white">
+                      {isOpExpense ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowOpExpenseBreakdown(v => !v)}
+                          className="inline-flex items-center gap-1 text-left hover:text-primary"
+                          aria-expanded={showOpExpenseBreakdown}
+                          aria-controls="chesterton-dashboard-opexpense-breakdown"
+                          data-testid="chesterton-dashboard-opexpense-toggle"
+                        >
+                          <ChevronIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                          {spec.label}
+                        </button>
+                      ) : (
+                        spec.label
+                      )}
                     </td>
-                  );
-                })}
-              </tr>
-            ))}
+                    {projections.rows.map(r => {
+                      const value = r[spec.key];
+                      const overGoal =
+                        spec.key === "fundraisingGap" && tfg > 0 && value > tfg;
+                      const text =
+                        spec.format === "currency" ? formatCurrency(value) : String(value);
+                      return (
+                        <td
+                          key={r.yearIndex}
+                          className={`p-2 text-center ${overGoal ? "bg-amber-50 text-amber-900" : ""}`}
+                          data-testid={`chesterton-dashboard-cell-${spec.key}-yr-${r.yearIndex}`}
+                        >
+                          <span className="inline-flex items-center gap-1">
+                            {overGoal && (
+                              <AlertTriangle
+                                className="h-3.5 w-3.5 text-amber-600"
+                                data-testid={`chesterton-dashboard-gap-warning-yr-${r.yearIndex}`}
+                                aria-label="Fundraising gap exceeds Total Fundraising Goal"
+                              />
+                            )}
+                            {text}
+                          </span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                  {isOpExpense && showOpExpenseBreakdown &&
+                    OPERATING_EXPENSE_BREAKDOWN.map(sub => (
+                      <tr
+                        key={sub.key}
+                        id={sub.key === "facultyCost" ? "chesterton-dashboard-opexpense-breakdown" : undefined}
+                        className="border-b border-border bg-muted/30 text-muted-foreground"
+                        data-testid={`chesterton-dashboard-row-${sub.key}`}
+                      >
+                        <td className="p-2 pl-8 sticky left-0 bg-muted/30 font-normal">
+                          ↳ {sub.label}
+                        </td>
+                        {projections.rows.map(r => (
+                          <td
+                            key={r.yearIndex}
+                            className="p-2 text-center font-normal"
+                            data-testid={`chesterton-dashboard-cell-${sub.key}-yr-${r.yearIndex}`}
+                          >
+                            {formatCurrency(r[sub.key])}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>

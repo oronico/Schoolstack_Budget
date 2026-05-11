@@ -53,6 +53,24 @@ describe("computeChestertonProjections", () => {
     expect(proj.rows[2].netRevenue).toBeCloseTo(8850 * enrollY2, 2);
   });
 
+  it("exposes faculty / admin / G&A subtotals that sum to operating expense", () => {
+    const data = buildDefaultChestertonData();
+    const proj = computeChestertonProjections(data);
+    for (const r of proj.rows) {
+      expect(r.facultyCost + r.adminSalaries + r.generalAdmin).toBeCloseTo(
+        r.operatingExpense,
+        2,
+      );
+    }
+  });
+
+  it("Year 0 admin salaries and G&A subtotals are 0 in the breakdown", () => {
+    const data = buildDefaultChestertonData();
+    const proj = computeChestertonProjections(data);
+    expect(proj.rows[0].adminSalaries).toBe(0);
+    expect(proj.rows[0].generalAdmin).toBe(0);
+  });
+
   it("returns zeros when chesterton data is undefined", () => {
     const proj = computeChestertonProjections(undefined);
     expect(proj.rows).toHaveLength(CHESTERTON_YEAR_COUNT);

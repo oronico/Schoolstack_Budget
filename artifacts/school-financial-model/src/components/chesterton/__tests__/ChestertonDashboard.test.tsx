@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { ChestertonDashboard } from "../ChestertonDashboard";
 import { buildDefaultChestertonData } from "@/lib/chesterton/template";
 
@@ -37,6 +37,25 @@ describe("ChestertonDashboard", () => {
     expect(
       screen.queryByTestId("chesterton-dashboard-gap-warning-yr-1"),
     ).toBeNull();
+  });
+
+  it("hides the operating expense breakdown until the toggle is clicked", () => {
+    const data = buildDefaultChestertonData();
+    render(<ChestertonDashboard chesterton={data} />);
+    // Subrows are not rendered initially.
+    expect(screen.queryByTestId("chesterton-dashboard-row-facultyCost")).toBeNull();
+    expect(screen.queryByTestId("chesterton-dashboard-row-adminSalaries")).toBeNull();
+    expect(screen.queryByTestId("chesterton-dashboard-row-generalAdmin")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("chesterton-dashboard-opexpense-toggle"));
+
+    expect(screen.getByTestId("chesterton-dashboard-row-facultyCost")).toBeInTheDocument();
+    expect(screen.getByTestId("chesterton-dashboard-row-adminSalaries")).toBeInTheDocument();
+    expect(screen.getByTestId("chesterton-dashboard-row-generalAdmin")).toBeInTheDocument();
+    // A specific Year 1 cell renders for each subrow.
+    expect(screen.getByTestId("chesterton-dashboard-cell-facultyCost-yr-1")).toBeInTheDocument();
+    expect(screen.getByTestId("chesterton-dashboard-cell-adminSalaries-yr-1")).toBeInTheDocument();
+    expect(screen.getByTestId("chesterton-dashboard-cell-generalAdmin-yr-1")).toBeInTheDocument();
   });
 
   it("renders zeros gracefully when chesterton data is undefined", () => {
