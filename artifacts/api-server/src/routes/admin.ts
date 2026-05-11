@@ -690,7 +690,16 @@ router.get(
       }
       const trendBucketStarts = computeBucketStarts();
 
+      // Section totals are split into current vs prior buckets so the
+      // admin UI can render a +/- delta badge per section row, mirroring
+      // the capSignupCurrent/capSignupPrior pattern used for capability
+      // summary rows. The combined `impressions`/`clicks` totals still
+      // include both halves of the windowFilter (existing contract — see
+      // the cta-conversion-section-trends regression test) and are kept
+      // alongside the per-period splits.
       const sectionImpressionsBySource = new Map<string, Map<string, number>>();
+      const sectionImpressionsCurrent = new Map<string, number>();
+      const sectionImpressionsPrior = new Map<string, number>();
       const sectionImpressionTrends = new Map<string, number[]>();
       for (const r of sectionImpressions) {
         if (!r.source || !r.section) continue;
@@ -699,8 +708,12 @@ router.get(
         sectionImpressionsBySource.set(r.source, map);
         if (cfg.windowed) {
           const ts = (r.bucket instanceof Date ? r.bucket : new Date(r.bucket)).getTime();
-          if (ts < startMs) continue;
           const key = `${r.source}|${r.section}`;
+          if (ts < startMs) {
+            sectionImpressionsPrior.set(key, (sectionImpressionsPrior.get(key) || 0) + r.count);
+            continue;
+          }
+          sectionImpressionsCurrent.set(key, (sectionImpressionsCurrent.get(key) || 0) + r.count);
           let arr = sectionImpressionTrends.get(key);
           if (!arr) {
             arr = new Array(bucketCount).fill(0) as number[];
@@ -711,6 +724,8 @@ router.get(
       }
 
       const sectionClicksBySource = new Map<string, Map<string, number>>();
+      const sectionClicksCurrent = new Map<string, number>();
+      const sectionClicksPrior = new Map<string, number>();
       const sectionClickTrends = new Map<string, number[]>();
       for (const r of clicksBySection) {
         if (!r.source || !r.section) continue;
@@ -719,8 +734,12 @@ router.get(
         sectionClicksBySource.set(r.source, map);
         if (cfg.windowed) {
           const ts = (r.bucket instanceof Date ? r.bucket : new Date(r.bucket)).getTime();
-          if (ts < startMs) continue;
           const key = `${r.source}|${r.section}`;
+          if (ts < startMs) {
+            sectionClicksPrior.set(key, (sectionClicksPrior.get(key) || 0) + r.count);
+            continue;
+          }
+          sectionClicksCurrent.set(key, (sectionClicksCurrent.get(key) || 0) + r.count);
           let arr = sectionClickTrends.get(key);
           if (!arr) {
             arr = new Array(bucketCount).fill(0) as number[];
@@ -766,6 +785,24 @@ router.get(
             ? sectionClickTrends.get(trendKey) ??
               new Array(cfg.bucketCount).fill(0)
             : [];
+          // Per-period splits for the +/- delta badge in the admin UI.
+          // Only meaningful for windowed ranges; for "all" both are 0.
+          const currentImpressions = cfg.windowed
+            ? sectionImpressionsCurrent.get(trendKey) || 0
+            : 0;
+          const previousImpressions = cfg.windowed
+            ? sectionImpressionsPrior.get(trendKey) || 0
+            : 0;
+          const currentClicks = cfg.windowed
+            ? sectionClicksCurrent.get(trendKey) || 0
+            : 0;
+          const previousClicks = cfg.windowed
+            ? sectionClicksPrior.get(trendKey) || 0
+            : 0;
+          const currentClickRate =
+            currentImpressions > 0 ? currentClicks / currentImpressions : 0;
+          const previousClickRate =
+            previousImpressions > 0 ? previousClicks / previousImpressions : 0;
           return {
             section,
             impressions,
@@ -774,9 +811,20 @@ router.get(
             clickRate: impressions > 0 ? sectionClicks / impressions : 0,
             impressionsTrend,
             clicksTrend,
+            currentImpressions,
+            previousImpressions,
+            currentClicks,
+            previousClicks,
+            currentClickRate,
+            previousClickRate,
           };
         }).filter(
-          (s) => s.impressions > 0 || s.clicks > 0 || s.signups > 0,
+          (s) =>
+            s.impressions > 0 ||
+            s.clicks > 0 ||
+            s.signups > 0 ||
+            s.previousImpressions > 0 ||
+            s.previousClicks > 0,
         );
         const scroll = scrollDepthBySource.get(source) || {};
         return {

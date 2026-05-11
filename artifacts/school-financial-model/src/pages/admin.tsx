@@ -206,6 +206,14 @@ interface CtaConversionData {
       clickRate: number;
       impressionsTrend: number[];
       clicksTrend: number[];
+      // Per-period splits for the +/- delta badge. Only populated for
+      // windowed ranges; "all" returns 0 for both halves.
+      currentImpressions: number;
+      previousImpressions: number;
+      currentClicks: number;
+      previousClicks: number;
+      currentClickRate: number;
+      previousClickRate: number;
     }[];
     scrollDepth: { d25: number; d50: number; d75: number; d100: number };
   }[];
@@ -846,28 +854,46 @@ function CtaConversionSection() {
                               >
                                 {data.bucketUnit ? (
                                   <div className="inline-flex flex-col items-end gap-0.5">
-                                    <MiniSparkline
-                                      values={s.impressionsTrend}
-                                      color="#0f766e"
-                                      bucketStarts={data.trendBucketStarts}
-                                      bucketUnit={data.bucketUnit}
-                                      metricLabel="impression"
-                                      companion={{
-                                        values: s.clicksTrend,
-                                        label: "click",
-                                      }}
-                                    />
-                                    <MiniSparkline
-                                      values={s.clicksTrend}
-                                      color="#b45309"
-                                      bucketStarts={data.trendBucketStarts}
-                                      bucketUnit={data.bucketUnit}
-                                      metricLabel="click"
-                                      companion={{
-                                        values: s.impressionsTrend,
-                                        label: "impression",
-                                      }}
-                                    />
+                                    <div
+                                      className="flex items-center gap-1.5"
+                                      data-testid={`section-engagement-impressions-delta-${page.source}-${s.section}`}
+                                    >
+                                      <MiniSparkline
+                                        values={s.impressionsTrend}
+                                        color="#0f766e"
+                                        bucketStarts={data.trendBucketStarts}
+                                        bucketUnit={data.bucketUnit}
+                                        metricLabel="impression"
+                                        companion={{
+                                          values: s.clicksTrend,
+                                          label: "click",
+                                        }}
+                                      />
+                                      <DeltaBadge
+                                        current={s.currentImpressions}
+                                        previous={s.previousImpressions}
+                                      />
+                                    </div>
+                                    <div
+                                      className="flex items-center gap-1.5"
+                                      data-testid={`section-engagement-click-rate-delta-${page.source}-${s.section}`}
+                                    >
+                                      <MiniSparkline
+                                        values={s.clicksTrend}
+                                        color="#b45309"
+                                        bucketStarts={data.trendBucketStarts}
+                                        bucketUnit={data.bucketUnit}
+                                        metricLabel="click"
+                                        companion={{
+                                          values: s.impressionsTrend,
+                                          label: "impression",
+                                        }}
+                                      />
+                                      <DeltaBadge
+                                        current={s.currentClickRate}
+                                        previous={s.previousClickRate}
+                                      />
+                                    </div>
                                   </div>
                                 ) : (
                                   <span className="text-xs text-muted-foreground">
