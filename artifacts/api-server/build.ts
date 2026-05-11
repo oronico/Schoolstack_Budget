@@ -24,6 +24,7 @@ const allowlist = [
   "jsonwebtoken",
   "resend",
   "pdfkit",
+  "pdf-lib",
   "pg",
   "zod",
 ];

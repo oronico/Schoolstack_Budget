@@ -223,10 +223,15 @@ const invokedDirectly = (() => {
   const entry = process.argv[1];
   if (!entry) return false;
   try {
+    const metaUrl =
+      typeof import.meta !== "undefined" && import.meta && typeof import.meta.url === "string"
+        ? import.meta.url
+        : undefined;
+    if (!metaUrl) return false;
     const url = new URL(`file://${entry}`).href;
-    return import.meta.url === url || import.meta.url.endsWith(entry);
+    return metaUrl === url || metaUrl.endsWith(entry);
   } catch {
-    return import.meta.url.endsWith(entry);
+    return false;
   }
 })();
 
