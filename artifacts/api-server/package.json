@@ -89,7 +89,8 @@
     "test:inline-rationale-rollup": "tsx ./tests/inline-rationale-rollup.ts",
     "test:workbook-helpers-school-model": "tsx ./tests/workbook-helpers-school-model.ts",
     "generate:legislator-samples": "tsx ./src/scripts/generate-legislator-samples.ts",
-    "generate:ceo-demos": "tsx ./src/scripts/generate-ceo-demos.ts"
+    "generate:ceo-demos": "tsx ./src/scripts/generate-ceo-demos.ts",
+    "cleanup:orphan-uploads": "tsx ./src/scripts/cleanup-orphan-uploads.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",

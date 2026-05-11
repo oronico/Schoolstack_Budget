@@ -189,6 +189,56 @@ export class ObjectStorageService {
     return normalizedPath;
   }
 
+  /**
+   * Task #736 — delete an evidence object referenced by a model.
+   * Accepts either the canonical `/objects/<id>` path stored on the
+   * model or a raw `https://storage.googleapis.com/...` upload URL.
+   * Returns true if the underlying GCS object was deleted (or never
+   * existed); false on any other failure so callers can decide to log
+   * and continue rather than fail the surrounding operation.
+   */
+  async deleteObjectEntity(rawPath: string): Promise<boolean> {
+    try {
+      const normalized = this.normalizeObjectEntityPath(rawPath);
+      if (!normalized.startsWith("/objects/")) return false;
+      const parts = normalized.slice(1).split("/");
+      if (parts.length < 2) return false;
+      const entityId = parts.slice(1).join("/");
+      let entityDir = this.getPrivateObjectDir();
+      if (!entityDir.endsWith("/")) entityDir = `${entityDir}/`;
+      const fullPath = `${entityDir}${entityId}`;
+      const { bucketName, objectName } = parseObjectPath(fullPath);
+      const file = objectStorageClient.bucket(bucketName).file(objectName);
+      await file.delete({ ignoreNotFound: true });
+      return true;
+    } catch (err) {
+      console.warn("[objectStorage] deleteObjectEntity failed", { rawPath, err });
+      return false;
+    }
+  }
+
+  /**
+   * Task #736 — list every `uploads/<id>` object under PRIVATE_OBJECT_DIR.
+   * Used by the orphan-uploads sweeper to compare against the set of
+   * objectPaths currently referenced by `financial_models` rows.
+   * Returns `/objects/<id>` paths so callers can compare directly with
+   * what's persisted on the model.
+   */
+  async listUploadObjectPaths(): Promise<string[]> {
+    let entityDir = this.getPrivateObjectDir();
+    if (!entityDir.endsWith("/")) entityDir = `${entityDir}/`;
+    const prefixPath = `${entityDir}uploads/`;
+    const { bucketName, objectName: prefix } = parseObjectPath(prefixPath);
+    const bucket = objectStorageClient.bucket(bucketName);
+    const [files] = await bucket.getFiles({ prefix });
+    const dirEntity = entityDir.replace(/^\//, "").split("/").slice(1).join("/");
+    return files.map((f) => {
+      const name = f.name;
+      const rel = name.startsWith(dirEntity) ? name.slice(dirEntity.length) : name;
+      return `/objects/${rel}`;
+    });
+  }
+
   async canAccessObjectEntity({
     userId,
     objectFile,

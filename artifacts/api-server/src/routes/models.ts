@@ -15,6 +15,7 @@ import {
   ArchiveModelParams,
 } from "@workspace/api-zod";
 import { authMiddleware, type AuthRequest } from "../middlewares/auth";
+import { ObjectStorageService } from "../lib/objectStorage";
 import { createRateLimiter } from "../lib/rate-limiter";
 import { isRequestAborted } from "../lib/request-abort";
 
@@ -243,6 +244,93 @@ async function fetchPersonaComfort(
 }
 
 const router: IRouter = Router();
+const objectStorageService = new ObjectStorageService();
+
+// Task #736 — collect every App Storage `objectPath` referenced by a
+// model's assumptionConfidence evidence files. Used by the model PUT
+// (to clean up paths the founder removed in this save) and DELETE
+// (to clean up everything the model owned) handlers so attachments
+// don't accumulate as orphan objects in App Storage. Tolerant of
+// legacy / partially-typed data — non-string objectPaths are skipped.
+function extractEvidenceObjectPaths(data: unknown): string[] {
+  const out: string[] = [];
+  if (!data || typeof data !== "object") return out;
+  const confidence = (data as Record<string, unknown>).assumptionConfidence;
+  if (!confidence || typeof confidence !== "object") return out;
+  for (const entry of Object.values(confidence as Record<string, unknown>)) {
+    if (!entry || typeof entry !== "object") continue;
+    const files = (entry as Record<string, unknown>).evidenceFiles;
+    if (!Array.isArray(files)) continue;
+    for (const f of files) {
+      if (!f || typeof f !== "object") continue;
+      const p = (f as Record<string, unknown>).objectPath;
+      if (typeof p === "string" && p.length > 0) out.push(p);
+    }
+  }
+  return out;
+}
+
+async function deleteOrphanedObjects(paths: Iterable<string>): Promise<void> {
+  for (const p of paths) {
+    try {
+      await objectStorageService.deleteObjectEntity(p);
+    } catch (err) {
+      console.warn("[models] orphan object delete failed", { p, err });
+    }
+  }
+}
+
+// Task #736 — duplicating a model copies its `data` JSON verbatim,
+// so two `financial_models` rows can legitimately reference the same
+// `/objects/<id>` evidence file. The inline cleanup paths in PUT and
+// DELETE must therefore only delete an object once the *last* model
+// referencing it lets go — otherwise removing an attachment in one
+// copy would silently break the same attachment in another copy.
+//
+// Returns the set of objectPaths still referenced by any model OTHER
+// than `excludeModelId`. Callers intersect this with their candidate
+// removal set and only delete the ones that fall outside it.
+//
+// Implemented as an in-process scan rather than a JSONB query because
+// the path lives several layers deep in `assumptionConfidence` and
+// the row count is small (one row per model per founder). The orphan
+// sweeper uses the same shape so semantics stay aligned.
+async function pathsReferencedByOtherModels(
+  excludeModelId: number,
+): Promise<Set<string>> {
+  const rows = await db
+    .select({
+      id: financialModelsTable.id,
+      data: financialModelsTable.data,
+    })
+    .from(financialModelsTable);
+  const refs = new Set<string>();
+  for (const row of rows) {
+    if (row.id === excludeModelId) continue;
+    for (const p of extractEvidenceObjectPaths(row.data)) refs.add(p);
+  }
+  return refs;
+}
+
+async function safeDeleteUnreferenced(
+  candidatePaths: string[],
+  excludeModelId: number,
+): Promise<void> {
+  if (candidatePaths.length === 0) return;
+  let stillReferenced: Set<string>;
+  try {
+    stillReferenced = await pathsReferencedByOtherModels(excludeModelId);
+  } catch (err) {
+    // If we can't prove the paths are orphans, do NOT delete — the
+    // sweeper will catch them on the next pass.
+    console.warn("[models] reference check failed; skipping inline delete", err);
+    return;
+  }
+  const truly = candidatePaths.filter((p) => !stillReferenced.has(p));
+  if (truly.length > 0) {
+    await deleteOrphanedObjects(truly);
+  }
+}
 
 function extractRowColumns(data: Record<string, unknown>) {
   const d = data as Record<string, unknown>;
@@ -523,6 +611,25 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
 
     await trackEvent("updated_model", req.userId, { modelId: model.id });
 
+    // Task #736 — diff the previous evidence-file objectPaths against
+    // the saved set and delete any that the founder removed in this
+    // save. Done after the DB write so a failed App Storage delete
+    // can never roll back the model save itself; we just log and let
+    // the orphan sweeper catch it on the next pass.
+    try {
+      const prev = new Set(extractEvidenceObjectPaths(existing.data));
+      const next = new Set(extractEvidenceObjectPaths(model.data));
+      const removed: string[] = [];
+      for (const p of prev) if (!next.has(p)) removed.push(p);
+      // Gate behind a global reference check: a duplicated model
+      // (POST /models/:id/duplicate copies `data` verbatim) can still
+      // reference the same objectPath, so we only delete once it's
+      // truly unreferenced.
+      void safeDeleteUnreferenced(removed, model.id);
+    } catch (cleanupErr) {
+      console.warn("[models] evidence cleanup diff failed", cleanupErr);
+    }
+
     res.setHeader("ETag", buildEtag(model.version));
     res.json(modelResponse(model));
   } catch (err) {
@@ -552,6 +659,22 @@ router.delete("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
 
     await db.delete(financialModelsTable).where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)));
     await trackEvent("deleted_model", req.userId, { modelId: params.data.id });
+
+    // Task #736 — drop every App Storage object the model owned
+    // (lease PDFs, MOUs, photos…) so they don't outlive the row that
+    // referenced them. Best-effort: a sidecar/network blip should not
+    // turn a successful model delete into a 500.
+    try {
+      const paths = extractEvidenceObjectPaths(existing.data);
+      // The row is already gone, so a global scan implicitly excludes
+      // it; pass -1 (no-op exclusion) to keep the helper signature
+      // consistent. Duplicates of this model that still reference any
+      // of these paths will keep them alive.
+      void safeDeleteUnreferenced(paths, -1);
+    } catch (cleanupErr) {
+      console.warn("[models] evidence cleanup on delete failed", cleanupErr);
+    }
+
     res.json({ message: "Model deleted successfully." });
   } catch (err) {
     console.error("Delete model error:", err);
