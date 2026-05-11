@@ -12,7 +12,7 @@ import type { CashRunwayView } from "./build-cash-runway";
 import type { PacketSection, LinkedMetric } from "./packet-types";
 import { renderForecastAccuracySection } from "./forecast-accuracy-pdf.js";
 import { cashStatusBadgeLabel, renderCashRunwaySection } from "./cash-runway-pdf.js";
-import { renderNarrativeCommentarySection, renderAssumptionsConfidenceSection, renderLenderStressTestsSection } from "./lender-packet-pdf.js";
+import { renderNarrativeCommentarySection, renderAssumptionsConfidenceSection, renderLenderStressTestsSection, renderFounderCompBlock } from "./lender-packet-pdf.js";
 import { buildFounderSummary, type FounderSummary } from "./build-founder-summary.js";
 import type { ConsultantOutput } from "../consultant-engine.js";
 import type { ModelData } from "../workbook-helpers.js";
@@ -129,6 +129,12 @@ export async function generateBoardPacketPDF(
     packet.forecastAccuracyFilter,
     packet.forecastAccuracyUnfilteredCount,
   );
+
+  // Task #699 — Founder compensation block, mirroring the labeled
+  // breakdown the Excel export and the lender PDF render. Reuses the
+  // lender PDF's renderer so trustees see identical numbers (and
+  // identical "not paying yet" copy) to lender reviewers.
+  renderFounderCompBlock(doc, packet.founderCompNormalization);
 
   drawFooter(doc);
   return docToBuffer(doc);

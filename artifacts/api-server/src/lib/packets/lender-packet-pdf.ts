@@ -1,13 +1,13 @@
 import {
   createDoc, drawHeader, sectionTitle, subSection, bodyText,
-  drawFooter, docToBuffer, statusBadge, labelValue,
+  drawTable, drawFooter, docToBuffer, statusBadge, labelValue,
   fmtCurrency, ensureSpace,
   renderDecisionHistorySection,
   renderPacketTable, renderPacketInsights, renderLinkedMetrics,
   drawActualVsProjectedPill,
-  type PDFDoc, BRAND,
+  type PDFDoc, type TableColumn, BRAND,
 } from "../pdf-utils.js";
-import type { LenderPacket, RiskMitigant, BudgetNarrativeData, FlaggedAssumptionExport, BreakEvenDownsideExport } from "./build-lender-packet";
+import type { LenderPacket, RiskMitigant, BudgetNarrativeData, FlaggedAssumptionExport, BreakEvenDownsideExport, FounderCompPdfBlock } from "./build-lender-packet";
 import type { LenderStressTestResults, ProgramBreakEven } from "@workspace/finance";
 import {
   ASSUMPTION_REGISTRY,
@@ -109,12 +109,104 @@ export async function generateLenderPacketPDF(
     packet.forecastAccuracyUnfilteredCount,
   );
 
+  // Task #699 — Founder compensation block, mirroring the labeled
+  // breakdown the Excel export now renders. Numbers come from
+  // `computeFounderCompNormalization` so the workbook, in-app dashboard,
+  // and PDF cannot drift.
+  renderFounderCompBlock(doc, packet.founderCompNormalization);
+
   drawFooter(doc);
   return docToBuffer(doc);
   // Task #729 — the inline-base64 PDF embed/merge path was removed
   // along with the legacy `dataBase64` field. Evidence files now live
   // in App Storage and the appendix prints clickable download links
   // for the lender to pull each source document on demand.
+}
+
+/**
+ * Task #699 — Render the Founder Compensation breakdown block on a
+ * packet PDF. Same data shape (and same labels / "not paying yet" note)
+ * the Excel export's Personnel sheet now renders, so a reviewer reading
+ * the PDF and a reviewer reading the workbook see identical numbers.
+ *
+ * Exported so the board PDF generator can call the same renderer rather
+ * than carry its own copy that could drift.
+ */
+export function renderFounderCompBlock(
+  doc: PDFDoc,
+  block: FounderCompPdfBlock | null,
+): void {
+  if (!block) return;
+
+  const yearCount = block.reported.length;
+  const fmt = (n: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(Math.round(n));
+
+  ensureSpace(doc, 80);
+  sectionTitle(doc, "Founder Compensation");
+  bodyText(
+    doc,
+    "Per-year founder pay shown two ways: as planned (what the founder draws) and at market rate (what a comparable hire would cost). The lender adjustment is the gap underwriters apply to staffing cost and DSCR.",
+  );
+
+  const yearLabels: TableColumn[] = [];
+  for (let y = 0; y < yearCount; y++) {
+    yearLabels.push({ header: `Y${y + 1}`, width: 60, align: "right" });
+  }
+  const cols: TableColumn[] = [
+    { header: "Line", width: 230 },
+    ...yearLabels,
+    { header: `${yearCount}-Yr Total`, width: 70, align: "right" },
+  ];
+
+  const sumOf = (arr: number[]): number => arr.reduce((s, v) => s + (v || 0), 0);
+
+  const rows: string[][] = [
+    [
+      "As planned (reported)",
+      ...block.reported.map((v) => fmt(v || 0)),
+      fmt(sumOf(block.reported)),
+    ],
+    [
+      "  Fully-loaded (incl. benefits + payroll tax)",
+      ...block.reportedLoaded.map((v) => fmt(v || 0)),
+      fmt(sumOf(block.reportedLoaded)),
+    ],
+    [
+      "Market rate (normalized)",
+      ...block.normalized.map((v) => fmt(v || 0)),
+      fmt(sumOf(block.normalized)),
+    ],
+    [
+      "  Fully-loaded (incl. benefits + payroll tax)",
+      ...block.normalizedLoaded.map((v) => fmt(v || 0)),
+      fmt(sumOf(block.normalizedLoaded)),
+    ],
+    [
+      "Lender adjustment (market - planned)",
+      ...block.delta.map((v) => fmt(v || 0)),
+      fmt(block.totalDelta),
+    ],
+  ];
+
+  drawTable(doc, cols, rows, { zebra: true, highlightLastRow: true });
+
+  const note = block.notPayingYet
+    ? "Note: Founder selected \u201Cnot paying yet\u201D \u2014 reported founder compensation is $0 across all years. The market-rate line shows what a comparable hire would cost; the lender adjustment is the gap underwriters apply."
+    : block.hasAdjustment
+    ? "Note: Founder is paying themselves below market rate (\u201Csweat equity\u201D). Lenders and boards underwrite to the market-rate line; the adjustment shows the gap."
+    : "Note: Reported and market-rate founder compensation match \u2014 no normalization adjustment is applied.";
+  doc.moveDown(0.3);
+  doc.font("Helvetica-Oblique").fontSize(8).fillColor(BRAND.darkGray);
+  doc.text(note, doc.page.margins.left, doc.y, {
+    width: doc.page.width - doc.page.margins.left - doc.page.margins.right,
+  });
+  doc.font("Helvetica").fillColor(BRAND.black);
+  doc.moveDown(0.3);
 }
 
 function drawCoverPage(doc: PDFDoc, packet: LenderPacket) {

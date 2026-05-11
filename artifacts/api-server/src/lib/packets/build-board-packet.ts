@@ -20,6 +20,7 @@ import {
   type LenderStressTestResults,
 } from "@workspace/finance";
 import { buildPacketData } from "./build-packet-data";
+import { buildFounderCompPdfBlock, type FounderCompPdfBlock } from "./build-lender-packet";
 import {
   buildNarrativeBundle,
   buildBoardCommentary,
@@ -209,6 +210,14 @@ export interface BoardPacket extends PacketData {
    * `consultantOutput.lenderStressTests`.
    */
   lenderStressTests: LenderStressTestResults;
+  /**
+   * Task #699 — Founder compensation breakdown for the board PDF, mirrored
+   * from the lender packet so trustees see the same per-year reported /
+   * normalized / adjustment numbers reviewers see in the workbook and the
+   * lender PDF. `null` when there is no reported pay, no "not paying yet"
+   * toggle, and no adjustment — same gate as the workbook.
+   */
+  founderCompNormalization: FounderCompPdfBlock | null;
 }
 
 const BOARD_PACKET_SECTIONS: SectionId[] = [
@@ -396,6 +405,10 @@ export function buildBoardPacket(
     // packet. Both surfaces read the same canonical engine result, so
     // the numbers reconcile bit-for-bit.
     lenderStressTests: consultantOutput.lenderStressTests,
+    // Task #699 — Founder compensation breakdown for the board PDF,
+    // mirrored from the lender packet's block so the same numbers land in
+    // both PDFs and the Excel export.
+    founderCompNormalization: buildFounderCompPdfBlock(modelData),
   };
 }
 

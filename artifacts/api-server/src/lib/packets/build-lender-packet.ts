@@ -9,6 +9,7 @@ import {
   computeDownsideBand,
   computeProgramBreakEven,
   computeSensitivityGrid,
+  computeFounderCompNormalization,
   type ForecastAccuracyFilter,
   type ForecastAccuracyRollup,
   type DecisionEngineModelData,
@@ -73,6 +74,47 @@ export interface BudgetNarrativeData {
 export interface FlaggedAssumptionExport {
   flag: AssumptionFlag;
   userExplanation: string;
+}
+
+/**
+ * Task #699 — Founder compensation breakdown surfaced in the lender and
+ * board packet PDFs. Mirrors the labeled "Founder compensation" block the
+ * Excel export now renders (Task #692): per-year reported (as planned),
+ * fully-loaded reported, normalized (market rate), fully-loaded
+ * normalized, and the lender adjustment delta. `notPayingYet` carries the
+ * founder's "not paying yet" toggle so the renderer can surface the
+ * matching note. `null` when none of (`hasReported`, `notPayingYet`,
+ * `hasAdjustment`) is true — same gate as the workbook.
+ */
+export interface FounderCompPdfBlock {
+  reported: number[];
+  reportedLoaded: number[];
+  normalized: number[];
+  normalizedLoaded: number[];
+  delta: number[];
+  totalDelta: number;
+  hasAdjustment: boolean;
+  notPayingYet: boolean;
+}
+
+export function buildFounderCompPdfBlock(modelData: ModelData): FounderCompPdfBlock | null {
+  const fc = computeFounderCompNormalization(
+    modelData as unknown as Parameters<typeof computeFounderCompNormalization>[0],
+  );
+  const stRaw = ((modelData as unknown as Record<string, unknown>).staffing || {}) as Record<string, unknown>;
+  const notPayingYet = stRaw.notPayingFounderYet === true;
+  const hasReported = fc.reported.some((v) => v > 0);
+  if (!hasReported && !notPayingYet && !fc.hasAdjustment) return null;
+  return {
+    reported: fc.reported,
+    reportedLoaded: fc.reportedLoaded,
+    normalized: fc.normalized,
+    normalizedLoaded: fc.normalizedLoaded,
+    delta: fc.delta,
+    totalDelta: fc.totalDelta,
+    hasAdjustment: fc.hasAdjustment,
+    notPayingYet,
+  };
 }
 
 export interface LenderPacket extends PacketData {
@@ -152,6 +194,15 @@ export interface LenderPacket extends PacketData {
    * present in `allowedFigures` (guard test enforces).
    */
   lenderCommentary: NarrativeCommentary;
+  /**
+   * Task #699 — Founder compensation breakdown for the lender PDF (and
+   * mirrored on the board PDF). Built from `computeFounderCompNormalization`
+   * so the per-year reported / normalized / adjustment numbers match the
+   * Excel export, the in-app dashboard, and the staffing-section
+   * normalization tables. `null` when there is no reported pay, no "not
+   * paying yet" toggle, and no adjustment — same gate as the workbook.
+   */
+  founderCompNormalization: FounderCompPdfBlock | null;
 }
 
 export interface BreakEvenDownsideExport {
@@ -324,6 +375,9 @@ export function buildLenderPacket(
     lenderCommentary: buildLenderCommentary(
       buildNarrativeBundle(modelData, consultantOutput),
     ),
+    // Task #699 — Founder compensation breakdown for the PDF, mirrored
+    // from the Excel export's labeled "Founder compensation" block.
+    founderCompNormalization: buildFounderCompPdfBlock(modelData),
   };
 }
 
