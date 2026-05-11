@@ -1,0 +1,382 @@
+REALISTIC SCHOOL SCENARIO QA FOR SCHOOLSTACK BUDGET LAUNCH
+
+Context:
+SchoolStack Budget launches for school founders. The app is for schools first. It should help inexperienced entrepreneurs build a credible budget and financial model, while producing outputs that can support board, funder, grant, landlord, and lender conversations.
+
+Do not use real identifiable borrower data.
+Do not add new features.
+Do not restructure the wizard.
+Do not change core finance formulas unless a scenario exposes a P0 math defect.
+Do not build full underwriting workflow.
+Do not add database tables.
+Do not work on unrelated tasks.
+
+Goal:
+Run six anonymized, realistic school scenarios through the production public /underwriting flow or the closest available launch-path model payload path. Confirm both:
+1. Math credibility.
+2. Founder-safe tone.
+
+Production URL:
+https://budget.schoolstack.ai/underwriting
+
+Required output:
+Create or update:
+docs/REALISTIC_SCENARIO_LAUNCH_QA.md
+
+Include:
+- timestamp
+- method used: browser UI, API payload, or both
+- scenarios tested
+- math result
+- tone result
+- export result
+- bugs found
+- severity
+- final verdict
+
+Final verdict options:
+- GO WITH WATCH ITEMS
+- NO GO
+
+Use GO WITH WATCH ITEMS only if no P0 blockers are found.
+
+SCENARIO 1: Fragile microschool launch
+
+School name: Magnolia Learning Studio
+School type: Microschool
+Stage: New school
+State: SC
+Students Y1: 18
+Annual growth: 20%
+Tuition: $9,500
+Public funding: $0
+Philanthropy: $10,000
+Students per teacher: 10
+Teacher salary: $42,000
+Admin/founder salary: $0
+Founder paid Year 1: No
+Founder compensation begins: Year 3
+Monthly rent: $2,500
+Utilities: $7,200/year
+Insurance: $5,000/year
+Curriculum: $6,000/year
+Other OpEx: $10,000/year
+Beginning cash: $8,000
+Lease: not signed
+Occupancy documentation: unknown
+Insurance: quoted
+Enrollment evidence: deposits collected
+Deposits: 7
+Average deposit: $250
+Existing debt: none
+
+Expected tone:
+The app should say the model shows promise but needs more clarity around enrollment evidence, founder compensation, facility readiness, and cash cushion.
+
+Expected math/tone flags:
+- founder compensation gap
+- low beginning cash
+- limited enrollment validation
+- lease not signed
+- facility readiness incomplete
+- likely early cash pressure
+
+SCENARIO 2: Stronger operating microschool
+
+School name: Riverbend Microschool
+School type: Microschool
+Stage: Operating school
+State: FL
+Current enrollment: 42
+Students Y1: 48
+Annual growth: 12%
+Tuition: $11,500
+Public funding / ESA: $4,000/student
+Philanthropy: $0
+Retention: 88%
+Students per teacher: 12
+Teacher salary: $50,000
+Admin/founder salary: $58,000
+Founder paid Year 1: Yes
+Monthly rent: $5,200
+Utilities: $14,000/year
+Insurance: $9,000/year
+Curriculum: $15,000/year
+Other OpEx: $24,000/year
+Beginning cash: $65,000
+Lease: signed
+Lease in entity name: yes
+Occupancy documentation: obtained
+Insurance: active
+Enrollment evidence: signed agreements
+Signed agreements: 41
+Existing debt: $18,000
+Annual debt service: $6,000
+
+Expected tone:
+The app should recognize a more developed model anchored in operating history, enrollment evidence, and a clear facility path while still coaching on cash timing and debt service.
+
+Expected math/tone flags:
+- mostly positive readiness
+- debt service reflected in estimated debt cushion or readiness language
+- staffing and facility ratios either acceptable or clearly explained
+- operating history/actuals should strengthen the model
+
+SCENARIO 3: ESA / public funding timing risk
+
+School name: Horizon Choice Academy
+School type: Private school
+Stage: New school
+State: AZ
+Students Y1: 25
+Annual growth: 18%
+Tuition: $5,000
+Public funding / ESA: $8,000/student
+Public funding status: pending
+Can withstand 90-day delay: no
+Philanthropy: $15,000
+Students per teacher: 11
+Teacher salary: $48,000
+Admin/founder salary: $45,000
+Founder paid Year 1: Yes
+Monthly rent: $3,500
+Utilities: $9,500/year
+Insurance: $7,500/year
+Curriculum: $9,000/year
+Other OpEx: $18,000/year
+Beginning cash: $10,000
+Lease: signed
+Occupancy documentation: in process
+Insurance: quoted
+Enrollment evidence: verbal commitments
+Signed agreements: 8
+Deposits: 5
+Existing debt: none
+
+Expected tone:
+The app should explain that annual revenue may support the plan, but cash timing could create pressure if public funds are delayed.
+
+Expected math/tone flags:
+- public funding timing risk
+- pending funding risk
+- 90-day delay risk
+- limited enrollment validation
+- cash cushion concern
+- tone should coach, not reject
+
+SCENARIO 4: Faith-based private school, board/funder-ready
+
+School name: St. Gabriel Classical School
+School type: Private school
+Stage: Operating school
+State: TX
+Current enrollment: 72
+Students Y1: 78
+Annual growth: 8%
+Tuition: $8,500
+Public funding: $0
+Philanthropy: $125,000
+Retention: 90%
+Students per teacher: 14
+Teacher salary: $47,000
+Admin/founder salary: $72,000
+Founder paid Year 1: Yes
+Monthly rent: $6,500
+Utilities: $22,000/year
+Insurance: $12,000/year
+Curriculum: $20,000/year
+Other OpEx: $48,000/year
+Beginning cash: $95,000
+Lease: signed
+Lease in entity name: yes
+Occupancy documentation: obtained
+Insurance: active
+Enrollment evidence: signed agreements
+Signed agreements: 70
+Existing debt: none
+
+Expected tone:
+The app should recognize a strong operating foundation and gently raise the question of whether philanthropy is recurring, restricted, or needed for ongoing operations.
+
+Expected math/tone flags:
+- strong operating base
+- philanthropy dependence should be explained
+- facility and staffing burden should be visible
+- board/funder communication should sound professional and nonjudgmental
+
+SCENARIO 5: Charter/public funding model
+
+School name: Civic Prep Charter School
+School type: Charter school
+Stage: Operating school
+State: CO
+Current enrollment: 180
+Students Y1: 200
+Annual growth: 10%
+Tuition: $0
+Public funding: $11,500/student
+Philanthropy: $150,000
+Retention: 86%
+Students per teacher: 18
+Teacher salary: $58,000
+Admin salary: $95,000
+Founder/leader paid Year 1: Yes
+Monthly rent: $38,000
+Utilities: $65,000/year
+Insurance: $35,000/year
+Curriculum: $80,000/year
+Other OpEx: $260,000/year
+Beginning cash: $350,000
+Lease: signed
+Occupancy documentation: obtained
+Insurance: active
+Existing debt: $250,000
+Annual debt service: $58,000
+
+Expected tone:
+The app should explain that the model depends heavily on public funding timing and enrollment stability. Board review should focus on cash timing, facility burden, and downside enrollment scenarios.
+
+Expected math/tone flags:
+- public funding concentration
+- debt service reflected
+- facility burden visible
+- enrollment sensitivity relevant
+- should not imply this is a loan program eligibility review
+
+SCENARIO 6: Fantasy model stress case
+
+School name: BrightPath Launch School
+School type: Microschool
+Stage: New school
+State: GA
+Students Y1: 60
+Annual growth: 35%
+Tuition: $14,000
+Public funding: $0
+Philanthropy: $0
+Students per teacher: 20
+Teacher salary: $35,000
+Admin/founder salary: $0
+Founder paid Year 1: No
+Founder compensation begins: Year 5 or never if the app supports it
+Monthly rent: $9,500
+Utilities: $18,000/year
+Insurance: $4,000/year
+Curriculum: $3,000/year
+Other OpEx: $5,000/year
+Beginning cash: $2,000
+Lease: not signed
+Occupancy documentation: not started
+Insurance: not started
+Enrollment evidence: projected only
+Deposits: 0
+Signed agreements: 0
+Existing debt: $40,000
+Annual debt service: $12,000
+
+Expected tone:
+The app should explain that the model relies on several assumptions that need more support before sharing externally: enrollment evidence, facility readiness, founder compensation, cash cushion, and debt service.
+
+Expected math/tone flags:
+- aggressive enrollment growth
+- weak enrollment evidence
+- no founder compensation
+- facility readiness missing
+- low insurance expense may be unrealistic
+- low curriculum/other OpEx may be unrealistic
+- existing debt pressure
+- low beginning cash
+- should catch the “looks good on paper, fails in reality” risk
+
+TEST REQUIREMENTS FOR EACH SCENARIO
+
+For each scenario, test:
+1. Readiness analysis runs.
+2. Excel export downloads.
+3. Workbook opens.
+4. Workbook contains no:
+   - undefined
+   - NaN
+   - #REF!
+   - #DIV/0!
+   - #VALUE!
+   - #NAME?
+5. Revenue is mathematically credible.
+6. Staffing ratio is reasonable or properly flagged.
+7. Facility burden is reasonable or properly flagged.
+8. Founder compensation gap is flagged when missing.
+9. Enrollment evidence gap is flagged when weak.
+10. Public funding timing risk is flagged when relevant.
+11. Debt service is reflected in estimated debt cushion or readiness language when debt exists.
+12. Tone is founder-safe and educational.
+
+BANNED FOUNDER-FACING LANGUAGE
+
+Founder-facing readiness copy, export copy, and scenario output should not say:
+- approved
+- declined
+- rejected
+- ineligible
+- failed
+- pass/fail
+- credit decision
+- underwriting decision
+- loan approval
+- approval packet
+- bank determination
+
+Allowed language:
+- worth strengthening
+- needs more clarity
+- may raise questions
+- a lender or funder may ask about this
+- your model gets stronger when...
+- useful for loan-readiness conversations
+- before sharing externally
+
+BUG CLASSIFICATION
+
+P0 Launch Blocker:
+- readiness analysis fails
+- Excel export fails
+- workbook corrupt
+- workbook contains broken formulas or NaN/undefined
+- revenue math is clearly inflated or impossible
+- scary approval/decline/credit-decision language appears
+- app crashes or route becomes unusable
+
+P1 Fix Soon:
+- expected risk not flagged
+- confusing tone
+- minor export label inconsistency
+- workbook opens but a summary label is unclear
+- mobile usability issue that does not block completion
+
+P2 Post-Launch:
+- deeper CFO-mode enhancement
+- more nuanced grant narrative
+- full assumption confidence expansion
+- additional charts
+- improved board/funder narrative
+
+DELIVERABLE FORMAT
+
+Create a table:
+
+Scenario | Math Result | Tone Result | Export Result | Bugs | Severity | Verdict
+
+Also include:
+- total scenarios tested
+- total exports downloaded
+- workbook validation status
+- banned-language sweep result
+- P0 blockers
+- P1 fixes recommended
+- P2 backlog items
+- final recommendation
+
+Final recommendation:
+Use “GO WITH WATCH ITEMS” if no P0 blockers are found.
+Use “NO GO” if any P0 blocker is found.
+
+Do not call this a clean GO while watch items remain.

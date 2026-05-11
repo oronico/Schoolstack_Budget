@@ -475,14 +475,27 @@ interface ScenarioResult {
 
 const RESULTS: ScenarioResult[] = [];
 
+function writePerScenarioResult(result: ScenarioResult) {
+  // Each worker writes its own per-scenario JSON so parallel workers do
+  // not race over a shared summary.json. The driver script aggregates
+  // these into a single docs/REALISTIC_SCENARIO_LAUNCH_QA.md afterwards.
+  const out = path.join(QA_OUT_DIR, `result-${result.slug}.json`);
+  fs.writeFileSync(out, JSON.stringify(result, null, 2), "utf8");
+}
+
 test.afterAll(() => {
-  const summaryPath = path.join(QA_OUT_DIR, "summary.json");
+  // Per-worker partial summary — useful for debugging an individual
+  // worker's run; the canonical artifact is the aggregated doc the
+  // driver script generates after all workers finish.
+  const summaryPath = path.join(
+    QA_OUT_DIR,
+    `summary-worker-${process.pid}.json`,
+  );
   fs.writeFileSync(summaryPath, JSON.stringify(RESULTS, null, 2), "utf8");
   // eslint-disable-next-line no-console
   console.log(
-    "\n=== REALISTIC SCENARIO QA — RESULTS ===\n" +
-      JSON.stringify(RESULTS, null, 2) +
-      `\n=== summary written to ${summaryPath} ===\n`,
+    `\n=== REALISTIC SCENARIO QA — worker ${process.pid} wrote ${RESULTS.length} result(s) ===\n` +
+      `=== partial summary: ${summaryPath} ===\n`,
   );
 });
 
@@ -812,6 +825,7 @@ for (const s of SCENARIOS) {
     await driveScenario(page, s);
     const result = await captureReviewAndExport(page, s, consoleCap);
     RESULTS.push(result);
+    writePerScenarioResult(result);
 
     // P0 hard assertions — any of these fails ⇒ launch blocker.
     expect(
