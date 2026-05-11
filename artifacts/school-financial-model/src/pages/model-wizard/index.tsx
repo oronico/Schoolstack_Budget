@@ -10,7 +10,12 @@ import { calculatePersonnelCosts } from "@/lib/staffing-defaults";
 import { seedFiveYearFromYearOne, resolveSeedDefaults, type SeedDefaults } from "@/lib/seed-five-year";
 import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
-import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE } from "@workspace/finance";
+import {
+  DEFAULT_BENEFITS_RATE,
+  DEFAULT_PAYROLL_TAX_RATE,
+  ASSUMPTION_REGISTRY,
+  isAssumptionKey,
+} from "@workspace/finance";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { MicroLessonContainer } from "@/components/coaching/MicroLessonCard";
 import { WhatThisMeansInYourBooks } from "@/components/coaching/WhatThisMeansInYourBooks";
@@ -64,6 +69,32 @@ const ChestertonGiftChartStep = lazy(() =>
 const ChestertonRecruitingStep = lazy(() =>
   import("./steps/chesterton/ChestertonRecruitingStep").then(m => ({ default: m.ChestertonRecruitingStep })),
 );
+
+// Task #759 — turn the server's structured evidence-cap error string
+// (e.g. `assumptionConfidence.tuition_per_student.evidenceFiles[0].size
+// is 30000000 bytes; the per-file cap is 26214400 bytes (25 MB).`) into
+// a row-aware founder-facing sentence. We name the assumption row when
+// the key resolves to a registered label, and fall back to a neutral
+// phrasing when it doesn't (e.g. for legacy keys not in the registry
+// or a future server-only assumption row).
+function buildEvidenceCapMessage(serverError: string | undefined): string {
+  const match = typeof serverError === "string"
+    ? serverError.match(/assumptionConfidence\.([a-zA-Z0-9_]+)\.evidenceFiles/)
+    : null;
+  const keyRaw = match?.[1];
+  const label = keyRaw && isAssumptionKey(keyRaw)
+    ? ASSUMPTION_REGISTRY[keyRaw].label
+    : null;
+  const isCountCap = typeof serverError === "string" && /the cap is \d+ per assumption/.test(serverError);
+  if (label) {
+    return isCountCap
+      ? `Too many evidence files on "${label}" — the cap is 25 per row. Remove one to keep saving.`
+      : `An evidence file on "${label}" is over the 25 MB cap. Remove or shrink it to keep saving.`;
+  }
+  return isCountCap
+    ? `One assumption row has too many evidence files (cap is 25 per row). Remove one to keep saving.`
+    : `An evidence file is over the 25 MB cap. Remove or shrink it to keep saving.`;
+}
 
 function stripEmptyValues(obj: unknown): unknown {
   if (obj === null || obj === undefined) return undefined;
@@ -295,6 +326,13 @@ export function ModelWizardPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [saveError, setSaveError] = useState<false | "network" | "auth" | "validation" | "conflict" | "unknown">(false);
+  // Task #759 — when the server rejects a save with the shared
+  // `evidence_cap_exceeded` code (file > 25 MB or > 25 files in one
+  // assumption row), we surface a row-aware explanation in the save
+  // status badge instead of the generic "Could not save" copy. The
+  // message names the offending assumption row and tells the founder
+  // how to recover (remove or shrink the file).
+  const [evidenceCapError, setEvidenceCapError] = useState<string | null>(null);
   const retryCountRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Task #479 — optimistic-concurrency token for /api/models/:id PUTs.
@@ -436,7 +474,19 @@ export function ModelWizardPage() {
         } catch { /* ignore */ }
       }
       if (!resp.ok) {
-        throw Object.assign(new Error(`save failed: ${resp.status}`), { status: resp.status });
+        // Task #759 — capture the JSON body for non-OK responses so
+        // callers can react to typed error codes (e.g. the server's
+        // `code: "evidence_cap_exceeded"` shape returned for oversize
+        // evidence files). The `clone()` keeps the original response
+        // available for any other reader downstream.
+        let body: { error?: string; code?: string } = {};
+        try {
+          body = (await resp.clone().json()) as { error?: string; code?: string };
+        } catch { /* body wasn't JSON — leave empty */ }
+        throw Object.assign(new Error(`save failed: ${resp.status}`), {
+          status: resp.status,
+          body,
+        });
       }
       const newEtag = resp.headers.get("etag");
       let body: { updatedAt?: string } = {};
@@ -810,14 +860,34 @@ export function ModelWizardPage() {
       });
       setLastSaved(new Date());
       setSaveError(false);
+      // Task #759 — clear any prior evidence-cap warning once a save
+      // succeeds (typically after the founder removes the offending
+      // file) so the badge falls back to the regular "Saved" cue.
+      setEvidenceCapError(null);
       retryCountRef.current = 0;
       return true;
     } catch (err: unknown) {
       const status = (err as { status?: number })?.status;
+      const body = (err as { body?: { error?: string; code?: string } })?.body;
       if (status === 401 || status === 403) {
         setSaveError("auth");
       } else if (status === 400) {
-        setSaveError("validation");
+        // Task #759 — when the server returns the shared evidence cap
+        // code, surface a row-aware message and stop the autosave
+        // retry loop. Without this break, the wizard would keep
+        // re-POSTing the same payload until the founder hand-removes
+        // the file, since nothing about the cap will change on retry.
+        if (body?.code === "evidence_cap_exceeded") {
+          setEvidenceCapError(buildEvidenceCapMessage(body.error));
+          setSaveError("validation");
+          retryCountRef.current = 999;
+          if (retryTimerRef.current) {
+            clearTimeout(retryTimerRef.current);
+            retryTimerRef.current = null;
+          }
+        } else {
+          setSaveError("validation");
+        }
       } else if (status === 409) {
         // Task #472 — another tab/session updated this model. Stop the
         // autosave retry loop and tell the user to reload so they don't
@@ -1522,7 +1592,24 @@ export function ModelWizardPage() {
                 ) : saveError === "network" ? (
                   <span data-testid="wizard-save-error-network" className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Offline - will retry</span>
                 ) : saveError === "validation" ? (
-                  <span data-testid="wizard-save-error-validation" className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Could not save - check your entries</span>
+                  // Task #759 — when the validation came from the
+                  // shared evidence-cap check, swap in a row-aware
+                  // explanation that names the offending assumption
+                  // and tells the founder how to recover. Falls back
+                  // to the generic "check your entries" copy for any
+                  // other 400 the server might raise.
+                  evidenceCapError ? (
+                    <span
+                      data-testid="wizard-save-error-evidence-cap"
+                      className="flex items-center gap-1.5 text-amber-600 max-w-[420px]"
+                      title={evidenceCapError}
+                    >
+                      <AlertCircle className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{evidenceCapError}</span>
+                    </span>
+                  ) : (
+                    <span data-testid="wizard-save-error-validation" className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Could not save - check your entries</span>
+                  )
                 ) : saveError === "conflict" ? (
                   // The full-width ConflictReloadBanner rendered below is the
                   // primary surface for this state — keep an inline cue in the

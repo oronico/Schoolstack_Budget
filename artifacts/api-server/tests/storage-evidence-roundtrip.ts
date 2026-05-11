@@ -631,6 +631,20 @@ async function main(): Promise<void> {
       oversizeRequest.status,
       400,
     );
+    // Task #759 — request-url now returns the same `evidence_cap_exceeded`
+    // code as the model save path so the wizard can show a friendly,
+    // file-aware explanation instead of a generic upload failure.
+    const oversizeReqJson = oversizeRequest.json as { code?: string; error?: string };
+    eq2(
+      "request-url rejection carries code=evidence_cap_exceeded",
+      oversizeReqJson.code,
+      "evidence_cap_exceeded",
+    );
+    check(
+      "request-url rejection error names the offending file",
+      typeof oversizeReqJson.error === "string" && oversizeReqJson.error.includes("too-big.pdf"),
+      `error=${oversizeReqJson.error}`,
+    );
 
     const oversizeFile = {
       id: "oversize",

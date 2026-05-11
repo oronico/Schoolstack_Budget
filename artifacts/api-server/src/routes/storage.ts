@@ -11,6 +11,14 @@ import { authMiddleware, type AuthRequest } from "../middlewares/auth";
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
 
+// Task #759 — mirror the per-file cap enforced on save in
+// artifacts/api-server/src/routes/models.ts (validateEvidenceFiles)
+// and on the wizard in AssumptionConfidenceCard.tsx. Surfacing the
+// oversize case from the presigned-URL endpoint with the same
+// `code: "evidence_cap_exceeded"` shape lets the wizard show a
+// friendly inline explanation instead of a generic upload failure.
+const MAX_EVIDENCE_FILE_BYTES = 25 * 1024 * 1024;
+
 /**
  * POST /storage/uploads/request-url
  *
@@ -26,6 +34,24 @@ router.post(
   "/storage/uploads/request-url",
   authMiddleware,
   async (req: AuthRequest, res: Response) => {
+    // Task #759 — surface the per-file cap with a stable error code
+    // BEFORE generic Zod parsing rejects the oversize body for the
+    // same reason. This way the wizard can show a friendly inline
+    // explanation that names the offending file instead of the
+    // generic "Couldn't get upload URL (400)" error.
+    const rawBody = (req.body ?? {}) as { name?: unknown; size?: unknown };
+    const rawSize = rawBody.size;
+    if (typeof rawSize === "number" && Number.isFinite(rawSize) && rawSize > MAX_EVIDENCE_FILE_BYTES) {
+      const rawName = typeof rawBody.name === "string" && rawBody.name.length > 0
+        ? rawBody.name
+        : "the selected file";
+      res.status(400).json({
+        error: `"${rawName}" is ${rawSize} bytes; the per-file cap is ${MAX_EVIDENCE_FILE_BYTES} bytes (25 MB).`,
+        code: "evidence_cap_exceeded",
+      });
+      return;
+    }
+
     const parsed = RequestUploadUrlBody.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Missing or invalid required fields" });

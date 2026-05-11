@@ -308,6 +308,20 @@ async function uploadEvidenceToStorage(file: File): Promise<string> {
     }),
   });
   if (!reqRes.ok) {
+    // Task #759 — when the server rejects with the shared
+    // `evidence_cap_exceeded` code (file > 25 MB), surface the
+    // friendly cap message instead of a generic HTTP error so the
+    // wrapping `Couldn't upload "<name>" — …` line tells the
+    // founder exactly what to do (remove or shrink the file).
+    let parsedErr: { error?: string; code?: string } = {};
+    try {
+      parsedErr = (await reqRes.json()) as { error?: string; code?: string };
+    } catch {
+      /* response wasn't JSON — fall through to generic error */
+    }
+    if (parsedErr.code === "evidence_cap_exceeded") {
+      throw new Error(`it's over the ${formatBytes(MAX_EVIDENCE_FILE_BYTES)} per-file cap`);
+    }
     throw new Error(`Couldn't get upload URL (${reqRes.status})`);
   }
   const { uploadURL, objectPath } = (await reqRes.json()) as {
