@@ -7,6 +7,8 @@ import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { RationaleField } from "@/components/coaching/RationaleField";
 import { AssumptionConfidenceCard } from "@/components/wizard/AssumptionConfidenceCard";
 import { SeededFromActualsBadge } from "@/components/wizard/SeededFromActualsBadge";
+import { RevenueMixCard } from "@/components/revenue/RevenueMixCard";
+import { RevenueMixGrowthControls } from "@/components/revenue/RevenueMixGrowthControls";
 import { ConceptExplainer } from "@/components/coaching/ConceptExplainer";
 import { cn, formatCurrency } from "@/lib/utils";
 import { formatPerStudent } from "@/lib/per-student-lens";
@@ -43,7 +45,7 @@ import {
   migrateGrantsToPhilanthropy,
   generateSchoolChoiceRows,
 } from "@/lib/revenue-defaults";
-import { type TuitionTier, getDefaultTuitionTiers } from "@/pages/model-wizard/schema";
+import { type TuitionTier, getDefaultTuitionTiers, type FullModelData } from "@/pages/model-wizard/schema";
 import { getStateFundingConfig, type StateFundingConfig, type SchoolType, type CharterPerPupilRange, type ProgramInfo } from "@/lib/state-funding-data";
 import { detectFragileFunding, type FragileProgramMatch } from "@workspace/finance";
 import { useShowCoach } from "@/lib/coaching/use-show-coach";
@@ -1097,6 +1099,9 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
           </div>
         </div>
       )}
+
+      <RevenueMixCard data={watch() as FullModelData} testId="revenue-step-mix-card" />
+      <RevenueMixGrowthControls data={watch() as FullModelData} testId="revenue-step-mix-growth" />
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {categoryOrder.filter((cat) => enabledCategories.has(cat)).map((cat) => {

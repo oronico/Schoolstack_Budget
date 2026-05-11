@@ -14,6 +14,7 @@ import { DiagnosticPanel } from "@/components/coaching/DiagnosticPanel";
 import { QuickLevers } from "@/components/coaching/QuickLevers";
 import { computeMetrics } from "@/lib/coaching/diagnostics-engine";
 import { CashFlowSubsection } from "@/components/review/CashFlowSubsection";
+import { RevenueMixCard } from "@/components/revenue/RevenueMixCard";
 import { ReviewViewToggle, useReviewView } from "@/components/review/ReviewViewToggle";
 import { SimpleSummaryPanel, CfoDetailPanel } from "@/components/review/ReviewMetricsPanels";
 import { toMonthlyRevenueRows } from "@/components/review/revenue-row-adapter";
@@ -680,6 +681,9 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
                   </span>
                 </div>
               ))}
+            </div>
+            <div className="mt-4">
+              <RevenueMixCard data={data} testId="review-revenue-mix" />
             </div>
           </Section>
           )}

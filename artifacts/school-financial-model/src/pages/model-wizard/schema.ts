@@ -522,6 +522,35 @@ export const revenueSchema = z.object({
   annualDonations: z.coerce.number(numMsg("annual donations")).min(0, "Please enter a positive donation amount").optional(),
   foundationGrants: z.coerce.number(numMsg("foundation grants")).min(0, "Please enter a positive grant amount").optional(),
   capitalGifts: z.coerce.number(numMsg("capital gifts")).min(0, "Please enter a positive amount").optional(),
+  // Per-source growth toggle for the revenue mix view (founder's
+  // terminology contract — see replit.md "Revenue terminology contract").
+  // Each source bucket is independently either "constant" share of revenue
+  // year-over-year (mix stays the same as Y1) or "manual" (founder
+  // overrides per year and explains in narrative). Optional; absent buckets
+  // default to "constant" so legacy models stay valid.
+  revenueMixGrowth: z.record(
+    z.string(),
+    z.object({
+      mode: z.enum(["constant", "manual"]).default("constant"),
+      narrative: z.string().max(500).optional(),
+      yearShares: z.array(z.number().min(0).max(100)).optional(),
+    }),
+  ).optional(),
+}).superRefine((rev, ctx) => {
+  // Manual-mode mix change requires a narrative — that note flows into the
+  // lender narrative, so leaving it blank would create an unexplained
+  // assumption shift in the underwriter's read.
+  const mix = rev.revenueMixGrowth;
+  if (!mix) return;
+  for (const [bucket, entry] of Object.entries(mix)) {
+    if (entry?.mode === "manual" && !entry.narrative?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["revenueMixGrowth", bucket, "narrative"],
+        message: "Add a short note explaining why this source's share changes year-to-year — it flows into your lender narrative.",
+      });
+    }
+  }
 });
 
 export const staffingRowSchema = z.object({

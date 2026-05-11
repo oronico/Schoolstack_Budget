@@ -38,6 +38,7 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisNumber } from "@/components/coaching/WhyThisNumber";
+import { RevenueMixCard } from "@/components/revenue/RevenueMixCard";
 import { ConceptExplainer } from "@/components/coaching/ConceptExplainer";
 import { PayingYourselfMatters } from "@/components/coaching/PayingYourselfMatters";
 import { LENDER_LABELS } from "@/lib/coaching/lender-labels";
@@ -797,6 +798,16 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
                   ))}
                 </ul>
               </div>
+            </div>
+          )}
+          {model?.data && (
+            <div className="mt-4">
+              <RevenueMixCard
+                data={model.data as unknown as FullModelData}
+                compact
+                title="Revenue mix by source"
+                testId="dashboard-revenue-mix"
+              />
             </div>
           )}
           {metrics && !metrics.hasNumbers && (

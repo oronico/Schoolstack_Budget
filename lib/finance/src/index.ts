@@ -338,6 +338,26 @@ export {
 export { isRestrictedRevenueRow } from "./restricted-revenue.js";
 
 export {
+  classifyRevenueRow,
+  computeRevenueSourceMix,
+  isCharterSchoolType,
+  getBucketOrder,
+  getBucketLabel,
+  getBucketColor,
+  PRIVATE_BUCKET_ORDER,
+  CHARTER_BUCKET_ORDER,
+  PRIVATE_BUCKET_LABELS,
+  CHARTER_BUCKET_LABELS,
+  PRIVATE_BUCKET_COLORS,
+  CHARTER_BUCKET_COLORS,
+  type PrivateRevenueSourceBucket,
+  type CharterRevenueSourceBucket,
+  type RevenueSourceBucket,
+  type RevenueSourceMixYear,
+  type RevenueSourceMixResult,
+} from "./revenue-source-mix.js";
+
+export {
   validateNextStep,
   assertEveryNextStep,
   NextStepGuardrailError,
