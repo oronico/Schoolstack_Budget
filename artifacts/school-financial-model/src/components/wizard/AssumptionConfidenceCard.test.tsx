@@ -140,6 +140,59 @@ describe("AssumptionConfidenceCard — Task #659", () => {
     expect(imgLink.tagName).toBe("BUTTON");
     expect(imgLink).not.toHaveAttribute("href");
     expect(imgLink.getAttribute("title")).toContain("site-photo.jpg");
+
+    // Task #760 — non-image attachments render the same compact
+    // file-type badge (PDF / DOC / XLS / IMG / etc.) the Lender
+    // Conversation Snapshot appendix uses, and a hint above the list
+    // tells founders this is what reviewers will see.
+    const pdfBadge = screen.getByTestId(`evidence-file-badge-${firstKey}-f-pdf`);
+    expect(pdfBadge.textContent).toBe("PDF");
+    expect(
+      screen.getByTestId(`evidence-file-list-hint-${firstKey}`).textContent,
+    ).toMatch(/Lender Conversation Snapshot/);
+  });
+
+  it("only thumbnails JPEG/PNG; GIF/WEBP/HEIC degrade to file-type badges (Task #760)", () => {
+    const keys = listAssumptionKeysByStep("Revenue");
+    const firstKey = keys[0];
+    const initial: Record<string, AssumptionConfidenceEntry> = {
+      [firstKey]: {
+        confidence: "signed_agreement",
+        evidenceFiles: [
+          {
+            id: "f-gif",
+            name: "diagram.gif",
+            mimeType: "image/gif",
+            size: 1024,
+            uploadedAt: "2025-01-01T00:00:00.000Z",
+            objectPath: "/objects/gif1",
+          },
+          {
+            id: "f-webp",
+            name: "screenshot.webp",
+            mimeType: "image/webp",
+            size: 1024,
+            uploadedAt: "2025-01-01T00:00:00.000Z",
+            objectPath: "/objects/webp1",
+          },
+          {
+            id: "f-heic",
+            name: "photo.heic",
+            mimeType: "image/heic",
+            size: 1024,
+            uploadedAt: "2025-01-01T00:00:00.000Z",
+            objectPath: "/objects/heic1",
+          },
+        ],
+      },
+    };
+    render(<Harness stepTitle="Revenue" initial={initial} />);
+    // PDF embeds JPEG/PNG only, so the wizard mirrors that: GIF/WEBP/HEIC
+    // render the file-type badge (matching the appendix's drawFileTypeBadge),
+    // not an inline <img> preview.
+    expect(screen.getByTestId(`evidence-file-badge-${firstKey}-f-gif`).textContent).toBe("GIF");
+    expect(screen.getByTestId(`evidence-file-badge-${firstKey}-f-webp`).textContent).toBe("IMG");
+    expect(screen.getByTestId(`evidence-file-badge-${firstKey}-f-heic`).textContent).toBe("IMG");
   });
 
   it("renders legacy dataBase64 evidence files as a data: URL link without crashing (Task #730)", () => {

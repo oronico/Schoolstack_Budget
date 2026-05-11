@@ -1,6 +1,6 @@
 import { useFormContext } from "react-hook-form";
 import { useEffect, useRef, useState } from "react";
-import { ShieldCheck, ChevronDown, ChevronUp, Paperclip, X, FileText, FileSpreadsheet, FileImage } from "lucide-react";
+import { ShieldCheck, ChevronDown, ChevronUp, Paperclip, X } from "lucide-react";
 import {
   ASSUMPTION_REGISTRY,
   ASSUMPTION_CONFIDENCE_LEVELS,
@@ -265,21 +265,32 @@ function useEvidenceObjectUrl(url: EvidenceUrl | null): {
   return state;
 }
 
-function isImageMime(mime: string): boolean {
-  return mime.toLowerCase().startsWith("image/");
+// Task #760 — match the lender-packet appendix's thumbnail eligibility
+// exactly: only JPEG/PNG attachments get an inline image preview;
+// GIF / WEBP / HEIC degrade to the same file-type badge a reviewer will
+// see in the appendix, so the wizard list stays WYSIWYG.
+function isPacketThumbnailMime(mime: string): boolean {
+  const m = mime.toLowerCase();
+  return m === "image/png" || m === "image/jpeg" || m === "image/jpg";
 }
 
-function isSpreadsheetMime(mime: string, name: string): boolean {
-  const m = mime.toLowerCase();
-  if (
-    m.includes("spreadsheet") ||
-    m.includes("excel") ||
-    m === "text/csv"
-  ) {
-    return true;
-  }
-  const lower = name.toLowerCase();
-  return lower.endsWith(".xls") || lower.endsWith(".xlsx") || lower.endsWith(".csv");
+// Task #760 — mirror the lender-packet PDF's `fileTypeBadgeLabel` so the
+// wizard's evidence list shows the same per-file-type indicator a
+// reviewer will see in the appendix (PDF / DOC / XLS / IMG / TXT / etc.).
+function fileTypeBadgeLabel(file: AssumptionEvidenceFile): string {
+  const name = (file.name || "").toLowerCase();
+  const ext = name.includes(".") ? name.slice(name.lastIndexOf(".") + 1) : "";
+  const mime = (file.mimeType || "").toLowerCase();
+  if (ext === "pdf" || mime === "application/pdf") return "PDF";
+  if (ext === "docx" || ext === "doc") return "DOC";
+  if (ext === "xlsx" || ext === "xls" || ext === "csv") return "XLS";
+  if (ext === "pptx" || ext === "ppt") return "PPT";
+  if (ext === "gif") return "GIF";
+  if (ext === "webp") return "IMG";
+  if (ext === "heic" || ext === "heif") return "IMG";
+  if (ext === "txt") return "TXT";
+  if (ext) return ext.slice(0, 4).toUpperCase();
+  return "FILE";
 }
 
 // Task #714 — two-step presigned-URL upload:
@@ -341,30 +352,47 @@ function EvidenceFileLink({
   url: EvidenceUrl | null;
   assumptionKey: AssumptionKey;
 }) {
-  const isImage = isImageMime(file.mimeType);
-  const isSheet = isSpreadsheetMime(file.mimeType, file.name);
-  const Icon = isImage ? FileImage : isSheet ? FileSpreadsheet : FileText;
+  // Task #760 — match the lender-packet appendix's thumbnail rule:
+  // only JPEG/PNG render as inline image previews. GIF / WEBP / HEIC
+  // (and every non-image type) degrade to the same file-type badge so
+  // the wizard list stays a true preview of the lender export.
+  const canThumbnail = isPacketThumbnailMime(file.mimeType);
   // Only eagerly resolve image previews — file downloads happen on
   // click so we don't waste bandwidth fetching every attachment up
   // front when the founder just wants to scroll past the row.
-  const previewState = useEvidenceObjectUrl(isImage ? url : null);
+  const previewState = useEvidenceObjectUrl(canThumbnail ? url : null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  // Image attachments get an inline preview; everything else (including
+  // GIF / WEBP / HEIC, which the PDF can't embed) degrades to a centered
+  // PDF / DOC / XLS / IMG label inside a rounded slate box.
+  const badgeLabel = fileTypeBadgeLabel(file);
+  const thumbnail =
+    canThumbnail && previewState.href ? (
+      <img
+        src={previewState.href}
+        alt=""
+        className="h-10 w-10 object-cover rounded border border-border shrink-0 bg-white"
+        loading="lazy"
+      />
+    ) : (
+      <span
+        aria-hidden="true"
+        className="h-10 w-10 shrink-0 rounded border border-border bg-slate-100 text-[10px] font-bold tracking-wide text-primary flex items-center justify-center"
+        data-testid={`evidence-file-badge-${assumptionKey}-${file.id}`}
+      >
+        {badgeLabel}
+      </span>
+    );
 
   const meta = (
     <>
-      {isImage && previewState.href ? (
-        <img
-          src={previewState.href}
-          alt=""
-          className="h-6 w-6 object-cover rounded border border-border shrink-0 bg-white"
-          loading="lazy"
-        />
-      ) : (
-        <Icon className="h-3 w-3 text-slate-500 shrink-0" />
-      )}
-      <span className="truncate">{file.name}</span>
-      <span className="text-muted-foreground shrink-0">
-        · {formatBytes(file.size)}
+      {thumbnail}
+      <span className="flex flex-col min-w-0 leading-tight">
+        <span className="truncate">{file.name}</span>
+        <span className="text-[11px] text-muted-foreground">
+          {formatBytes(file.size)}
+        </span>
       </span>
     </>
   );
@@ -621,8 +649,17 @@ function ConfidenceRow({
       </div>
 
       {hasFiles && (
+        <p
+          className="mt-2 text-[11px] italic text-muted-foreground"
+          data-testid={`evidence-file-list-hint-${assumptionKey}`}
+        >
+          As it appears in the Lender Conversation Snapshot
+        </p>
+      )}
+
+      {hasFiles && (
         <ul
-          className="mt-2 space-y-1"
+          className="mt-1 space-y-1"
           data-testid={`evidence-file-list-${assumptionKey}`}
         >
           {files.map((f) => {
