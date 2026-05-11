@@ -2175,6 +2175,14 @@ export function ScenarioPage() {
     useState<boolean>(false);
   const [decisionCompareError, setDecisionCompareError] = useState<string | null>(null);
 
+  // Task #667 — Year selector for the per-program break-even block. Year 1
+  // is often the hardest year for a brand-new program (low enrollment, full
+  // fixed costs), so founders ramping enrollment year-over-year need to see
+  // whether each program ever crosses break-even later. Stored 0-indexed
+  // (0 = Yr 1 … 4 = Yr 5) to match `computeProgramBreakEven`'s `yearIndex`
+  // argument and the rest of the engine's `year` arrays.
+  const [programBreakEvenYear, setProgramBreakEvenYear] = useState<number>(0);
+
   // Filter/sort selections for the Saved What-If list. Persist to URL query
   // string so a chosen view (e.g. "what's still on hold?") survives reloads
   // and is shareable. Unknown / legacy values fall back to the defaults so we
@@ -2962,10 +2970,16 @@ export function ScenarioPage() {
                         )}
                       />
                       {(() => {
-                        const basePrograms = computeProgramBreakEven(modelData, results.base.metrics, 0);
+                        // Task #667 — `programBreakEvenYear` is 0-indexed
+                        // (0 = Yr 1 … 4 = Yr 5). Founders need to see
+                        // whether a program ever crosses break-even, not
+                        // just the (often hardest) Year 1 picture.
+                        const yIdx = programBreakEvenYear;
+                        const yLabel = `Yr ${yIdx + 1}`;
+                        const basePrograms = computeProgramBreakEven(modelData, results.base.metrics, yIdx);
                         if (basePrograms.length === 0) return null;
                         const scenarioPrograms = results.scenarios.map((s) =>
-                          computeProgramBreakEven(modelData, s.metrics, 0, s.adjustments.enrollmentAdjustment, s.adjustments.tuitionAdjustment),
+                          computeProgramBreakEven(modelData, s.metrics, yIdx, s.adjustments.enrollmentAdjustment, s.adjustments.tuitionAdjustment),
                         );
                         return (
                           <>
@@ -2973,9 +2987,40 @@ export function ScenarioPage() {
                               <td
                                 colSpan={2 + results.scenarios.length}
                                 className="py-2 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-muted/30"
-                                title="Break-even student count per program (Yr 1). Allocates shared fixed costs by enrollment share so you can see which programs are carrying the school."
+                                title={`Break-even student count per program (${yLabel}). Allocates shared fixed costs by enrollment share so you can see which programs are carrying the school.`}
                               >
-                                Per-program break-even (Yr 1) — students needed at this program's tuition
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <span>
+                                    Per-program break-even ({yLabel}) — students needed at this program's tuition
+                                  </span>
+                                  <div
+                                    className="flex items-center gap-1 normal-case tracking-normal"
+                                    role="tablist"
+                                    aria-label="Per-program break-even year"
+                                    data-testid="per-program-breakeven-year-selector"
+                                  >
+                                    {[0, 1, 2, 3, 4].map((y) => {
+                                      const active = y === yIdx;
+                                      return (
+                                        <button
+                                          key={y}
+                                          type="button"
+                                          role="tab"
+                                          aria-selected={active}
+                                          onClick={() => setProgramBreakEvenYear(y)}
+                                          data-testid={`per-program-breakeven-year-${y + 1}`}
+                                          className={`px-2 py-0.5 text-[11px] font-semibold rounded border transition-colors ${
+                                            active
+                                              ? "bg-primary text-primary-foreground border-primary"
+                                              : "bg-background text-muted-foreground border-border hover:bg-muted"
+                                          }`}
+                                        >
+                                          Y{y + 1}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
                               </td>
                             </tr>
                             {basePrograms.map((p, pIdx) => (
