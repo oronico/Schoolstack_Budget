@@ -245,6 +245,118 @@ router.get(
       const abandonmentRate =
         totalSignupAttempts > 0 ? totalAbandonedSignups / totalSignupAttempts : 0;
 
+      // Task #779 — break the verified-vs-abandoned counts down by email
+      // domain so a single provider silently spam-foldering our
+      // verification email (Outlook, a school district's mail server,
+      // etc.) is distinguishable from "the link copy is confusing".
+      // `signup_abandoned` carries the lowercased domain in
+      // metadata.domain (see cleanupExpiredPendingSignups in
+      // routes/auth.ts). `signed_up` carries the full email in
+      // metadata.email; we extract the domain server-side with
+      // split_part(lower(...), '@', 2) so the join key matches.
+      const abandonedByDomainRows = await db
+        .select({
+          domain: sql<string>`metadata->>'domain'`.as("domain"),
+          value: count(),
+        })
+        .from(eventsTable)
+        .where(
+          and(
+            eq(eventsTable.eventName, "signup_abandoned"),
+            sql`metadata->>'domain' IS NOT NULL AND metadata->>'domain' <> ''`,
+          ),
+        )
+        .groupBy(sql`metadata->>'domain'`);
+      const verifiedByDomainRows = await db
+        .select({
+          domain: sql<string>`split_part(lower(metadata->>'email'), '@', 2)`.as(
+            "domain",
+          ),
+          value: count(),
+        })
+        .from(eventsTable)
+        .where(
+          and(
+            eq(eventsTable.eventName, "signed_up"),
+            sql`metadata->>'email' IS NOT NULL`,
+            sql`position('@' in metadata->>'email') > 0`,
+          ),
+        )
+        .groupBy(sql`split_part(lower(metadata->>'email'), '@', 2)`);
+      const domainCounts = new Map<
+        string,
+        { verified: number; abandoned: number }
+      >();
+      const upsertDomain = (
+        domain: string,
+        field: "verified" | "abandoned",
+        value: number,
+      ) => {
+        const key = domain && domain.length > 0 ? domain : "unknown";
+        const cur = domainCounts.get(key) || { verified: 0, abandoned: 0 };
+        cur[field] += value;
+        domainCounts.set(key, cur);
+      };
+      for (const r of verifiedByDomainRows) upsertDomain(r.domain, "verified", r.value);
+      for (const r of abandonedByDomainRows)
+        upsertDomain(r.domain, "abandoned", r.value);
+      // Hide tiny samples so a single one-off attempt from a typo'd
+      // domain ("gmial.com") doesn't dominate the table at 100%
+      // abandoned. Anything with fewer than this many total attempts
+      // gets rolled into a single "Other (small samples)" row, which
+      // is itself dropped if it ends up empty. Keep the threshold low
+      // — this is an internal admin view and we'd rather see noisy
+      // signal than nothing.
+      const SMALL_SAMPLE_THRESHOLD = 3;
+      const MAX_DOMAIN_ROWS = 10;
+      type DomainRow = {
+        domain: string;
+        verified: number;
+        abandoned: number;
+        total: number;
+        abandonmentRate: number;
+      };
+      const allDomainRows: DomainRow[] = [];
+      let otherVerified = 0;
+      let otherAbandoned = 0;
+      for (const [domain, c] of domainCounts.entries()) {
+        const total = c.verified + c.abandoned;
+        if (total < SMALL_SAMPLE_THRESHOLD) {
+          otherVerified += c.verified;
+          otherAbandoned += c.abandoned;
+          continue;
+        }
+        allDomainRows.push({
+          domain,
+          verified: c.verified,
+          abandoned: c.abandoned,
+          total,
+          abandonmentRate: total > 0 ? c.abandoned / total : 0,
+        });
+      }
+      // Rank by absolute abandoned count (the column the admin cares
+      // about) with a total-attempts tiebreak so a 5/5 domain doesn't
+      // outrank a 50/100 one. Cap the list so the panel stays compact.
+      allDomainRows.sort((a, b) => {
+        if (b.abandoned !== a.abandoned) return b.abandoned - a.abandoned;
+        return b.total - a.total;
+      });
+      const signupDomainBreakdown = allDomainRows.slice(0, MAX_DOMAIN_ROWS);
+      const otherTotal = otherVerified + otherAbandoned;
+      const signupDomainOther =
+        otherTotal > 0
+          ? {
+              verified: otherVerified,
+              abandoned: otherAbandoned,
+              total: otherTotal,
+              abandonmentRate: otherTotal > 0 ? otherAbandoned / otherTotal : 0,
+              domainCount:
+                Array.from(domainCounts.values()).filter(
+                  (c) => c.verified + c.abandoned < SMALL_SAMPLE_THRESHOLD,
+                ).length,
+            }
+          : null;
+
       res.json({
         totalUsers,
         totalModels,
@@ -314,6 +426,13 @@ router.get(
           trendDays: SIGNUP_TREND_DAYS,
           verifiedTrend,
           abandonedTrend,
+          // Task #779 — per-domain breakdown so admins can tell which
+          // mail providers are silently dropping the verification
+          // email. Pre-sorted by abandoned count desc; small-sample
+          // domains (< 3 total attempts) are rolled into `other`.
+          domainBreakdown: signupDomainBreakdown,
+          domainOther: signupDomainOther,
+          domainSmallSampleThreshold: SMALL_SAMPLE_THRESHOLD,
         },
       });
     } catch (err) {

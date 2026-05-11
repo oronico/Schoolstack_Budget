@@ -95,6 +95,23 @@ interface AnalyticsData {
     trendDays: number;
     verifiedTrend: number[];
     abandonedTrend: number[];
+    // Task #779 — per-domain breakdown so admins can spot a mail
+    // provider silently spam-foldering the verification email.
+    domainBreakdown?: {
+      domain: string;
+      verified: number;
+      abandoned: number;
+      total: number;
+      abandonmentRate: number;
+    }[];
+    domainOther?: {
+      verified: number;
+      abandoned: number;
+      total: number;
+      abandonmentRate: number;
+      domainCount: number;
+    } | null;
+    domainSmallSampleThreshold?: number;
   };
 }
 
@@ -1097,6 +1114,115 @@ function SignupVerificationPanel({
           </span>
         </div>
       ) : null}
+      <SignupDomainBreakdown
+        rows={data.domainBreakdown}
+        other={data.domainOther}
+        threshold={data.domainSmallSampleThreshold}
+      />
+    </div>
+  );
+}
+
+// Task #779 — per-domain abandonment table. Helps the admin tell a
+// provider-specific spam-folder problem (every gmail.com user verifies,
+// every outlook.com user abandons) apart from a generic copy issue.
+// Domains with fewer than `threshold` total attempts are folded into a
+// single "Other" row server-side so the table doesn't get dominated by
+// noise from typo'd domains.
+function SignupDomainBreakdown({
+  rows,
+  other,
+  threshold,
+}: {
+  rows: NonNullable<AnalyticsData["signupVerification"]>["domainBreakdown"];
+  other: NonNullable<AnalyticsData["signupVerification"]>["domainOther"];
+  threshold: number | undefined;
+}) {
+  const list = rows ?? [];
+  if (list.length === 0 && !other) return null;
+  const overallMax = Math.max(
+    1,
+    ...list.map((r) => r.total),
+    other ? other.total : 0,
+  );
+  return (
+    <div className="pt-4 border-t border-border/40">
+      <div className="flex items-baseline justify-between mb-2">
+        <div className="text-sm font-semibold text-foreground">
+          Drop-off by email domain
+        </div>
+        {threshold && threshold > 1 ? (
+          <div className="text-[11px] text-muted-foreground">
+            domains with &lt; {threshold} attempts grouped
+          </div>
+        ) : null}
+      </div>
+      <div className="overflow-x-auto -mx-2">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="text-left text-muted-foreground border-b border-border/40">
+              <th className="font-normal py-1 pl-2 pr-2">Domain</th>
+              <th className="font-normal py-1 px-2 text-right">Verified</th>
+              <th className="font-normal py-1 px-2 text-right">Abandoned</th>
+              <th className="font-normal py-1 px-2 text-right pr-2">Rate</th>
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((r) => {
+              const pct = (r.abandonmentRate * 100).toFixed(0);
+              const widthPct = (r.total / overallMax) * 100;
+              const ratePct = r.abandonmentRate * 100;
+              return (
+                <tr key={r.domain} className="border-b border-border/20 last:border-0">
+                  <td className="py-1.5 pl-2 pr-2 font-medium text-foreground">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="truncate max-w-[180px]" title={r.domain}>
+                        {r.domain}
+                      </span>
+                      <div className="h-1 rounded bg-secondary/40 overflow-hidden">
+                        <div
+                          className="h-full bg-primary/40"
+                          style={{ width: `${widthPct}%` }}
+                        />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-1.5 px-2 text-right tabular-nums">{r.verified}</td>
+                  <td className="py-1.5 px-2 text-right tabular-nums">{r.abandoned}</td>
+                  <td
+                    className={`py-1.5 px-2 pr-2 text-right tabular-nums font-semibold ${
+                      ratePct >= 50
+                        ? "text-red-600"
+                        : ratePct >= 30
+                        ? "text-amber-600"
+                        : "text-foreground"
+                    }`}
+                  >
+                    {pct}%
+                  </td>
+                </tr>
+              );
+            })}
+            {other ? (
+              <tr className="border-b border-border/20 last:border-0 text-muted-foreground">
+                <td className="py-1.5 pl-2 pr-2 italic">
+                  Other ({other.domainCount}{" "}
+                  {other.domainCount === 1 ? "domain" : "domains"})
+                </td>
+                <td className="py-1.5 px-2 text-right tabular-nums">
+                  {other.verified}
+                </td>
+                <td className="py-1.5 px-2 text-right tabular-nums">
+                  {other.abandoned}
+                </td>
+                <td className="py-1.5 px-2 pr-2 text-right tabular-nums">
+                  {(other.abandonmentRate * 100).toFixed(0)}%
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
