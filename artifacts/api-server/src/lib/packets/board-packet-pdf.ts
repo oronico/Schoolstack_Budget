@@ -61,7 +61,7 @@ export async function generateBoardPacketPDF(
   // renderer means trustees see the identical provenance signal — no
   // second copy of the styling, no risk of the two surfaces drifting on
   // wording or color.
-  renderAssumptionsConfidenceSection(doc, packet.assumptionConfidence, packet.provenance);
+  await renderAssumptionsConfidenceSection(doc, packet.assumptionConfidence, packet.provenance);
 
   for (const section of packet.sections) {
     if (!section.included) continue;

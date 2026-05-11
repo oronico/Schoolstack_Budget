@@ -26,6 +26,7 @@ import { drawLenderSummaryPage } from "./lender-summary-pdf.js";
 import type { LenderSummaryData } from "./build-lender-summary.js";
 import type { NarrativeCommentary } from "./build-narrative-commentary.js";
 import { lenderReadinessCoachingHeadline } from "../lender-readiness-coaching.js";
+import { ObjectStorageService, ObjectNotFoundError } from "../objectStorage.js";
 
 export async function generateLenderPacketPDF(
   packet: LenderPacket,
@@ -71,7 +72,7 @@ export async function generateLenderPacketPDF(
   // Renders right after the budget narrative so a reviewer reading the
   // founder's prose immediately sees which numbers are anchored vs.
   // estimate. Skipped silently when the founder hasn't tagged anything.
-  renderAssumptionsConfidenceSection(doc, packet.assumptionConfidence, packet.provenance);
+  await renderAssumptionsConfidenceSection(doc, packet.assumptionConfidence, packet.provenance);
 
   for (const section of packet.sections) {
     if (!section.included) continue;
@@ -256,11 +257,11 @@ function renderBudgetNarrativeSection(doc: PDFDoc, narrative: BudgetNarrativeDat
 // Task #716 — exported so the board PDF can reuse the exact same
 // renderer (including the Actual / Projected pill on the rollup) instead
 // of carrying a parallel implementation that could drift.
-export function renderAssumptionsConfidenceSection(
+export async function renderAssumptionsConfidenceSection(
   doc: PDFDoc,
   confidence: LenderPacket["assumptionConfidence"],
   provenance?: "actuals" | "assumptions",
-): void {
+): Promise<void> {
   const entries = Object.entries(confidence || {}).filter(([k]) =>
     Object.prototype.hasOwnProperty.call(ASSUMPTION_REGISTRY, k),
   ) as Array<[AssumptionKey, { confidence: keyof typeof ASSUMPTION_CONFIDENCE_LABELS; evidenceNote?: string }]>;
@@ -403,7 +404,7 @@ export function renderAssumptionsConfidenceSection(
   // attachment so the lender knows what supporting documents the
   // founder asked them to review. Skipped silently when no files were
   // uploaded.
-  renderAssumptionsEvidenceAppendix(doc, confidence);
+  await renderAssumptionsEvidenceAppendix(doc, confidence);
 }
 
 function formatEvidenceFileSize(n: number): string {
@@ -424,6 +425,76 @@ interface AppendixFileLike {
   objectPath?: string;
 }
 
+// Task #732 — pluggable bytes loader so the lender appendix can fetch
+// the underlying image bytes from App Storage and embed thumbnails. The
+// default loader streams the object via ObjectStorageService; tests
+// replace it via `setEvidenceBytesLoader` so they can exercise the
+// thumbnail render path without touching real storage.
+export type EvidenceBytesLoader = (objectPath: string) => Promise<Buffer | null>;
+
+const defaultEvidenceBytesLoader: EvidenceBytesLoader = async (objectPath) => {
+  try {
+    const svc = new ObjectStorageService();
+    const file = await svc.getObjectEntityFile(objectPath);
+    const [bytes] = await file.download();
+    return bytes;
+  } catch (err) {
+    if (err instanceof ObjectNotFoundError) return null;
+    return null;
+  }
+};
+
+let evidenceBytesLoader: EvidenceBytesLoader = defaultEvidenceBytesLoader;
+
+export function setEvidenceBytesLoader(loader: EvidenceBytesLoader | null): void {
+  evidenceBytesLoader = loader ?? defaultEvidenceBytesLoader;
+}
+
+// Cap how much we pull per file (5 MB) and how much we pull total per
+// packet (25 MB) so a founder who attached a stack of 50 MB photos
+// can't blow up memory or balloon the packet PDF beyond what email
+// gateways will accept.
+const EVIDENCE_THUMBNAIL_MAX_BYTES = 5 * 1024 * 1024;
+const EVIDENCE_THUMBNAIL_TOTAL_BUDGET_BYTES = 25 * 1024 * 1024;
+const THUMBNAIL_BOX = 56;
+const THUMBNAIL_GAP = 10;
+
+function isImageMime(mime: string | undefined): boolean {
+  if (!mime) return false;
+  const m = mime.toLowerCase();
+  // PDFKit's image() accepts JPEG and PNG only; gifs / webp / heic
+  // degrade to the file-type indicator badge.
+  return m === "image/png" || m === "image/jpeg" || m === "image/jpg";
+}
+
+function fileTypeBadgeLabel(file: AppendixFileLike): string {
+  const name = (file.name || "").toLowerCase();
+  const ext = name.includes(".") ? name.slice(name.lastIndexOf(".") + 1) : "";
+  if (ext === "pdf" || (file.mimeType || "").toLowerCase() === "application/pdf") return "PDF";
+  if (ext === "docx" || ext === "doc") return "DOC";
+  if (ext === "xlsx" || ext === "xls" || ext === "csv") return "XLS";
+  if (ext === "pptx" || ext === "ppt") return "PPT";
+  if (ext === "gif") return "GIF";
+  if (ext === "webp") return "IMG";
+  if (ext === "heic" || ext === "heif") return "IMG";
+  if (ext === "txt") return "TXT";
+  if (ext) return ext.slice(0, 4).toUpperCase();
+  return "FILE";
+}
+
+function drawFileTypeBadge(doc: PDFDoc, x: number, y: number, label: string) {
+  const w = THUMBNAIL_BOX;
+  const h = THUMBNAIL_BOX;
+  doc.save();
+  doc.roundedRect(x, y, w, h, 4).fill(BRAND.lightGray);
+  doc.strokeColor(BRAND.gray).lineWidth(0.5).roundedRect(x, y, w, h, 4).stroke();
+  doc.fillColor(BRAND.navy).font("Helvetica-Bold").fontSize(label.length > 3 ? 11 : 14);
+  const textW = doc.widthOfString(label);
+  const textH = doc.currentLineHeight();
+  doc.text(label, x + (w - textW) / 2, y + (h - textH) / 2, { lineBreak: false });
+  doc.restore();
+}
+
 /** Task #714 — build the public download URL for an evidence file
  *  stored in App Storage. Returns null when no objectPath is present
  *  (legacy inline base64 attachments) or when no public APP_URL is
@@ -440,10 +511,10 @@ function evidenceDownloadUrl(objectPath: string | undefined): string | null {
 // every founder-uploaded attachment grouped by assumption. The lender
 // reviewer can use this as a manifest when pulling the source documents
 // from the founder's data room.
-function renderAssumptionsEvidenceAppendix(
+async function renderAssumptionsEvidenceAppendix(
   doc: PDFDoc,
   confidence: LenderPacket["assumptionConfidence"],
-): void {
+): Promise<void> {
   const rows: Array<{ label: string; file: AppendixFileLike }> = [];
   for (const [k, entry] of Object.entries(confidence || {})) {
     if (!Object.prototype.hasOwnProperty.call(ASSUMPTION_REGISTRY, k)) continue;
@@ -461,21 +532,72 @@ function renderAssumptionsEvidenceAppendix(
   subSection(doc, "Evidence Files");
   doc.font("Helvetica").fontSize(9).fillColor(BRAND.darkGray);
   doc.text(
-    `${rows.length} file${rows.length === 1 ? "" : "s"} attached by the founder. Each was uploaded with the corresponding assumption and is available on request.`,
+    `${rows.length} file${rows.length === 1 ? "" : "s"} attached by the founder. Image attachments preview inline; other file types show a type indicator with a clickable download link.`,
     {
       width: doc.page.width - doc.page.margins.left - doc.page.margins.right,
     },
   );
   doc.moveDown(0.3);
 
+  // Task #732 — fetch image bytes up front so each row can render its
+  // thumbnail. PDFs / DOCX / etc. degrade to a file-type indicator
+  // badge. We respect a per-file size cap and a per-packet total
+  // byte budget so a stack of large attachments can't balloon the
+  // packet beyond what email gateways will accept.
+  let bytesUsed = 0;
+  const thumbnails = new Map<AppendixFileLike, Buffer | null>();
+  for (const { file } of rows) {
+    if (!file.objectPath) continue;
+    if (!isImageMime(file.mimeType)) continue;
+    if (typeof file.size === "number" && file.size > EVIDENCE_THUMBNAIL_MAX_BYTES) continue;
+    if (bytesUsed >= EVIDENCE_THUMBNAIL_TOTAL_BUDGET_BYTES) break;
+    try {
+      const bytes = await evidenceBytesLoader(file.objectPath);
+      if (!bytes || bytes.length === 0) continue;
+      if (bytes.length > EVIDENCE_THUMBNAIL_MAX_BYTES) continue;
+      if (bytesUsed + bytes.length > EVIDENCE_THUMBNAIL_TOTAL_BUDGET_BYTES) continue;
+      bytesUsed += bytes.length;
+      thumbnails.set(file, bytes);
+    } catch {
+      // Loader failed — fall back to file-type badge for this row.
+    }
+  }
+
   let lastLabel = "";
+  const margin = doc.page.margins.left;
+  const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
   for (const { label, file } of rows) {
-    ensureSpace(doc, 20);
+    ensureSpace(doc, THUMBNAIL_BOX + 14);
     if (label !== lastLabel) {
       doc.font("Helvetica-Bold").fontSize(9).fillColor(BRAND.navy);
-      doc.text(label, doc.page.margins.left, doc.y);
+      doc.text(label, margin, doc.y);
+      doc.moveDown(0.1);
       lastLabel = label;
     }
+
+    const rowTop = doc.y;
+    const thumbX = margin + 10;
+    const textX = thumbX + THUMBNAIL_BOX + THUMBNAIL_GAP;
+    const textWidth = contentWidth - (textX - margin);
+
+    // Render the preview block — image thumbnail when we have bytes,
+    // otherwise a file-type indicator badge so the reviewer still gets
+    // an at-a-glance signal of what's attached.
+    const imageBytes = thumbnails.get(file);
+    if (imageBytes) {
+      try {
+        doc.image(imageBytes, thumbX, rowTop, {
+          fit: [THUMBNAIL_BOX, THUMBNAIL_BOX],
+          align: "center",
+          valign: "center",
+        });
+      } catch {
+        drawFileTypeBadge(doc, thumbX, rowTop, fileTypeBadgeLabel(file));
+      }
+    } else {
+      drawFileTypeBadge(doc, thumbX, rowTop, fileTypeBadgeLabel(file));
+    }
+
     const meta: string[] = [];
     if (typeof file.size === "number") meta.push(formatEvidenceFileSize(file.size));
     if (file.mimeType) meta.push(file.mimeType);
@@ -485,32 +607,36 @@ function renderAssumptionsEvidenceAppendix(
         meta.push(`uploaded ${d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}`);
       }
     }
-    const metaStr = meta.length ? `   (${meta.join(" · ")})` : "";
+    const metaStr = meta.length ? meta.join(" · ") : "";
     const downloadUrl = evidenceDownloadUrl(file.objectPath);
-    doc.font("Helvetica").fontSize(8).fillColor(BRAND.black);
+
+    doc.font("Helvetica").fontSize(9).fillColor(BRAND.black);
     if (downloadUrl) {
       // Task #714 — render the filename as a clickable link to App
       // Storage so the reviewer can pull the source doc straight from
       // the PDF.
-      doc.fillColor(BRAND.navy).text(`  • ${file.name}`, doc.page.margins.left + 10, doc.y, {
+      doc.fillColor(BRAND.navy).text(file.name || "Attachment", textX, rowTop, {
         link: downloadUrl,
         underline: true,
-        continued: true,
-        width: doc.page.width - doc.page.margins.left - doc.page.margins.right - 10,
+        width: textWidth,
       });
-      doc.fillColor(BRAND.black).text(metaStr, { underline: false, link: null });
     } else {
-      doc.text(`  • ${file.name}${metaStr}`, doc.page.margins.left + 10, doc.y, {
-        width: doc.page.width - doc.page.margins.left - doc.page.margins.right - 10,
+      doc.text(file.name || "Attachment", textX, rowTop, {
+        width: textWidth,
+        link: null,
+        underline: false,
       });
     }
+    if (metaStr) {
+      doc.font("Helvetica").fontSize(8).fillColor(BRAND.darkGray)
+        .text(metaStr, textX, doc.y, { width: textWidth, link: null, underline: false });
+    }
 
-    // Task #729 — files now live in App Storage, so each manifest entry
-    // exposes the source document via the clickable download link
-    // rendered above. The legacy inline-base64 image embed and the
-    // pdf-lib page merge for attached PDFs were removed along with the
-    // `dataBase64` payload they read from.
-    doc.moveDown(0.2);
+    // Advance past the thumbnail box so the next row never overlaps.
+    const textBottom = doc.y;
+    const rowBottom = Math.max(textBottom, rowTop + THUMBNAIL_BOX);
+    doc.y = rowBottom + 8;
+    doc.fillColor(BRAND.black);
   }
   doc.moveDown(0.3);
 }
