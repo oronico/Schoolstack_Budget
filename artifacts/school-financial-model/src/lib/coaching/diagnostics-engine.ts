@@ -71,6 +71,14 @@ export interface ComputedMetrics {
   staffingByYear: number[];
   opexByYear: number[];
   capDebtByYear: number[];
+  /**
+   * Per-year facility/occupancy expense (sum of `occupancy_facility`
+   * category rows, escalation honored). Mirrors the consultant engine's
+   * `yf.facilityCost` so the dashboard's multi-year Revenue Quality donut
+   * (Task #639) can pair contracted revenue against fixed costs + debt
+   * service for years 2-5 too.
+   */
+  facilityByYear: number[];
   grantRevenue: number;
   // Task #658 — Year 1 public-funding revenue, computed with the same
   // driver-expanded math as `revenueByYear` (handles `per_student`,
@@ -267,6 +275,7 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
   const staffingByYear = [0, 0, 0, 0, 0];
   const opexByYear = [0, 0, 0, 0, 0];
   const capDebtByYear = [0, 0, 0, 0, 0];
+  const facilityByYear = [0, 0, 0, 0, 0];
   for (let y = 0; y < 5; y++) {
     const students = enrollment[y] || y1Students;
     const ns = y === 0 ? students : Math.max(0, students - Math.min(students, Math.round((enrollment[y - 1] || 0) * (retentionRate / 100))));
@@ -274,8 +283,10 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
     const staffY = y1StaffingCost * Math.pow(1 + cola / 100, y);
     const yearFTE = computeFTEForYear(y, students);
     let opY = 0;
+    let facY = 0;
     for (const e of expenseRows) {
       if (!e.enabled) continue;
+      let val: number;
       if (e.driverType === "percent_of_revenue") {
         const esc = e.escalationRate ?? costInflation ?? 0;
         let pct: number;
@@ -284,9 +295,13 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
         } else {
           pct = e.amounts?.[y] ?? 0;
         }
-        opY += (pct / 100) * revenueByYear[y];
+        val = (pct / 100) * revenueByYear[y];
       } else {
-        opY += driverVal(e.amounts, y, e.driverType, students, e.escalationRate, costInflation, ns, rs, yearFTE);
+        val = driverVal(e.amounts, y, e.driverType, students, e.escalationRate, costInflation, ns, rs, yearFTE);
+      }
+      opY += val;
+      if (e.category === "occupancy_facility") {
+        facY += val;
       }
     }
     let capDebtY = 0;
@@ -304,6 +319,7 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
     staffingByYear[y] = staffY;
     opexByYear[y] = opY;
     capDebtByYear[y] = capDebtY;
+    facilityByYear[y] = facY;
   }
 
   const y1TotalExpenses = y1StaffingCost + y1OpExpenses + y1CapDebt;
@@ -330,6 +346,7 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
     staffingByYear,
     opexByYear,
     capDebtByYear,
+    facilityByYear,
     grantRevenue,
     endingCashByYear,
     breakevenEnrollment,

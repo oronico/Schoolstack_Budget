@@ -31,6 +31,7 @@ import {
   type LenderStressTestResults,
   type MonthlyRevenueRowLike,
   type RevenueQuality,
+  type RevenueQualityYearRollup,
   type RevenueRowAmountsRowLike,
   type RevenueRowAmountsSchoolProfileLike,
   type TuitionTierLike,
@@ -255,6 +256,11 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
     query: { queryKey: [`/api/models/${modelId}`, "snapshot"] },
   });
   const [selectedYear, setSelectedYear] = useState<0 | 1 | 2 | 3 | 4>(0);
+  // Task #639 — Revenue Quality donut + hard-coverage badge get their own
+  // year picker so founders can see how the contracted/projected/donor/
+  // policy mix shifts as enrollment grows and policy/donor commitments
+  // expire across the 5-year ramp.
+  const [rqYear, setRqYear] = useState<0 | 1 | 2 | 3 | 4>(0);
 
   const metrics = useMemo(() => {
     if (!model?.data) return null;
@@ -314,39 +320,50 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
       };
       const byYear = [0, 1, 2, 3, 4].map((y) => buildYear(y as 0 | 1 | 2 | 3 | 4));
 
-      // Task #629 — Revenue Quality donut for the dashboard snapshot.
-      // Mirrors the consultant analysis view: bucket Y1 revenue dollars
-      // into contracted / policy / projected / donor and pair contracted
-      // (hard) revenue against fixed costs + debt service for the
-      // hard-revenue coverage callout. Uses the shared
-      // `computeRevenueRowAmountsForYear` helper from @workspace/finance
-      // so the snapshot stays in lock-step with the consultant engine
-      // (tuition tiers, grade-band per-pupil, percent-of-base, etc.).
+      // Task #629 / #639 — Revenue Quality donut for the dashboard snapshot,
+      // computed for all 5 years so founders can flip the donut + hard-
+      // coverage badge across the ramp. Mirrors the consultant analysis
+      // view: bucket revenue dollars into contracted / policy / projected
+      // / donor and pair contracted (hard) revenue against fixed costs
+      // (staffing + facility) + debt service for the hard-revenue coverage
+      // callout. Uses the shared `computeRevenueRowAmountsForYear` helper
+      // from @workspace/finance so the snapshot stays in lock-step with
+      // the consultant engine (tuition tiers, grade-band per-pupil,
+      // percent-of-base, escalation, etc.). Loan debt service is held flat
+      // across years here to match `computeY1LoanDebtService` (we don't
+      // model loan payoff inside the snapshot — the consultant view does).
       const rqRows = (data.revenueRows ?? []) as RevenueRowAmountsRowLike[];
-      const rqStudents = m.enrollment?.[0] ?? 0;
-      const rqAmountsMap = computeRevenueRowAmountsForYear(
+      const rqYearInputs = [0, 1, 2, 3, 4].map((yIdx) => {
+        const studentsY = m.enrollment?.[yIdx] ?? 0;
+        const amountsMap = computeRevenueRowAmountsForYear(
+          rqRows,
+          yIdx,
+          studentsY,
+          (data.tuitionTiers ?? undefined) as TuitionTierLike[] | undefined,
+          sp as RevenueRowAmountsSchoolProfileLike | undefined,
+        );
+        const rowAmountsById: Record<string, number> = {};
+        for (const [rowId, amount] of amountsMap.entries()) {
+          rowAmountsById[rowId] = amount;
+        }
+        const staffingY = yIdx === 0
+          ? (m.y1StaffingCost || 0)
+          : (m.staffingByYear?.[yIdx] ?? 0);
+        const facilityY = yIdx === 0
+          ? (m.y1FacilityCost || 0)
+          : (m.facilityByYear?.[yIdx] ?? 0);
+        return {
+          year: yIdx + 1,
+          rowAmountsById,
+          fixedCosts: staffingY + facilityY,
+          debtService: loanDebtService,
+        };
+      });
+      const revenueQualityByYear = computeRevenueQualityRollup(
         rqRows,
-        0,
-        rqStudents,
-        (data.tuitionTiers ?? undefined) as TuitionTierLike[] | undefined,
-        sp as RevenueRowAmountsSchoolProfileLike | undefined,
+        rqYearInputs,
       );
-      const rowAmountsById: Record<string, number> = {};
-      for (const [rowId, amount] of rqAmountsMap.entries()) {
-        rowAmountsById[rowId] = amount;
-      }
-      const fixedCosts = (m.y1StaffingCost || 0) + (m.y1FacilityCost || 0);
-      const [revenueQualityY1] = computeRevenueQualityRollup(
-        rqRows,
-        [
-          {
-            year: 1,
-            rowAmountsById,
-            fixedCosts,
-            debtService: loanDebtService,
-          },
-        ],
-      );
+      const revenueQualityY1 = revenueQualityByYear[0];
       return {
         operatingSurplus,
         netIncome: m.y1NetIncome,
@@ -359,6 +376,7 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
         revenueByYear: m.revenueByYear,
         expensesByYear: m.expensesByYear,
         revenueQualityY1,
+        revenueQualityByYear,
       };
     } catch {
       return null;
@@ -387,8 +405,20 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
       (metrics.expensesByYear[selectedYear] ?? 0) > 0)
   );
 
+  // Task #639 — pick the rollup for the year the founder is currently
+  // viewing. Falls back to Y1 if a year has no revenue (e.g. founder is
+  // still filling in years 2-5), so the donut never goes blank when at
+  // least one year has data.
+  const rqRollupForYear: RevenueQualityYearRollup | null = useMemo(() => {
+    const arr = metrics?.revenueQualityByYear;
+    if (!arr || arr.length === 0) return null;
+    const picked = arr[rqYear];
+    if (picked && picked.totalRevenue > 0) return picked;
+    return metrics?.revenueQualityY1 ?? null;
+  }, [metrics, rqYear]);
+
   const rqDonutData = useMemo(() => {
-    const rq = metrics?.revenueQualityY1;
+    const rq = rqRollupForYear;
     if (!rq || rq.totalRevenue <= 0) return null;
     const data = RQ_BUCKET_ORDER.map((k) => ({
       key: k,
@@ -397,7 +427,7 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
       dollars: rq.byBucket[k],
     })).filter((d) => d.pct > 0);
     return data.length > 0 ? data : null;
-  }, [metrics]);
+  }, [rqRollupForYear]);
 
   return (
     <div
@@ -716,33 +746,70 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
               modelData={(model?.data as unknown as FullModelData) ?? null}
             />
           </div>
-          {metrics?.revenueQualityY1 && rqDonutData && (
+          {rqRollupForYear && rqDonutData && (
             <div
               data-testid="dashboard-revenue-quality"
+              data-rq-year={rqYear + 1}
               className="mt-4 rounded-2xl border border-border/60 bg-secondary/20 p-4"
             >
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
                 <PieChartIcon className="w-4 h-4 text-primary" />
                 <h3 className="text-sm font-semibold text-foreground">
                   Revenue Quality
                 </h3>
-                {metrics.revenueQualityY1.hardRevenueCoverage !== null && (
+                {rqRollupForYear.hardRevenueCoverage !== null && (
                   <span
                     data-testid="dashboard-hard-revenue-coverage"
-                    title={`Hard Revenue Coverage: contracted Year-1 revenue divided by fixed costs (staffing + facility) plus loan debt service. ${REVENUE_QUALITY_DEFINITIONS.contracted}`}
+                    title={`Hard Revenue Coverage: contracted Year-${rqYear + 1} revenue divided by fixed costs (staffing + facility) plus loan debt service. ${REVENUE_QUALITY_DEFINITIONS.contracted}`}
                     className={`ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                      metrics.revenueQualityY1.hardRevenueCoverage >= 1.0
+                      rqRollupForYear.hardRevenueCoverage >= 1.0
                         ? "bg-green-100 text-green-800"
-                        : metrics.revenueQualityY1.hardRevenueCoverage >= 0.75
+                        : rqRollupForYear.hardRevenueCoverage >= 0.75
                           ? "bg-amber-100 text-amber-800"
                           : "bg-rose-100 text-rose-800"
                     }`}
                   >
                     <Shield className="w-3 h-3" />
                     Hard coverage{" "}
-                    {metrics.revenueQualityY1.hardRevenueCoverage.toFixed(2)}×
+                    {rqRollupForYear.hardRevenueCoverage.toFixed(2)}×
                   </span>
                 )}
+              </div>
+              {/* Task #639 — year picker so founders can flip the donut +
+                  hard-coverage badge across the 5-year ramp. Disabled per
+                  year when there is no revenue modeled, so the picker
+                  doesn't suggest a year that would render an empty donut. */}
+              <div
+                role="tablist"
+                aria-label="Choose Revenue Quality year"
+                data-testid="dashboard-rq-year-selector"
+                className="flex flex-wrap gap-1 rounded-lg bg-secondary/50 p-1 mb-3 self-start"
+              >
+                {YEAR_OPTIONS.map((opt) => {
+                  const yearRollup =
+                    metrics?.revenueQualityByYear?.[opt.value];
+                  const yearHasRevenue =
+                    !!yearRollup && yearRollup.totalRevenue > 0;
+                  const active = opt.value === rqYear;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      disabled={!yearHasRevenue}
+                      data-testid={`dashboard-rq-year-${opt.value + 1}`}
+                      onClick={() => setRqYear(opt.value)}
+                      className={`text-[11px] font-medium px-2.5 py-1 rounded-md transition-colors ${
+                        active
+                          ? "bg-white text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      } ${!yearHasRevenue ? "opacity-40 cursor-not-allowed" : ""}`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-[7rem_1fr] gap-4 items-center">
                 <div className="h-28 w-28 mx-auto sm:mx-0">

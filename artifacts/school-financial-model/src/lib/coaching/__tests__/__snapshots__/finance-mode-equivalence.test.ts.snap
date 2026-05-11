@@ -140,6 +140,13 @@ exports[`Finance package is independent of guidance mode > snapshots the cross-m
         404934.57935,
         418287.6167305,
       ],
+      "facilityByYear": [
+        0,
+        0,
+        0,
+        0,
+        0,
+      ],
       "grantRevenue": 50000,
       "opexByYear": [
         157000,
@@ -319,6 +326,13 @@ exports[`Finance package is independent of guidance mode > snapshots the cross-m
         404934.57935,
         418287.6167305,
       ],
+      "facilityByYear": [
+        0,
+        0,
+        0,
+        0,
+        0,
+      ],
       "grantRevenue": 50000,
       "opexByYear": [
         157000,
@@ -497,6 +511,13 @@ exports[`Finance package is independent of guidance mode > snapshots the cross-m
         391781.145,
         404934.57935,
         418287.6167305,
+      ],
+      "facilityByYear": [
+        0,
+        0,
+        0,
+        0,
+        0,
       ],
       "grantRevenue": 50000,
       "opexByYear": [
