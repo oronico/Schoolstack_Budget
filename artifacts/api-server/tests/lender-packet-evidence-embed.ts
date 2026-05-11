@@ -4,9 +4,19 @@
 // Storage and the appendix prints a clickable download link per file
 // instead of inlining the bytes. This test verifies the manifest still
 // renders correctly with `objectPath`-only attachments.
+//
+// Task #722 — PDF attachments (lease, MOU, signed quotes) are now
+// merged onto the end of the packet via pdf-lib so the export ships
+// as a single self-contained underwriting bundle. The manifest still
+// lists every uploaded file with a disposition note ("Full PDF
+// embedded at end of packet" / "Available on request"). The same
+// merge step is wired into the board packet generator so trustees see
+// identical behavior — exercised in tests/board-packet-evidence-embed.ts.
 
 import { generateLenderPacketPDF, setEvidenceBytesLoader } from "../src/lib/packets/lender-packet-pdf.js";
+import { generateBoardPacketPDF } from "../src/lib/packets/board-packet-pdf.js";
 import { buildLenderPacket } from "../src/lib/packets/build-lender-packet.js";
+import { buildBoardPacket } from "../src/lib/packets/build-board-packet.js";
 import { runConsultantEngine } from "../src/lib/consultant-engine.js";
 import { microschoolStartup } from "./sample-payloads.js";
 import { PDFDocument } from "pdf-lib";
@@ -145,15 +155,28 @@ async function main() {
   // bytes loader that returns a tiny valid PNG for image attachments
   // so the appendix actually embeds them via PDFKit. Other file types
   // should fall back to the file-type indicator badge.
+  // Task #722 — the loader is now also consulted for PDF attachments
+  // (lease, MOU, signed quotes) so the bytes can be merged onto the
+  // end of the packet via pdf-lib. The DOCX manifest entry stays a
+  // type-badge-only row because DOCX cannot be embedded.
   // 1×1 transparent PNG.
   const tinyPng = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
     "base64",
   );
+  // Build a tiny valid 2-page PDF via pdf-lib so the merge step can
+  // append real pages onto the packet and we can assert the page
+  // count grew by exactly the embedded PDF's page count.
+  const tinyPdfDoc = await PDFDocument.create();
+  tinyPdfDoc.addPage([300, 400]);
+  tinyPdfDoc.addPage([300, 400]);
+  const tinyPdfBytes = Buffer.from(await tinyPdfDoc.save());
+
   const fetched: string[] = [];
   setEvidenceBytesLoader(async (objectPath: string) => {
     fetched.push(objectPath);
     if (objectPath.endsWith("site-photo-uuid")) return tinyPng;
+    if (objectPath.endsWith("lease-uuid")) return tinyPdfBytes;
     return null;
   });
 
@@ -163,19 +186,72 @@ async function main() {
     thumbBuffer.subarray(0, 5).toString("ascii") === "%PDF-" && thumbBuffer.length > 5000,
     `length=${thumbBuffer.length}`,
   );
+  // The loader is now consulted for both image attachments (thumbnail
+  // render) and PDF attachments (merge at end of packet). DOCX is not
+  // a recognized embed type so the loader is never asked for it.
+  const fetchedSet = new Set(fetched);
   check(
-    "loader is only consulted for image attachments (PDFs / DOCX use the type badge)",
-    fetched.length === 1 && fetched[0].endsWith("site-photo-uuid"),
+    "loader is consulted for image and PDF attachments (DOCX still uses the type badge)",
+    fetchedSet.size === 2 &&
+      [...fetchedSet].every((p) => p.endsWith("site-photo-uuid") || p.endsWith("lease-uuid")),
     `fetched=${JSON.stringify(fetched)}`,
   );
+  // Task #722 — note: byte-size comparison vs. the no-loader render
+  // is no longer a reliable signal because pdf-lib re-saves the merged
+  // PDF with different compression than pdfkit, which can shrink the
+  // overall payload even when extra pages are added. We assert the
+  // page-count delta instead (below).
+
+  // Task #722 — the rendered packet should pick up the 2 pages from
+  // the merged lease.pdf attachment. Comparing against the same packet
+  // rendered with no loader (no merge happens) gives a stable
+  // page-delta assertion regardless of upstream layout drift.
+  setEvidenceBytesLoader(null);
+  const noMergeBuffer = await generateLenderPacketPDF(packet);
+  const noMergePages = (await PDFDocument.load(noMergeBuffer)).getPageCount();
+  const mergedPages = (await PDFDocument.load(thumbBuffer)).getPageCount();
   check(
-    "thumbnail render produces a larger PDF than the no-bytes render",
-    thumbBuffer.length > buffer.length,
-    `with-thumb=${thumbBuffer.length} no-thumb=${buffer.length}`,
+    "page count grows by the embedded PDF's page count",
+    mergedPages === noMergePages + 2,
+    `noMerge=${noMergePages} merged=${mergedPages}`,
   );
 
   // Reset to the default loader so later tests in the suite see a
   // pristine module state.
+  setEvidenceBytesLoader(null);
+
+  // Task #722 — board packet must mirror the lender behavior end to
+  // end: PDF attachments get merged onto the end of the packet, image
+  // attachments still inline as thumbnails in the shared appendix.
+  setEvidenceBytesLoader(async (objectPath: string) => {
+    if (objectPath.endsWith("site-photo-uuid")) return tinyPng;
+    if (objectPath.endsWith("lease-uuid")) return tinyPdfBytes;
+    return null;
+  });
+  const boardPacket = await buildBoardPacket(
+    data as Parameters<typeof buildBoardPacket>[0],
+    consultant,
+  );
+  (boardPacket as unknown as { assumptionConfidence: Record<string, unknown> }).assumptionConfidence = (
+    packet as unknown as { assumptionConfidence: Record<string, unknown> }
+  ).assumptionConfidence;
+  const boardWithMerge = await generateBoardPacketPDF(boardPacket);
+  check(
+    "board packet renders with embedded PDF attachments",
+    boardWithMerge.subarray(0, 5).toString("ascii") === "%PDF-" &&
+      boardWithMerge.length > 5000,
+    `length=${boardWithMerge.length}`,
+  );
+  setEvidenceBytesLoader(null);
+  const boardNoMerge = await generateBoardPacketPDF(boardPacket);
+  const boardNoMergePages = (await PDFDocument.load(boardNoMerge)).getPageCount();
+  const boardMergedPages = (await PDFDocument.load(boardWithMerge)).getPageCount();
+  check(
+    "board packet page count grows by the embedded PDF's page count",
+    boardMergedPages === boardNoMergePages + 2,
+    `noMerge=${boardNoMergePages} merged=${boardMergedPages}`,
+  );
+
   setEvidenceBytesLoader(null);
 
   console.log(`\nResults: ${passed} passed, ${failed} failed`);

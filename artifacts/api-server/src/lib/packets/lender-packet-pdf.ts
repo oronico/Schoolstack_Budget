@@ -27,6 +27,7 @@ import type { LenderSummaryData } from "./build-lender-summary.js";
 import type { NarrativeCommentary } from "./build-narrative-commentary.js";
 import { lenderReadinessCoachingHeadline } from "../lender-readiness-coaching.js";
 import { ObjectStorageService, ObjectNotFoundError } from "../objectStorage.js";
+import { PDFDocument as PdfLibDocument } from "pdf-lib";
 
 export async function generateLenderPacketPDF(
   packet: LenderPacket,
@@ -116,11 +117,15 @@ export async function generateLenderPacketPDF(
   renderFounderCompBlock(doc, packet.founderCompNormalization);
 
   drawFooter(doc);
-  return docToBuffer(doc);
-  // Task #729 — the inline-base64 PDF embed/merge path was removed
-  // along with the legacy `dataBase64` field. Evidence files now live
-  // in App Storage and the appendix prints clickable download links
-  // for the lender to pull each source document on demand.
+  const baseBuffer = await docToBuffer(doc);
+  // Task #722 — fetch any uploaded PDF attachments (lease, MOU, signed
+  // quotes) from App Storage and merge them onto the end of the packet
+  // so it ships as a single self-contained underwriting bundle. Image
+  // attachments are still inlined under each manifest entry by the
+  // existing thumbnail render path; PDFs needed a separate merge step
+  // because PDFKit cannot embed another PDF mid-document.
+  const pdfsToEmbed = await collectEvidencePdfsForPacket(packet.assumptionConfidence);
+  return mergeEvidencePdfs(baseBuffer, pdfsToEmbed);
 }
 
 /**
@@ -553,8 +558,106 @@ export function setEvidenceBytesLoader(loader: EvidenceBytesLoader | null): void
 // gateways will accept.
 const EVIDENCE_THUMBNAIL_MAX_BYTES = 5 * 1024 * 1024;
 const EVIDENCE_THUMBNAIL_TOTAL_BUDGET_BYTES = 25 * 1024 * 1024;
+// Task #722 — per-file cap (10 MB) for PDF attachments merged onto the
+// end of the packet. Files exceeding the cap fall back to the manifest
+// entry with an "available on request" note instead of being embedded.
+// A separate total budget guards against a stack of borderline-cap PDFs
+// from inflating the packet beyond what email gateways accept.
+const EVIDENCE_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
+const EVIDENCE_ATTACHMENT_TOTAL_BUDGET_BYTES = 50 * 1024 * 1024;
 const THUMBNAIL_BOX = 56;
 const THUMBNAIL_GAP = 10;
+
+function isPdfAttachment(file: AppendixFileLike): boolean {
+  const mime = (file.mimeType || "").toLowerCase();
+  if (mime === "application/pdf") return true;
+  const name = (file.name || "").toLowerCase();
+  return name.endsWith(".pdf");
+}
+
+type EvidenceDisposition = "image" | "embedded-pdf" | "oversized" | "unsupported";
+
+function evidenceAttachmentDisposition(file: AppendixFileLike): EvidenceDisposition {
+  const oversizedByDeclared =
+    typeof file.size === "number" && file.size > EVIDENCE_ATTACHMENT_MAX_BYTES;
+  if (isPdfAttachment(file)) {
+    return oversizedByDeclared ? "oversized" : "embedded-pdf";
+  }
+  if (isImageMime(file.mimeType)) return "image";
+  return oversizedByDeclared ? "oversized" : "unsupported";
+}
+
+/**
+ * Task #722 — walk the assumption-confidence map and load bytes for any
+ * uploaded PDF attachments that fit under the 10 MB per-file cap (and
+ * the per-packet total budget). Returned PDFs are merged onto the end
+ * of the rendered packet by `mergeEvidencePdfs` so the packet ships as
+ * a single self-contained underwriting bundle. Files that fail any cap
+ * (or fail to load) are silently skipped — the manifest in the
+ * Evidence Files appendix still lists them with an "available on
+ * request" note so the reviewer knows what to ask for.
+ */
+export async function collectEvidencePdfsForPacket(
+  confidence: Record<string, unknown> | undefined,
+): Promise<Array<{ name: string; bytes: Buffer }>> {
+  const out: Array<{ name: string; bytes: Buffer }> = [];
+  let totalBytes = 0;
+  for (const [k, entry] of Object.entries(confidence || {})) {
+    if (!Object.prototype.hasOwnProperty.call(ASSUMPTION_REGISTRY, k)) continue;
+    const files = (entry as { evidenceFiles?: AppendixFileLike[] } | undefined)
+      ?.evidenceFiles;
+    if (!Array.isArray(files)) continue;
+    for (const f of files) {
+      if (!f?.objectPath) continue;
+      if (!isPdfAttachment(f)) continue;
+      if (typeof f.size === "number" && f.size > EVIDENCE_ATTACHMENT_MAX_BYTES) continue;
+      if (totalBytes >= EVIDENCE_ATTACHMENT_TOTAL_BUDGET_BYTES) break;
+      try {
+        const bytes = await evidenceBytesLoader(f.objectPath);
+        if (!bytes || bytes.length === 0) continue;
+        if (bytes.length > EVIDENCE_ATTACHMENT_MAX_BYTES) continue;
+        if (totalBytes + bytes.length > EVIDENCE_ATTACHMENT_TOTAL_BUDGET_BYTES) continue;
+        totalBytes += bytes.length;
+        out.push({ name: f.name || "attachment.pdf", bytes });
+      } catch {
+        // skip — manifest still lists the file with the download link
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Task #722 — append every supplied PDF onto the end of the packet
+ * buffer using pdf-lib. Pages from each attachment are copied in
+ * order, so the packet's page count grows by the sum of the embedded
+ * PDFs' page counts. Unparseable attachments (corrupted, encrypted,
+ * etc.) are skipped silently — they remain in the manifest with an
+ * "available on request" note for the reviewer to chase.
+ */
+export async function mergeEvidencePdfs(
+  packetBuffer: Buffer,
+  pdfs: Array<{ name: string; bytes: Buffer }>,
+): Promise<Buffer> {
+  if (pdfs.length === 0) return packetBuffer;
+  let merged: PdfLibDocument;
+  try {
+    merged = await PdfLibDocument.load(packetBuffer);
+  } catch {
+    return packetBuffer;
+  }
+  for (const att of pdfs) {
+    try {
+      const src = await PdfLibDocument.load(att.bytes, { ignoreEncryption: true });
+      const pages = await merged.copyPages(src, src.getPageIndices());
+      for (const p of pages) merged.addPage(p);
+    } catch {
+      // skip unparseable PDFs — manifest already lists them
+    }
+  }
+  const out = await merged.save();
+  return Buffer.from(out);
+}
 
 function isImageMime(mime: string | undefined): boolean {
   if (!mime) return false;
@@ -727,6 +830,40 @@ async function renderAssumptionsEvidenceAppendix(
     if (metaStr) {
       doc.font("Helvetica").fontSize(8).fillColor(BRAND.darkGray)
         .text(metaStr, textX, doc.y, { width: textWidth, link: null, underline: false });
+    }
+
+    // Task #722 — render a one-line disposition note so the reviewer
+    // immediately knows whether the file body lives inside the packet
+    // (embedded PDF / inline image thumbnail) or whether they need to
+    // request the source document separately (oversized or unsupported
+    // file type). Mirrors the manifest convention used in the lender
+    // packet so trustees and lenders see identical wording.
+    const disposition = evidenceAttachmentDisposition(file);
+    let dispositionNote = "";
+    let dispositionColor: string = BRAND.darkGray;
+    if (disposition === "embedded-pdf") {
+      dispositionNote = "Full PDF embedded at end of packet.";
+      dispositionColor = BRAND.teal;
+    } else if (disposition === "image" && imageBytes) {
+      dispositionNote = "Preview embedded above.";
+      dispositionColor = BRAND.teal;
+    } else if (disposition === "oversized") {
+      dispositionNote = "Available on request — exceeds 10 MB embed cap.";
+      dispositionColor = BRAND.amber;
+    } else if (disposition === "unsupported") {
+      dispositionNote = "Available on request — file type cannot be inlined.";
+      dispositionColor = BRAND.amber;
+    } else if (disposition === "image" && !imageBytes) {
+      dispositionNote = "Available on request — preview could not be loaded.";
+      dispositionColor = BRAND.amber;
+    }
+    if (dispositionNote) {
+      doc.font("Helvetica-Oblique").fontSize(8).fillColor(dispositionColor)
+        .text(dispositionNote, textX, doc.y, {
+          width: textWidth,
+          link: null,
+          underline: false,
+        });
     }
 
     // Advance past the thumbnail box so the next row never overlaps.

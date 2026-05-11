@@ -12,7 +12,14 @@ import type { CashRunwayView } from "./build-cash-runway";
 import type { PacketSection, LinkedMetric } from "./packet-types";
 import { renderForecastAccuracySection } from "./forecast-accuracy-pdf.js";
 import { cashStatusBadgeLabel, renderCashRunwaySection } from "./cash-runway-pdf.js";
-import { renderNarrativeCommentarySection, renderAssumptionsConfidenceSection, renderLenderStressTestsSection, renderFounderCompBlock } from "./lender-packet-pdf.js";
+import {
+  renderNarrativeCommentarySection,
+  renderAssumptionsConfidenceSection,
+  renderLenderStressTestsSection,
+  renderFounderCompBlock,
+  collectEvidencePdfsForPacket,
+  mergeEvidencePdfs,
+} from "./lender-packet-pdf.js";
 import { buildFounderSummary, type FounderSummary } from "./build-founder-summary.js";
 import type { ConsultantOutput } from "../consultant-engine.js";
 import type { ModelData } from "../workbook-helpers.js";
@@ -137,7 +144,19 @@ export async function generateBoardPacketPDF(
   renderFounderCompBlock(doc, packet.founderCompNormalization);
 
   drawFooter(doc);
-  return docToBuffer(doc);
+  const baseBuffer = await docToBuffer(doc);
+  // Task #722 — mirror the lender packet: fetch any uploaded PDF
+  // attachments (lease, MOU, signed quotes) from App Storage and merge
+  // them onto the end of the board packet so trustees get a single
+  // self-contained underwriting bundle instead of having to chase the
+  // founder for each source document. Same 10 MB per-file cap and
+  // "available on request" notes the lender packet uses; image
+  // attachments are still inlined as thumbnails under the manifest by
+  // the shared appendix renderer.
+  const pdfsToEmbed = await collectEvidencePdfsForPacket(
+    packet.assumptionConfidence as Record<string, unknown>,
+  );
+  return mergeEvidencePdfs(baseBuffer, pdfsToEmbed);
 }
 
 export function drawCoverPage(doc: PDFDoc, packet: BoardPacket) {
