@@ -3617,7 +3617,17 @@ export function ScenarioPage() {
           const removeCustom = async (target: { name: string; createdAt: string }) => {
             if (!modelId) return;
             const freshData = readFreshData();
-            const list = ((freshData.customScenarios as CustomScenario[]) || []).filter(
+            const priorList = (freshData.customScenarios as CustomScenario[]) || [];
+            // Snapshot the full deleted scenario (including outcomeStatus,
+            // retrospective, actuals, appliedToModelAt) so the Undo toast
+            // can restore everything the founder would otherwise have to
+            // reconstruct from memory. Mirrors the apply/undo and
+            // remove-export patterns elsewhere on this page (Task #444).
+            const priorIndex = priorList.findIndex(
+              (cs) => cs.name === target.name && cs.createdAt === target.createdAt,
+            );
+            const priorScenario = priorIndex >= 0 ? priorList[priorIndex] : undefined;
+            const list = priorList.filter(
               (cs) => !(cs.name === target.name && cs.createdAt === target.createdAt)
             );
             await updateMutation.mutateAsync({
@@ -3625,6 +3635,57 @@ export function ScenarioPage() {
               data: { data: { ...freshData, customScenarios: list } as Record<string, unknown> },
             });
             await queryClient.invalidateQueries({ queryKey: [`/api/models/${modelId}`] });
+            if (!priorScenario) return;
+            toast({
+              title: "Scenario deleted",
+              description: `"${priorScenario.name}" was removed from your saved scenarios.`,
+              action: (
+                <ToastAction
+                  altText="Undo delete"
+                  onClick={async () => {
+                    const latest = readFreshData();
+                    const latestList = (latest.customScenarios as CustomScenario[]) || [];
+                    // Skip if a same-key scenario was re-created in the
+                    // meantime (e.g. founder saved a new one with the same
+                    // name + createdAt — vanishingly unlikely, but cheap to
+                    // guard against double-insertion).
+                    if (
+                      latestList.some(
+                        (cs) =>
+                          cs.name === priorScenario.name &&
+                          cs.createdAt === priorScenario.createdAt,
+                      )
+                    ) {
+                      toast({
+                        title: "Already restored",
+                        description: "That scenario is back on your model.",
+                      });
+                      return;
+                    }
+                    // Re-insert at the original index so the saved list
+                    // looks identical to before the delete.
+                    const restored = [...latestList];
+                    const insertAt = Math.min(priorIndex, restored.length);
+                    restored.splice(insertAt, 0, priorScenario);
+                    await updateMutation.mutateAsync({
+                      id: modelId,
+                      data: {
+                        data: { ...latest, customScenarios: restored } as Record<string, unknown>,
+                      },
+                    });
+                    await queryClient.invalidateQueries({
+                      queryKey: [`/api/models/${modelId}`],
+                    });
+                    toast({
+                      title: "Scenario restored",
+                      description: `"${priorScenario.name}" is back on your saved scenarios.`,
+                    });
+                  }}
+                >
+                  Undo
+                </ToastAction>
+              ),
+            });
           };
           // Patch a single scenario in the customScenarios array and persist.
           // We match by (name, createdAt) which together act as a stable id.
