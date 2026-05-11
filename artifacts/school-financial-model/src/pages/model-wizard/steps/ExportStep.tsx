@@ -11,7 +11,9 @@ import { useConflictBanner } from "@/components/ConflictReloadBanner";
 import { Link } from "wouter";
 import { LenderPacketPreview } from "../../../components/export/LenderPacketPreview";
 import { BoardPacketPreview } from "../../../components/export/BoardPacketPreview";
+import { ChestertonDashboard } from "../../../components/chesterton/ChestertonDashboard";
 import { trackExport } from "@/hooks/useExportTracker";
+import type { ChestertonData } from "../schema";
 
 type ExportType = "formula" | "underwritingV2" | "lenderPacketPdf" | "boardPacketPdf" | "chestertonOperatingManual";
 
@@ -371,6 +373,13 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
             </div>
           </div>
         </div>
+      )}
+
+      {isChesterton && (
+        <ChestertonDashboard
+          chesterton={watch("chesterton") as ChestertonData | undefined}
+          schoolName={(watch("schoolProfile.schoolName") as string | undefined) || undefined}
+        />
       )}
 
       {isSingleYear && (
