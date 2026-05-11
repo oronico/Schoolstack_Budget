@@ -12,9 +12,13 @@
  *      "info" otherwise.
  *   3. The five-year-projection narrative no longer carries either sentence
  *      (so the PDF doesn't double-render them).
- *   4. The accounting-basis sentence is preserved in the narrative.
- *   5. Both insights flow through `generateLenderPacketPDF` and reach the
- *      rendered PDF text via the existing `drawInsightCallout` helper.
+ *   4. (Task #437) The accounting-basis disclosure is now its own
+ *      `PacketInsight` (label "Accounting basis"), with tone "info" when
+ *      the school's books are accrual / undetermined and "warning" when
+ *      they differ from accrual. The narrative no longer carries the
+ *      sentence.
+ *   5. All three insights flow through `generateLenderPacketPDF` and reach
+ *      the rendered PDF text via the existing `drawInsightCallout` helper.
  */
 import zlib from "node:zlib";
 import { runConsultantEngine } from "../src/lib/consultant-engine.js";
@@ -227,12 +231,36 @@ async function run() {
       !smallSection.narrative.includes("Prior-year revenue was"),
       `narrative was: ${smallSection.narrative}`,
     );
-    // Sanity: the accounting-basis tail is still in narrative — we only
-    // moved the two coaching sentences, not the basis disclosure.
+    // Task #437: the accounting-basis disclosure has graduated to its own
+    // callout, so it must NOT appear in the narrative anymore (otherwise
+    // the PDF would render it twice — once inline, once in the callout).
     check(
-      "narrative still contains the accounting-basis disclosure",
-      smallSection.narrative.includes("All projections are prepared on an accrual basis"),
+      "narrative no longer contains the accounting-basis disclosure",
+      !smallSection.narrative.includes("All projections are prepared on an accrual basis"),
       `narrative was: ${smallSection.narrative}`,
+    );
+
+    // Task #437: the accounting-basis insight is present, with the right
+    // body text. privateSchoolWithESA does not set `accountingBasis`, so
+    // currentBasis = "undetermined" and tone stays "info".
+    const accountingBasis = insights.find((i) => i.label === "Accounting basis");
+    check(
+      "exposes an 'Accounting basis' insight callout",
+      !!accountingBasis,
+      `insights were: ${JSON.stringify(insights)}`,
+    );
+    check(
+      "accounting-basis insight body names the current basis vs. accrual",
+      !!accountingBasis &&
+        /All projections are prepared on an accrual basis; the school currently keeps books on a .+ basis\./.test(
+          accountingBasis.body,
+        ),
+      `body was: ${accountingBasis?.body ?? "(missing)"}`,
+    );
+    check(
+      "accounting-basis insight tone is 'info' when basis is accrual or undetermined",
+      !!accountingBasis && (accountingBasis.tone ?? "info") === "info",
+      `tone was: ${accountingBasis?.tone ?? "(none)"}`,
     );
     // The break-even-year line is the original opening sentence and should
     // remain in narrative.
@@ -268,6 +296,39 @@ async function run() {
     `tone was: ${dropPriorYear?.tone ?? "(missing)"} body: ${dropPriorYear?.body ?? ""}`,
   );
 
+  // ---- 2b. Task #437: cash-basis school flips accounting-basis tone -------
+  const cashBasisModel = withPriorYearRevenue(2_000_000) as Record<string, unknown>;
+  const sp = (cashBasisModel.schoolProfile as Record<string, unknown> | undefined) ?? {};
+  cashBasisModel.schoolProfile = { ...sp, accountingBasis: "cash" };
+  const { section: cashSection } = await buildFiveYearSection(cashBasisModel);
+  const cashBasisInsight = cashSection?.insights?.find(
+    (i) => i.label === "Accounting basis",
+  );
+  check(
+    "cash-basis school flips accounting-basis tone to 'warning'",
+    !!cashBasisInsight && cashBasisInsight.tone === "warning",
+    `tone was: ${cashBasisInsight?.tone ?? "(missing)"} body: ${cashBasisInsight?.body ?? ""}`,
+  );
+  check(
+    "cash-basis accounting-basis body names 'cash basis'",
+    !!cashBasisInsight && /keeps books on a cash basis/.test(cashBasisInsight.body),
+    `body was: ${cashBasisInsight?.body ?? "(missing)"}`,
+  );
+
+  // Accrual-basis school keeps tone = "info".
+  const accrualModel = withPriorYearRevenue(2_000_000) as Record<string, unknown>;
+  const aSp = (accrualModel.schoolProfile as Record<string, unknown> | undefined) ?? {};
+  accrualModel.schoolProfile = { ...aSp, accountingBasis: "accrual" };
+  const { section: accrualSection } = await buildFiveYearSection(accrualModel);
+  const accrualInsight = accrualSection?.insights?.find(
+    (i) => i.label === "Accounting basis",
+  );
+  check(
+    "accrual-basis school keeps accounting-basis tone='info'",
+    !!accrualInsight && (accrualInsight.tone ?? "info") === "info",
+    `tone was: ${accrualInsight?.tone ?? "(missing)"} body: ${accrualInsight?.body ?? ""}`,
+  );
+
   // ---- 3. PDF round-trip: both labels reach the rendered lender PDF --------
   const pdfBuffer = await generateLenderPacketPDF(smallPacket);
   check("lender PDF builds without error", pdfBuffer.length > 0);
@@ -280,6 +341,11 @@ async function run() {
   check(
     "rendered lender PDF contains the 'Prior-year comparison' callout label",
     pdfText.includes("Prior-year comparison"),
+    "label missing from PDF — five_year_projection insights aren't being rendered by lender-packet-pdf",
+  );
+  check(
+    "rendered lender PDF contains the 'Accounting basis' callout label",
+    pdfText.includes("Accounting basis"),
     "label missing from PDF — five_year_projection insights aren't being rendered by lender-packet-pdf",
   );
 

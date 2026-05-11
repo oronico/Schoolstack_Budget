@@ -771,13 +771,23 @@ function buildFiveYearProjection(
     sourceEngine: "consultant" as const,
   }));
 
+  // Task #437: the accounting-basis disclosure is something lenders and
+  // auditors look for explicitly, so promote it from a tail sentence on the
+  // narrative to its own bordered callout. Tone flips to "warning" when the
+  // school's current books differ from accrual — that mismatch is exactly
+  // what a reviewer needs to notice.
   const sp = md.schoolProfile || {};
   const currentBasis = sp.accountingBasis ? accountingBasisLabel(sp.accountingBasis).toLowerCase() : "undetermined";
-  const basisNote = ` All projections are prepared on an accrual basis; the school currently keeps books on a ${currentBasis} basis.`;
+  const basisDiffersFromAccrual = sp.accountingBasis ? sp.accountingBasis !== "accrual" : false;
+  insights.push({
+    label: "Accounting basis",
+    body: `All projections are prepared on an accrual basis; the school currently keeps books on a ${currentBasis} basis.`,
+    tone: basisDiffersFromAccrual ? "warning" : "info",
+  });
 
   return {
     ...s,
-    narrative: `${breakEvenText} Year 5 ${niLabel.toLowerCase()} is projected at ${fmt(yearlyData[4]?.netIncome || 0)} (${pct(yearlyData[4]?.netMargin || 0)} margin).${basisNote}`,
+    narrative: `${breakEvenText} Year 5 ${niLabel.toLowerCase()} is projected at ${fmt(yearlyData[4]?.netIncome || 0)} (${pct(yearlyData[4]?.netMargin || 0)} margin).`,
     tables: [{
       title: `5-Year ${niLabel} Projection`,
       headers: ["Year", "Students", "Revenue", "Expenses", niLabel, "Margin"],
