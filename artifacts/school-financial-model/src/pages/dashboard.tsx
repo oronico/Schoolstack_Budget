@@ -9,6 +9,7 @@ import { DecisionLauncher, ThingsHaveChangedBanner } from "@/components/decision
 import { FinancialSnapshot } from "@/components/dashboard/FinancialSnapshot";
 import { BreakEvenDownsideCard } from "@/components/dashboard/BreakEvenDownsideCard";
 import { LaunchReadinessCard } from "@/components/dashboard/LaunchReadinessCard";
+import { UnrestrictedCashHero } from "@/components/dashboard/UnrestrictedCashHero";
 import { getPersonaTone, hasCompletePersona, isYetToLaunch } from "@/lib/coaching/founder-persona";
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -172,6 +173,14 @@ export function DashboardPage() {
 
           {!isLoading && snapshotModel && (
             <>
+              {/* Task #646 — unrestricted-cash hero card sits above the
+                  rest of the snapshot so the founder's first read is the
+                  cash figure DSCR + runway are computed off, with a
+                  one-click reveal for the legacy accrual number. */}
+              <UnrestrictedCashHero
+                modelId={snapshotModel.id}
+                modelName={snapshotModel.name || "Untitled Model"}
+              />
               <FinancialSnapshot
                 modelId={snapshotModel.id}
                 modelName={snapshotModel.name || "Untitled Model"}

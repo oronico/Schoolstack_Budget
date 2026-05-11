@@ -21,7 +21,7 @@ import {
 import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "../benchmark-thresholds";
 import type { PacketSection, LinkedMetric } from "./packet-types";
 import { renderForecastAccuracySection } from "./forecast-accuracy-pdf.js";
-import { renderCashRunwayTroughCallout } from "./cash-runway-pdf.js";
+import { renderCashRunwayTroughCallout, renderCashRunwayAccrualToggle } from "./cash-runway-pdf.js";
 import { drawLenderSummaryPage } from "./lender-summary-pdf.js";
 import type { LenderSummaryData } from "./build-lender-summary.js";
 import type { NarrativeCommentary } from "./build-narrative-commentary.js";
@@ -691,8 +691,14 @@ function renderSection(doc: PDFDoc, section: PacketSection, packet: LenderPacket
   // After the operating reserve / ending cash table, surface a one-line
   // callout for the trough year so lenders see the runway crunch year at
   // a glance — same wording used in the board packet (Task #213).
-  if (section.id === "debt_service" && packet.cashRunway?.troughCallout) {
-    renderCashRunwayTroughCallout(doc, packet.cashRunway, { prependEnsureSpace: 24 });
+  if (section.id === "debt_service" && packet.cashRunway) {
+    if (packet.cashRunway.troughCallout) {
+      renderCashRunwayTroughCallout(doc, packet.cashRunway, { prependEnsureSpace: 24 });
+    }
+    // Task #646 — surface the unrestricted-cash headline + accrual context
+    // alongside the trough callout so lenders see the same figure DSCR /
+    // runway are computed off as the founder's dashboard hero card.
+    renderCashRunwayAccrualToggle(doc, packet.cashRunway, { prependEnsureSpace: 32 });
   }
 
   if (section.linkedAssumptions.length > 0 && shouldShowAssumptions(section.id)) {

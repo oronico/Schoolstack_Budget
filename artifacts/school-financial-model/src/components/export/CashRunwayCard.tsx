@@ -12,6 +12,15 @@ export interface CashRunwayView {
     isTrough: boolean;
   }[];
   troughCallout: { year: number; endingCash: string; isNegative: boolean } | null;
+  // Task #646 — mirrors `buildCashRunway().accrualToggle` so the lender +
+  // board HTML previews can show the same unrestricted-cash headline + "vs
+  // accrual" context line that the founder dashboard hero card and packet
+  // PDFs render. Optional for back-compat with older payloads / fixtures.
+  accrualToggle?: {
+    unrestrictedCashLabel: string;
+    accrualCashLabel: string;
+    deltaLabel: string;
+  };
 }
 
 /**
@@ -46,6 +55,25 @@ export function CashRunwayCard({
         <span className="font-bold text-sm text-[#1E293B]">Cash & Runway</span>
       </div>
       <p className="text-sm text-muted-foreground mb-3">{cash.runwayLabel}</p>
+      {cash.accrualToggle && (
+        <div
+          className="mb-3 rounded-md bg-white/70 border border-white/80 p-2"
+          data-testid={`${prefix}-cash-accrual-toggle`}
+        >
+          <p
+            className="text-xs font-bold text-[#1E293B]"
+            data-testid={`${prefix}-unrestricted-cash-headline`}
+          >
+            Year-end unrestricted cash: {cash.accrualToggle.unrestrictedCashLabel}
+          </p>
+          <p
+            className="text-[11px] text-muted-foreground mt-0.5"
+            data-testid={`${prefix}-accrual-cash-context`}
+          >
+            vs accrual: {cash.accrualToggle.accrualCashLabel} ({cash.accrualToggle.deltaLabel}). Unrestricted is what funds operations + debt service.
+          </p>
+        </div>
+      )}
       {cash.yearByYearCash.length > 0 && (
         <>
           <div className="grid grid-cols-5 gap-2" data-testid={`${prefix}-ending-cash-row`}>

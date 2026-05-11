@@ -5,6 +5,42 @@ import {
 import type { CashRunwayView } from "./build-cash-runway";
 
 /**
+ * Task #646 — render the year-end unrestricted cash headline + "vs accrual"
+ * context line that mirrors the founder dashboard's hero card. Lenders see
+ * the same figure DSCR + runway are computed off (`unrestrictedCashLabel`),
+ * with the legacy all-in cash number and the restricted carve-out exposed
+ * inline so they can reconcile against the school's P&L. Centralized here
+ * so the lender + board packets share one rendering — Task #389 caught the
+ * trough callout drifting when each PDF maintained its own copy, and this
+ * keeps the new headline from following the same path.
+ */
+export function renderCashRunwayAccrualToggle(
+  doc: PDFDoc,
+  cash: CashRunwayView,
+  opts: { prependEnsureSpace?: number } = {},
+): void {
+  const t = cash.accrualToggle;
+  if (!t) return;
+  if (opts.prependEnsureSpace) ensureSpace(doc, opts.prependEnsureSpace);
+  doc.moveDown(0.3);
+  doc.font("Helvetica-Bold").fontSize(10).fillColor(BRAND.navy);
+  doc.text(
+    `Year-end unrestricted cash: ${t.unrestrictedCashLabel}`,
+    doc.page.margins.left,
+    doc.y,
+    { width: doc.page.width - doc.page.margins.left - doc.page.margins.right },
+  );
+  doc.font("Helvetica").fontSize(9).fillColor(BRAND.darkGray);
+  doc.text(
+    `vs accrual: ${t.accrualCashLabel} (${t.deltaLabel}). Unrestricted is the headline DSCR + runway are computed off; restricted gifts can't legally fund operations or debt service.`,
+    doc.page.margins.left,
+    doc.y,
+    { width: doc.page.width - doc.page.margins.left - doc.page.margins.right },
+  );
+  doc.moveDown(0.3);
+}
+
+/**
  * Renders the trough-year callout sentence used at the bottom of every cash
  * runway block in both the lender and board packet PDFs. Centralized here so
  * a wording or color tweak only needs to happen in one place (Task #389 — the
@@ -86,5 +122,9 @@ export function renderCashRunwaySection(
     drawTable(doc, cols, rows, { zebra: true });
 
     renderCashRunwayTroughCallout(doc, cash);
+    // Task #646 — board packet mirrors the founder dashboard's hero card
+    // and the lender packet's debt-service block, so the same unrestricted
+    // headline + accrual context appears here too.
+    renderCashRunwayAccrualToggle(doc, cash);
   }
 }

@@ -3097,13 +3097,35 @@ export function ScenarioPage() {
                         format={pct}
                         highlightBetter="lower"
                       />
+                      {/* Task #646 — runway chip uses
+                          unrestrictedCashRunwayMonths so the headline
+                          excludes restricted gifts that legally can't
+                          service debt. The legacy accrual figure is shown
+                          inline as the "(accrual: …)" caption when it
+                          differs, mirroring the dashboard's "vs accrual"
+                          reveal. */}
                       <MetricRow
-                        label="Cash Runway"
-                        base={results.base.metrics.cashRunwayMonths}
-                        scenarios={results.scenarios.map((s) => s.metrics.cashRunwayMonths)}
+                        label="Cash Runway (unrestricted)"
+                        base={results.base.metrics.unrestrictedCashRunwayMonths}
+                        scenarios={results.scenarios.map((s) => s.metrics.unrestrictedCashRunwayMonths)}
                         format={(v) => (v >= 60 ? "60+ mo" : `${v.toFixed(0)} mo`)}
                         highlightBetter="higher"
                       />
+                      {(results.base.metrics.cashRunwayMonths !==
+                        results.base.metrics.unrestrictedCashRunwayMonths ||
+                        results.scenarios.some(
+                          (s) =>
+                            s.metrics.cashRunwayMonths !==
+                            s.metrics.unrestrictedCashRunwayMonths,
+                        )) && (
+                        <MetricRow
+                          label="Cash Runway (vs accrual)"
+                          base={results.base.metrics.cashRunwayMonths}
+                          scenarios={results.scenarios.map((s) => s.metrics.cashRunwayMonths)}
+                          format={(v) => (v >= 60 ? "60+ mo" : `${v.toFixed(0)} mo`)}
+                          highlightBetter="higher"
+                        />
+                      )}
                       <MetricRow
                         label="Reserve Months (Yr 5)"
                         base={results.base.metrics.reserveMonths}
