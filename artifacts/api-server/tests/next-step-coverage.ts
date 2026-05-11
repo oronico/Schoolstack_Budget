@@ -9,18 +9,15 @@
 import { generateTopIssues } from "../src/lib/decision-rules.js";
 import { generateHealthSignals } from "../src/lib/financial-health.js";
 import { detectUnusualAssumptions } from "../src/lib/assumption-flags.js";
-import { computeScenarios } from "@workspace/finance";
+import { computeScenarios, validateNextStep, NextStepGuardrailError } from "@workspace/finance";
 
-const BANNED = [
-  /\bapproved\b/i,
-  /\bdeclined\b/i,
-  /\bfailed\b/i,
-  /\brejected\b/i,
-  /\brejection\b/i,
-  /\bineligible\b/i,
-  /loan\s+approval/i,
-  /\b(you|your|the)\s+(model|plan|application)\s+(passed|failed)\b/i,
-];
+// Task #689 — delegate the actual contract to the single source of truth
+// (`lib/finance/src/coaching-flag-guardrail.ts`). That guardrail catches
+// banned credit-verdict words *and* weak/generic phrasings ("review this",
+// "look at this", "investigate", "tbd", etc.) and enforces a minimum
+// length. Keeping the rules here in one place means a future contributor
+// adding a registry entry like "Review this assumption with the board"
+// fails this test rather than slipping through to runtime.
 
 let passed = 0;
 let failed = 0;
@@ -28,17 +25,16 @@ const fail = (msg: string) => { console.error(`  ✗ ${msg}`); failed++; };
 const pass = (msg: string) => { console.log(`  ✓ ${msg}`); passed++; };
 
 function checkNextStep(label: string, ns: unknown) {
-  if (typeof ns !== "string" || ns.trim().length === 0) {
-    fail(`${label} missing or empty nextStep`);
-    return;
-  }
-  for (const re of BANNED) {
-    if (re.test(ns)) {
-      fail(`${label} banned pattern ${re}: "${ns}"`);
-      return;
+  try {
+    validateNextStep(ns, label);
+    pass(`${label}: nextStep ok`);
+  } catch (err) {
+    if (err instanceof NextStepGuardrailError) {
+      fail(err.message);
+    } else {
+      fail(`${label} unexpected error: ${(err as Error).message}`);
     }
   }
-  pass(`${label}: nextStep ok`);
 }
 
 // Synthetic stressed FY shape. Negative net income, growing enrollment but

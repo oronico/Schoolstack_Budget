@@ -12,6 +12,20 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import {
+  validateNextStep,
+  NextStepGuardrailError,
+} from "@workspace/finance";
+
+// Task #689 — when adding or editing a `nextStep:` literal in any of the
+// engine files below, the string must satisfy
+// `validateNextStep` from `lib/finance/src/coaching-flag-guardrail.ts`.
+// That guardrail rejects banned credit-verdict vocabulary *and* weak,
+// non-actionable phrasings like "Review this", "Look into staffing",
+// "Investigate", "Consider this", "TBD", etc. Coach-voice next steps name
+// a specific Step, lever, or cadence the founder can act on right now.
+// See also `coaching-flag-guardrail.test.ts` for the unit tests that pin
+// the contract.
 
 const REPO_ROOT = resolve(__dirname, "../../../..");
 
@@ -124,6 +138,28 @@ describe("Task #658 — nextStep registry enforcement", () => {
         expect(re.test(flat), `${h.file}:${h.line} → banned ${re}: "${h.literal}"`).toBe(false);
       }
     }
+  });
+
+  // Task #689 — also enforce the *weak phrasing* and minimum-length rules
+  // from the runtime guardrail, not just the banned-word list. We
+  // substitute placeholders with a neutral filler so dynamic ${...} parts
+  // (which the founder will see filled in at runtime) don't accidentally
+  // trip the length floor or weak-phrase regexes.
+  it("every nextStep literal passes the runtime guardrail (validateNextStep)", () => {
+    const errors: string[] = [];
+    for (const h of allHits) {
+      const filled = h.literal.replace(/\$\{[^}]*\}/g, "0");
+      try {
+        validateNextStep(filled, `${h.file}:${h.line}`);
+      } catch (err) {
+        if (err instanceof NextStepGuardrailError) {
+          errors.push(`${err.message} (raw: "${h.literal}")`);
+        } else {
+          throw err;
+        }
+      }
+    }
+    expect(errors, errors.join("\n")).toEqual([]);
   });
 
   it("totals at least 25 emit sites across all engines (sanity floor)", () => {
