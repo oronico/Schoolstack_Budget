@@ -106,7 +106,7 @@ export class ObjectStorageService {
     return new Response(webStream, { headers });
   }
 
-  async getObjectEntityUploadURL(): Promise<string> {
+  async getObjectEntityUploadURL(ownerUserId?: string | number): Promise<string> {
     const privateObjectDir = this.getPrivateObjectDir();
     if (!privateObjectDir) {
       throw new Error(
@@ -116,7 +116,15 @@ export class ObjectStorageService {
     }
 
     const objectId = randomUUID();
-    const fullPath = `${privateObjectDir}/uploads/${objectId}`;
+    // Task #734 — encode the planned owner into the object name so the
+    // finalize step (and a defensive check at download time) can verify
+    // the bytes belong to the founder who requested the URL. Anonymous
+    // uploads land under uploads/anon/<id> and are not finalizable.
+    const ownerSegment =
+      ownerUserId !== undefined && ownerUserId !== null && String(ownerUserId).length > 0
+        ? `u-${String(ownerUserId)}`
+        : "anon";
+    const fullPath = `${privateObjectDir}/uploads/${ownerSegment}/${objectId}`;
 
     const { bucketName, objectName } = parseObjectPath(fullPath);
 
@@ -237,6 +245,22 @@ export class ObjectStorageService {
       const rel = name.startsWith(dirEntity) ? name.slice(dirEntity.length) : name;
       return `/objects/${rel}`;
     });
+  }
+
+  // Task #734 — derive the planned owner userId from a normalized
+  // object path produced by `getObjectEntityUploadURL(ownerUserId)`.
+  // Object paths look like `/objects/uploads/u-<userId>/<uuid>`.
+  // Returns undefined for legacy/anonymous paths.
+  parseOwnerUserIdFromObjectPath(objectPath: string): string | undefined {
+    if (!objectPath.startsWith("/objects/")) return undefined;
+    const parts = objectPath.split("/").filter(Boolean);
+    for (const seg of parts) {
+      if (seg.startsWith("u-")) {
+        const id = seg.slice(2);
+        if (id.length > 0) return id;
+      }
+    }
+    return undefined;
   }
 
   async canAccessObjectEntity({

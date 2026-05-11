@@ -111,10 +111,13 @@ interface ModelRow {
 async function requestUploadUrl(
   baseUrl: string,
   body: { name: string; size: number; contentType: string },
+  token?: string,
 ): Promise<{ status: number; json: UploadUrlResponse | { error: string } }> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${baseUrl}/api/storage/uploads/request-url`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(body),
   });
   const text = await res.text();
@@ -125,6 +128,22 @@ async function requestUploadUrl(
     json = { error: text.slice(0, 200) };
   }
   return { status: res.status, json };
+}
+
+async function finalizeUpload(
+  baseUrl: string,
+  objectPath: string,
+  token: string,
+): Promise<{ status: number; body: string }> {
+  const res = await fetch(`${baseUrl}/api/storage/uploads/finalize`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ objectPath }),
+  });
+  return { status: res.status, body: (await res.text()).slice(0, 300) };
 }
 
 function buildModelData(
@@ -233,18 +252,49 @@ async function main(): Promise<void> {
 
   const { baseUrl, close } = await startServer();
   let userId: number | null = null;
+  let otherUserId: number | null = null;
 
   try {
     // -----------------------------------------------------------------
-    // Probe the storage sidecar with a no-op request. If the sidecar
-    // isn't available in this environment the rest of the test would
-    // be meaningless; skip cleanly so the suite stays green.
+    // Register a founder up-front. Task #734 gates the whole storage
+    // surface behind authMiddleware, so every subsequent call needs a
+    // Bearer token.
     // -----------------------------------------------------------------
-    const probe = await requestUploadUrl(baseUrl, {
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const { token, user } = await registerAndVerify(baseUrl, {
+      email: `evidence-roundtrip-${stamp}@example.com`,
+      password: "Password123!",
+      name: "Evidence Roundtrip",
+    });
+    userId = user.id;
+
+    // Task #734 — request-url is now auth-gated. An unauthenticated
+    // call must be rejected before any signed URL is handed out.
+    const unauthRequest = await requestUploadUrl(baseUrl, {
       name: "probe.png",
       size: TINY_PNG_BYTES.length,
       contentType: "image/png",
     });
+    eq2(
+      "request-url: unauthenticated call is rejected with 401",
+      unauthRequest.status,
+      401,
+    );
+
+    // -----------------------------------------------------------------
+    // Probe the storage sidecar with a real authed request. If the
+    // sidecar isn't available in this environment the rest of the
+    // test would be meaningless; skip cleanly so the suite stays green.
+    // -----------------------------------------------------------------
+    const probe = await requestUploadUrl(
+      baseUrl,
+      {
+        name: "probe.png",
+        size: TINY_PNG_BYTES.length,
+        contentType: "image/png",
+      },
+      token,
+    );
     if (probe.status === 500) {
       console.warn(
         "  SKIP: Replit object-storage sidecar unavailable in this env (request-url returned 500). " +
@@ -257,28 +307,21 @@ async function main(): Promise<void> {
     // -----------------------------------------------------------------
     // 1. Validation: the request-url endpoint rejects malformed bodies.
     // -----------------------------------------------------------------
-    const badBody = await requestUploadUrl(baseUrl, {
-      // @ts-expect-error — intentionally invalid
-      name: "",
-      size: 0,
-      contentType: "",
-    });
+    const badBody = await requestUploadUrl(
+      baseUrl,
+      {
+        // @ts-expect-error — intentionally invalid
+        name: "",
+        size: 0,
+        contentType: "",
+      },
+      token,
+    );
     eq2(
       "request-url: rejects empty/zero metadata with 400",
       badBody.status,
       400,
     );
-
-    // -----------------------------------------------------------------
-    // 2. Happy path: register, request URL, PUT bytes.
-    // -----------------------------------------------------------------
-    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const { token, user } = await registerAndVerify(baseUrl, {
-      email: `evidence-roundtrip-${stamp}@example.com`,
-      password: "Password123!",
-      name: "Evidence Roundtrip",
-    });
-    userId = user.id;
 
     eq2(
       "request-url: returns 200 for a valid metadata payload",
@@ -309,6 +352,15 @@ async function main(): Promise<void> {
       "PUT to signed upload URL succeeds",
       putRes.ok,
       `status=${putRes.status}`,
+    );
+
+    // Task #734 — finalize sets the ACL policy so the download route
+    // can later allow only the founder who uploaded the bytes.
+    const finalize = await finalizeUpload(baseUrl, probeBody.objectPath, token);
+    eq2(
+      "finalize: 200 for the founder who initiated the upload",
+      finalize.status,
+      200,
     );
 
     // -----------------------------------------------------------------
@@ -365,8 +417,38 @@ async function main(): Promise<void> {
     //    `/api/storage/objects/<id>`.
     // -----------------------------------------------------------------
     const downloadPath = `/api/storage${probeBody.objectPath}`;
-    const downloadRes = await fetch(`${baseUrl}${downloadPath}`);
-    eq2("GET /api/storage/objects/:path returns 200", downloadRes.status, 200);
+
+    // Task #734 — unauthenticated download must be rejected.
+    const unauthDownload = await fetch(`${baseUrl}${downloadPath}`);
+    eq2(
+      "GET /api/storage/objects/:path without auth returns 401",
+      unauthDownload.status,
+      401,
+    );
+
+    // Task #734 — a different authenticated founder must not be able
+    // to download evidence they did not upload.
+    const otherStamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const other = await registerAndVerify(baseUrl, {
+      email: `evidence-roundtrip-other-${otherStamp}@example.com`,
+      password: "Password123!",
+      name: "Evidence Roundtrip Other",
+    });
+    otherUserId = other.user.id;
+    const crossUserDownload = await fetch(`${baseUrl}${downloadPath}`, {
+      headers: { Authorization: `Bearer ${other.token}` },
+    });
+    eq2(
+      "GET /api/storage/objects/:path for a different founder returns 403",
+      crossUserDownload.status,
+      403,
+    );
+
+    // The owner gets the file back.
+    const downloadRes = await fetch(`${baseUrl}${downloadPath}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    eq2("GET /api/storage/objects/:path returns 200 for owner", downloadRes.status, 200);
     const downloadedBuf = Buffer.from(await downloadRes.arrayBuffer());
     eq2(
       "downloaded bytes match the uploaded PNG length",
@@ -381,6 +463,7 @@ async function main(): Promise<void> {
     // Unknown object paths must 404, not leak a generic 500.
     const missingRes = await fetch(
       `${baseUrl}/api/storage/objects/does-not-exist-${stamp}`,
+      { headers: { Authorization: `Bearer ${token}` } },
     );
     eq2(
       "GET /api/storage/objects/<missing> returns 404",
@@ -482,11 +565,15 @@ async function main(): Promise<void> {
     // Validation must accept a request-url payload at the cap too —
     // an unintended `.max(...)` on the size field would silently
     // break the wizard at the threshold.
-    const capRequest = await requestUploadUrl(baseUrl, {
-      name: "huge.pdf",
-      size: MAX_EVIDENCE_FILE_BYTES,
-      contentType: "application/pdf",
-    });
+    const capRequest = await requestUploadUrl(
+      baseUrl,
+      {
+        name: "huge.pdf",
+        size: MAX_EVIDENCE_FILE_BYTES,
+        contentType: "application/pdf",
+      },
+      token,
+    );
     eq2(
       "request-url accepts size = 25 MB exactly (matches wizard cap)",
       capRequest.status,
@@ -530,11 +617,15 @@ async function main(): Promise<void> {
     //    path and the request-url endpoint must both refuse anything
     //    above the documented caps.
     // -----------------------------------------------------------------
-    const oversizeRequest = await requestUploadUrl(baseUrl, {
-      name: "too-big.pdf",
-      size: MAX_EVIDENCE_FILE_BYTES + 1,
-      contentType: "application/pdf",
-    });
+    const oversizeRequest = await requestUploadUrl(
+      baseUrl,
+      {
+        name: "too-big.pdf",
+        size: MAX_EVIDENCE_FILE_BYTES + 1,
+        contentType: "application/pdf",
+      },
+      token,
+    );
     eq2(
       "request-url rejects size > 25 MB with 400",
       oversizeRequest.status,
@@ -592,11 +683,13 @@ async function main(): Promise<void> {
       `body=${tooManySave.body.slice(0, 200)}`,
     );
   } finally {
-    if (userId !== null) {
-      try {
-        await db.delete(usersTable).where(eq(usersTable.id, userId));
-      } catch (err) {
-        console.warn("user cleanup failed:", err);
+    for (const id of [userId, otherUserId]) {
+      if (id !== null) {
+        try {
+          await db.delete(usersTable).where(eq(usersTable.id, id));
+        } catch (err) {
+          console.warn("user cleanup failed:", err);
+        }
       }
     }
     await close();

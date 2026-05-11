@@ -125,16 +125,21 @@ describe("AssumptionConfidenceCard — Task #659", () => {
       },
     };
     render(<Harness stepTitle="Revenue" initial={initial} />);
+    // Task #734 — `/api/storage/objects/*` is now behind auth+ACL,
+    // so the row renders a <button> that downloads via authenticated
+    // fetch (not a raw <a href>) so the Bearer token gets attached.
+    // Img previews load async via the same auth-aware fetch into a
+    // blob: URL, so we just assert the trigger exists with the right
+    // testid + accessible label here.
     const pdfLink = screen.getByTestId(`evidence-file-link-${firstKey}-f-pdf`);
-    expect(pdfLink).toHaveAttribute("href", "/api/storage/objects/abc123");
-    expect(pdfLink).toHaveAttribute("target", "_blank");
-    expect(pdfLink).toHaveAttribute("download", "lease.pdf");
+    expect(pdfLink.tagName).toBe("BUTTON");
+    expect(pdfLink).not.toHaveAttribute("href");
+    expect(pdfLink.getAttribute("title")).toContain("lease.pdf");
 
     const imgLink = screen.getByTestId(`evidence-file-link-${firstKey}-f-img`);
-    expect(imgLink).toHaveAttribute("href", "/api/storage/objects/def456");
-    const thumb = imgLink.querySelector("img");
-    expect(thumb).not.toBeNull();
-    expect(thumb).toHaveAttribute("src", "/api/storage/objects/def456");
+    expect(imgLink.tagName).toBe("BUTTON");
+    expect(imgLink).not.toHaveAttribute("href");
+    expect(imgLink.getAttribute("title")).toContain("site-photo.jpg");
   });
 
   it("renders legacy dataBase64 evidence files as a data: URL link without crashing (Task #730)", () => {

@@ -1,5 +1,5 @@
 import { useFormContext } from "react-hook-form";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ShieldCheck, ChevronDown, ChevronUp, Paperclip, X, FileText, FileSpreadsheet, FileImage } from "lucide-react";
 import {
   ASSUMPTION_REGISTRY,
@@ -182,12 +182,22 @@ function formatBytes(n: number): string {
 // uploads (Task #707) carry inline `dataBase64` instead — we render
 // those as `data:` URLs so the founder can still preview/download
 // them. Returns null when neither field is present.
-function evidenceFileUrl(file: AssumptionEvidenceFile): string | null {
+//
+// Task #734 — `/api/storage/objects/*` is now behind auth + ACL, so
+// browser navigation/img loads can't hit it directly (no Bearer
+// header). We mark those as `{ kind: "authenticated" }` and the UI
+// fetches them via the patched `window.fetch` (which injects the
+// token) and renders a blob: URL.
+type EvidenceUrl =
+  | { kind: "direct"; href: string }
+  | { kind: "authenticated"; href: string };
+
+function evidenceFileUrl(file: AssumptionEvidenceFile): EvidenceUrl | null {
   if (file.objectPath) {
     if (file.objectPath.startsWith("/objects/")) {
-      return `/api/storage${file.objectPath}`;
+      return { kind: "authenticated", href: `/api/storage${file.objectPath}` };
     }
-    return file.objectPath;
+    return { kind: "direct", href: file.objectPath };
   }
   // Legacy (Task #707) inline payload was dropped from the Zod schema
   // in Task #729, but un-migrated rows in saved JSON may still carry
@@ -195,9 +205,64 @@ function evidenceFileUrl(file: AssumptionEvidenceFile): string | null {
   const legacy = (file as { dataBase64?: string }).dataBase64;
   if (legacy) {
     const mime = file.mimeType || "application/octet-stream";
-    return `data:${mime};base64,${legacy}`;
+    return { kind: "direct", href: `data:${mime};base64,${legacy}` };
   }
   return null;
+}
+
+// Task #734 — fetch an authenticated storage URL via the patched
+// window.fetch (which carries the auth token) and expose a blob: URL
+// the browser can use for <img src> / download. Direct URLs (legacy
+// data: payloads or external URLs) are passed through unchanged.
+function useEvidenceObjectUrl(url: EvidenceUrl | null): {
+  href: string | null;
+  loading: boolean;
+  error: string | null;
+} {
+  const [state, setState] = useState<{
+    href: string | null;
+    loading: boolean;
+    error: string | null;
+  }>(() =>
+    url && url.kind === "direct"
+      ? { href: url.href, loading: false, error: null }
+      : { href: null, loading: !!url, error: null },
+  );
+
+  useEffect(() => {
+    if (!url) {
+      setState({ href: null, loading: false, error: null });
+      return;
+    }
+    if (url.kind === "direct") {
+      setState({ href: url.href, loading: false, error: null });
+      return;
+    }
+    let cancelled = false;
+    let blobUrl: string | null = null;
+    setState({ href: null, loading: true, error: null });
+    fetch(url.href)
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`download failed (${res.status})`);
+        return res.blob();
+      })
+      .then((blob) => {
+        if (cancelled) return;
+        blobUrl = URL.createObjectURL(blob);
+        setState({ href: blobUrl, loading: false, error: null });
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const reason = err instanceof Error ? err.message : "download failed";
+        setState({ href: null, loading: false, error: reason });
+      });
+    return () => {
+      cancelled = true;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [url?.kind, url?.href]);
+
+  return state;
 }
 
 function isImageMime(mime: string): boolean {
@@ -246,7 +311,137 @@ async function uploadEvidenceToStorage(file: File): Promise<string> {
   if (!putRes.ok) {
     throw new Error(`Upload did not complete (${putRes.status})`);
   }
+  // Task #734 — write the ACL policy server-side so only the founder
+  // who uploaded this file can later download it through
+  // /api/storage/objects/<path>.
+  const finalizeRes = await fetch("/api/storage/uploads/finalize", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ objectPath }),
+  });
+  if (!finalizeRes.ok) {
+    throw new Error(`Finalize did not complete (${finalizeRes.status})`);
+  }
   return objectPath;
+}
+
+// Task #734 — render an evidence file row's preview + name + size as a
+// download trigger. For authenticated storage URLs we (a) preload the
+// blob via the auth-aware fetch so <img> previews render and (b) on
+// click pull the bytes again into a same-origin download. We avoid
+// passing the storage URL straight to <a href> / <img src> because the
+// browser doesn't carry the Bearer token on those requests, which
+// would 401 even for the file's owner after the route lockdown.
+function EvidenceFileLink({
+  file,
+  url,
+  assumptionKey,
+}: {
+  file: AssumptionEvidenceFile;
+  url: EvidenceUrl | null;
+  assumptionKey: AssumptionKey;
+}) {
+  const isImage = isImageMime(file.mimeType);
+  const isSheet = isSpreadsheetMime(file.mimeType, file.name);
+  const Icon = isImage ? FileImage : isSheet ? FileSpreadsheet : FileText;
+  // Only eagerly resolve image previews — file downloads happen on
+  // click so we don't waste bandwidth fetching every attachment up
+  // front when the founder just wants to scroll past the row.
+  const previewState = useEvidenceObjectUrl(isImage ? url : null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  const meta = (
+    <>
+      {isImage && previewState.href ? (
+        <img
+          src={previewState.href}
+          alt=""
+          className="h-6 w-6 object-cover rounded border border-border shrink-0 bg-white"
+          loading="lazy"
+        />
+      ) : (
+        <Icon className="h-3 w-3 text-slate-500 shrink-0" />
+      )}
+      <span className="truncate">{file.name}</span>
+      <span className="text-muted-foreground shrink-0">
+        · {formatBytes(file.size)}
+      </span>
+    </>
+  );
+
+  if (!url) {
+    return (
+      <span
+        className="inline-flex items-center gap-1.5 min-w-0 text-muted-foreground"
+        title="This file is no longer available for download"
+        data-testid={`evidence-file-unavailable-${assumptionKey}-${file.id}`}
+      >
+        {meta}
+      </span>
+    );
+  }
+
+  if (url.kind === "direct") {
+    return (
+      <a
+        href={url.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        download={file.name}
+        className="inline-flex items-center gap-1.5 min-w-0 text-foreground hover:text-primary hover:underline"
+        title={`Open or download ${file.name}`}
+        data-testid={`evidence-file-link-${assumptionKey}-${file.id}`}
+      >
+        {meta}
+      </a>
+    );
+  }
+
+  const onDownload = async () => {
+    setDownloadError(null);
+    try {
+      // Authenticated fetch — `setupFetchInterceptor` injects the
+      // Bearer token so `/api/storage/objects/*` returns the bytes.
+      const res = await fetch(url.href);
+      if (!res.ok) throw new Error(`download failed (${res.status})`);
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      // Defer revoke so the browser has time to start the download.
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : "download failed";
+      setDownloadError(reason);
+    }
+  };
+
+  return (
+    <span className="inline-flex flex-col min-w-0">
+      <button
+        type="button"
+        onClick={onDownload}
+        className="inline-flex items-center gap-1.5 min-w-0 text-foreground hover:text-primary hover:underline text-left"
+        title={`Download ${file.name}`}
+        data-testid={`evidence-file-link-${assumptionKey}-${file.id}`}
+      >
+        {meta}
+      </button>
+      {downloadError && (
+        <span
+          className="text-[11px] text-red-600 mt-0.5"
+          role="alert"
+          data-testid={`evidence-file-error-${assumptionKey}-${file.id}`}
+        >
+          Couldn't download — {downloadError}.
+        </span>
+      )}
+    </span>
+  );
 }
 
 function ConfidenceRow({
@@ -432,53 +627,16 @@ function ConfidenceRow({
         >
           {files.map((f) => {
             const url = evidenceFileUrl(f);
-            const isImage = isImageMime(f.mimeType);
-            const isSheet = isSpreadsheetMime(f.mimeType, f.name);
-            const Icon = isImage ? FileImage : isSheet ? FileSpreadsheet : FileText;
-            const meta = (
-              <>
-                {isImage && url ? (
-                  <img
-                    src={url}
-                    alt=""
-                    className="h-6 w-6 object-cover rounded border border-border shrink-0 bg-white"
-                    loading="lazy"
-                  />
-                ) : (
-                  <Icon className="h-3 w-3 text-slate-500 shrink-0" />
-                )}
-                <span className="truncate">{f.name}</span>
-                <span className="text-muted-foreground shrink-0">
-                  · {formatBytes(f.size)}
-                </span>
-              </>
-            );
             return (
               <li
                 key={f.id}
                 className="flex items-center justify-between gap-2 text-xs bg-slate-50 border border-border rounded-lg px-2 py-1"
               >
-                {url ? (
-                  <a
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    download={f.name}
-                    className="inline-flex items-center gap-1.5 min-w-0 text-foreground hover:text-primary hover:underline"
-                    title={`Open or download ${f.name}`}
-                    data-testid={`evidence-file-link-${assumptionKey}-${f.id}`}
-                  >
-                    {meta}
-                  </a>
-                ) : (
-                  <span
-                    className="inline-flex items-center gap-1.5 min-w-0 text-muted-foreground"
-                    title="This file is no longer available for download"
-                    data-testid={`evidence-file-unavailable-${assumptionKey}-${f.id}`}
-                  >
-                    {meta}
-                  </span>
-                )}
+                <EvidenceFileLink
+                  file={f}
+                  url={url}
+                  assumptionKey={assumptionKey}
+                />
                 <button
                   type="button"
                   onClick={() => removeFile(f.id)}
