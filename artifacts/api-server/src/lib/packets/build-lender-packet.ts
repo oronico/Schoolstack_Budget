@@ -16,6 +16,8 @@ import {
   type LenderStressTestResults,
   type ProgramBreakEven,
   type SensitivityGrid,
+  getFounderCompBenchmarkPerYear,
+  getFounderCompBandTransitions,
 } from "@workspace/finance";
 import { buildPacketData } from "./build-packet-data";
 import {
@@ -221,7 +223,7 @@ export function buildLenderPacket(
     // packet uses the normalized view as primary and prints the per-year
     // delta vs the as-planned comp the founder actually plans to draw.
     if (next.id === "staffing_plan") {
-      next = enrichStaffingPlanSection(next, consultantOutput);
+      next = enrichStaffingPlanSection(next, consultantOutput, modelData);
     }
     return appendFounderReasoning(next, rollups);
   });
@@ -491,14 +493,99 @@ function enrichDebtServiceSection(
 function enrichStaffingPlanSection(
   section: PacketSection,
   co: ConsultantOutput,
+  modelData: ModelData,
 ): PacketSection {
   const nv = co.normalizedView;
-  if (!nv || !nv.founderComp.hasAdjustment) return section;
+  const hasAdjustment = !!nv && nv.founderComp.hasAdjustment;
 
-  const fc = nv.founderComp;
-  const yearCount = fc.delta.length;
   const fmtUSD = (n: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+
+  // Task #665 — derive the per-year suggested founder-comp benchmark series
+  // (the same one the wizard shows founders) so lenders / boards see exactly
+  // when the market rate steps up as enrollment crosses NAIS / NACSA size
+  // bands, rather than only the Y1 figure.
+  const yearCountForBench =
+    nv?.founderComp.delta.length ??
+    co.costComposition?.length ??
+    5;
+  const perYearBenchmarks = getFounderCompBenchmarkPerYear(
+    modelData as unknown as DecisionEngineModelData,
+    yearCountForBench,
+  );
+  const bandTransitions = getFounderCompBandTransitions(perYearBenchmarks);
+  const hasPerYearBenchmark = perYearBenchmarks.some((b) => b && b.escalatedAmount > 0);
+
+  const benchmarkTables: PacketTable[] = [];
+  const benchmarkNarrativeChunks: string[] = [];
+
+  if (hasPerYearBenchmark) {
+    const benchRows: PacketTableRow[] = perYearBenchmarks.map((b, i) => {
+      const isTransition =
+        i > 0 &&
+        b?.benchmark.sizeBand.key !==
+          perYearBenchmarks[i - 1]?.benchmark.sizeBand.key &&
+        !!b &&
+        !!perYearBenchmarks[i - 1];
+      const bandLabel = b ? b.benchmark.sizeBand.label : "-";
+      return {
+        label: `Year ${i + 1}`,
+        values: [
+          b ? String(b.enrollment) : "-",
+          bandLabel + (isTransition ? " (new band)" : ""),
+          b ? fmtUSD(b.escalatedAmount) : "-",
+        ],
+      };
+    });
+    benchmarkTables.push({
+      title: "Suggested Founder Compensation Benchmark by Year",
+      headers: ["Year", "Projected Enrollment", "Size Band", "Suggested Market Rate"],
+      rows: benchRows,
+    });
+
+    const firstWithSource = perYearBenchmarks.find((b) => b);
+    if (firstWithSource) {
+      // PDFKit's built-in Helvetica only ships Latin-1; en/em dashes from
+      // citation strings (e.g. "NAIS 2023-24") are normalized to ASCII
+      // hyphens so they don't corrupt downstream PDF text rendering.
+      const safeCitation = firstWithSource.benchmark.source.citation
+        .replace(/[\u2013\u2014]/g, "-");
+      benchmarkNarrativeChunks.push(
+        `Suggested founder compensation steps up year over year as projected enrollment crosses NAIS / NACSA size bands (escalated by COLA from Y1). Source: ${safeCitation}.`,
+      );
+    }
+
+    if (bandTransitions.length > 0) {
+      const items = bandTransitions
+        .map((t) => {
+          const amt = perYearBenchmarks[t.year - 1]?.escalatedAmount ?? 0;
+          return `Year ${t.year} (${t.fromBand.label.toLowerCase()} to ${t.toBand.label.toLowerCase()}, suggested rate ${fmtUSD(amt)})`;
+        })
+        .join("; ");
+      benchmarkNarrativeChunks.push(
+        `Size-band transitions during the forecast: ${items}. Each crossing bumps the lender-side market rate for the founder / head-of-school role.`,
+      );
+    }
+  }
+
+  const appendBenchmarkNarrative = (base: string): string => {
+    if (benchmarkNarrativeChunks.length === 0) return base;
+    const trimmed = base.trim();
+    const sep = trimmed.length > 0 ? "\n\n" : "";
+    return `${trimmed}${sep}${benchmarkNarrativeChunks.join(" ")}`;
+  };
+
+  if (!hasAdjustment) {
+    if (!hasPerYearBenchmark) return section;
+    return {
+      ...section,
+      narrative: appendBenchmarkNarrative(section.narrative),
+      tables: [...(section.tables || []), ...benchmarkTables],
+    };
+  }
+
+  const fc = nv!.founderComp;
+  const yearCount = fc.delta.length;
 
   const rows: PacketTableRow[] = [];
   for (let y = 0; y < yearCount; y++) {
@@ -578,12 +665,20 @@ function enrichStaffingPlanSection(
     `DSCR, runway, and net income figures elsewhere in this packet reflect the normalized view; ` +
     `the founder dashboard reflects the as-planned view.`;
 
+  const baseNarrative = section.narrative
+    ? section.narrative.trimEnd() + " " + adjNarrative
+    : adjNarrative;
+
   return {
     ...section,
-    narrative: section.narrative
-      ? section.narrative.trimEnd() + " " + adjNarrative
-      : adjNarrative,
-    tables: [...(section.tables || []), normalizationTable, comparisonTable, runwayTable],
+    narrative: appendBenchmarkNarrative(baseNarrative),
+    tables: [
+      ...(section.tables || []),
+      ...benchmarkTables,
+      normalizationTable,
+      comparisonTable,
+      runwayTable,
+    ],
   };
 }
 

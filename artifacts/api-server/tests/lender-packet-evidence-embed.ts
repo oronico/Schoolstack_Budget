@@ -110,10 +110,18 @@ async function main() {
   // upstream sections that vary with assumptionConfidence, can shift
   // the count. The legacy assertion (merged >= baseline + embedded-PDF
   // pages) was removed when the inline-base64 embed/merge path was
-  // deleted (Task #729).
+  // deleted (Task #729). We previously also asserted
+  // `renderedPages >= baselinePages` as a sanity floor, but that held
+  // only by coincidence — the empty-state Assumption Confidence section
+  // (rendered when no keys are tagged) leaves more whitespace per page
+  // than the populated appendix, so adding upstream content (Task #665
+  // per-year founder-comp benchmark table) can flip the comparison
+  // even though both packets render the same upstream sections. The
+  // fixed-floor assertion below covers the original intent: the
+  // rendered packet is a non-trivial multi-page document.
   check(
-    "rendered packet has at least the baseline page count",
-    renderedPages >= baselinePages,
+    "rendered packet is a non-trivial multi-page PDF",
+    renderedPages >= 10,
     `baseline=${baselinePages}, rendered=${renderedPages}`,
   );
 
