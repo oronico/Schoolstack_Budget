@@ -85,6 +85,17 @@ interface AnalyticsData {
     reachedReview: number;
     exported: number;
   };
+  // Task #537 — abandoned-vs-verified signups. Lifetime totals plus a
+  // 14-day daily trend so admins can spot mailer/copy regressions.
+  signupVerification?: {
+    verified: number;
+    abandoned: number;
+    totalAttempts: number;
+    abandonmentRate: number;
+    trendDays: number;
+    verifiedTrend: number[];
+    abandonedTrend: number[];
+  };
 }
 
 interface FeedbackItem {
@@ -951,6 +962,115 @@ function FunnelBar({
           style={{ width: `${pct}%` }}
         />
       </div>
+    </div>
+  );
+}
+
+// Task #537 — verification-email drop-off panel. Renders the lifetime
+// verified-vs-abandoned counts and the abandonment rate, plus a 14-day
+// daily sparkline so a sudden spike (mailer outage, broken verification
+// link, regressed copy) jumps off the page. We surface a yellow tip
+// once the rate climbs past 30% — that's roughly the threshold where
+// the drop-off stops being "user changed their mind" and starts being
+// "the email isn't getting clicked."
+function SignupVerificationPanel({
+  data,
+}: {
+  data: NonNullable<AnalyticsData["signupVerification"]>;
+}) {
+  const ratePct = (data.abandonmentRate * 100).toFixed(0);
+  const ratePctNumber = data.abandonmentRate * 100;
+  const last7Verified = data.verifiedTrend.slice(-7).reduce((a, b) => a + b, 0);
+  const last7Abandoned = data.abandonedTrend.slice(-7).reduce((a, b) => a + b, 0);
+  const last7Total = last7Verified + last7Abandoned;
+  const last7Rate = last7Total > 0 ? (last7Abandoned / last7Total) * 100 : 0;
+  const peak = Math.max(
+    1,
+    ...data.verifiedTrend.map((v, i) => v + data.abandonedTrend[i]),
+  );
+  return (
+    <div className="mt-6 pt-6 border-t border-border/60 space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold text-foreground">
+            Email verification drop-off
+          </div>
+          <div className="text-xs text-muted-foreground mt-0.5">
+            Signups that never clicked the verification link (last {data.trendDays} days
+            shown).
+          </div>
+        </div>
+        <div className="text-right">
+          <div className={`text-2xl font-bold ${ratePctNumber >= 30 ? "text-amber-600" : "text-foreground"}`}>
+            {ratePct}%
+          </div>
+          <div className="text-xs text-muted-foreground">abandoned (lifetime)</div>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-3 text-sm">
+        <div className="bg-secondary/40 rounded-lg p-2">
+          <div className="text-xs text-muted-foreground">Verified</div>
+          <div className="font-semibold text-foreground">{data.verified}</div>
+        </div>
+        <div className="bg-secondary/40 rounded-lg p-2">
+          <div className="text-xs text-muted-foreground">Abandoned</div>
+          <div className="font-semibold text-foreground">{data.abandoned}</div>
+        </div>
+        <div className="bg-secondary/40 rounded-lg p-2">
+          <div className="text-xs text-muted-foreground">Last 7d rate</div>
+          <div className="font-semibold text-foreground">{last7Rate.toFixed(0)}%</div>
+        </div>
+      </div>
+      <div>
+        <div className="flex justify-between text-xs text-muted-foreground mb-1">
+          <span>Daily attempts (oldest → newest)</span>
+          <span>{data.totalAttempts} total</span>
+        </div>
+        <div className="flex items-end gap-0.5 h-12" aria-label="Signup attempts by day">
+          {data.verifiedTrend.map((v, i) => {
+            const a = data.abandonedTrend[i];
+            const total = v + a;
+            const heightPct = (total / peak) * 100;
+            const aPct = total > 0 ? (a / total) * 100 : 0;
+            return (
+              <div
+                key={i}
+                className="flex-1 flex flex-col justify-end bg-secondary/30 rounded-sm overflow-hidden"
+                style={{ height: "100%" }}
+                title={`Day ${i + 1}: ${v} verified, ${a} abandoned`}
+              >
+                <div
+                  className="bg-emerald-500/70"
+                  style={{ height: `${heightPct - (heightPct * aPct) / 100}%` }}
+                />
+                <div
+                  className="bg-amber-500/80"
+                  style={{ height: `${(heightPct * aPct) / 100}%` }}
+                />
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-2 w-2 rounded-sm bg-emerald-500/70" />
+            Verified
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-2 w-2 rounded-sm bg-amber-500/80" />
+            Abandoned
+          </span>
+        </div>
+      </div>
+      {ratePctNumber >= 30 ? (
+        <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 flex gap-2">
+          <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+          <span>
+            More than 30% of signups never click the verification link. Check that the
+            email is landing in inboxes and that the link copy is obviously clickable.
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -2383,6 +2503,17 @@ export function AdminPage() {
               <FunnelBar label="Reached Review" value={data.funnel.reachedReview} maxValue={data.funnel.signedUp} />
               <FunnelBar label="Exported XLSX" value={data.funnel.exported} maxValue={data.funnel.signedUp} />
             </div>
+            {/*
+              Task #537 — surface verification-email drop-off right under
+              the funnel so a sudden spike (mailer outage, broken link,
+              confusing copy) is visible the next time anyone opens this
+              dashboard. Driven by the `signed_up` event from
+              /auth/verify-email and the `signup_abandoned` event emitted
+              by cleanupExpiredPendingSignups.
+            */}
+            {data.signupVerification && data.signupVerification.totalAttempts > 0 ? (
+              <SignupVerificationPanel data={data.signupVerification} />
+            ) : null}
           </div>
 
           <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">

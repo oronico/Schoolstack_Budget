@@ -19,8 +19,8 @@ import type { AddressInfo } from "node:net";
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
-import { pendingSignupsTable, usersTable } from "@workspace/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { pendingSignupsTable, usersTable, eventsTable } from "@workspace/db/schema";
+import { eq, inArray, gte, and, sql } from "drizzle-orm";
 import app from "../src/app.js";
 import { cleanupExpiredPendingSignups } from "../src/routes/auth.js";
 
@@ -90,6 +90,10 @@ async function testSweeperDropsExpiredKeepsFresh(): Promise<void> {
     verificationTokenExpiry: new Date(Date.now() + 30 * 60_000),
   });
 
+  // Task #537 — track when the sweep runs so we can scope the
+  // signup_abandoned event lookup to just our newly-deleted row,
+  // independent of any other test or background activity.
+  const sweepStart = new Date();
   const deleted = await cleanupExpiredPendingSignups();
   check("sweeper reports at least one deletion", deleted >= 1, `got ${deleted}`);
 
@@ -104,6 +108,47 @@ async function testSweeperDropsExpiredKeepsFresh(): Promise<void> {
     .from(pendingSignupsTable)
     .where(eq(pendingSignupsTable.email, "task535-fresh@example.com"));
   check("fresh pending signup is preserved", freshAfter.length === 1, `found ${freshAfter.length} rows`);
+
+  // Task #537 — sweeping the expired row should fire one
+  // `signup_abandoned` event tagged with the email *domain* (not the
+  // full address), so admins can see verification drop-off without us
+  // leaking PII into analytics.
+  const abandonedEvents = await db
+    .select({ id: eventsTable.id, metadata: eventsTable.metadata })
+    .from(eventsTable)
+    .where(
+      and(
+        eq(eventsTable.eventName, "signup_abandoned"),
+        gte(eventsTable.createdAt, sweepStart),
+        sql`${eventsTable.metadata}->>'domain' = 'example.com'`,
+      ),
+    );
+  check(
+    "sweeper emits a signup_abandoned event for the expired row",
+    abandonedEvents.length >= 1,
+    `found ${abandonedEvents.length} events`,
+  );
+  const leakedEmailEvent = abandonedEvents.find(
+    (e) =>
+      e.metadata &&
+      typeof (e.metadata as Record<string, unknown>).email === "string",
+  );
+  check(
+    "signup_abandoned metadata never carries the full email",
+    !leakedEmailEvent,
+    leakedEmailEvent ? `event ${leakedEmailEvent.id} leaked email` : "",
+  );
+  // Clean up the events we just emitted so this test is idempotent.
+  if (abandonedEvents.length > 0) {
+    await db
+      .delete(eventsTable)
+      .where(
+        inArray(
+          eventsTable.id,
+          abandonedEvents.map((e) => e.id),
+        ),
+      );
+  }
 
   await purgeTestRows();
 }

@@ -50,12 +50,41 @@ const VERIFICATION_TOKEN_TTL_MS = 3_600_000;
 // closed the tab, mistyped their email, etc.). Pruned on the same
 // 5-minute interval as the rate-limiter / error-logs sweepers wired in
 // src/index.ts.
+// Task #537 — extract the email's domain part (everything after the last
+// "@", lowercased) so we can record a coarse `signup_abandoned` event
+// without leaking the full address into analytics. Returns "unknown"
+// for malformed input so the metric stays a single non-null bucket.
+function emailDomain(email: string | null | undefined): string {
+  if (!email || typeof email !== "string") return "unknown";
+  const at = email.lastIndexOf("@");
+  if (at < 0 || at === email.length - 1) return "unknown";
+  return email.slice(at + 1).toLowerCase();
+}
+
 export async function cleanupExpiredPendingSignups(): Promise<number> {
   try {
     const deleted = await db
       .delete(pendingSignupsTable)
       .where(lt(pendingSignupsTable.verificationTokenExpiry, new Date()))
-      .returning({ id: pendingSignupsTable.id });
+      .returning({ id: pendingSignupsTable.id, email: pendingSignupsTable.email });
+    // Task #537 — emit one `signup_abandoned` event per dropped row so
+    // founders / admins can see how many people start a signup and never
+    // click the verification link. Carry only the email domain (not the
+    // full address) so analytics stays PII-free; a sudden spike in this
+    // counter is the signal that the verification email is landing in
+    // spam, the copy is confusing, or the link is broken. Fire in
+    // parallel and never let a tracking failure mask the cleanup result.
+    if (deleted.length > 0) {
+      await Promise.all(
+        deleted.map((row) =>
+          trackEvent("signup_abandoned", null, {
+            domain: emailDomain(row.email),
+          }).catch((e) =>
+            console.error(`[auth] cleanup: trackEvent failed for row ${row.id}:`, e),
+          ),
+        ),
+      );
+    }
     return deleted.length;
   } catch (err) {
     console.error("Pending-signup cleanup error:", err);

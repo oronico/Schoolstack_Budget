@@ -185,6 +185,65 @@ router.get(
         .where(eq(exportsTable.format, "xlsx"));
       const exported = exportedResult.value;
 
+      // Task #537 — surface the abandoned-vs-verified ratio so a sudden
+      // spike (mailer outage, broken verification link, copy regression)
+      // is visible on the admin dashboard. We pair the lifetime totals
+      // with a 14-day daily breakdown so the UI can render a sparkline
+      // and the founder/admin can eyeball the trend without leaving the
+      // page. `signed_up` is logged from /auth/verify-email and
+      // `signup_abandoned` is emitted by cleanupExpiredPendingSignups
+      // for each pending row it sweeps.
+      const SIGNUP_TREND_DAYS = 14;
+      // Floor to the start of *today* (UTC) before stepping back the
+      // window, so the bucket math below lines up exactly with
+      // date_trunc('day', ...) on the SQL side. Without this the window
+      // starts mid-day and the oldest bucket gets indexed to -1 and
+      // dropped.
+      const todayStartMs = Math.floor(Date.now() / (24 * 60 * 60 * 1000)) * 24 * 60 * 60 * 1000;
+      const trendStart = new Date(todayStartMs - (SIGNUP_TREND_DAYS - 1) * 24 * 60 * 60 * 1000);
+      const signupOutcomeRows = await db
+        .select({
+          eventName: eventsTable.eventName,
+          value: count(),
+        })
+        .from(eventsTable)
+        .where(inArray(eventsTable.eventName, ["signed_up", "signup_abandoned"]))
+        .groupBy(eventsTable.eventName);
+      let totalVerifiedSignups = 0;
+      let totalAbandonedSignups = 0;
+      for (const r of signupOutcomeRows) {
+        if (r.eventName === "signed_up") totalVerifiedSignups = r.value;
+        else if (r.eventName === "signup_abandoned") totalAbandonedSignups = r.value;
+      }
+      const signupTrendRows = await db
+        .select({
+          eventName: eventsTable.eventName,
+          day: sql<Date>`date_trunc('day', ${eventsTable.createdAt})`.as("day"),
+          value: count(),
+        })
+        .from(eventsTable)
+        .where(
+          and(
+            inArray(eventsTable.eventName, ["signed_up", "signup_abandoned"]),
+            gte(eventsTable.createdAt, trendStart),
+          ),
+        )
+        .groupBy(eventsTable.eventName, sql`date_trunc('day', ${eventsTable.createdAt})`);
+      const verifiedTrend = new Array(SIGNUP_TREND_DAYS).fill(0) as number[];
+      const abandonedTrend = new Array(SIGNUP_TREND_DAYS).fill(0) as number[];
+      const dayMs = 24 * 60 * 60 * 1000;
+      const trendStartMs = trendStart.getTime();
+      for (const r of signupTrendRows) {
+        const ts = (r.day instanceof Date ? r.day : new Date(r.day)).getTime();
+        const idx = Math.floor((ts - trendStartMs) / dayMs);
+        if (idx < 0 || idx >= SIGNUP_TREND_DAYS) continue;
+        if (r.eventName === "signed_up") verifiedTrend[idx] += r.value;
+        else if (r.eventName === "signup_abandoned") abandonedTrend[idx] += r.value;
+      }
+      const totalSignupAttempts = totalVerifiedSignups + totalAbandonedSignups;
+      const abandonmentRate =
+        totalSignupAttempts > 0 ? totalAbandonedSignups / totalSignupAttempts : 0;
+
       res.json({
         totalUsers,
         totalModels,
@@ -242,6 +301,18 @@ router.get(
           createdModel: usersWithModel,
           reachedReview: reachedReview,
           exported: exported,
+        },
+        // Task #537 — abandoned-vs-verified signups. `trendDays` arrays
+        // run from oldest → newest day so the UI can render a sparkline
+        // left-to-right.
+        signupVerification: {
+          verified: totalVerifiedSignups,
+          abandoned: totalAbandonedSignups,
+          totalAttempts: totalSignupAttempts,
+          abandonmentRate,
+          trendDays: SIGNUP_TREND_DAYS,
+          verifiedTrend,
+          abandonedTrend,
         },
       });
     } catch (err) {
