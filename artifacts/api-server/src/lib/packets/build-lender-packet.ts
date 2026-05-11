@@ -7,11 +7,13 @@ import {
   filterForecastAccuracy,
   computeBaseFinancials,
   computeDownsideBand,
+  computeSensitivityGrid,
   type ForecastAccuracyFilter,
   type ForecastAccuracyRollup,
   type DecisionEngineModelData,
   type DownsideBand,
   type LenderStressTestResults,
+  type SensitivityGrid,
 } from "@workspace/finance";
 import { buildPacketData } from "./build-packet-data";
 import {
@@ -143,6 +145,13 @@ export interface BreakEvenDownsideExport {
   maxCapacity: number | null;
   enrollment: number[];
   downsideBand: DownsideBand;
+  /**
+   * Task #628 — two-variable sensitivity grid (enrollment delta × tuition
+   * delta). Rendered as a heatmap-style table in the lender PDF so a
+   * reviewer can answer "what if enrollment is down 10% AND we can't push
+   * tuition the planned 5%?" in one glance.
+   */
+  sensitivityGrid: SensitivityGrid;
 }
 
 export interface DSCRSummary {
@@ -251,12 +260,14 @@ export function buildLenderPacket(
   const spRaw = (modelData as unknown as Record<string, unknown>).schoolProfile as Record<string, unknown> | undefined;
   const maxCapRaw = spRaw?.maxCapacity;
   const maxCapacity = typeof maxCapRaw === "number" && maxCapRaw > 0 ? maxCapRaw : null;
+  const sensitivityGrid = computeSensitivityGrid(engineData);
   const breakEvenDownside: BreakEvenDownsideExport = {
     breakEvenStudents: baseMetrics.breakEvenStudents,
     breakEvenUtilization: baseMetrics.breakEvenUtilization,
     maxCapacity,
     enrollment: baseMetrics.enrollment,
     downsideBand,
+    sensitivityGrid,
   };
 
   return {

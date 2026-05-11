@@ -1258,6 +1258,84 @@ export function computeDownsideBand(data: FullModelData): DownsideBand {
   return { minus10: run(-10), minus20: run(-20) };
 }
 
+/**
+ * Two-variable sensitivity grid (Task #628). Re-runs the canonical engine
+ * over every combination of enrollment delta × tuition delta and returns a
+ * 2-D table of Year-1 DSCR and Year-5 ending cash. Lenders frequently ask
+ * "what if enrollment is down 10% AND we can't push tuition the planned
+ * 5%?" — the grid answers that in one glance.
+ *
+ * The cell metrics mirror the existing single-axis downside band (Year-1
+ * DSCR + ending cash) so the heatmap, lender PDF, and dashboard all read
+ * from the same numbers founders see elsewhere on the planner.
+ *
+ * Defaults are -20%..+10% enrollment in 5-pt steps × -5%..+10% tuition in
+ * 5-pt steps. Callers can override via `options` to widen the band for a
+ * specific surface (e.g. an analyst workbook).
+ */
+export interface SensitivityGridCell {
+  enrollmentDelta: number;
+  tuitionDelta: number;
+  /** Year-1 enrollment under the combined delta — useful for the cell tooltip. */
+  enrollment: number;
+  /** Year-1 DSCR. 0 when no debt service is modeled (engine sentinel). */
+  dscr: number;
+  /** Year-5 ending cash position (opening cash + cumulative net income). */
+  endingCash: number;
+  /** Year-1 net income — handy for the lender packet's "swing" callout. */
+  netIncome: number;
+}
+
+export interface SensitivityGrid {
+  enrollmentDeltas: number[];
+  tuitionDeltas: number[];
+  /** Indexed `[enrollmentIdx][tuitionIdx]`. */
+  cells: SensitivityGridCell[][];
+}
+
+export interface SensitivityGridOptions {
+  enrollmentDeltas?: number[];
+  tuitionDeltas?: number[];
+}
+
+export const DEFAULT_SENSITIVITY_ENROLLMENT_DELTAS: number[] = [-20, -15, -10, -5, 0, 5, 10];
+export const DEFAULT_SENSITIVITY_TUITION_DELTAS: number[] = [-5, 0, 5, 10];
+
+export function computeSensitivityGrid(
+  data: FullModelData,
+  options?: SensitivityGridOptions,
+): SensitivityGrid {
+  const enrollmentDeltas = options?.enrollmentDeltas ?? DEFAULT_SENSITIVITY_ENROLLMENT_DELTAS;
+  const tuitionDeltas = options?.tuitionDeltas ?? DEFAULT_SENSITIVITY_TUITION_DELTAS;
+  const baseMetrics = computeBaseFinancials(data);
+  const startingCash = data.openingBalances?.cash || 0;
+  const maxCapacity = readMaxCapacity(data);
+
+  const cells: SensitivityGridCell[][] = enrollmentDeltas.map((eD) =>
+    tuitionDeltas.map((tD) => {
+      const adj: ScenarioAdjustments = {
+        name: `e${eD}_t${tD}`,
+        enrollmentAdjustment: eD,
+        tuitionAdjustment: tD,
+        expenseAdjustment: 0,
+        staffingAdjustment: 0,
+        facilityAdjustment: 0,
+      };
+      const m = applyAdjustments(baseMetrics, adj, startingCash, maxCapacity);
+      return {
+        enrollmentDelta: eD,
+        tuitionDelta: tD,
+        enrollment: m.enrollment[0] ?? 0,
+        dscr: m.dscr[0] ?? 0,
+        endingCash: m.cashPosition[m.cashPosition.length - 1] ?? 0,
+        netIncome: m.netIncome[0] ?? 0,
+      };
+    }),
+  );
+
+  return { enrollmentDeltas, tuitionDeltas, cells };
+}
+
 function metricsToLever(m: ScenarioMetrics, startingCash: number): LeverMetrics {
   return {
     netIncome: m.netIncome[0],

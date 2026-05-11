@@ -103,6 +103,9 @@ export {
   computeBreakEvenStudentsForYear,
   computeDownsideBand,
   computeNormalizedFinancials,
+  computeSensitivityGrid,
+  DEFAULT_SENSITIVITY_ENROLLMENT_DELTAS,
+  DEFAULT_SENSITIVITY_TUITION_DELTAS,
   type ScenarioAdjustments,
   type ScenarioMetrics,
   type ScenarioResult,
@@ -112,6 +115,9 @@ export {
   type DownsideBand,
   type DownsideScenario,
   type NormalizedFinancialsView,
+  type SensitivityGrid,
+  type SensitivityGridCell,
+  type SensitivityGridOptions,
 } from "./decision-engine/scenario-engine.js";
 
 export {

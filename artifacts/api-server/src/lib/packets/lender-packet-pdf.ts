@@ -821,6 +821,98 @@ function renderBreakEvenDownsideSection(doc: PDFDoc, bed: BreakEvenDownsideExpor
     }
     doc.moveDown(0.3);
   }
+
+  renderSensitivityGridSection(doc, bed.sensitivityGrid);
+}
+
+// Task #628 — two-variable sensitivity grid (enrollment delta × tuition
+// delta). Rendered as a heatmap-style table where each cell shows Year-1
+// DSCR over Year-5 ending cash, color-coded by the same DSCR thresholds
+// (BENCHMARK_DSCR_GREEN / AMBER) used elsewhere in the packet.
+function renderSensitivityGridSection(doc: PDFDoc, grid: BreakEvenDownsideExport["sensitivityGrid"]) {
+  if (!grid || grid.cells.length === 0 || grid.tuitionDeltas.length === 0) return;
+
+  ensureSpace(doc, 60 + grid.cells.length * 22);
+  subSection(doc, "Enrollment × Tuition Sensitivity (Yr 1 DSCR / Yr 5 ending cash)");
+  bodyText(
+    doc,
+    `Each cell re-runs the canonical engine with the row's enrollment delta and the column's tuition delta applied together. Cells shaded green clear the ${BENCHMARK_DSCR_GREEN}x DSCR benchmark; amber sit between ${BENCHMARK_DSCR_AMBER}x–${BENCHMARK_DSCR_GREEN}x; red are below ${BENCHMARK_DSCR_AMBER}x.`,
+  );
+  doc.moveDown(0.3);
+
+  const margin = doc.page.margins.left;
+  const pageW = doc.page.width;
+  const contentW = pageW - margin * 2;
+  const labelColW = 70;
+  const colCount = grid.tuitionDeltas.length;
+  const cellW = (contentW - labelColW) / colCount;
+  const headerH = 18;
+  const rowH = 22;
+
+  // Header row
+  ensureSpace(doc, headerH + rowH * grid.cells.length + 6);
+  let y = doc.y;
+  doc.save();
+  doc.rect(margin, y, labelColW, headerH).fill(BRAND.lightGray);
+  doc.fillColor(BRAND.darkGray).font("Helvetica-Bold").fontSize(7);
+  doc.text("Enrollment ↓ / Tuition →", margin + 3, y + 5, { width: labelColW - 6, lineBreak: false });
+  doc.restore();
+  for (let c = 0; c < colCount; c++) {
+    const cx = margin + labelColW + c * cellW;
+    doc.save();
+    doc.rect(cx, y, cellW, headerH).fill(BRAND.lightGray);
+    doc.fillColor(BRAND.navy).font("Helvetica-Bold").fontSize(8);
+    const tD = grid.tuitionDeltas[c];
+    const tLabel = `${tD > 0 ? "+" : ""}${tD}% tuition`;
+    doc.text(tLabel, cx, y + 5, { width: cellW, align: "center", lineBreak: false });
+    doc.restore();
+  }
+  y += headerH;
+
+  for (let r = 0; r < grid.cells.length; r++) {
+    const row = grid.cells[r];
+    const eD = grid.enrollmentDeltas[r];
+    // Row label
+    doc.save();
+    doc.rect(margin, y, labelColW, rowH).fill(BRAND.lightGray);
+    doc.fillColor(BRAND.navy).font("Helvetica-Bold").fontSize(8);
+    doc.text(
+      `${eD > 0 ? "+" : ""}${eD}% enroll`,
+      margin + 3,
+      y + 6,
+      { width: labelColW - 6, lineBreak: false },
+    );
+    doc.restore();
+
+    for (let c = 0; c < row.length; c++) {
+      const cell = row[c];
+      const cx = margin + labelColW + c * cellW;
+      // DSCR-based shading; sentinel 0 means "no debt service modeled"
+      // — render those neutral so the grid still shows the cash impact.
+      let fill = BRAND.white;
+      if (cell.dscr === 0) {
+        fill = "#F3F4F6";
+      } else if (cell.dscr >= BENCHMARK_DSCR_GREEN) {
+        fill = "#DCFCE7";
+      } else if (cell.dscr >= BENCHMARK_DSCR_AMBER) {
+        fill = "#FEF3C7";
+      } else {
+        fill = "#FEE2E2";
+      }
+      doc.save();
+      doc.rect(cx, y, cellW, rowH).fill(fill);
+      doc.strokeColor(BRAND.gray).lineWidth(0.3).rect(cx, y, cellW, rowH).stroke();
+      const dscrStr = cell.dscr === 0 ? "—" : `${cell.dscr.toFixed(2)}x`;
+      doc.fillColor(BRAND.black).font("Helvetica-Bold").fontSize(8.5);
+      doc.text(dscrStr, cx, y + 3, { width: cellW, align: "center", lineBreak: false });
+      doc.fillColor(BRAND.darkGray).font("Helvetica").fontSize(7.5);
+      doc.text(fmtCurrency(cell.endingCash), cx, y + 12, { width: cellW, align: "center", lineBreak: false });
+      doc.restore();
+    }
+    y += rowH;
+  }
+  doc.y = y + 4;
+  doc.fillColor(BRAND.black).font("Helvetica");
 }
 
 function renderLenderStressTestsSection(doc: PDFDoc, stress: LenderStressTestResults) {

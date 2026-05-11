@@ -10,6 +10,9 @@ export {
   computeQuickLevers,
   computeBreakEvenStudentsForYear,
   computeDownsideBand,
+  computeSensitivityGrid,
+  DEFAULT_SENSITIVITY_ENROLLMENT_DELTAS,
+  DEFAULT_SENSITIVITY_TUITION_DELTAS,
   type ScenarioAdjustments,
   type ScenarioMetrics,
   type ScenarioResult,
@@ -18,4 +21,7 @@ export {
   type QuickLever,
   type DownsideBand,
   type DownsideScenario,
+  type SensitivityGrid,
+  type SensitivityGridCell,
+  type SensitivityGridOptions,
 } from "@workspace/finance";

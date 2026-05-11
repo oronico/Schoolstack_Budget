@@ -26,7 +26,8 @@ import {
   X,
   Share2,
 } from "lucide-react";
-import { computeScenarios, computeProgramBreakEven, type ScenarioAdjustments, type ScenarioResult, type NudgeItem, type ProgramBreakEven } from "@/lib/scenario-engine";
+import { computeScenarios, computeProgramBreakEven, computeSensitivityGrid, type ScenarioAdjustments, type ScenarioResult, type NudgeItem, type ProgramBreakEven } from "@/lib/scenario-engine";
+import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "@workspace/finance";
 import { compareScenarios } from "@/lib/scenario-compare";
 import { ScenarioComparisonView } from "@/components/consultant/ScenarioComparisonView";
 import { AdvisorPreviewPanel } from "@/components/scenarios/AdvisorPreviewPanel";
@@ -2343,6 +2344,22 @@ export function ScenarioPage() {
     return computeScenarios(modelData, scenarios);
   }, [modelData, scenarios, initialized, model]);
 
+  // Task #628 — two-variable sensitivity grid (enrollment × tuition).
+  // Re-runs the canonical engine over the default delta band so the
+  // heatmap-style table on the planner shows the same Year-1 DSCR /
+  // Year-5 ending cash a lender will see in the PDF packet. Errors are
+  // logged so engine regressions surface in the console rather than
+  // silently hiding the section.
+  const sensitivityGrid = useMemo(() => {
+    if (!initialized || !model) return null;
+    try {
+      return computeSensitivityGrid(modelData);
+    } catch (err) {
+      console.error("[scenarios] computeSensitivityGrid failed", err);
+      return null;
+    }
+  }, [modelData, initialized, model]);
+
   // Memoize the forecast-accuracy roll-up so we re-run the per-scenario
   // engine projections only when the saved scenarios actually change. The
   // helper internally calls `computeProjectedSnapshot` (which re-runs the
@@ -3099,6 +3116,76 @@ export function ScenarioPage() {
                 </div>
               </div>
             </div>
+
+            {sensitivityGrid && sensitivityGrid.cells.length > 0 && (
+              <div className="mb-8" data-testid="sensitivity-grid-section">
+                <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingDown className="h-5 w-5 text-amber-600" />
+                    <h2 className="font-display text-xl font-bold text-foreground">
+                      Enrollment × Tuition Sensitivity
+                    </h2>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Each cell re-runs the canonical engine with that row's enrollment delta and that column's tuition delta applied together. Top number is Year-1 DSCR; bottom is Year-5 ending cash. Green clears the {BENCHMARK_DSCR_GREEN}x DSCR benchmark, amber sits between {BENCHMARK_DSCR_AMBER}x–{BENCHMARK_DSCR_GREEN}x, red is below {BENCHMARK_DSCR_AMBER}x. Same numbers print in the lender PDF.
+                  </p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse" data-testid="sensitivity-grid-table">
+                      <thead>
+                        <tr>
+                          <th className="text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-2 py-2 border-b border-border/40">
+                            Enroll ↓ / Tuition →
+                          </th>
+                          {sensitivityGrid.tuitionDeltas.map((tD) => (
+                            <th
+                              key={tD}
+                              className="text-center text-xs font-semibold text-foreground px-2 py-2 border-b border-border/40 whitespace-nowrap"
+                            >
+                              {tD > 0 ? "+" : ""}{tD}%
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sensitivityGrid.cells.map((row, rIdx) => {
+                          const eD = sensitivityGrid.enrollmentDeltas[rIdx];
+                          return (
+                            <tr key={eD} data-testid={`sensitivity-grid-row-${eD}`}>
+                              <th className="text-left text-xs font-semibold text-foreground px-2 py-2 border-b border-border/40 whitespace-nowrap bg-muted/30">
+                                {eD > 0 ? "+" : ""}{eD}%
+                              </th>
+                              {row.map((cell) => {
+                                let cellClass = "bg-white";
+                                if (cell.dscr === 0) cellClass = "bg-muted/40";
+                                else if (cell.dscr >= BENCHMARK_DSCR_GREEN) cellClass = "bg-emerald-100";
+                                else if (cell.dscr >= BENCHMARK_DSCR_AMBER) cellClass = "bg-amber-100";
+                                else cellClass = "bg-red-100";
+                                const dscrStr = cell.dscr === 0 ? "—" : `${cell.dscr.toFixed(2)}x`;
+                                return (
+                                  <td
+                                    key={cell.tuitionDelta}
+                                    className={`text-center px-2 py-2 border-b border-border/40 ${cellClass}`}
+                                    title={`Year 1 enrollment: ${cell.enrollment} students · Year 1 net income: ${fmt(cell.netIncome)}`}
+                                    data-testid={`sensitivity-grid-cell-e${eD}-t${cell.tuitionDelta}`}
+                                  >
+                                    <div className="text-sm font-mono font-semibold text-foreground">
+                                      {dscrStr}
+                                    </div>
+                                    <div className="text-[11px] font-mono text-muted-foreground">
+                                      {fmt(cell.endingCash)}
+                                    </div>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="mb-8">
               <h2 className="font-display text-xl font-bold text-foreground mb-4 flex items-center gap-2">
