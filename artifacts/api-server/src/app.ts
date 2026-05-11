@@ -4,7 +4,8 @@ import helmet from "helmet";
 import compression from "compression";
 import { tenantMiddleware } from "@workspace/tenant/express";
 import router from "./routes";
-import { pool, db, errorLogsTable } from "@workspace/db";
+import { pool, db } from "@workspace/db";
+import { recordErrorLog } from "./lib/error-log";
 import { stripSensitive } from "./routes/errors";
 import { respondHealth, respondHealthWithDb } from "./lib/health";
 
@@ -216,15 +217,15 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   delete headers.authorization;
   delete headers.cookie;
 
-  db.insert(errorLogsTable)
-    .values({
-      userId: (req as unknown as Record<string, unknown>).userId ? String((req as unknown as Record<string, unknown>).userId) : null,
-      errorMessage: String(err.message).slice(0, 2000),
-      errorStack: err.stack ? String(err.stack).slice(0, 5000) : null,
-      route: `${req.method} ${req.originalUrl}`.slice(0, 500),
-      requestBody: sanitizedBody as Record<string, unknown>,
-    })
-    .catch((logErr) => console.error("Failed to persist error log:", logErr));
+  recordErrorLog({
+    userId: (req as unknown as Record<string, unknown>).userId
+      ? String((req as unknown as Record<string, unknown>).userId)
+      : null,
+    errorMessage: err.message,
+    errorStack: err.stack ?? null,
+    route: `${req.method} ${req.originalUrl}`,
+    requestBody: sanitizedBody as Record<string, unknown> | null,
+  }).catch((logErr) => console.error("Failed to persist error log:", logErr));
 
   if (!res.headersSent) {
     res.status(500).json({ error: "Internal server error" });

@@ -4,6 +4,7 @@ import { desc, lt } from "drizzle-orm";
 import { authMiddleware, verifyTokenStrict } from "../middlewares/auth";
 import { adminMiddleware } from "../middlewares/admin";
 import { createRateLimiter } from "../lib/rate-limiter";
+import { recordErrorLog } from "../lib/error-log";
 
 const router = Router();
 
@@ -63,12 +64,14 @@ router.post("/errors/report", errorReportRateLimiter, async (req, res) => {
       if (result.ok) userId = String(result.userId);
     }
 
-    await db.insert(errorLogsTable).values({
+    await recordErrorLog({
       userId,
-      errorMessage: String(message).slice(0, 2000),
-      errorStack: stack ? String(stack).slice(0, 5000) : null,
-      route: url ? String(url).slice(0, 500) : null,
-      requestBody: userAgent ? { userAgent: String(userAgent).slice(0, 500), source: "frontend" } : null,
+      errorMessage: String(message),
+      errorStack: stack ? String(stack) : null,
+      route: url ? String(url) : null,
+      requestBody: userAgent
+        ? { userAgent: String(userAgent).slice(0, 500), source: "frontend" }
+        : null,
     });
 
     res.json({ ok: true });

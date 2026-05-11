@@ -12,82 +12,22 @@
 // statically scans `src/` and fails the build if a raw insert appears
 // outside this file.
 //
-// Add new forbidden keys here — the test reads this list directly.
+// Task #638 — The redactor and the forbidden-key list now live in
+// `./redact-sensitive.ts` and are shared with the error-log writer
+// (which has the same exposure). Add a new forbidden key there — the
+// audit-log AND error-log redaction tests both read the list directly.
 
 import { db } from "@workspace/db";
 import { auditLogTable, type InsertAuditLog } from "@workspace/db/schema";
+import {
+  FORBIDDEN_SENSITIVE_KEYS,
+  redactSensitivePayload,
+} from "./redact-sensitive";
 
-// Keys we never want to see in `before` / `after` JSON, regardless of
-// nesting depth. Match is case-insensitive and also catches
-// camelCase/snake_case variants of the same concept.
-export const FORBIDDEN_AUDIT_KEYS: readonly string[] = [
-  "storage_ref",
-  "storageRef",
-  "ein_encrypted_ref",
-  "einEncryptedRef",
-  "ssn_encrypted_ref",
-  "ssnEncryptedRef",
-  "password_hash",
-  "passwordHash",
-  "bank_account_token",
-  "bankAccountToken",
-  "bank_routing_token",
-  "bankRoutingToken",
-  "plaid_access_token",
-  "plaidAccessToken",
-  "access_token",
-  "accessToken",
-  "refresh_token",
-  "refreshToken",
-  "session_token",
-  "sessionToken",
-  "api_key",
-  "apiKey",
-  "secret",
-  // The raw values themselves — callers occasionally hand us a record
-  // keyed by `ein` / `ssn` rather than the encrypted-ref pointer.
-  "ein",
-  "ssn",
-];
-
-const FORBIDDEN_LOOKUP = new Set(FORBIDDEN_AUDIT_KEYS.map((k) => k.toLowerCase()));
-
-function isForbiddenKey(key: string): boolean {
-  return FORBIDDEN_LOOKUP.has(key.toLowerCase());
-}
-
-/**
- * Deep-clone the input, dropping any property whose key matches a
- * forbidden audit key (case-insensitive). Walks nested objects and
- * arrays. Returns `null` for `null` / `undefined` inputs so the
- * `before` / `after` columns stay properly nullable.
- */
-export function redactAuditPayload(
-  payload: Record<string, unknown> | null | undefined,
-): Record<string, unknown> | null {
-  if (payload === null || payload === undefined) return null;
-  const cleaned = redactValue(payload);
-  if (cleaned === null || typeof cleaned !== "object" || Array.isArray(cleaned)) {
-    return null;
-  }
-  return cleaned as Record<string, unknown>;
-}
-
-function redactValue(value: unknown): unknown {
-  if (value === null || value === undefined) return value;
-  if (Array.isArray(value)) {
-    return value.map((entry) => redactValue(entry));
-  }
-  if (typeof value === "object") {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      if (isForbiddenKey(k)) continue;
-      out[k] = redactValue(v);
-    }
-    return out;
-  }
-  return value;
-}
+// Re-exported under the original Task #621 names so existing callers
+// and the audit-log redaction test keep working unchanged.
+export const FORBIDDEN_AUDIT_KEYS: readonly string[] = FORBIDDEN_SENSITIVE_KEYS;
+export const redactAuditPayload = redactSensitivePayload;
 
 export interface RecordAuditLogInput {
   actorUserId?: number | null;

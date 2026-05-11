@@ -2,7 +2,8 @@ import app from "./app";
 import { cleanupExpiredRateLimits } from "./lib/rate-limiter";
 import { cleanupOldErrorLogs } from "./routes/errors";
 import { cleanupExpiredPendingSignups } from "./routes/auth";
-import { pool, db, errorLogsTable, runMigrations } from "@workspace/db";
+import { pool, db, runMigrations } from "@workspace/db";
+import { recordErrorLog } from "./lib/error-log";
 import { applyMigrations as runApplyMigrations } from "./lib/apply-migrations";
 import { seedPreviewDataIfEmpty } from "./lib/seed-preview-data";
 import type { Server } from "http";
@@ -76,15 +77,13 @@ function applyMigrations(): Promise<void> {
 
 function logCrashToDb(message: string, stack: string | undefined) {
   if (!db) return;
-  db.insert(errorLogsTable)
-    .values({
-      userId: null,
-      errorMessage: String(message).slice(0, 2000),
-      errorStack: stack ? String(stack).slice(0, 5000) : null,
-      route: "process_crash",
-      requestBody: null,
-    })
-    .catch(() => {});
+  recordErrorLog({
+    userId: null,
+    errorMessage: message,
+    errorStack: stack ?? null,
+    route: "process_crash",
+    requestBody: null,
+  }).catch(() => {});
 }
 
 // Task #586 — In production we want fail-fast on uncaught errors so the
