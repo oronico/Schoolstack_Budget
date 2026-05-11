@@ -47,10 +47,6 @@ const GENERIC_ERROR_FAILED_ALLOWLIST = [
   // Admin console is an internal staff-only surface (out of scope for
   // founder voice). Throws "Failed to fetch …" runtime errors throughout.
   "pages/admin.tsx",
-  // /underwriting is the internal lender-reviewer screen — out of scope
-  // for founder-voice rewrites per task #655. It throws "Analysis failed"
-  // / "Export failed" runtime errors.
-  "pages/underwriting.tsx",
   // Test fixtures naming a scenario "(declined)" / asserting save-failure
   // strings are internal test surfaces.
   "lib/__tests__/forecast-accuracy.test.ts",
@@ -67,7 +63,7 @@ const BANNED_PATTERNS: BannedPattern[] = [
   { label: '"Underwriting Model workbook"', re: /Underwriting\s+Model\s+workbook/i },
   { label: "approval packet", re: /approval\s+packet/i },
   { label: "loan approval packet", re: /loan\s+approval\s+packet/i },
-  { label: "loan approval", re: /loan\s+approval/i, extraAllowlist: ["pages/underwriting.tsx"] },
+  { label: "loan approval", re: /loan\s+approval/i },
   { label: "borrower approval", re: /borrower\s+approval/i },
   { label: "bank review", re: /bank\s+review/i },
   // "Rejection / rejected" — the Replit-managed conflict banner uses
@@ -100,10 +96,6 @@ const BANNED_PATTERNS: BannedPattern[] = [
   {
     label: '"passed/failed" as a verdict on the founder, plan, model or application',
     re: /\b(you|your|the)\s+(model|plan|application|school|budget|workbook|submission|package|packet|review)\s+(have\s+|has\s+|did\s+not\s+|didn't\s+)?(pass(ed)?|fail(ed)?)\b/i,
-    extraAllowlist: [
-      // Internal lender-reviewer screen — out of scope per task #655 / #676.
-      "pages/underwriting.tsx",
-    ],
   },
   {
     label: '"passed/failed" the underwriting / credit / lender review',

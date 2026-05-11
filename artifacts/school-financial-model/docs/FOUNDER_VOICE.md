@@ -79,10 +79,13 @@ non-verdict context. They are listed in `GLOBAL_ALLOWLIST` or per-pattern
 - `pages/scenarios/index.tsx`, `pages/model-wizard/schema.ts` — the
   founder's own scenario tracker (`Pursued / Declined / On hold`).
 - `pages/underwriting.tsx` — the `/underwriting` route name and a
-  `PublicFundingApprovalStatus` enum that mirrors government program
-  terminology. Out of scope for renaming per the task's "Out of scope"
-  rules; founder-visible labels rendered from this page still follow the
-  guide.
+  `PublicFundingApprovalStatus` enum (`approved` / `pending` /
+  `not_applicable`) that mirrors government program terminology. The
+  enum string values are allowlisted for the literal `approved` ban;
+  every founder-visible label rendered from this page (including the
+  "Award letter received" / "Awaiting decision" select labels) follows
+  the guide. Per task #679 the page no longer needs the per-pattern
+  `loan approval` / `passed-or-failed verdict` / `failed` allowlists.
 - `lib/error-reporter.ts` — `PromiseRejectionEvent` /
   `window.onunhandledrejection` are standard browser API names.
 - Generic JS error throws (`throw new Error("… failed")`) in the

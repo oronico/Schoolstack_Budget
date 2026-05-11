@@ -1358,8 +1358,8 @@ export function UnderwritingLandingPage() {
                         testId="select-funding-approval"
                         onChange={(v) => update("publicFundingApprovalStatus", v)}
                         options={[
-                          { value: "approved", label: "Approved" },
-                          { value: "pending", label: "Pending" },
+                          { value: "approved", label: "Award letter received" },
+                          { value: "pending", label: "Awaiting decision" },
                           { value: "not_applicable", label: "Not applicable" },
                         ]}
                       />
@@ -1408,7 +1408,7 @@ export function UnderwritingLandingPage() {
                 <div className="border-2 rounded-xl p-5" style={{ borderColor: `${readiness.color}30` }} data-testid="lender-readiness-snapshot">
                   <h3 className="font-display text-base font-bold text-[#1E293B] mb-4 flex items-center gap-2">
                     <readiness.Icon className="w-5 h-5" style={{ color: readiness.color }} />
-                    Loan Readiness Snapshot
+                    Lender readiness snapshot
                   </h3>
 
                   <div className="flex items-center gap-2 mb-4">
@@ -1489,7 +1489,7 @@ export function UnderwritingLandingPage() {
                     className="bg-[#328555] hover:bg-[#266a44] disabled:opacity-50 text-white px-5 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition"
                   >
                     {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                    {isExporting ? "Generating…" : "Download Excel workbook"}
+                    {isExporting ? "Generating…" : "Download Founder Planning Workbook"}
                   </button>
                 </div>
 
@@ -1509,7 +1509,7 @@ export function UnderwritingLandingPage() {
                     {analysis.executiveSummary ? (
                       <p className="text-sm text-[#1E293B]/80 leading-relaxed whitespace-pre-line">{analysis.executiveSummary}</p>
                     ) : (
-                      <p className="text-sm text-[#1E293B]/60">Analysis complete. Download the Excel workbook for full detail.</p>
+                      <p className="text-sm text-[#1E293B]/60">Analysis complete. Download the Founder Planning Workbook for full detail.</p>
                     )}
                   </div>
                 ) : null}
