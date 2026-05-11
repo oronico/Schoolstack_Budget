@@ -28,6 +28,17 @@
 // ciphertext and the last 4 digits. To recover the raw value they
 // additionally need the KEK, which lives in the deployment environment
 // and never in Postgres.
+//
+// Task #788 — Key rotation. The active KEK comes from
+// `SENSITIVE_ENCRYPTION_KEY`; one or more retired KEKs may be
+// supplied via `SENSITIVE_ENCRYPTION_KEY_PREVIOUS` (a single key, OR
+// a JSON array of keys for multi-step rotations). Encryption ALWAYS
+// uses the active KEK; decryption looks up the matching KEK by the
+// `kekId` embedded in the envelope. The rotation script in
+// `src/scripts/rotate-sensitive-encryption-key.ts` walks every row
+// that still carries an old `kekId`, decrypts with the matching
+// previous KEK, and re-encrypts with the active one — after which the
+// previous KEK env var can be removed safely.
 
 import {
   createCipheriv,
@@ -39,6 +50,7 @@ import {
 
 const FORMAT_VERSION = "v1";
 const KEK_ENV_VAR = "SENSITIVE_ENCRYPTION_KEY";
+const PREVIOUS_KEK_ENV_VAR = "SENSITIVE_ENCRYPTION_KEY_PREVIOUS";
 const DEV_KEY_SEED = "schoolstack-dev-only-sensitive-encryption-key-do-not-use-in-prod";
 
 const AES_KEY_BYTES = 32; // AES-256
@@ -88,40 +100,19 @@ interface EnvelopePayload {
   dataCt: string;
 }
 
-function loadKek(): { key: Buffer; id: string } {
-  const raw = process.env[KEK_ENV_VAR];
-  let keyBytes: Buffer;
-  if (raw && raw.trim().length > 0) {
-    keyBytes = decodeKeyMaterial(raw.trim());
-  } else if (process.env.NODE_ENV === "production") {
-    throw new SensitiveEncryptionError(
-      `${KEK_ENV_VAR} is not set. Refusing to encrypt sensitive borrower data with an ephemeral key in production.`,
-    );
-  } else {
-    // Deterministic dev-only key. Loud warning so it's obvious this is
-    // not a production code path.
-    if (!devKeyWarned) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        `[sensitive-encryption] ${KEK_ENV_VAR} unset; using a deterministic DEV-ONLY key. Set ${KEK_ENV_VAR} for any non-local environment.`,
-      );
-      devKeyWarned = true;
-    }
-    keyBytes = createHash("sha256").update(DEV_KEY_SEED).digest();
-  }
-  if (keyBytes.length !== AES_KEY_BYTES) {
-    throw new SensitiveEncryptionError(
-      `${KEK_ENV_VAR} must decode to exactly ${AES_KEY_BYTES} bytes (got ${keyBytes.length}).`,
-    );
-  }
-  // KEK id is the first 8 hex chars of SHA-256(KEK). Derived (not the
-  // key itself) so it can be safely embedded in the opaque token and
-  // logged for rotation diagnostics.
-  const id = createHash("sha256").update(keyBytes).digest("hex").slice(0, 8);
-  return { key: keyBytes, id };
+interface LoadedKek {
+  key: Buffer;
+  id: string;
 }
 
 let devKeyWarned = false;
+
+function deriveKekId(keyBytes: Buffer): string {
+  // KEK id is the first 8 hex chars of SHA-256(KEK). Derived (not the
+  // key itself) so it can be safely embedded in the opaque token and
+  // logged for rotation diagnostics.
+  return createHash("sha256").update(keyBytes).digest("hex").slice(0, 8);
+}
 
 function decodeKeyMaterial(input: string): Buffer {
   // Accept either base64 (with or without padding) or hex.
@@ -129,6 +120,91 @@ function decodeKeyMaterial(input: string): Buffer {
     return Buffer.from(input, "hex");
   }
   return Buffer.from(input, "base64");
+}
+
+function decodeKekOrThrow(raw: string, sourceLabel: string): LoadedKek {
+  const keyBytes = decodeKeyMaterial(raw.trim());
+  if (keyBytes.length !== AES_KEY_BYTES) {
+    throw new SensitiveEncryptionError(
+      `${sourceLabel} must decode to exactly ${AES_KEY_BYTES} bytes (got ${keyBytes.length}).`,
+    );
+  }
+  return { key: keyBytes, id: deriveKekId(keyBytes) };
+}
+
+function loadActiveKek(): LoadedKek {
+  const raw = process.env[KEK_ENV_VAR];
+  if (raw && raw.trim().length > 0) {
+    return decodeKekOrThrow(raw, KEK_ENV_VAR);
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new SensitiveEncryptionError(
+      `${KEK_ENV_VAR} is not set. Refusing to encrypt sensitive borrower data with an ephemeral key in production.`,
+    );
+  }
+  // Deterministic dev-only key. Loud warning so it's obvious this is
+  // not a production code path.
+  if (!devKeyWarned) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[sensitive-encryption] ${KEK_ENV_VAR} unset; using a deterministic DEV-ONLY key. Set ${KEK_ENV_VAR} for any non-local environment.`,
+    );
+    devKeyWarned = true;
+  }
+  const keyBytes = createHash("sha256").update(DEV_KEY_SEED).digest();
+  return { key: keyBytes, id: deriveKekId(keyBytes) };
+}
+
+function loadPreviousKeks(): LoadedKek[] {
+  const raw = process.env[PREVIOUS_KEK_ENV_VAR];
+  if (!raw || raw.trim().length === 0) return [];
+
+  const trimmed = raw.trim();
+  // Try to parse as a JSON array of strings first (multi-step
+  // rotations). Anything that isn't a valid JSON array is treated as
+  // a single key value.
+  let candidates: string[];
+  if (trimmed.startsWith("[")) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch (err) {
+      throw new SensitiveEncryptionError(
+        `${PREVIOUS_KEK_ENV_VAR} starts with '[' but is not valid JSON: ${(err as Error).message}`,
+      );
+    }
+    if (!Array.isArray(parsed) || !parsed.every((v) => typeof v === "string" && v.trim().length > 0)) {
+      throw new SensitiveEncryptionError(
+        `${PREVIOUS_KEK_ENV_VAR} JSON value must be a non-empty array of key strings.`,
+      );
+    }
+    candidates = parsed as string[];
+  } else {
+    candidates = [trimmed];
+  }
+
+  const loaded: LoadedKek[] = [];
+  const seen = new Set<string>();
+  for (const candidate of candidates) {
+    const kek = decodeKekOrThrow(candidate, `${PREVIOUS_KEK_ENV_VAR} entry`);
+    if (seen.has(kek.id)) continue;
+    seen.add(kek.id);
+    loaded.push(kek);
+  }
+  return loaded;
+}
+
+/**
+ * Load every KEK currently available to this process — the active one
+ * first, followed by any retired KEKs in
+ * `SENSITIVE_ENCRYPTION_KEY_PREVIOUS`. De-duplicated by `kekId` so
+ * accidentally re-listing the active key in the previous-list is a
+ * no-op rather than an error.
+ */
+function loadAllKeks(): { active: LoadedKek; all: LoadedKek[] } {
+  const active = loadActiveKek();
+  const previous = loadPreviousKeks().filter((k) => k.id !== active.id);
+  return { active, all: [active, ...previous] };
 }
 
 function aesGcmEncrypt(key: Buffer, plaintext: Buffer): { iv: Buffer; tag: Buffer; ct: Buffer } {
@@ -193,7 +269,7 @@ export function encryptSensitive(raw: string): EncryptResult {
   const normalized = normalizeRaw(raw);
   const last4 = lastFour(normalized);
 
-  const { key: kek, id: kekId } = loadKek();
+  const { key: kek, id: kekId } = loadActiveKek();
   const dek = randomBytes(AES_KEY_BYTES);
 
   try {
@@ -241,6 +317,12 @@ export interface DecryptOptions {
  * Gated to server-internal roles via `opts.actorRole`. Throws
  * `SensitiveDecryptionForbiddenError` for any other role so a
  * misconfigured route cannot leak raw EIN/SSN by accident.
+ *
+ * If the ref was wrapped by a retired KEK, this looks the matching
+ * KEK up in `SENSITIVE_ENCRYPTION_KEY_PREVIOUS`. Throws
+ * `SensitiveEncryptionError` if no loaded KEK matches the ref's
+ * `kekId` — which is the operator's signal to either re-add the old
+ * KEK to the previous-list, or run the rotation script.
  */
 export function decryptSensitive(encryptedRef: string, opts: DecryptOptions): string {
   if (!opts || typeof opts.actorRole !== "string" || typeof opts.purpose !== "string") {
@@ -260,20 +342,19 @@ export function decryptSensitive(encryptedRef: string, opts: DecryptOptions): st
   }
 
   const payload = parseEncryptedRef(encryptedRef);
-  const { key: kek, id: kekId } = loadKek();
+  const { all } = loadAllKeks();
 
-  // Constant-time KEK id comparison: in a multi-key future this is the
-  // hint we use to look up the right KEK; today it must match.
-  const expected = Buffer.from(kekId, "utf8");
-  const actual = Buffer.from(payload.kekId, "utf8");
-  if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
+  const match = findKekById(all, payload.kekId);
+  if (!match) {
+    const knownIds = all.map((k) => k.id).join(", ");
     throw new SensitiveEncryptionError(
-      `Encrypted ref was wrapped with a different KEK (id=${payload.kekId}); cannot decrypt with current ${KEK_ENV_VAR}.`,
+      `Encrypted ref was wrapped with KEK id '${payload.kekId}' which is not loaded. ` +
+        `Loaded KEK ids: [${knownIds}]. Add the missing key to ${PREVIOUS_KEK_ENV_VAR}, or run the rotation script.`,
     );
   }
 
   const dek = aesGcmDecrypt(
-    kek,
+    match.key,
     Buffer.from(payload.dekIv, "base64"),
     Buffer.from(payload.dekTag, "base64"),
     Buffer.from(payload.dekCt, "base64"),
@@ -289,6 +370,23 @@ export function decryptSensitive(encryptedRef: string, opts: DecryptOptions): st
   } finally {
     dek.fill(0);
   }
+}
+
+function findKekById(keks: LoadedKek[], wantedId: string): LoadedKek | null {
+  // Constant-time compare each candidate id. We still iterate every
+  // entry on no-match so timing doesn't reveal whether (or where) a
+  // matching id sat in the list.
+  const wanted = Buffer.from(wantedId, "utf8");
+  let found: LoadedKek | null = null;
+  for (const k of keks) {
+    const candidate = Buffer.from(k.id, "utf8");
+    if (candidate.length === wanted.length && timingSafeEqual(candidate, wanted)) {
+      // Don't break early; let the loop run to keep timing flat across
+      // hit / miss cases.
+      if (found === null) found = k;
+    }
+  }
+  return found;
 }
 
 function parseEncryptedRef(encryptedRef: string): EnvelopePayload {
@@ -327,6 +425,32 @@ function parseEncryptedRef(encryptedRef: string): EnvelopePayload {
     throw new SensitiveEncryptionError(`Unknown envelope version '${payload.v}'.`);
   }
   return payload;
+}
+
+/**
+ * Inspect the `kekId` embedded in an encrypted ref without performing
+ * a decrypt. Used by the rotation script to decide which rows still
+ * carry an old KEK and need to be re-wrapped.
+ */
+export function readKekIdFromRef(encryptedRef: string): string {
+  return parseEncryptedRef(encryptedRef).kekId;
+}
+
+/**
+ * Return the `kekId` of the active (encrypting) KEK. Useful for
+ * operator scripts — e.g. "skip every row whose kekId already matches
+ * the active one".
+ */
+export function getActiveKekId(): string {
+  return loadActiveKek().id;
+}
+
+/**
+ * Return every KEK id currently loaded (active first). Diagnostic
+ * helper for the rotation script's startup banner.
+ */
+export function listLoadedKekIds(): string[] {
+  return loadAllKeks().all.map((k) => k.id);
 }
 
 /**
