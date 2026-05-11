@@ -1,10 +1,43 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { useRegister } from "@workspace/api-client-react";
-import { Loader2, Eye, EyeOff, Mail } from "lucide-react";
+import { Loader2, Eye, EyeOff, Mail, Compass, Building2, Check } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { SEOHead } from "@/components/SEOHead";
 import { getApiErrorMessage } from "@/lib/api-error";
+
+// Task #566 — capture whether the founder is planning a new school or
+// already running one at signup, so the welcome email (Task #557) can
+// branch on a real signal instead of falling through to the generic
+// default. The chosen value is also persisted onto the `users` row as
+// `personaStage` in /auth/verify-email so the in-app FounderPersonaPrompt
+// (Task #302) doesn't re-ask the same question on first sign-in.
+//
+// Values match the `personaStage` enum exactly ("yet_to_launch" /
+// "existing"); they also match `pickWelcomeTrack`'s substring matchers
+// (`/yet/` → "yet-to-launch", `/exist/` → "operating") so the welcome
+// branch resolves correctly with no translation layer in between.
+type SignupStage = "yet_to_launch" | "existing";
+
+const STAGE_OPTIONS: Array<{
+  value: SignupStage;
+  icon: typeof Compass;
+  title: string;
+  description: string;
+}> = [
+  {
+    value: "yet_to_launch",
+    icon: Compass,
+    title: "I'm planning a new school",
+    description: "Build a Year-1 model for an opening you're working toward.",
+  },
+  {
+    value: "existing",
+    icon: Building2,
+    title: "I'm already running a school",
+    description: "Bring in your existing numbers and forecast forward.",
+  },
+];
 
 export function RegisterPage() {
   const registerMutation = useRegister();
@@ -12,6 +45,7 @@ export function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [stage, setStage] = useState<SignupStage | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [error, setError] = useState("");
@@ -24,8 +58,14 @@ export function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (!stage) {
+      setError("Please tell us whether you're planning a new school or already running one.");
+      return;
+    }
     try {
-      await registerMutation.mutateAsync({ data: { name, email, password } });
+      await registerMutation.mutateAsync({
+        data: { name, email, password, planningStage: stage },
+      });
       setSubmittedEmail(email);
     } catch (err) {
       setError(getApiErrorMessage(err, "Failed to register. Please try again."));
@@ -81,6 +121,40 @@ export function RegisterPage() {
               </div>
             ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="block text-sm font-semibold mb-2">Where are you in your school's journey?</label>
+                <div className="grid grid-cols-1 gap-2" role="radiogroup" aria-label="Where are you in your school's journey?">
+                  {STAGE_OPTIONS.map((option) => {
+                    const Icon = option.icon;
+                    const isSelected = stage === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() => setStage(option.value)}
+                        data-testid={`signup-stage-${option.value}`}
+                        className={`flex items-start gap-3 p-3.5 rounded-xl border-2 text-left transition-all ${
+                          isSelected
+                            ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                            : "border-border bg-background hover:border-primary/40"
+                        }`}
+                      >
+                        <Icon className={`h-5 w-5 mt-0.5 shrink-0 ${isSelected ? "text-primary" : "text-muted-foreground"}`} aria-hidden="true" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                            {option.title}
+                            {isSelected && <Check className="h-3.5 w-3.5 text-primary" aria-hidden="true" />}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{option.description}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-semibold mb-1.5">Full Name</label>
                 <input
@@ -152,7 +226,7 @@ export function RegisterPage() {
 
               <button
                 type="submit"
-                disabled={registerMutation.isPending || !agreedToTerms}
+                disabled={registerMutation.isPending || !agreedToTerms || !stage}
                 className="w-full mt-4 flex items-center justify-center py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:transform-none disabled:cursor-not-allowed"
               >
                 {registerMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : "Create Account"}

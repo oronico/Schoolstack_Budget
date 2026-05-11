@@ -95,6 +95,16 @@ export function FounderPersonaPrompt({ onComplete, mode = "first-time", onClose 
   const [error, setError] = useState<string | null>(null);
   const isEdit = mode === "edit";
 
+  // Task #566: when the founder already picked their stage at signup we
+  // don't re-ask it here on first sign-in. We render only the two comfort
+  // cards for that stage so the founder makes one quick choice and lands
+  // on the dashboard. Edit mode always shows the full 4-card picker.
+  const stageAlreadyKnown =
+    !isEdit && initialPersona.stage !== null && initialPersona.comfort === null;
+  const visibleBuckets = stageAlreadyKnown
+    ? PERSONA_BUCKETS.filter((b) => b.stage === initialPersona.stage)
+    : PERSONA_BUCKETS;
+
   useEffect(() => {
     trackCoachingEvent("founder_persona_prompt_shown", { mode });
   }, [mode]);
@@ -155,18 +165,24 @@ export function FounderPersonaPrompt({ onComplete, mode = "first-time", onClose 
             <Sparkles className="h-6 w-6 text-primary" aria-hidden="true" />
           </div>
           <h2 className="font-display text-2xl font-bold text-foreground">
-            {isEdit ? "Update your founder profile" : "Welcome - let's tailor this to you"}
+            {isEdit
+              ? "Update your founder profile"
+              : stageAlreadyKnown
+                ? "One quick question to tailor this to you"
+                : "Welcome - let's tailor this to you"}
           </h2>
           <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
             {isEdit
               ? "Pick the option that matches where you are now. We'll re-tune the tone and surfaces accordingly."
-              : "Pick the card that fits you best. We'll set the right tone and turn on only the tools that apply to your situation. You can change this later."}
+              : stageAlreadyKnown
+                ? "Pick the card that sounds like you. We'll set the tone accordingly. You can change this later."
+                : "Pick the card that fits you best. We'll set the right tone and turn on only the tools that apply to your situation. You can change this later."}
           </p>
         </div>
 
         <div className="px-6 pb-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {PERSONA_BUCKETS.map((bucket) => {
+            {visibleBuckets.map((bucket) => {
               const Icon = bucket.icon;
               const isSelected = stage === bucket.stage && comfort === bucket.comfort;
               return (

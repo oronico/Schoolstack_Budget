@@ -305,6 +305,20 @@ router.post("/auth/verify-email", registerRateLimiter, async (req, res) => {
       return;
     }
 
+    // Task #566 — when the signup form captures stage as one of the
+    // canonical persona values ("yet_to_launch" / "existing"), seed
+    // `personaStage` on the new users row too so the in-app
+    // FounderPersonaPrompt (Task #302) doesn't re-ask the same question
+    // on first sign-in. We only seed when the value matches an exact
+    // persona-stage enum entry; free-text values supplied by other
+    // /auth/register callers are still preserved on `planningStage` for
+    // the welcome-email branch but don't pre-fill the persona picker
+    // (which would skip the comfort question we still need to ask).
+    const seededPersonaStage =
+      pending.planningStage === "yet_to_launch" || pending.planningStage === "existing"
+        ? pending.planningStage
+        : null;
+
     const [user] = await db
       .insert(usersTable)
       .values({
@@ -314,6 +328,7 @@ router.post("/auth/verify-email", registerRateLimiter, async (req, res) => {
         ...(pending.schoolName !== null ? { schoolName: pending.schoolName } : {}),
         ...(pending.profileRole !== null ? { profileRole: pending.profileRole } : {}),
         ...(pending.planningStage !== null ? { planningStage: pending.planningStage } : {}),
+        ...(seededPersonaStage !== null ? { personaStage: seededPersonaStage } : {}),
       })
       .returning();
 

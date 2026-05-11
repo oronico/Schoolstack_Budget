@@ -100,6 +100,35 @@ describe("FounderPersonaPrompt — picker + persistence", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it("skips the stage question on first sign-in when stage was seeded at signup", async () => {
+    // Task #566: founders who picked their stage on the signup form should
+    // not be asked it again here. Only the two comfort cards for their
+    // stage should render, and submitting must include the seeded stage.
+    currentUser = {
+      id: 1,
+      email: "founder@test.school",
+      name: "Maya",
+      personaStage: "yet_to_launch",
+    };
+    mockCustomFetch.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    render(<FounderPersonaPrompt />);
+
+    expect(screen.getByTestId("persona-bucket-yet_to_launch-new_to_budgeting")).toBeTruthy();
+    expect(screen.getByTestId("persona-bucket-yet_to_launch-comfortable")).toBeTruthy();
+    expect(screen.queryByTestId("persona-bucket-existing-new_to_budgeting")).toBeNull();
+    expect(screen.queryByTestId("persona-bucket-existing-comfortable")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("persona-bucket-yet_to_launch-comfortable"));
+    fireEvent.click(screen.getByTestId("persona-prompt-submit"));
+
+    await waitFor(() => {
+      expect(mockCustomFetch).toHaveBeenCalledTimes(1);
+    });
+    const [, init] = mockCustomFetch.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toEqual({ stage: "yet_to_launch", comfort: "comfortable" });
+  });
+
   it("surfaces an error message when the PATCH fails", async () => {
     mockCustomFetch.mockRejectedValueOnce(new Error("network down"));
     render(<FounderPersonaPrompt />);
