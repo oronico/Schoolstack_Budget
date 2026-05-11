@@ -60,6 +60,23 @@ import {
 } from "@workspace/finance";
 import type { Response } from "express";
 
+// Indirection layer the GET /api/shared/:token handler uses to invoke the
+// canonical break-even / downside engine. Tests reassign these properties to
+// deterministically exercise the route's `breakEvenDownside = null` fallback
+// branch (Task #790) — without it, contriving a server-side payload that
+// makes only the engine throw (and not the rest of the consultant pipeline)
+// is impractical because they share most of their input assumptions. The
+// object is plain and mutable, so swapping properties works in any ESM
+// runtime; production code paths read through the same indirection at no
+// runtime cost.
+export const sharedRouteEngineHooks: {
+  computeBaseFinancials: typeof computeBaseFinancials;
+  computeDownsideBand: typeof computeDownsideBand;
+} = {
+  computeBaseFinancials,
+  computeDownsideBand,
+};
+
 // Postgres `serial` (int4) caps at 2,147,483,647. `zod.coerce.number()` on
 // the generated path-param schemas accepts fractional ("1.5"), exponential
 // ("1e10"), and overflow ("9999999999999999999") strings — every one of
@@ -2114,8 +2131,8 @@ router.get("/shared/:token", sharedLinkRateLimiter, async (req, res) => {
     } | null = null;
     try {
       const engineData = data as unknown as DecisionEngineModelData;
-      const baseMetrics = computeBaseFinancials(engineData);
-      const downsideBand = computeDownsideBand(engineData);
+      const baseMetrics = sharedRouteEngineHooks.computeBaseFinancials(engineData);
+      const downsideBand = sharedRouteEngineHooks.computeDownsideBand(engineData);
       const maxCapRaw = profile?.maxCapacity;
       const maxCapacity =
         typeof maxCapRaw === "number" && maxCapRaw > 0 ? maxCapRaw : null;
