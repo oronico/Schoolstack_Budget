@@ -29,12 +29,120 @@
 // real handler emits 422. We assert against the real handler.
 
 import type { AddressInfo } from "node:net";
+import zlib from "node:zlib";
 import bcrypt from "bcryptjs";
 import { db, usersTable, financialModelsTable, exportsTable, eventsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import app from "../src/app.js";
 import { generateToken } from "../src/middlewares/auth.js";
 import { microschoolStartup } from "./sample-payloads.js";
+
+// --- Minimal PDF text extractor -----------------------------------------
+// Same technique used in tests/board-packet-pdf-route.ts. pdfkit emits
+// FlateDecode-compressed content streams; rendered text lives inside PDF
+// string literals `(...)` and hex strings `<...>`. We inflate each stream
+// and pull both. Needed here for Task #748 so we can assert the Lender
+// Commentary section actually ships in the rendered bytes (founder draft
+// sentinel + canonical-engine fallback prose) and a future renderer
+// change can't silently drop the section.
+
+function extractStringLiterals(content: string): string {
+  let result = "";
+  let i = 0;
+  while (i < content.length) {
+    const ch = content[i];
+    if (ch === "(") {
+      i++;
+      let depth = 1;
+      let str = "";
+      while (i < content.length && depth > 0) {
+        const c = content[i];
+        if (c === "\\") {
+          const n = content[i + 1];
+          if (n === undefined) { i++; break; }
+          if (n === "n") { str += "\n"; i += 2; continue; }
+          if (n === "r") { str += "\r"; i += 2; continue; }
+          if (n === "t") { str += "\t"; i += 2; continue; }
+          if (n === "b" || n === "f") { i += 2; continue; }
+          if (n === "(" || n === ")" || n === "\\") { str += n; i += 2; continue; }
+          if (n >= "0" && n <= "7") {
+            let oct = "";
+            i++;
+            while (oct.length < 3 && i < content.length && content[i] >= "0" && content[i] <= "7") {
+              oct += content[i];
+              i++;
+            }
+            str += String.fromCharCode(parseInt(oct, 8));
+            continue;
+          }
+          str += n;
+          i += 2;
+          continue;
+        }
+        if (c === "(") { depth++; str += c; i++; continue; }
+        if (c === ")") {
+          depth--;
+          if (depth === 0) { i++; break; }
+          str += c;
+          i++;
+          continue;
+        }
+        str += c;
+        i++;
+      }
+      result += str;
+      continue;
+    }
+    if (ch === "<" && content[i + 1] !== "<") {
+      i++;
+      let hex = "";
+      while (i < content.length && content[i] !== ">") {
+        const c = content[i];
+        if ((c >= "0" && c <= "9") || (c >= "a" && c <= "f") || (c >= "A" && c <= "F")) {
+          hex += c;
+        }
+        i++;
+      }
+      if (content[i] === ">") i++;
+      if (hex.length % 2 === 1) hex += "0";
+      let str = "";
+      for (let h = 0; h < hex.length; h += 2) {
+        str += String.fromCharCode(parseInt(hex.substr(h, 2), 16));
+      }
+      result += str;
+      continue;
+    }
+    i++;
+  }
+  return result;
+}
+
+function extractPDFText(pdf: Buffer): string {
+  const out: string[] = [];
+  let cursor = 0;
+  while (cursor < pdf.length) {
+    const sIdx = pdf.indexOf("stream", cursor);
+    if (sIdx === -1) break;
+    let dataStart = sIdx + "stream".length;
+    if (pdf[dataStart] === 0x0d) dataStart++;
+    if (pdf[dataStart] === 0x0a) dataStart++;
+    const eIdx = pdf.indexOf("endstream", dataStart);
+    if (eIdx === -1) break;
+    let dataEnd = eIdx;
+    if (pdf[dataEnd - 1] === 0x0a) dataEnd--;
+    if (pdf[dataEnd - 1] === 0x0d) dataEnd--;
+    const raw = pdf.subarray(dataStart, dataEnd);
+    let body: string;
+    try {
+      body = zlib.inflateSync(raw).toString("binary");
+    } catch {
+      body = raw.toString("binary");
+    }
+    out.push(extractStringLiterals(body));
+    cursor = eIdx + "endstream".length;
+  }
+  return out.join("\n");
+}
 
 let passed = 0;
 let failed = 0;
@@ -259,6 +367,117 @@ async function testFlagBlocked(server: BootedServer) {
   }
 }
 
+// Task #748 — Lender Commentary PDF section coverage. The lender PDF
+// renders a founder-edited lender draft (when present) or falls back to
+// the canonical-engine `buildLenderCommentary` prose. The renderer is
+// covered at the unit level by build-narrative-commentary.test.ts; these
+// two cases assert the section actually ships through the HTTP route so
+// a future renderer regression that drops `renderNarrativeCommentarySection`
+// for "Lender Commentary" can't pass CI. Mirrors the Grant Version
+// coverage Task #747 added for the board PDF route test.
+
+const LENDER_DRAFT_SENTINEL = "LENDER-SENTINEL-748-Q7M19";
+
+function lenderDraftModelData() {
+  const base = happyPathModelData() as Record<string, unknown>;
+  const existingNarrative = (base.budgetNarrative as Record<string, unknown> | undefined) || {};
+  const existingDrafts =
+    (existingNarrative.audienceDrafts as Record<string, unknown> | undefined) || {};
+  return {
+    ...base,
+    budgetNarrative: {
+      ...existingNarrative,
+      audienceDrafts: {
+        ...existingDrafts,
+        lender: `Underwriters, please note: ${LENDER_DRAFT_SENTINEL}. Our debt service coverage and cash runway projections anchor on the assumptions documented throughout this packet.`,
+      },
+    },
+  };
+}
+
+async function testLenderSectionFounderDraft(server: BootedServer) {
+  console.log("\n— lender section: founder-edited draft ships in PDF —");
+
+  const stamp = Date.now();
+  const user = await createUser(`lender-draft-${stamp}@example.com`);
+  const modelId = await createModel(user.id, lenderDraftModelData());
+
+  try {
+    const res = await getPdf(server.baseUrl, modelId, user.token);
+    eq2("status is 200", res.status, 200);
+    const buf = Buffer.from(await res.arrayBuffer());
+    check("response body looks like a PDF", buf.subarray(0, 5).toString() === "%PDF-");
+
+    const text = extractPDFText(buf);
+    check(
+      "Lender Commentary section header is rendered",
+      text.includes("Lender Commentary"),
+      "expected 'Lender Commentary' section title in extracted PDF text",
+    );
+    check(
+      `founder lender draft sentinel '${LENDER_DRAFT_SENTINEL}' is rendered`,
+      text.includes(LENDER_DRAFT_SENTINEL),
+      "founder-edited lender prose did not reach the rendered PDF buffer",
+    );
+    check(
+      "founder-draft footer caption is rendered (provenance signal)",
+      text.includes("Edited by the founder for this audience"),
+      "expected the renderer's founder-draft caption beneath the Lender Commentary section",
+    );
+  } finally {
+    await deleteUserCascade(user.id);
+  }
+}
+
+async function testLenderSectionCanonicalFallback(server: BootedServer) {
+  console.log("\n— lender section: canonical-engine fallback when no draft —");
+
+  const stamp = Date.now();
+  const user = await createUser(`lender-fallback-${stamp}@example.com`);
+  // Reuse the happy-path data, which has no audienceDrafts.lender set,
+  // so the renderer should fall through to the deterministic
+  // `buildLenderCommentary` paragraphs.
+  const modelId = await createModel(user.id, happyPathModelData());
+
+  try {
+    const res = await getPdf(server.baseUrl, modelId, user.token);
+    eq2("status is 200", res.status, 200);
+    const buf = Buffer.from(await res.arrayBuffer());
+    check("response body looks like a PDF", buf.subarray(0, 5).toString() === "%PDF-");
+
+    const text = extractPDFText(buf);
+    check(
+      "Lender Commentary section header is rendered",
+      text.includes("Lender Commentary"),
+      "expected 'Lender Commentary' section title in extracted PDF text",
+    );
+    // Stable opening phrase from `buildLenderCommentary` paragraph 1
+    // (verdictSentence). If the canonical lender prose is rewritten this
+    // assertion needs to be updated; that change is intentional — we
+    // want the test to flag any drift in the fallback content.
+    check(
+      "canonical-engine lender prose ('Based on the canonical financial engine') is rendered",
+      text.includes("Based on the canonical financial engine"),
+      "fallback lender commentary did not reach the rendered PDF buffer",
+    );
+    check(
+      "canonical-source footer caption is rendered (no founder-draft tag)",
+      text.includes("sourced from the same canonical engine"),
+      "expected the renderer's canonical-source caption beneath the Lender Commentary section",
+    );
+    // Belt-and-suspenders: when there's no founder draft the
+    // edited-for-this-audience caption must not appear under the Lender
+    // Commentary section.
+    check(
+      "founder-draft caption is NOT rendered when no draft is set",
+      !text.includes("Edited by the founder for this audience"),
+      "fallback case unexpectedly emitted the founder-draft caption",
+    );
+  } finally {
+    await deleteUserCascade(user.id);
+  }
+}
+
 // --- Entrypoint ----------------------------------------------------------
 
 async function main() {
@@ -278,6 +497,8 @@ async function main() {
     await testHappyPath(server);
     await testOtherUsersModel(server);
     await testFlagBlocked(server);
+    await testLenderSectionFounderDraft(server);
+    await testLenderSectionCanonicalFallback(server);
   } finally {
     await server.close();
   }
