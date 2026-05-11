@@ -5,6 +5,8 @@ import { profitLabel, cumulativeProfitLabel } from "../schema";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { ConsultantAnalysisView } from "@/components/consultant/ConsultantAnalysisView";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
+import { LaunchEvidenceSection } from "@/components/packets/LaunchEvidenceSection";
+import type { FullModelData } from "../schema";
 
 interface ConsultantStepProps {
   jumpToStep?: (step: number) => void;
@@ -82,6 +84,17 @@ export function ConsultantStep({ jumpToStep, modelId, revenueStepNumber }: Consu
         schoolType={schoolType}
         schoolStage={watch("schoolProfile.schoolStage") as string | undefined}
       />
+      {/* Task #718 — mirror the dashboard's launch-readiness card so
+          consultant-analysis reviewers see at a glance how grounded a
+          brand-new school's plan is in real evidence. Operating-school
+          packets render nothing here. */}
+      <div className="mb-4">
+        <LaunchEvidenceSection
+          data={getValues() as unknown as FullModelData}
+          contextLabel="in this consultant analysis"
+          testId="consultant-launch-evidence"
+        />
+      </div>
       <ConsultantAnalysisView
         data={data}
         niLabel={niLabel}

@@ -2,6 +2,10 @@ import { useGetModel } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { ClipboardList, ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
 import type { FullModelData } from "@/pages/model-wizard/schema";
+import {
+  isNewSchool,
+  summarizeLaunchReadiness,
+} from "@/lib/launch-readiness";
 
 // Task #711 — Launch readiness on the dashboard.
 //
@@ -14,71 +18,14 @@ import type { FullModelData } from "@/pages/model-wizard/schema";
 // The deep-link target is the Enrollment step (step 3 in the
 // canonical wizard layout). We pass `?step=3&focus=launch-checklist`
 // so `LaunchAssumptionsChecklist` scrolls into view on arrival.
+//
+// Field list + ordering live in `@/lib/launch-readiness` so the
+// lender narrative + consultant packets (Task #718) can render the
+// same readiness signal without drift.
 
 interface Props {
   modelId: number;
   modelName: string;
-}
-
-type ChecklistField = {
-  key: string;
-  label: string;
-  filled: (data: FullModelData) => boolean;
-};
-
-// Ordered by importance — the first unfilled item in this list is
-// what we surface as "still missing". Projected opening month is the
-// brief's headline example, so it leads.
-const FIELDS: ChecklistField[] = [
-  {
-    key: "projectedOpeningMonth",
-    label: "Projected opening month",
-    filled: (d) => Boolean(d.schoolProfile?.launchAssumptions?.projectedOpeningMonth),
-  },
-  {
-    key: "committedStudents",
-    label: "Committed students",
-    filled: (d) => isNum(d.schoolProfile?.launchAssumptions?.committedStudents),
-  },
-  {
-    key: "signedEnrollmentAgreements",
-    label: "Signed enrollment agreements",
-    filled: (d) => isNum(d.schoolProfile?.launchAssumptions?.signedEnrollmentAgreements),
-  },
-  {
-    key: "depositsCollected",
-    label: "Deposits collected",
-    filled: (d) => isNum(d.schoolProfile?.launchAssumptions?.depositsCollected),
-  },
-  {
-    key: "firstMonthWithRevenue",
-    label: "First month with revenue",
-    filled: (d) => Boolean(d.schoolProfile?.launchAssumptions?.firstMonthWithRevenue),
-  },
-  {
-    key: "firstMonthWithPayroll",
-    label: "First month with payroll",
-    filled: (d) => Boolean(d.schoolProfile?.launchAssumptions?.firstMonthWithPayroll),
-  },
-  {
-    key: "firstMonthWithRent",
-    label: "First month with rent",
-    filled: (d) => Boolean(d.schoolProfile?.launchAssumptions?.firstMonthWithRent),
-  },
-  {
-    key: "preOpeningCashNeeds",
-    label: "Pre-opening cash needs",
-    filled: (d) => isNum(d.schoolProfile?.launchAssumptions?.preOpeningCashNeeds),
-  },
-  {
-    key: "startupCosts",
-    label: "One-time startup costs",
-    filled: (d) => isNum(d.schoolProfile?.launchAssumptions?.startupCosts),
-  },
-];
-
-function isNum(v: unknown): boolean {
-  return typeof v === "number" && Number.isFinite(v) && v > 0;
 }
 
 export function LaunchReadinessCard({ modelId, modelName }: Props) {
@@ -92,18 +39,12 @@ export function LaunchReadinessCard({ modelId, modelName }: Props) {
 
   // New-school only. Operating schools see Actuals on the wizard
   // and don't have a launch-checklist surface to summarize.
-  if (data.schoolProfile?.schoolStage !== "new_school") return null;
+  if (!isNewSchool(data)) return null;
 
-  const total = FIELDS.length;
-  const filledFields = FIELDS.filter((f) => {
-    try {
-      return f.filled(data);
-    } catch {
-      return false;
-    }
-  });
-  const filled = filledFields.length;
-  const firstMissing = FIELDS.find((f) => !filledFields.includes(f));
+  const summary = summarizeLaunchReadiness(data);
+  const filled = summary.filled.length;
+  const total = summary.total;
+  const firstMissing = summary.missing[0];
   const pct = Math.round((filled / total) * 100);
   const complete = filled === total;
 

@@ -4,6 +4,8 @@ import { useGetConsultantAnalysis } from "@workspace/api-client-react";
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Loader2, BookOpen, Shield, Users, TrendingUp, FileText, Pencil } from "lucide-react";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
+import { LaunchEvidenceSection } from "@/components/packets/LaunchEvidenceSection";
+import type { FullModelData } from "@/pages/model-wizard/schema";
 import {
   buildSectionRollup,
   ROLLUP_SECTION_KEYS,
@@ -375,6 +377,16 @@ export function NarrativeStep({ modelId, jumpToStep }: NarrativeStepProps) {
         section="narrative"
         schoolType={schoolType}
         schoolStage={watch("schoolProfile.schoolStage") as string | undefined}
+      />
+
+      {/* Task #718 — mirror the dashboard's launch-readiness card so
+          reviewers reading the lender narrative see at a glance how
+          grounded a brand-new school's plan is in real evidence. Only
+          renders for new-school models. */}
+      <LaunchEvidenceSection
+        data={formValues as unknown as FullModelData}
+        contextLabel="in this lender narrative"
+        testId="narrative-launch-evidence"
       />
 
       <div className="border rounded-xl bg-card p-4">
