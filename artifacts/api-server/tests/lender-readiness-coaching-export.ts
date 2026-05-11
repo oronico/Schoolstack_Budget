@@ -54,6 +54,7 @@ import { buildLenderPacket } from "../src/lib/packets/build-lender-packet.js";
 import { generateLenderPacketPDF } from "../src/lib/packets/lender-packet-pdf.js";
 import { buildBoardPacket } from "../src/lib/packets/build-board-packet.js";
 import { generateBoardPacketPDF } from "../src/lib/packets/board-packet-pdf.js";
+import { buildLenderSummarySheet } from "../src/lib/packets/lender-summary-sheet.js";
 import type { ModelData } from "../src/lib/workbook-helpers.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -847,6 +848,152 @@ function testTask751MailerRendersCoachingHeadline(): void {
   );
 }
 
+// ───────────────────────────────────────────────────────────────────────
+// Task #755 — the lender-conversation Excel workbook (Lender Summary
+// tab built by `buildLenderSummarySheet`) used to write the bare
+// verdict noun ("Strong" / "Needs Work" / "Not Yet Ready") into its
+// "Lender Verdict" cell. Tasks #751 and #753 pushed the coaching
+// headline to every PDF, email, and in-app surface; this asserts the
+// workbook tab now publishes the same coaching headline and never
+// leaves the raw verdict word as a standalone cell value.
+// ───────────────────────────────────────────────────────────────────────
+
+function buildLenderSummaryFixture(verdict: LenderReadinessVerdict): import("../src/lib/packets/build-lender-summary.js").LenderSummaryData {
+  return {
+    schoolName: "Acme Microschool",
+    generatedAt: new Date("2026-05-11T00:00:00Z"),
+    verdict: {
+      status: verdict,
+      line: "Detailed assessment of the model against typical lender benchmarks.",
+    },
+    dscrByYear: [
+      { year: 1, planned: 1.2, normalized: 1.1 },
+      { year: 2, planned: 1.3, normalized: 1.2 },
+      { year: 3, planned: 1.4, normalized: 1.3 },
+      { year: 4, planned: 1.5, normalized: 1.4 },
+      { year: 5, planned: 1.6, normalized: 1.5 },
+    ],
+    cashRunwayMonths: 6.5,
+    breakEven: [
+      { year: 1, plannedEnrollment: 12, breakEvenStudents: 10, utilization: 0.4 },
+      { year: 2, plannedEnrollment: 18, breakEvenStudents: 14, utilization: 0.6 },
+      { year: 3, plannedEnrollment: 22, breakEvenStudents: 18, utilization: 0.73 },
+      { year: 4, plannedEnrollment: 26, breakEvenStudents: 21, utilization: 0.86 },
+      { year: 5, plannedEnrollment: 28, breakEvenStudents: 24, utilization: 0.93 },
+    ],
+    maxCapacity: 30,
+    revenueQualityY1: {
+      contractedPct: 0.6,
+      projectedPct: 0.3,
+      donorDependentPct: 0.05,
+      policyDependentPct: 0.05,
+    },
+    topRisks: [
+      {
+        severity: "high",
+        risk: "Aggressive enrollment growth assumption.",
+        mitigant: "Lock in waitlist conversions before opening.",
+      },
+    ],
+    keyAssumptions: [
+      { key: "enrollment_y1", label: "Year 1 enrollment", value: "12 students", stepNumber: 2, stepTitle: "Enrollment" },
+      { key: "enrollment_y5", label: "Year 5 enrollment", value: "28 students", stepNumber: 2, stepTitle: "Enrollment" },
+      { key: "retention_rate", label: "Retention rate", value: "88%", stepNumber: 2, stepTitle: "Enrollment" },
+      { key: "tuition_per_student", label: "Tuition per student", value: "$12,000", stepNumber: 3, stepTitle: "Revenue" },
+      { key: "staffing_total_cost", label: "Y1 staffing cost", value: "$108,000", stepNumber: 4, stepTitle: "Staffing" },
+      { key: "facility_rent_y1", label: "Y1 rent", value: "$48,000", stepNumber: 5, stepTitle: "Expenses" },
+    ],
+  };
+}
+
+async function testTask755LenderSummarySheetCoachingHeadline(): Promise<void> {
+  console.log(
+    "\n— Task #755 lender-conversation Excel workbook renders coaching headlines on the readiness row —",
+  );
+
+  const ExcelJSImport = await import("exceljs");
+  const ExcelJSDefault = ExcelJSImport.default;
+
+  for (const verdict of VERDICTS) {
+    const data = buildLenderSummaryFixture(verdict);
+    const wb = new ExcelJSDefault.Workbook();
+    buildLenderSummarySheet(wb, data);
+
+    const allValues = collectCellValues(wb);
+    const headline = LENDER_READINESS_COACHING_HEADLINES[verdict];
+
+    check(
+      `[${verdict}] coaching headline "${headline}" appears in at least one cell of the Lender Summary tab`,
+      allValues.some((v) => v.includes(headline)),
+      `cell values searched: ${allValues.length}`,
+    );
+
+    // No cell may contain just the bare verdict word as its entire
+    // value — the legacy "Lender Verdict" cell used to do exactly that.
+    for (const otherVerdict of VERDICTS) {
+      const offenders = allValues.filter((v) => v.trim() === otherVerdict);
+      check(
+        `[${verdict}] no Lender Summary cell has the standalone verdict word "${otherVerdict}" as its entire value`,
+        offenders.length === 0,
+        `offending cells: ${offenders.length}`,
+      );
+    }
+
+    // The coaching headline must land specifically on the readiness
+    // row (the "Lender Verdict" label cell B5 + its adjacent C5
+    // headline cell), not just anywhere in the workbook.
+    const ws = wb.getWorksheet("Lender Summary");
+    if (!ws) {
+      check(`[${verdict}] Lender Summary worksheet exists`, false);
+      continue;
+    }
+    const labelCell = ws.getCell("B5").value;
+    const headlineCell = ws.getCell("C5").value;
+    const headlineText =
+      typeof headlineCell === "string"
+        ? headlineCell
+        : headlineCell && typeof headlineCell === "object" && "richText" in headlineCell
+          ? (headlineCell as { richText: Array<{ text?: string }> }).richText
+              .map((r) => r.text ?? "")
+              .join("")
+          : "";
+    check(
+      `[${verdict}] B5 reads "Lender Verdict"`,
+      labelCell === "Lender Verdict",
+      `got ${JSON.stringify(labelCell)}`,
+    );
+    check(
+      `[${verdict}] C5 readiness cell renders the coaching headline (not the bare verdict word)`,
+      headlineText === headline,
+      `got ${JSON.stringify(headlineText)}`,
+    );
+  }
+}
+
+function testTask755LenderSummarySheetSourceUsesCoachingHelper(): void {
+  console.log(
+    "\n— Task #755 lender-summary-sheet.ts source wraps verdict in the coaching helper —",
+  );
+  const src = readSrc("src/lib/packets/lender-summary-sheet.ts");
+  check(
+    "imports lenderReadinessCoachingHeadline",
+    /lenderReadinessCoachingHeadline/.test(src),
+  );
+  check(
+    "calls lenderReadinessCoachingHeadline(...) at least once",
+    /lenderReadinessCoachingHeadline\(/.test(src),
+  );
+  // No `.value =` assignment may write `data.verdict.status` directly
+  // — that was the legacy raw-verdict path. The status is still used
+  // for the cell fill color, but never as the cell value.
+  const offenders = src.match(/\.value\s*=\s*data\.verdict\.status\b/g) || [];
+  check(
+    "no cell .value assignment writes data.verdict.status directly",
+    offenders.length === 0,
+    `offending assignments: ${offenders.join(" | ")}`,
+  );
+}
+
 async function main(): Promise<void> {
   console.log("=== Task #742 — lender-ready exports use coaching headlines ===");
 
@@ -865,6 +1012,10 @@ async function main(): Promise<void> {
   await testTask751NarrativeBuilders();
   await testTask754LenderPacketPdfRender();
   await testTask756FounderSummaryPdfRender();
+
+  console.log("\n=== Task #755 — coaching headline on the lender-conversation Excel workbook ===");
+  testTask755LenderSummarySheetSourceUsesCoachingHelper();
+  await testTask755LenderSummarySheetCoachingHeadline();
 
   console.log(`\nResults: ${passed} passed, ${failed} failed`);
   if (failed > 0) {

@@ -23,6 +23,7 @@ import {
   BENCHMARK_DSCR_AMBER,
 } from "../workbook-helpers.js";
 import type { LenderSummaryData } from "./build-lender-summary.js";
+import { lenderReadinessCoachingHeadline } from "../lender-readiness-coaching.js";
 
 const TITLE_FONT: Partial<ExcelJS.Font> = {
   name: "Calibri",
@@ -140,19 +141,33 @@ export function buildLenderSummarySheet(
   subtitle.font = { name: "Calibri", size: 9, italic: true, color: { argb: "FF6B7280" } };
 
   // ── Verdict row ─────────────────────────────────────────────────────────
+  // Task #755 — surface the same coaching phrasing the in-app Consultant
+  // view and the lender packet PDF show ("Ready to share — keep polishing
+  // the narrative.") instead of leaking the raw verdict noun ("Strong" /
+  // "Needs Work" / "Not Yet Ready") into the workbook cell. The coaching
+  // helper is shared with excel-export.ts, the loan-readiness PDF, the
+  // lender-summary PDF, and the mailer so every founder-facing surface
+  // reads the same phrasing.
   const verdictRow = 5;
   ws.getCell(`B${verdictRow}`).value = "Lender Verdict";
   ws.getCell(`B${verdictRow}`).font = { ...LABEL_FONT, bold: true };
-  ws.getCell(`C${verdictRow}`).value = data.verdict.status;
-  ws.getCell(`C${verdictRow}`).font = { ...VALUE_FONT, bold: true };
-  ws.getCell(`C${verdictRow}`).fill = verdictFill(data.verdict.status);
-  ws.getCell(`C${verdictRow}`).alignment = { horizontal: "center" };
-  ws.mergeCells(`D${verdictRow}:J${verdictRow}`);
-  const verdictLine = ws.getCell(`D${verdictRow}`);
+  ws.mergeCells(`C${verdictRow}:J${verdictRow}`);
+  const verdictHeadlineCell = ws.getCell(`C${verdictRow}`);
+  verdictHeadlineCell.value = lenderReadinessCoachingHeadline(data.verdict.status);
+  verdictHeadlineCell.font = { ...VALUE_FONT, bold: true };
+  verdictHeadlineCell.fill = verdictFill(data.verdict.status);
+  verdictHeadlineCell.alignment = { horizontal: "left", vertical: "middle", wrapText: true };
+  ws.getRow(verdictRow).height = 24;
+  // Supporting one-liner sits directly underneath the coaching headline,
+  // mirroring the lender-summary PDF layout (headline + small explanatory
+  // line below).
+  const verdictLineRow = verdictRow + 1;
+  ws.mergeCells(`C${verdictLineRow}:J${verdictLineRow}`);
+  const verdictLine = ws.getCell(`C${verdictLineRow}`);
   verdictLine.value = data.verdict.line;
   verdictLine.font = VALUE_FONT;
   verdictLine.alignment = { horizontal: "left", vertical: "middle", wrapText: true };
-  ws.getRow(verdictRow).height = 28;
+  ws.getRow(verdictLineRow).height = 22;
 
   // ── DSCR by Year ────────────────────────────────────────────────────────
   const dscrSectionRow = 7;
