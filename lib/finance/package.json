@@ -9,7 +9,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "tsx ./src/decision-engine/__tests__/scenario-engine-dscr.test.ts && tsx ./src/decision-engine/__tests__/lender-stress-tests.test.ts && tsx ./src/__tests__/assumption-registry.test.ts",
+    "test": "tsx ./src/decision-engine/__tests__/scenario-engine-dscr.test.ts && tsx ./src/decision-engine/__tests__/scenario-engine-monthly-cash-flow.test.ts && tsx ./src/decision-engine/__tests__/lender-stress-tests.test.ts && tsx ./src/__tests__/assumption-registry.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
