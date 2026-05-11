@@ -364,6 +364,7 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
     [fyKey]: st.y5NetIncome,
     _y1: st.y1NetIncome,
     _fy: st.y5NetIncome,
+    _isHardRevenue: /hard\s*revenue/i.test(st.scenario),
   }));
 
   return (
@@ -998,16 +999,125 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
                 <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
                 <Bar dataKey={y1Key} fill={CHART_COLORS.blue} radius={[4, 4, 0, 0]}>
                   {stressChartData.map((entry, index) => (
-                    <Cell key={index} fill={entry._y1 >= 0 ? CHART_COLORS.blue : CHART_COLORS.rose} />
+                    <Cell
+                      key={index}
+                      fill={entry._y1 >= 0 ? CHART_COLORS.blue : CHART_COLORS.rose}
+                      stroke={entry._isHardRevenue ? CHART_COLORS.navy : undefined}
+                      strokeWidth={entry._isHardRevenue ? 2 : 0}
+                      strokeDasharray={entry._isHardRevenue ? "4 2" : undefined}
+                    />
                   ))}
                 </Bar>
                 <Bar dataKey={fyKey} fill={CHART_COLORS.teal} radius={[4, 4, 0, 0]}>
                   {stressChartData.map((entry, index) => (
-                    <Cell key={index} fill={entry._fy >= 0 ? CHART_COLORS.teal : CHART_COLORS.rose} />
+                    <Cell
+                      key={index}
+                      fill={entry._fy >= 0 ? CHART_COLORS.teal : CHART_COLORS.rose}
+                      stroke={entry._isHardRevenue ? CHART_COLORS.navy : undefined}
+                      strokeWidth={entry._isHardRevenue ? 2 : 0}
+                      strokeDasharray={entry._isHardRevenue ? "4 2" : undefined}
+                    />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+          </div>
+          {/* Task #644 — surface lender resilience metrics (reserve months, Y1
+              DSCR, runway) per scenario above the detail table so founders who
+              don't expand the table still see what lenders ask about. The
+              "Hard revenue only" scenario gets a distinguishing dashed border
+              and label so founders can spot the contracted-only world at a
+              glance — both here and in the chart bars above. */}
+          <div
+            className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3"
+            data-testid="consultant-stress-resilience-chips"
+          >
+            {stressTests!.map((st, idx) => {
+              const isHardRev = /hard\s*revenue/i.test(st.scenario);
+              const reserve = st.reserveMonths;
+              const dscr = st.dscr;
+              const runway = st.runwayMonths;
+              const reserveTone =
+                reserve === undefined || reserve === null
+                  ? "muted"
+                  : reserve >= 3
+                    ? "green"
+                    : reserve >= 1
+                      ? "amber"
+                      : "red";
+              const dscrTone =
+                dscr === undefined || dscr === null
+                  ? "muted"
+                  : dscr >= 1.25
+                    ? "green"
+                    : dscr >= 1.1
+                      ? "amber"
+                      : "red";
+              const runwayTone =
+                runway === undefined || runway === null
+                  ? "muted"
+                  : runway >= 12
+                    ? "green"
+                    : runway >= 6
+                      ? "amber"
+                      : "red";
+              const toneCls = (t: "green" | "amber" | "red" | "muted") =>
+                t === "green"
+                  ? "text-green-700"
+                  : t === "amber"
+                    ? "text-amber-700"
+                    : t === "red"
+                      ? "text-rose-700"
+                      : "text-muted-foreground";
+              return (
+                <div
+                  key={idx}
+                  data-testid={`consultant-stress-chip-${idx}`}
+                  data-hard-revenue={isHardRev ? "true" : "false"}
+                  className={cn(
+                    "rounded-xl border p-3 bg-secondary/30",
+                    isHardRev
+                      ? "border-dashed border-2 border-slate-700 bg-slate-50"
+                      : "border-border/60",
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="text-xs font-semibold text-foreground leading-snug">
+                      {st.scenario}
+                    </div>
+                    {isHardRev && (
+                      <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wide bg-slate-700 text-white">
+                        Contracted only
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-[11px]">
+                    <div>
+                      <div className="text-muted-foreground uppercase tracking-wide text-[9px] font-semibold">Reserve</div>
+                      <div className={cn("font-bold tabular-nums", toneCls(reserveTone))}>
+                        {reserve === undefined || reserve === null ? "—" : `${reserve.toFixed(1)} mo`}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground uppercase tracking-wide text-[9px] font-semibold">Y1 DSCR</div>
+                      <div className={cn("font-bold tabular-nums", toneCls(dscrTone))}>
+                        {dscr === null || dscr === undefined ? "N/A" : `${dscr.toFixed(2)}x`}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground uppercase tracking-wide text-[9px] font-semibold">Runway</div>
+                      <div className={cn("font-bold tabular-nums", toneCls(runwayTone))}>
+                        {runway === undefined || runway === null
+                          ? "—"
+                          : runway >= 60
+                            ? "60+ mo"
+                            : `${runway} mo`}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
           <CollapsibleTable label="View detailed table">
             <div className="overflow-hidden rounded-xl border border-border/60">
