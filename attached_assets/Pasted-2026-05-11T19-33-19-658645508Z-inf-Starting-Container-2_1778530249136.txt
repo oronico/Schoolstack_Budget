@@ -1,0 +1,334 @@
+2026-05-11T19:33:19.658645508Z [inf]  Starting Container
+2026-05-11T19:33:21.392422745Z [err]  
+2026-05-11T19:33:21.392436414Z [err]  Error: Cannot find module 'pdf-lib'
+2026-05-11T19:33:21.392440685Z [inf]  [migrate] Running database migrations...
+2026-05-11T19:33:21.392448918Z [err]  Require stack:
+2026-05-11T19:33:21.392466239Z [err]  - /app/dist/index.cjs
+2026-05-11T19:33:21.392487630Z [inf]  [migrate] Schema up to date.
+2026-05-11T19:33:21.392497139Z [err]  node:internal/modules/cjs/loader:1386
+2026-05-11T19:33:21.392507217Z [err]    throw err;
+2026-05-11T19:33:21.392516254Z [err]    ^
+2026-05-11T19:33:21.392597711Z [err]      at Function._resolveFilename (node:internal/modules/cjs/loader:1383:15)
+2026-05-11T19:33:21.392608697Z [err]      at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+2026-05-11T19:33:21.392617407Z [err]      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+2026-05-11T19:33:21.392624153Z [err]      at Function._load (node:internal/modules/cjs/loader:1192:37)
+2026-05-11T19:33:21.392631858Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:21.392639133Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:21.392645521Z [err]      at Module.require (node:internal/modules/cjs/loader:1463:12)
+2026-05-11T19:33:21.392651354Z [err]      at require (node:internal/modules/helpers:147:16)
+2026-05-11T19:33:21.392656769Z [err]      at Object.<anonymous> (/app/dist/index.cjs:1184:14860)
+2026-05-11T19:33:21.392662905Z [err]      at Module._compile (node:internal/modules/cjs/loader:1705:14)
+2026-05-11T19:33:21.392669572Z [err]      at Object..js (node:internal/modules/cjs/loader:1838:10)
+2026-05-11T19:33:21.392675398Z [err]      at Module.load (node:internal/modules/cjs/loader:1441:32)
+2026-05-11T19:33:21.392680990Z [err]      at Function._load (node:internal/modules/cjs/loader:1263:12)
+2026-05-11T19:33:21.392686580Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:23.680653854Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:23.680660847Z [err]      at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5) {
+2026-05-11T19:33:23.680666981Z [err]    code: 'MODULE_NOT_FOUND',
+2026-05-11T19:33:23.680673226Z [err]    requireStack: [ '/app/dist/index.cjs' ]
+2026-05-11T19:33:23.680680028Z [err]  }
+2026-05-11T19:33:23.680687157Z [err]  
+2026-05-11T19:33:23.680693647Z [err]  Node.js v22.22.2
+2026-05-11T19:33:23.680699692Z [inf]  [migrate] Running database migrations...
+2026-05-11T19:33:23.680705636Z [inf]  [migrate] Schema up to date.
+2026-05-11T19:33:23.680711704Z [err]  node:internal/modules/cjs/loader:1386
+2026-05-11T19:33:23.680724943Z [err]    throw err;
+2026-05-11T19:33:23.680732447Z [err]    ^
+2026-05-11T19:33:23.680738413Z [err]  
+2026-05-11T19:33:23.680744596Z [err]  Error: Cannot find module 'pdf-lib'
+2026-05-11T19:33:23.680751252Z [err]  Require stack:
+2026-05-11T19:33:23.680758485Z [err]  - /app/dist/index.cjs
+2026-05-11T19:33:23.680765958Z [err]      at Function._resolveFilename (node:internal/modules/cjs/loader:1383:15)
+2026-05-11T19:33:23.680772634Z [err]      at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+2026-05-11T19:33:23.680778944Z [err]      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+2026-05-11T19:33:23.680784850Z [err]      at Function._load (node:internal/modules/cjs/loader:1192:37)
+2026-05-11T19:33:23.680795309Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:23.680802993Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:23.680809286Z [err]      at Module.require (node:internal/modules/cjs/loader:1463:12)
+2026-05-11T19:33:23.680816460Z [err]      at require (node:internal/modules/helpers:147:16)
+2026-05-11T19:33:23.680822523Z [err]      at Object.<anonymous> (/app/dist/index.cjs:1184:14860)
+2026-05-11T19:33:24.867483270Z [inf]  Stopping Container
+2026-05-11T19:33:25.370501561Z [err]  Node.js v22.22.2
+2026-05-11T19:33:25.370507025Z [err]      at Function._load (node:internal/modules/cjs/loader:1263:12)
+2026-05-11T19:33:25.370520279Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:25.370524894Z [inf]  [migrate] Running database migrations...
+2026-05-11T19:33:25.370532559Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:25.370535672Z [inf]  [migrate] Schema up to date.
+2026-05-11T19:33:25.370540931Z [err]      at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5) {
+2026-05-11T19:33:25.370548089Z [err]    code: 'MODULE_NOT_FOUND',
+2026-05-11T19:33:25.370556817Z [err]    requireStack: [ '/app/dist/index.cjs' ]
+2026-05-11T19:33:25.370563980Z [err]  }
+2026-05-11T19:33:25.370571726Z [err]  
+2026-05-11T19:33:25.370624035Z [err]      at Module._compile (node:internal/modules/cjs/loader:1705:14)
+2026-05-11T19:33:25.370630484Z [err]      at Object..js (node:internal/modules/cjs/loader:1838:10)
+2026-05-11T19:33:25.370637260Z [err]      at Module.load (node:internal/modules/cjs/loader:1441:32)
+2026-05-11T19:33:27.096534112Z [err]  node:internal/modules/cjs/loader:1386
+2026-05-11T19:33:27.096547632Z [err]    throw err;
+2026-05-11T19:33:27.096552180Z [err]      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+2026-05-11T19:33:27.096553477Z [err]  - /app/dist/index.cjs
+2026-05-11T19:33:27.096560694Z [err]      at Function._load (node:internal/modules/cjs/loader:1192:37)
+2026-05-11T19:33:27.096564312Z [err]    ^
+2026-05-11T19:33:27.096565355Z [err]      at Function._resolveFilename (node:internal/modules/cjs/loader:1383:15)
+2026-05-11T19:33:27.096574040Z [err]      at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+2026-05-11T19:33:27.096578934Z [err]  
+2026-05-11T19:33:27.096586863Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:27.096589912Z [err]      at require (node:internal/modules/helpers:147:16)
+2026-05-11T19:33:27.096594943Z [err]  Error: Cannot find module 'pdf-lib'
+2026-05-11T19:33:27.096595828Z [err]      at Function._load (node:internal/modules/cjs/loader:1263:12)
+2026-05-11T19:33:27.096599382Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:27.096607991Z [err]      at Object.<anonymous> (/app/dist/index.cjs:1184:14860)
+2026-05-11T19:33:27.096614373Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:27.096614506Z [err]      at Object..js (node:internal/modules/cjs/loader:1838:10)
+2026-05-11T19:33:27.096616822Z [err]  Require stack:
+2026-05-11T19:33:27.096617692Z [err]      at Module.require (node:internal/modules/cjs/loader:1463:12)
+2026-05-11T19:33:27.096624014Z [err]      at Module._compile (node:internal/modules/cjs/loader:1705:14)
+2026-05-11T19:33:27.096632614Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:27.096637865Z [err]      at Module.load (node:internal/modules/cjs/loader:1441:32)
+2026-05-11T19:33:28.975612373Z [err]      at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5) {
+2026-05-11T19:33:28.975618761Z [err]    code: 'MODULE_NOT_FOUND',
+2026-05-11T19:33:28.975625490Z [err]    requireStack: [ '/app/dist/index.cjs' ]
+2026-05-11T19:33:28.975630922Z [err]  }
+2026-05-11T19:33:28.975636458Z [err]  
+2026-05-11T19:33:28.975641911Z [err]  Node.js v22.22.2
+2026-05-11T19:33:28.975647648Z [inf]  [migrate] Running database migrations...
+2026-05-11T19:33:28.975653175Z [inf]  [migrate] Schema up to date.
+2026-05-11T19:33:31.054334799Z [err]  - /app/dist/index.cjs
+2026-05-11T19:33:31.054348779Z [err]      at Function._resolveFilename (node:internal/modules/cjs/loader:1383:15)
+2026-05-11T19:33:31.054357804Z [err]    throw err;
+2026-05-11T19:33:31.054359252Z [err]      at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+2026-05-11T19:33:31.054370216Z [err]      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+2026-05-11T19:33:31.054375693Z [err]    ^
+2026-05-11T19:33:31.054383762Z [err]  
+2026-05-11T19:33:31.054392214Z [err]  Error: Cannot find module 'pdf-lib'
+2026-05-11T19:33:31.054399057Z [err]  Require stack:
+2026-05-11T19:33:31.054424617Z [err]      at Function._load (node:internal/modules/cjs/loader:1192:37)
+2026-05-11T19:33:31.054435246Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:31.054444216Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:31.054454554Z [err]      at Module.require (node:internal/modules/cjs/loader:1463:12)
+2026-05-11T19:33:31.054466208Z [err]      at require (node:internal/modules/helpers:147:16)
+2026-05-11T19:33:31.054467850Z [err]  node:internal/modules/cjs/loader:1386
+2026-05-11T19:33:31.054478237Z [err]      at Object.<anonymous> (/app/dist/index.cjs:1184:14860)
+2026-05-11T19:33:31.054486651Z [err]      at Module._compile (node:internal/modules/cjs/loader:1705:14)
+2026-05-11T19:33:31.054494381Z [err]      at Object..js (node:internal/modules/cjs/loader:1838:10)
+2026-05-11T19:33:31.054502464Z [err]      at Module.load (node:internal/modules/cjs/loader:1441:32)
+2026-05-11T19:33:31.054510717Z [err]      at Function._load (node:internal/modules/cjs/loader:1263:12)
+2026-05-11T19:33:31.054519136Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:31.054527079Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:32.620143727Z [err]      at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5) {
+2026-05-11T19:33:32.620326808Z [err]    code: 'MODULE_NOT_FOUND',
+2026-05-11T19:33:32.620336346Z [err]    requireStack: [ '/app/dist/index.cjs' ]
+2026-05-11T19:33:32.620343531Z [err]  }
+2026-05-11T19:33:32.620351243Z [err]  
+2026-05-11T19:33:32.620358730Z [err]  Node.js v22.22.2
+2026-05-11T19:33:32.620366146Z [inf]  [migrate] Running database migrations...
+2026-05-11T19:33:32.620372820Z [inf]  [migrate] Schema up to date.
+2026-05-11T19:33:34.538080668Z [err]      at Module.require (node:internal/modules/cjs/loader:1463:12)
+2026-05-11T19:33:34.538101743Z [err]      at require (node:internal/modules/helpers:147:16)
+2026-05-11T19:33:34.538109212Z [err]      at Object.<anonymous> (/app/dist/index.cjs:1184:14860)
+2026-05-11T19:33:34.538116647Z [err]      at Module._compile (node:internal/modules/cjs/loader:1705:14)
+2026-05-11T19:33:34.538122361Z [err]      at Object..js (node:internal/modules/cjs/loader:1838:10)
+2026-05-11T19:33:34.538128737Z [err]      at Module.load (node:internal/modules/cjs/loader:1441:32)
+2026-05-11T19:33:34.538134572Z [err]      at Function._load (node:internal/modules/cjs/loader:1263:12)
+2026-05-11T19:33:34.538140471Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:34.538145757Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:34.538487018Z [err]  node:internal/modules/cjs/loader:1386
+2026-05-11T19:33:34.538492568Z [err]    throw err;
+2026-05-11T19:33:34.538498781Z [err]    ^
+2026-05-11T19:33:34.538505383Z [err]  
+2026-05-11T19:33:34.538511420Z [err]  Error: Cannot find module 'pdf-lib'
+2026-05-11T19:33:34.538532112Z [err]  Require stack:
+2026-05-11T19:33:34.538537577Z [err]  - /app/dist/index.cjs
+2026-05-11T19:33:34.538542838Z [err]      at Function._resolveFilename (node:internal/modules/cjs/loader:1383:15)
+2026-05-11T19:33:34.538548332Z [err]      at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+2026-05-11T19:33:34.538553960Z [err]      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+2026-05-11T19:33:34.538558909Z [err]      at Function._load (node:internal/modules/cjs/loader:1192:37)
+2026-05-11T19:33:34.538564148Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:34.538569144Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:36.231697250Z [err]      at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5) {
+2026-05-11T19:33:36.231702905Z [err]    code: 'MODULE_NOT_FOUND',
+2026-05-11T19:33:36.231708191Z [err]    requireStack: [ '/app/dist/index.cjs' ]
+2026-05-11T19:33:36.231713357Z [err]  }
+2026-05-11T19:33:36.231718613Z [err]  
+2026-05-11T19:33:36.231724156Z [err]  Node.js v22.22.2
+2026-05-11T19:33:36.231730056Z [inf]  [migrate] Running database migrations...
+2026-05-11T19:33:36.231736789Z [inf]  [migrate] Schema up to date.
+2026-05-11T19:33:36.231742260Z [err]  node:internal/modules/cjs/loader:1386
+2026-05-11T19:33:36.231748176Z [err]    throw err;
+2026-05-11T19:33:36.231753769Z [err]    ^
+2026-05-11T19:33:36.231760239Z [err]  
+2026-05-11T19:33:36.231765104Z [err]  Error: Cannot find module 'pdf-lib'
+2026-05-11T19:33:36.231769721Z [err]  Require stack:
+2026-05-11T19:33:36.231775798Z [err]  - /app/dist/index.cjs
+2026-05-11T19:33:36.231780980Z [err]      at Function._resolveFilename (node:internal/modules/cjs/loader:1383:15)
+2026-05-11T19:33:36.231784925Z [err]      at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+2026-05-11T19:33:36.231789235Z [err]      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+2026-05-11T19:33:36.231794276Z [err]      at Function._load (node:internal/modules/cjs/loader:1192:37)
+2026-05-11T19:33:36.231798389Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:36.231802384Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:36.231806498Z [err]      at Module.require (node:internal/modules/cjs/loader:1463:12)
+2026-05-11T19:33:36.231811076Z [err]      at require (node:internal/modules/helpers:147:16)
+2026-05-11T19:33:36.231815518Z [err]      at Object.<anonymous> (/app/dist/index.cjs:1184:14860)
+2026-05-11T19:33:36.231819750Z [err]      at Module._compile (node:internal/modules/cjs/loader:1705:14)
+2026-05-11T19:33:37.785473272Z [err]      at Object..js (node:internal/modules/cjs/loader:1838:10)
+2026-05-11T19:33:37.785480753Z [err]      at Module.load (node:internal/modules/cjs/loader:1441:32)
+2026-05-11T19:33:37.785481289Z [inf]  [migrate] Schema up to date.
+2026-05-11T19:33:37.785486706Z [err]      at Function._load (node:internal/modules/cjs/loader:1263:12)
+2026-05-11T19:33:37.785492632Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:37.785502855Z [err]  }
+2026-05-11T19:33:37.785516599Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:37.785524556Z [err]      at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5) {
+2026-05-11T19:33:37.785530471Z [err]    code: 'MODULE_NOT_FOUND',
+2026-05-11T19:33:37.785536233Z [err]    requireStack: [ '/app/dist/index.cjs' ]
+2026-05-11T19:33:37.785687403Z [err]  
+2026-05-11T19:33:37.785695342Z [err]  Node.js v22.22.2
+2026-05-11T19:33:37.785701581Z [inf]  [migrate] Running database migrations...
+2026-05-11T19:33:39.381553454Z [err]  node:internal/modules/cjs/loader:1386
+2026-05-11T19:33:39.381557608Z [err]    throw err;
+2026-05-11T19:33:39.381561957Z [err]    ^
+2026-05-11T19:33:39.381567004Z [err]  
+2026-05-11T19:33:39.381571808Z [err]  Error: Cannot find module 'pdf-lib'
+2026-05-11T19:33:39.381576174Z [err]  Require stack:
+2026-05-11T19:33:39.381580498Z [err]  - /app/dist/index.cjs
+2026-05-11T19:33:39.381588306Z [err]      at Function._resolveFilename (node:internal/modules/cjs/loader:1383:15)
+2026-05-11T19:33:39.381592977Z [err]      at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+2026-05-11T19:33:39.381597386Z [err]      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+2026-05-11T19:33:39.381601814Z [err]      at Function._load (node:internal/modules/cjs/loader:1192:37)
+2026-05-11T19:33:39.381605899Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:39.381609956Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:39.381614687Z [err]      at Module.require (node:internal/modules/cjs/loader:1463:12)
+2026-05-11T19:33:39.381618825Z [err]      at require (node:internal/modules/helpers:147:16)
+2026-05-11T19:33:39.381623534Z [err]      at Object.<anonymous> (/app/dist/index.cjs:1184:14860)
+2026-05-11T19:33:39.381628097Z [err]      at Module._compile (node:internal/modules/cjs/loader:1705:14)
+2026-05-11T19:33:39.381632818Z [err]      at Object..js (node:internal/modules/cjs/loader:1838:10)
+2026-05-11T19:33:39.381637173Z [err]      at Module.load (node:internal/modules/cjs/loader:1441:32)
+2026-05-11T19:33:39.381641169Z [err]      at Function._load (node:internal/modules/cjs/loader:1263:12)
+2026-05-11T19:33:39.381645888Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:39.381650294Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:41.407582455Z [err]      at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5) {
+2026-05-11T19:33:41.407588080Z [err]    code: 'MODULE_NOT_FOUND',
+2026-05-11T19:33:41.407594792Z [err]    requireStack: [ '/app/dist/index.cjs' ]
+2026-05-11T19:33:41.407600781Z [err]  }
+2026-05-11T19:33:41.407607756Z [err]  
+2026-05-11T19:33:41.407615948Z [err]  Node.js v22.22.2
+2026-05-11T19:33:41.407621775Z [inf]  [migrate] Running database migrations...
+2026-05-11T19:33:41.407627532Z [inf]  [migrate] Schema up to date.
+2026-05-11T19:33:42.696003115Z [err]  node:internal/modules/cjs/loader:1386
+2026-05-11T19:33:42.696010854Z [err]    throw err;
+2026-05-11T19:33:42.696017248Z [err]    ^
+2026-05-11T19:33:42.696023503Z [err]  
+2026-05-11T19:33:42.696029430Z [err]  Error: Cannot find module 'pdf-lib'
+2026-05-11T19:33:42.696036736Z [err]  Require stack:
+2026-05-11T19:33:42.696042736Z [err]  - /app/dist/index.cjs
+2026-05-11T19:33:42.696049069Z [err]      at Function._resolveFilename (node:internal/modules/cjs/loader:1383:15)
+2026-05-11T19:33:42.696225967Z [err]      at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+2026-05-11T19:33:42.696235009Z [err]      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+2026-05-11T19:33:42.696244433Z [err]      at Function._load (node:internal/modules/cjs/loader:1192:37)
+2026-05-11T19:33:42.696252243Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:42.696258847Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:42.696264719Z [err]      at Module.require (node:internal/modules/cjs/loader:1463:12)
+2026-05-11T19:33:42.696269596Z [err]      at require (node:internal/modules/helpers:147:16)
+2026-05-11T19:33:42.696276386Z [err]      at Object.<anonymous> (/app/dist/index.cjs:1184:14860)
+2026-05-11T19:33:42.696283332Z [err]      at Module._compile (node:internal/modules/cjs/loader:1705:14)
+2026-05-11T19:33:42.696290591Z [err]      at Object..js (node:internal/modules/cjs/loader:1838:10)
+2026-05-11T19:33:42.696298705Z [err]      at Module.load (node:internal/modules/cjs/loader:1441:32)
+2026-05-11T19:33:42.696304929Z [err]      at Function._load (node:internal/modules/cjs/loader:1263:12)
+2026-05-11T19:33:42.696311444Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:42.696319338Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:44.295921881Z [err]      at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5) {
+2026-05-11T19:33:44.295927687Z [err]    code: 'MODULE_NOT_FOUND',
+2026-05-11T19:33:44.295933673Z [err]    requireStack: [ '/app/dist/index.cjs' ]
+2026-05-11T19:33:44.295939068Z [err]  }
+2026-05-11T19:33:44.295956268Z [err]  
+2026-05-11T19:33:44.295963791Z [err]  Node.js v22.22.2
+2026-05-11T19:33:44.295969666Z [inf]  [migrate] Running database migrations...
+2026-05-11T19:33:44.295975397Z [inf]  [migrate] Schema up to date.
+2026-05-11T19:33:44.295980766Z [err]  node:internal/modules/cjs/loader:1386
+2026-05-11T19:33:44.295986274Z [err]    throw err;
+2026-05-11T19:33:44.295992230Z [err]    ^
+2026-05-11T19:33:44.295998091Z [err]  
+2026-05-11T19:33:44.296005833Z [err]  Error: Cannot find module 'pdf-lib'
+2026-05-11T19:33:44.296012276Z [err]  Require stack:
+2026-05-11T19:33:44.296018565Z [err]  - /app/dist/index.cjs
+2026-05-11T19:33:44.296036739Z [err]      at Function._resolveFilename (node:internal/modules/cjs/loader:1383:15)
+2026-05-11T19:33:44.296043044Z [err]      at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+2026-05-11T19:33:44.296048857Z [err]      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+2026-05-11T19:33:44.296054594Z [err]      at Function._load (node:internal/modules/cjs/loader:1192:37)
+2026-05-11T19:33:44.296060024Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:44.296065348Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:44.296071120Z [err]      at Module.require (node:internal/modules/cjs/loader:1463:12)
+2026-05-11T19:33:44.296077371Z [err]      at require (node:internal/modules/helpers:147:16)
+2026-05-11T19:33:44.296083119Z [err]      at Object.<anonymous> (/app/dist/index.cjs:1184:14860)
+2026-05-11T19:33:44.296088736Z [err]      at Module._compile (node:internal/modules/cjs/loader:1705:14)
+2026-05-11T19:33:45.698909741Z [err]      at Object..js (node:internal/modules/cjs/loader:1838:10)
+2026-05-11T19:33:45.698914729Z [err]      at Module.load (node:internal/modules/cjs/loader:1441:32)
+2026-05-11T19:33:45.698920271Z [err]      at Function._load (node:internal/modules/cjs/loader:1263:12)
+2026-05-11T19:33:45.698925083Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:45.698931409Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:45.698936582Z [err]      at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5) {
+2026-05-11T19:33:45.698941198Z [err]    code: 'MODULE_NOT_FOUND',
+2026-05-11T19:33:45.698945866Z [err]    requireStack: [ '/app/dist/index.cjs' ]
+2026-05-11T19:33:45.698950447Z [err]  }
+2026-05-11T19:33:45.698956177Z [err]  
+2026-05-11T19:33:45.698961797Z [err]  Node.js v22.22.2
+2026-05-11T19:33:47.098172808Z [inf]  [migrate] Running database migrations...
+2026-05-11T19:33:47.098178304Z [inf]  [migrate] Schema up to date.
+2026-05-11T19:33:48.496297288Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:48.496319868Z [err]  
+2026-05-11T19:33:48.496326847Z [err]      at Module._compile (node:internal/modules/cjs/loader:1705:14)
+2026-05-11T19:33:48.496345064Z [err]      at Object..js (node:internal/modules/cjs/loader:1838:10)
+2026-05-11T19:33:48.496346470Z [err]  Error: Cannot find module 'pdf-lib'
+2026-05-11T19:33:48.496355681Z [err]      at Module.load (node:internal/modules/cjs/loader:1441:32)
+2026-05-11T19:33:48.496362944Z [err]      at Object.<anonymous> (/app/dist/index.cjs:1184:14860)
+2026-05-11T19:33:48.496363891Z [err]  Require stack:
+2026-05-11T19:33:48.496378364Z [err]  - /app/dist/index.cjs
+2026-05-11T19:33:48.496381081Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:48.496389808Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:48.496392174Z [err]      at Function._load (node:internal/modules/cjs/loader:1263:12)
+2026-05-11T19:33:48.496399631Z [err]      at Module.require (node:internal/modules/cjs/loader:1463:12)
+2026-05-11T19:33:48.496405110Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:48.496407937Z [err]      at require (node:internal/modules/helpers:147:16)
+2026-05-11T19:33:48.496436671Z [err]      at Function._resolveFilename (node:internal/modules/cjs/loader:1383:15)
+2026-05-11T19:33:48.496452586Z [err]      at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+2026-05-11T19:33:48.496454230Z [err]  node:internal/modules/cjs/loader:1386
+2026-05-11T19:33:48.496466094Z [err]    throw err;
+2026-05-11T19:33:48.496468281Z [err]      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+2026-05-11T19:33:48.496478002Z [err]    ^
+2026-05-11T19:33:48.496481134Z [err]      at Function._load (node:internal/modules/cjs/loader:1192:37)
+2026-05-11T19:33:50.113181491Z [err]      at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5) {
+2026-05-11T19:33:50.113187860Z [err]    code: 'MODULE_NOT_FOUND',
+2026-05-11T19:33:50.113194448Z [err]    requireStack: [ '/app/dist/index.cjs' ]
+2026-05-11T19:33:50.113200126Z [err]  }
+2026-05-11T19:33:50.113210685Z [err]  
+2026-05-11T19:33:50.113218012Z [err]  Node.js v22.22.2
+2026-05-11T19:33:50.113226176Z [inf]  [migrate] Running database migrations...
+2026-05-11T19:33:50.113234035Z [inf]  [migrate] Schema up to date.
+2026-05-11T19:33:50.113242019Z [err]  node:internal/modules/cjs/loader:1386
+2026-05-11T19:33:50.113248468Z [err]    throw err;
+2026-05-11T19:33:50.113254405Z [err]    ^
+2026-05-11T19:33:50.113259598Z [err]  
+2026-05-11T19:33:50.113265494Z [err]  Error: Cannot find module 'pdf-lib'
+2026-05-11T19:33:50.113272282Z [err]  Require stack:
+2026-05-11T19:33:50.113278261Z [err]  - /app/dist/index.cjs
+2026-05-11T19:33:50.113283756Z [err]      at Function._resolveFilename (node:internal/modules/cjs/loader:1383:15)
+2026-05-11T19:33:50.113348691Z [err]      at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+2026-05-11T19:33:50.113478880Z [err]      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+2026-05-11T19:33:50.113488686Z [err]      at Function._load (node:internal/modules/cjs/loader:1192:37)
+2026-05-11T19:33:50.113494359Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:50.113505770Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:50.113512128Z [err]      at Module.require (node:internal/modules/cjs/loader:1463:12)
+2026-05-11T19:33:50.113518267Z [err]      at require (node:internal/modules/helpers:147:16)
+2026-05-11T19:33:50.113524076Z [err]      at Object.<anonymous> (/app/dist/index.cjs:1184:14860)
+2026-05-11T19:33:50.113530959Z [err]      at Module._compile (node:internal/modules/cjs/loader:1705:14)
+2026-05-11T19:33:51.920215127Z [err]      at Object..js (node:internal/modules/cjs/loader:1838:10)
+2026-05-11T19:33:51.920231558Z [err]      at Module.load (node:internal/modules/cjs/loader:1441:32)
+2026-05-11T19:33:51.920247618Z [err]      at Function._load (node:internal/modules/cjs/loader:1263:12)
+2026-05-11T19:33:51.920253668Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+2026-05-11T19:33:51.920259446Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+2026-05-11T19:33:51.920265091Z [err]      at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5) {
+2026-05-11T19:33:51.920271208Z [err]    code: 'MODULE_NOT_FOUND',
+2026-05-11T19:33:51.920277543Z [err]    requireStack: [ '/app/dist/index.cjs' ]
+2026-05-11T19:33:51.920283808Z [err]  }
+2026-05-11T19:33:51.920408954Z [err]  
+2026-05-11T19:33:51.920416452Z [err]  Node.js v22.22.2
+2026-05-11T19:35:39.725977345Z [err]  2026-05-11 19:35:39.552 UTC [82] LOG:  checkpoint starting: time
+2026-05-11T19:35:47.205269517Z [err]  2026-05-11 19:35:47.194 UTC [82] LOG:  checkpoint complete: wrote 76 buffers (0.5%), wrote 2 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=7.624 s, sync=0.008 s, total=7.643 s; sync files=62, longest=0.003 s, average=0.001 s; distance=425 kB, estimate=425 kB; lsn=0/5C8DF190, redo lsn=0/5C8DF100
