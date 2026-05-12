@@ -3,6 +3,13 @@
 **Version:** Alpha 1.0
 **Architecture:** Netlify (frontend) + Railway (API + PostgreSQL)
 
+> **Latest preflight:** `RAILWAY_ALIGNMENT_REPORT_2026-05-12.md` (Task #849)
+> covers env vars, SSL, schema drift, migration plumbing, the Dockerfile
+> dedupe, and **completed** live-deploy verification (HTTP 200 with
+> `migrations:"ok"` + `db:"connected"` against `schoolstackbudget.up.railway.app`).
+> The only remaining operator follow-on is an optional deploy-log tail
+> screenshot for the paper trail.
+
 ---
 
 ## Preview Environments
