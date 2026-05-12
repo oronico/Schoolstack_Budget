@@ -62,15 +62,55 @@ export const DEMO_USER_PASSWORD_DEFAULT = "demo1234";
 export const DEMO_USER_PASSWORD = DEMO_USER_PASSWORD_DEFAULT;
 const DEMO_USER_NAME = "Demo Reviewer";
 
+export class PreviewSeedConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PreviewSeedConfigError";
+  }
+}
+
 /**
- * Resolve the demo-user password from the environment, falling back to
- * the documented default. Exported so tests can exercise both branches
- * without poking at module internals.
+ * Allow-list of NODE_ENV values where falling back to the documented
+ * `demo1234` constant is safe: local developer machines and the test
+ * runner. Every other environment (production, staging, anything
+ * unset, anything custom like "preview" / "review-app" / "ci") MUST
+ * supply `PREVIEW_DEMO_PASSWORD` explicitly. This is the
+ * "non-preview-safe" gate the security review asked for: the only
+ * silent fallback path is the developer laptop and the test suite.
+ */
+const SAFE_FALLBACK_NODE_ENVS: ReadonlySet<string> = new Set([
+  "development",
+  "test",
+]);
+
+/**
+ * Resolve the demo-user password from the environment.
+ *
+ * Task #846 — silent-credential remediation. The hardcoded
+ * `demo1234` constant is no longer a runtime fallback for
+ * preview/staging/production. The env var must be set explicitly
+ * everywhere except the two NODE_ENV values in
+ * `SAFE_FALLBACK_NODE_ENVS` (developer machine, test runner).
+ *
+ * If the gate fails we throw `PreviewSeedConfigError` — and the
+ * outer `seedPreviewDataIfEmpty` deliberately re-throws this class
+ * (instead of swallowing it like a transient DB error) so a
+ * misconfigured deploy is a loud, visible startup failure rather
+ * than a silent password fallback.
  */
 export function resolveDemoPassword(env: NodeJS.ProcessEnv = process.env): string {
   const override = env.PREVIEW_DEMO_PASSWORD;
   if (typeof override === "string" && override.length > 0) {
     return override;
+  }
+  const nodeEnv = typeof env.NODE_ENV === "string" ? env.NODE_ENV : "";
+  if (!SAFE_FALLBACK_NODE_ENVS.has(nodeEnv)) {
+    throw new PreviewSeedConfigError(
+      `PREVIEW_DEMO_PASSWORD must be set explicitly when NODE_ENV is '${nodeEnv || "(unset)"}'. ` +
+        `The documented '${DEMO_USER_PASSWORD_DEFAULT}' fallback is only allowed for ` +
+        `NODE_ENV in [${[...SAFE_FALLBACK_NODE_ENVS].join(", ")}] (local dev + test runner). ` +
+        `Set PREVIEW_DEMO_PASSWORD on this environment, or set SKIP_PREVIEW_SEED=true to disable seeding entirely.`,
+    );
   }
   return DEMO_USER_PASSWORD_DEFAULT;
 }
@@ -254,9 +294,16 @@ export async function seedPreviewDataIfEmpty(deps: SeedPreviewDataDeps = {}): Pr
       `[seed] Done. Reviewers can log in with ${DEMO_USER_EMAIL} / ${demoPassword} (password source: ${passwordSource}).`,
     );
   } catch (err) {
-    // A failed seed must not prevent the server from starting. The
-    // worst-case outcome is reviewers see an empty preview and have
-    // to register manually — same as before this script existed.
+    // Task #846 — config errors (e.g. PREVIEW_DEMO_PASSWORD missing on
+    // a non-dev/non-test NODE_ENV) are deliberately re-thrown so a
+    // misconfigured deploy is a loud, visible startup failure rather
+    // than a silent fallback to the documented `demo1234` constant.
+    // Transient DB hiccups still get the soft-fail treatment so the
+    // API can boot without seed data — same as before.
+    if (err instanceof PreviewSeedConfigError) {
+      logError("[seed] Refusing to seed with default credential:", err.message);
+      throw err;
+    }
     logError("[seed] Failed to seed preview data:", err);
   }
 }
@@ -333,8 +380,15 @@ async function rotateDemoPasswordIfChanged(
       `[seed] Rotated demo password for ${DEMO_USER_EMAIL} to match current env (password source: ${passwordSource}).`,
     );
   } catch (err) {
-    // A failed rotation must not prevent the server from starting.
-    // Operators can fall back to the manual update path.
+    // Task #846 — same propagation rule as `seedPreviewDataIfEmpty`:
+    // a config error (env var missing on a non-dev/non-test
+    // NODE_ENV) escapes so the deploy fails loudly. Anything else
+    // (transient DB hiccup, bcrypt error) is soft-failed so the API
+    // can still boot.
+    if (err instanceof PreviewSeedConfigError) {
+      logError("[seed] Refusing to rotate to default credential:", err.message);
+      throw err;
+    }
     logError("[seed] Failed to rotate demo password:", err);
   }
 }

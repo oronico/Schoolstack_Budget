@@ -219,9 +219,41 @@ function aesGcmEncrypt(key: Buffer, plaintext: Buffer): { iv: Buffer; tag: Buffe
 }
 
 function aesGcmDecrypt(key: Buffer, iv: Buffer, tag: Buffer, ct: Buffer): Buffer {
-  const decipher = createDecipheriv("aes-256-gcm", key, iv);
-  decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(ct), decipher.final()]);
+  // Defensive shape checks so a malformed envelope surfaces as a
+  // SensitiveEncryptionError rather than a low-level OpenSSL error
+  // string. The auth-tag length check is what makes "tamper with the
+  // tag length" fail loudly instead of returning garbage.
+  if (iv.length !== GCM_IV_BYTES) {
+    throw new SensitiveEncryptionError(
+      `AES-GCM IV must be exactly ${GCM_IV_BYTES} bytes (got ${iv.length}).`,
+    );
+  }
+  if (tag.length !== GCM_TAG_BYTES) {
+    throw new SensitiveEncryptionError(
+      `AES-GCM auth tag must be exactly ${GCM_TAG_BYTES} bytes (got ${tag.length}).`,
+    );
+  }
+  let decipher: ReturnType<typeof createDecipheriv> & {
+    setAuthTag(tag: Buffer): void;
+  };
+  try {
+    decipher = createDecipheriv("aes-256-gcm", key, iv) as typeof decipher;
+    decipher.setAuthTag(tag);
+  } catch (err) {
+    throw new SensitiveEncryptionError(
+      `AES-GCM decipher setup failed: ${(err as Error).message}`,
+    );
+  }
+  try {
+    // .final() is what verifies the GCM auth tag — if the ciphertext,
+    // IV, tag, or key were tampered with, this throws and the
+    // function MUST NOT return any plaintext bytes.
+    return Buffer.concat([decipher.update(ct), decipher.final()]);
+  } catch (err) {
+    throw new SensitiveEncryptionError(
+      `AES-GCM authentication failed — ciphertext, IV, or auth tag was tampered with or wrapped under a different key: ${(err as Error).message}`,
+    );
+  }
 }
 
 function normalizeRaw(raw: string): string {

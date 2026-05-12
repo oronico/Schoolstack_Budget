@@ -45,6 +45,13 @@
 // hermetic — no DATABASE_URL required, no migrations to run, runs in
 // the same `pnpm test` step as the rest of the api-server suite.
 
+// Task #846 — pin NODE_ENV=test so the test runner sits inside the
+// allow-list of "safe to fall back to the documented default password"
+// environments. Production / staging / preview / unset are explicitly
+// rejected by `resolveDemoPassword` and exercised in dedicated cases
+// below.
+process.env.NODE_ENV = process.env.NODE_ENV ?? "test";
+
 import bcrypt from "bcryptjs";
 import {
   seedPreviewDataIfEmpty,
@@ -52,6 +59,7 @@ import {
   DEMO_USER_EMAIL,
   DEMO_USER_PASSWORD,
   DEMO_USER_PASSWORD_DEFAULT,
+  PreviewSeedConfigError,
 } from "../src/lib/seed-preview-data.js";
 
 let passed = 0;
@@ -617,24 +625,121 @@ async function run() {
   // pin both branches independently of the seed flow so a regression
   // in the resolver itself can't be masked by the seed wiring.
   {
+    // Task #846 — env-unset (no NODE_ENV at all) is no longer
+    // a safe fallback; the resolver now throws so a misconfigured
+    // deploy can't silently use 'demo1234'.
+    let threwUnset = false;
+    try {
+      resolveDemoPassword({} as NodeJS.ProcessEnv);
+    } catch (err) {
+      threwUnset = err instanceof PreviewSeedConfigError;
+    }
     check(
-      "resolveDemoPassword({}) → default",
-      resolveDemoPassword({} as NodeJS.ProcessEnv) === DEMO_USER_PASSWORD_DEFAULT,
+      "resolveDemoPassword({}) → throws PreviewSeedConfigError (env-unset is not safe)",
+      threwUnset,
     );
     check(
-      "resolveDemoPassword({ PREVIEW_DEMO_PASSWORD: '' }) → default (empty ignored)",
-      resolveDemoPassword({ PREVIEW_DEMO_PASSWORD: "" } as NodeJS.ProcessEnv) ===
+      "resolveDemoPassword({ NODE_ENV: 'test' }) → default (test runner allow-list)",
+      resolveDemoPassword({ NODE_ENV: "test" } as NodeJS.ProcessEnv) ===
         DEMO_USER_PASSWORD_DEFAULT,
     );
     check(
-      "resolveDemoPassword({ PREVIEW_DEMO_PASSWORD: 'foo' }) → 'foo'",
+      "resolveDemoPassword({ NODE_ENV: 'development' }) → default (dev allow-list)",
+      resolveDemoPassword({ NODE_ENV: "development" } as NodeJS.ProcessEnv) ===
+        DEMO_USER_PASSWORD_DEFAULT,
+    );
+    check(
+      "resolveDemoPassword({ NODE_ENV: 'test', PREVIEW_DEMO_PASSWORD: '' }) → default (empty override ignored)",
+      resolveDemoPassword({
+        NODE_ENV: "test",
+        PREVIEW_DEMO_PASSWORD: "",
+      } as NodeJS.ProcessEnv) === DEMO_USER_PASSWORD_DEFAULT,
+    );
+    check(
+      "resolveDemoPassword({ PREVIEW_DEMO_PASSWORD: 'foo' }) → 'foo' (override wins regardless of NODE_ENV)",
       resolveDemoPassword({ PREVIEW_DEMO_PASSWORD: "foo" } as NodeJS.ProcessEnv) ===
         "foo",
     );
+
+    // Task #846 — production / staging / preview / any custom value
+    // MUST require an explicit override; the documented 'demo1234'
+    // fallback may not silently land in those environments.
+    for (const nodeEnv of ["production", "staging", "preview", "review-app", "ci"]) {
+      let threw = false;
+      let isConfig = false;
+      try {
+        resolveDemoPassword({ NODE_ENV: nodeEnv } as NodeJS.ProcessEnv);
+      } catch (err) {
+        threw = true;
+        isConfig = err instanceof PreviewSeedConfigError;
+      }
+      check(
+        `resolveDemoPassword({ NODE_ENV: '${nodeEnv}' }) without override → throws PreviewSeedConfigError`,
+        threw && isConfig,
+      );
+      check(
+        `resolveDemoPassword({ NODE_ENV: '${nodeEnv}', PREVIEW_DEMO_PASSWORD: 'set' }) → uses override`,
+        resolveDemoPassword({
+          NODE_ENV: nodeEnv,
+          PREVIEW_DEMO_PASSWORD: "set",
+        } as NodeJS.ProcessEnv) === "set",
+      );
+    }
+
     check(
       "DEMO_USER_PASSWORD back-compat alias still equals the default",
       DEMO_USER_PASSWORD === DEMO_USER_PASSWORD_DEFAULT,
     );
+  }
+
+  // Case 11 (task #846) — production-shaped seed call without
+  // PREVIEW_DEMO_PASSWORD must fail loudly: the
+  // `PreviewSeedConfigError` thrown by `resolveDemoPassword` escapes
+  // `seedPreviewDataIfEmpty`'s outer try/catch instead of being
+  // swallowed, so a misconfigured deploy is a visible startup
+  // failure rather than a silent fall-back to 'demo1234'.
+  {
+    const originalNodeEnv = process.env.NODE_ENV;
+    const originalPwd = process.env.PREVIEW_DEMO_PASSWORD;
+    const originalSkip = process.env.SKIP_PREVIEW_SEED;
+    process.env.NODE_ENV = "production";
+    delete process.env.PREVIEW_DEMO_PASSWORD;
+    delete process.env.SKIP_PREVIEW_SEED;
+    const { fakeDb, inserted } = makeFakeDb({ existingUsers: 0 });
+    const errors: unknown[][] = [];
+    let escaped: unknown = null;
+    try {
+      await seedPreviewDataIfEmpty({
+        database: fakeDb as never,
+        log: () => {},
+        logError: (...a) => errors.push(a),
+      });
+    } catch (err) {
+      escaped = err;
+    }
+    check(
+      "production + no PREVIEW_DEMO_PASSWORD → seed throws PreviewSeedConfigError (does not soft-fail)",
+      escaped instanceof PreviewSeedConfigError,
+      `escaped=${(escaped as Error)?.constructor?.name}`,
+    );
+    check(
+      "production + no PREVIEW_DEMO_PASSWORD → no inserts (no demo user written)",
+      inserted.length === 0,
+      `inserted=${inserted.length}`,
+    );
+    check(
+      "production + no PREVIEW_DEMO_PASSWORD → logs the refusal reason",
+      errors.some((row) => row.some((arg) =>
+        typeof arg === "string" && arg.includes("Refusing to seed"),
+      )),
+    );
+
+    if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = originalNodeEnv;
+    if (originalPwd === undefined) delete process.env.PREVIEW_DEMO_PASSWORD;
+    else process.env.PREVIEW_DEMO_PASSWORD = originalPwd;
+    if (originalSkip === undefined) delete process.env.SKIP_PREVIEW_SEED;
+    else process.env.SKIP_PREVIEW_SEED = originalSkip;
   }
 
   console.log(`\nseed-preview-data: ${passed} passed, ${failed} failed`);
