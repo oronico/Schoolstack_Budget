@@ -76,7 +76,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@playwright/test": "1.55.0",
+    "@playwright/test": "^1.55.1",
     "@replit/vite-plugin-cartographer": "catalog:",
     "@replit/vite-plugin-dev-banner": "catalog:",
     "@replit/vite-plugin-runtime-error-modal": "catalog:",
