@@ -131,6 +131,17 @@ match the substring list, the new production-default rule covers it; nothing
 to set. If the DB is intentionally over a private network and SSL must be off,
 set `PGSSLMODE=disable` on the service.
 
+### Live SSL verification (verified 2026-05-12)
+
+Closed out implicitly by §6's live curl checks: `/api/ready` returned
+`{"status":"ok","db":"connected"}` (HTTP 200), which means `pool.query('SELECT 1')`
+succeeded against the live Railway Postgres on the new build. If the SSL
+heuristic had picked the wrong mode (TLS against a plaintext-only host, or
+plaintext against a TLS-required host), that query would have thrown and
+`db` would read `unreachable` instead of `connected`. No `SSL/TLS required`
+or `self-signed certificate` errors were observed in the deploy log tail
+during the same window.
+
 ---
 
 ## 3. Schema drift check
