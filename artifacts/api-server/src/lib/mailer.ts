@@ -268,6 +268,16 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
+// Task #847 — every HTML-bound number goes through `n()` so the email
+// templates never interpolate a raw value. The inputs here are all
+// server-computed `number`s (counts, currency totals, percentages,
+// indices) so the escapeHtml call is defence-in-depth against future
+// type drift rather than a real XSS vector, but routing them through a
+// named helper makes the audit trail unambiguous.
+function n(value: number): string {
+  return escapeHtml(String(value));
+}
+
 function fmtCurrency(n: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 }
@@ -339,21 +349,122 @@ export function renderReviewRequestEmail(data: ReviewRequestData): RenderedRevie
   // Single-year models render the rollup as Y1 only. Five-year models render
   // every year present in the array (typically 5).
   const yearCount = isSingleYear ? 1 : data.enrollment.length;
-  const yearHeaders = Array.from({ length: yearCount }, (_, i) => `<th style="padding:6px 10px;border-bottom:2px solid #D97706;text-align:right;color:#1E293B;font-size:12px;">Y${i + 1}</th>`).join("");
+  const yearHeaders = Array.from({ length: yearCount }, (_, i) =>
+    // nosemgrep: javascript.lang.security.html-in-template-string
+    `<th style="padding:6px 10px;border-bottom:2px solid #D97706;text-align:right;color:#1E293B;font-size:12px;">Y${n(i + 1)}</th>`
+  ).join("");
 
-  function yearRow(label: string, values: number[], formatter: (n: number) => string = fmtCurrency): string {
+  function yearRow(label: string, values: number[], formatter: (v: number) => string = fmtCurrency): string {
     const sliced = values.slice(0, yearCount);
-    return `<tr><td style="padding:5px 10px;border-bottom:1px solid #E2E8F0;font-weight:600;color:#1E293B;font-size:13px;">${label}</td>${sliced.map(v => `<td style="padding:5px 10px;border-bottom:1px solid #E2E8F0;text-align:right;color:#475569;font-size:13px;">${formatter(v)}</td>`).join("")}</tr>`;
+    const cells = sliced.map(v =>
+      // nosemgrep: javascript.lang.security.html-in-template-string
+      `<td style="padding:5px 10px;border-bottom:1px solid #E2E8F0;text-align:right;color:#475569;font-size:13px;">${escapeHtml(formatter(v))}</td>`
+    ).join("");
+    // `label` originates from a fixed call-site literal ("Revenue",
+    // "Expenses", "Net Income", "DSCR"); escape regardless so future
+    // callers can't smuggle markup in via this parameter.
+    // nosemgrep: javascript.lang.security.html-in-template-string
+    return `<tr><td style="padding:5px 10px;border-bottom:1px solid #E2E8F0;font-weight:600;color:#1E293B;font-size:13px;">${escapeHtml(label)}</td>${cells}</tr>`;
   }
 
   const findingsHtml = data.criticalFindings.length > 0
-    ? data.criticalFindings.map((f) => `<div style="padding:6px 0;border-bottom:1px solid #FDE68A;font-size:13px;color:#1E293B;">${severityDot(f.severity)} <span style="font-weight:600;text-transform:uppercase;font-size:10px;color:${f.severity === "critical" ? "#DC2626" : f.severity === "high" ? "#D97706" : "#6B7280"};margin-right:4px;">${f.severity}</span> ${escapeHtml(f.title)}</div>`).join("")
+    ? data.criticalFindings.map((f) => {
+        // `f.severity` is typed as a closed union; the colour is picked
+        // from a literal map (no interpolation of the value itself), so
+        // there is no untrusted data flowing into the inline style.
+        const sevColor = f.severity === "critical" ? "#DC2626" : f.severity === "high" ? "#D97706" : "#6B7280";
+        // nosemgrep: javascript.lang.security.html-in-template-string
+        return `<div style="padding:6px 0;border-bottom:1px solid #FDE68A;font-size:13px;color:#1E293B;">${severityDot(f.severity)} <span style="font-weight:600;text-transform:uppercase;font-size:10px;color:${sevColor};margin-right:4px;">${escapeHtml(f.severity)}</span> ${escapeHtml(f.title)}</div>`;
+      }).join("")
     : `<p style="color:#16A34A;font-size:13px;">No critical findings identified.</p>`;
 
   const sharedLinkSection = data.sharedViewUrl
+    // nosemgrep: javascript.lang.security.html-in-template-string
     ? `<div style="text-align:center;margin:12px 0;"><a href="${escapeHtml(data.sharedViewUrl)}" style="background:#1E293B;color:white;padding:10px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;display:inline-block;">View Full Model</a></div>`
     : "";
 
+  // Each conditional row is built outside the main template so the
+  // outer template only carries one HTML-string interpolation per
+  // section. This makes the audit (and the SAST suppression) one-per-
+  // template rather than one-per-nested-ternary.
+  const locationCell = `${data.facilityCity ? escapeHtml(data.facilityCity) + ", " : ""}${escapeHtml(data.state)}`;
+  const stageRow = data.schoolStage
+    // nosemgrep: javascript.lang.security.html-in-template-string
+    ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Stage</td><td style="color:#1E293B;font-size:13px;">${escapeHtml(data.schoolStage)}</td></tr>`
+    : "";
+  const openingYearRow = data.openingYear
+    // nosemgrep: javascript.lang.security.html-in-template-string
+    ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Opening Year</td><td style="color:#1E293B;font-size:13px;">${n(data.openingYear)}</td></tr>`
+    : "";
+  const maxCapacityRow = data.maxCapacity
+    // nosemgrep: javascript.lang.security.html-in-template-string
+    ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Max Capacity</td><td style="color:#1E293B;font-size:13px;">${escapeHtml(data.maxCapacity.toLocaleString())} students</td></tr>`
+    : "";
+  const enrollmentLabel = data.isSingleYear === true ? "Enrollment Y1" : "Enrollment Y1→Y5";
+  const enrollmentValue = data.isSingleYear === true
+    ? escapeHtml((data.enrollment[0] ?? 0).toLocaleString())
+    : escapeHtml(data.enrollment.map(e => e.toLocaleString()).join(" → "));
+  // nosemgrep: javascript.lang.security.html-in-template-string
+  const enrollmentRow = `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">${escapeHtml(enrollmentLabel)}</td><td style="color:#1E293B;font-size:13px;">${enrollmentValue}</td></tr>`;
+  const faithSuffix = data.faithAffiliation ? " — " + escapeHtml(data.faithAffiliation) : "";
+  const faithRow = data.isFaithAffiliated
+    // nosemgrep: javascript.lang.security.html-in-template-string
+    ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Faith-Affiliated</td><td style="color:#1E293B;font-size:13px;">Yes${faithSuffix}</td></tr>`
+    : "";
+
+  const ownershipRow = data.ownershipType
+    // nosemgrep: javascript.lang.security.html-in-template-string
+    ? `<tr><td style="padding:3px 0;color:#94A3B8;width:140px;font-size:13px;">Facility</td><td style="color:#1E293B;font-size:13px;">${escapeHtml(data.ownershipType)}</td></tr>`
+    : "";
+  const monthlyRentRow = data.monthlyRent
+    // nosemgrep: javascript.lang.security.html-in-template-string
+    ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Monthly Rent</td><td style="color:#1E293B;font-size:13px;">${escapeHtml(fmtCurrency(data.monthlyRent))}</td></tr>`
+    : "";
+  const loanRow = data.hasLoan
+    // nosemgrep: javascript.lang.security.html-in-template-string
+    ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Existing Loan</td><td style="color:#1E293B;font-size:13px;">${data.loanAmount ? escapeHtml(fmtCurrency(data.loanAmount)) : "Yes"}</td></tr>`
+    : "";
+  const lendingIntentRow = data.lendingLabIntent
+    // nosemgrep: javascript.lang.security.html-in-template-string
+    ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Financing Interest</td><td style="color:#1E293B;font-size:13px;">${escapeHtml(data.lendingLabIntent)}</td></tr>`
+    : "";
+  const staffCountRow = data.staffCount
+    // nosemgrep: javascript.lang.security.html-in-template-string
+    ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Staff Count</td><td style="color:#1E293B;font-size:13px;">${n(data.staffCount)} positions</td></tr>`
+    : "";
+  // The over-65% style fragment is a literal chosen by a numeric
+  // threshold; only the percent value flows into the visible text and
+  // it goes through `n()`-equivalent escaping via toFixed → escapeHtml.
+  const staffingPctStyleSuffix = data.staffingCostPercent !== undefined && data.staffingCostPercent > 65 ? "color:#DC2626;font-weight:600;" : "";
+  const staffingPctRow = data.staffingCostPercent !== undefined && data.staffingCostPercent > 0
+    // nosemgrep: javascript.lang.security.html-in-template-string
+    ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Staffing % of Revenue</td><td style="color:#1E293B;font-size:13px;${staffingPctStyleSuffix}">${escapeHtml(data.staffingCostPercent.toFixed(1))}%</td></tr>`
+    : "";
+
+  const headlineRow = isSingleYear
+    // nosemgrep: javascript.lang.security.html-in-template-string
+    ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Y1 Net Income</td><td style="color:#1E293B;font-weight:600;font-size:13px;" colspan="3">${escapeHtml(fmtCurrency(headlineNI))}</td></tr>`
+    // nosemgrep: javascript.lang.security.html-in-template-string
+    : `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">${escapeHtml(headlineYearLabel)} Revenue</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${escapeHtml(fmtCurrency(headlineRev))}</td><td style="padding:3px 0;color:#94A3B8;font-size:13px;">${escapeHtml(headlineYearLabel)} Net Income</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${escapeHtml(fmtCurrency(headlineNI))}</td></tr>`;
+  const breakEvenText = breakEven
+    ? `Year ${n(breakEven)}`
+    : (isSingleYear ? "Not reached in Year 1" : "Not within projection");
+
+  const messageSection = data.message
+    // nosemgrep: javascript.lang.security.html-in-template-string
+    ? `
+        <h3 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;border-bottom:2px solid #D97706;padding-bottom:4px;font-size:14px;">Advisor Notes</h3>
+        <div style="background:#F8FAFC;border-radius:6px;padding:12px 16px;margin:8px 0 16px;">
+          <p style="color:#475569;margin:0;font-style:italic;font-size:13px;line-height:1.5;">"${escapeHtml(data.message)}"</p>
+        </div>`
+    : "";
+
+  const revenueRow = yearRow("Revenue", data.revenue);
+  const expensesRow = yearRow("Expenses", data.expenses);
+  const netIncomeRow = yearRow("Net Income", data.netIncome);
+  const dscrRow = yearRow("DSCR", data.dscr, v => v > 0 ? v.toFixed(2) + "x" : "N/A");
+
+  // nosemgrep: javascript.lang.security.html-in-template-string
   const html = `
     <div style="font-family:'Nunito',Arial,sans-serif;max-width:640px;margin:0 auto;padding:24px;">
       <div style="background:#1E293B;padding:14px 24px;border-radius:8px 8px 0 0;">
@@ -367,43 +478,41 @@ export function renderReviewRequestEmail(data: ReviewRequestData): RenderedRevie
         <h3 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;border-bottom:2px solid #D97706;padding-bottom:4px;font-size:14px;margin-top:20px;">School Profile</h3>
         <table style="width:100%;border-collapse:collapse;margin:8px 0 16px;">
           <tr><td style="padding:3px 0;color:#94A3B8;width:140px;font-size:13px;">School</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${escapeHtml(data.schoolName)}</td></tr>
-          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Location</td><td style="color:#1E293B;font-size:13px;">${data.facilityCity ? escapeHtml(data.facilityCity) + ", " : ""}${escapeHtml(data.state)}</td></tr>
+          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Location</td><td style="color:#1E293B;font-size:13px;">${locationCell}</td></tr>
           <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Type</td><td style="color:#1E293B;font-size:13px;">${escapeHtml(data.schoolType)}</td></tr>
           <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Entity</td><td style="color:#1E293B;font-size:13px;">${escapeHtml(data.entityType)}</td></tr>
-          ${data.schoolStage ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Stage</td><td style="color:#1E293B;font-size:13px;">${escapeHtml(data.schoolStage)}</td></tr>` : ""}
-          ${data.openingYear ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Opening Year</td><td style="color:#1E293B;font-size:13px;">${data.openingYear}</td></tr>` : ""}
-          ${data.maxCapacity ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Max Capacity</td><td style="color:#1E293B;font-size:13px;">${data.maxCapacity.toLocaleString()} students</td></tr>` : ""}
-          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">${data.isSingleYear === true ? "Enrollment Y1" : "Enrollment Y1→Y5"}</td><td style="color:#1E293B;font-size:13px;">${data.isSingleYear === true ? (data.enrollment[0] ?? 0).toLocaleString() : data.enrollment.map(e => e.toLocaleString()).join(" → ")}</td></tr>
-          ${data.isFaithAffiliated ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Faith-Affiliated</td><td style="color:#1E293B;font-size:13px;">Yes${data.faithAffiliation ? " — " + escapeHtml(data.faithAffiliation) : ""}</td></tr>` : ""}
+          ${stageRow}
+          ${openingYearRow}
+          ${maxCapacityRow}
+          ${enrollmentRow}
+          ${faithRow}
         </table>
 
         <!-- SECTION 1b: Facility & Financing Context -->
         <h3 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;border-bottom:2px solid #D97706;padding-bottom:4px;font-size:14px;">Facility & Financing</h3>
         <table style="width:100%;border-collapse:collapse;margin:8px 0 16px;">
-          ${data.ownershipType ? `<tr><td style="padding:3px 0;color:#94A3B8;width:140px;font-size:13px;">Facility</td><td style="color:#1E293B;font-size:13px;">${escapeHtml(data.ownershipType)}</td></tr>` : ""}
-          ${data.monthlyRent ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Monthly Rent</td><td style="color:#1E293B;font-size:13px;">${fmtCurrency(data.monthlyRent)}</td></tr>` : ""}
-          ${data.hasLoan ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Existing Loan</td><td style="color:#1E293B;font-size:13px;">${data.loanAmount ? fmtCurrency(data.loanAmount) : "Yes"}</td></tr>` : ""}
-          ${data.lendingLabIntent ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Financing Interest</td><td style="color:#1E293B;font-size:13px;">${escapeHtml(data.lendingLabIntent)}</td></tr>` : ""}
-          ${data.staffCount ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Staff Count</td><td style="color:#1E293B;font-size:13px;">${data.staffCount} positions</td></tr>` : ""}
-          ${data.staffingCostPercent !== undefined && data.staffingCostPercent > 0 ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Staffing % of Revenue</td><td style="color:#1E293B;font-size:13px;${data.staffingCostPercent > 65 ? "color:#DC2626;font-weight:600;" : ""}">${data.staffingCostPercent.toFixed(1)}%</td></tr>` : ""}
+          ${ownershipRow}
+          ${monthlyRentRow}
+          ${loanRow}
+          ${lendingIntentRow}
+          ${staffCountRow}
+          ${staffingPctRow}
         </table>
 
         <!-- SECTION 2: Financial Snapshot -->
         <h3 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;border-bottom:2px solid #D97706;padding-bottom:4px;font-size:14px;">Financial Snapshot</h3>
         <table style="width:100%;border-collapse:collapse;margin:8px 0 4px;">
-          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Y1 Revenue</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${fmtCurrency(y1Rev)}</td><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Y1 Margin</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${y1Margin}%</td></tr>
-          ${isSingleYear
-            ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Y1 Net Income</td><td style="color:#1E293B;font-weight:600;font-size:13px;" colspan="3">${fmtCurrency(headlineNI)}</td></tr>`
-            : `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">${headlineYearLabel} Revenue</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${fmtCurrency(headlineRev)}</td><td style="padding:3px 0;color:#94A3B8;font-size:13px;">${headlineYearLabel} Net Income</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${fmtCurrency(headlineNI)}</td></tr>`}
-          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Break-even</td><td style="color:#1E293B;font-weight:600;font-size:13px;" colspan="3">${breakEven ? `Year ${breakEven}` : (isSingleYear ? "Not reached in Year 1" : "Not within projection")}</td></tr>
+          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Y1 Revenue</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${escapeHtml(fmtCurrency(y1Rev))}</td><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Y1 Margin</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${escapeHtml(y1Margin)}%</td></tr>
+          ${headlineRow}
+          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Break-even</td><td style="color:#1E293B;font-weight:600;font-size:13px;" colspan="3">${breakEvenText}</td></tr>
         </table>
         <table style="width:100%;border-collapse:collapse;margin:8px 0 16px;font-size:12px;">
           <thead><tr><th style="padding:5px 10px;border-bottom:2px solid #D97706;text-align:left;color:#1E293B;font-size:12px;">Metric</th>${yearHeaders}</tr></thead>
           <tbody>
-            ${yearRow("Revenue", data.revenue)}
-            ${yearRow("Expenses", data.expenses)}
-            ${yearRow("Net Income", data.netIncome)}
-            ${yearRow("DSCR", data.dscr, n => n > 0 ? n.toFixed(2) + "x" : "N/A")}
+            ${revenueRow}
+            ${expensesRow}
+            ${netIncomeRow}
+            ${dscrRow}
           </tbody>
         </table>
 
@@ -416,17 +525,13 @@ export function renderReviewRequestEmail(data: ReviewRequestData): RenderedRevie
         <!-- SECTION 4: Lending Readiness -->
         <h3 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;border-bottom:2px solid #D97706;padding-bottom:4px;font-size:14px;">Lending Readiness</h3>
         <table style="width:100%;border-collapse:collapse;margin:8px 0 16px;">
-          <tr><td style="padding:3px 0;color:#94A3B8;width:180px;font-size:13px;">Reserve Months</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${data.reserveMonths.toFixed(1)}</td></tr>
-          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Cash Runway</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${data.cashRunwayMonths >= 60 ? "60+ months" : data.cashRunwayMonths.toFixed(1) + " months"}</td></tr>
-          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Days Cash on Hand</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${Math.round(data.daysCashOnHand)} days</td></tr>
+          <tr><td style="padding:3px 0;color:#94A3B8;width:180px;font-size:13px;">Reserve Months</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${escapeHtml(data.reserveMonths.toFixed(1))}</td></tr>
+          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Cash Runway</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${escapeHtml(data.cashRunwayMonths >= 60 ? "60+ months" : data.cashRunwayMonths.toFixed(1) + " months")}</td></tr>
+          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Days Cash on Hand</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${n(Math.round(data.daysCashOnHand))} days</td></tr>
         </table>
 
         <!-- SECTION 5: Advisor Notes -->
-        ${data.message ? `
-        <h3 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;border-bottom:2px solid #D97706;padding-bottom:4px;font-size:14px;">Advisor Notes</h3>
-        <div style="background:#F8FAFC;border-radius:6px;padding:12px 16px;margin:8px 0 16px;">
-          <p style="color:#475569;margin:0;font-style:italic;font-size:13px;line-height:1.5;">"${escapeHtml(data.message)}"</p>
-        </div>` : ""}
+        ${messageSection}
 
         <!-- Actions -->
         ${sharedLinkSection}
@@ -470,6 +575,7 @@ export async function sendReviewRequestToTeam(data: ReviewRequestData): Promise<
 }
 
 export async function sendReviewConfirmation(toEmail: string, requesterName: string, schoolName: string): Promise<{ success: boolean; error?: string }> {
+  // nosemgrep: javascript.lang.security.html-in-template-string
   const html = `
     <div style="font-family:'Nunito',Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
       <h2 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;">We received your review request</h2>
@@ -530,23 +636,24 @@ function nl2br(str: string): string {
 export async function sendReviewFeedback(data: ReviewFeedbackData): Promise<{ success: boolean; error?: string }> {
   const firstName = data.recipientName.split(" ")[0] || data.recipientName;
 
+  // nosemgrep: javascript.lang.security.html-in-template-string
   const metricsTable = `
     <table style="width:100%;border-collapse:collapse;margin:8px 0;">
       <tr>
         <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#475569;font-size:14px;">Year 1 Revenue</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#1E293B;font-weight:600;text-align:right;font-size:14px;">${fmtCurrency(data.metrics.y1Revenue)}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#1E293B;font-weight:600;text-align:right;font-size:14px;">${escapeHtml(fmtCurrency(data.metrics.y1Revenue))}</td>
       </tr>
       <tr>
         <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#475569;font-size:14px;">Year 1 Net Margin</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#1E293B;font-weight:600;text-align:right;font-size:14px;">${(data.metrics.y1NetMargin * 100).toFixed(1)}%</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#1E293B;font-weight:600;text-align:right;font-size:14px;">${escapeHtml((data.metrics.y1NetMargin * 100).toFixed(1))}%</td>
       </tr>
       <tr>
         <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#475569;font-size:14px;">DSCR (Debt Service Coverage)</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#1E293B;font-weight:600;text-align:right;font-size:14px;">${data.metrics.dscr.toFixed(2)}x</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#1E293B;font-weight:600;text-align:right;font-size:14px;">${escapeHtml(data.metrics.dscr.toFixed(2))}x</td>
       </tr>
       <tr>
         <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#475569;font-size:14px;">Cash Runway</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#1E293B;font-weight:600;text-align:right;font-size:14px;">${data.metrics.cashRunwayMonths} months</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#1E293B;font-weight:600;text-align:right;font-size:14px;">${n(data.metrics.cashRunwayMonths)} months</td>
       </tr>
       <tr>
         <td style="padding:8px 12px;color:#475569;font-size:14px;">Lending Readiness</td>
@@ -558,6 +665,7 @@ export async function sendReviewFeedback(data: ReviewFeedbackData): Promise<{ su
   const sections: string[] = [];
 
   if (data.strengths.trim()) {
+    // nosemgrep: javascript.lang.security.html-in-template-string
     sections.push(`
       <div style="margin-bottom:24px;">
         <div style="font-family:'Quicksand',Arial,sans-serif;font-weight:700;font-size:15px;color:#328555;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;border-bottom:2px solid #328555;padding-bottom:4px;">What looks strong</div>
@@ -567,6 +675,7 @@ export async function sendReviewFeedback(data: ReviewFeedbackData): Promise<{ su
   }
 
   if (data.watchItems.trim()) {
+    // nosemgrep: javascript.lang.security.html-in-template-string
     sections.push(`
       <div style="margin-bottom:24px;">
         <div style="font-family:'Quicksand',Arial,sans-serif;font-weight:700;font-size:15px;color:#D97706;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;border-bottom:2px solid #D97706;padding-bottom:4px;">What to keep an eye on</div>
@@ -576,6 +685,7 @@ export async function sendReviewFeedback(data: ReviewFeedbackData): Promise<{ su
   }
 
   if (data.recommendations.trim()) {
+    // nosemgrep: javascript.lang.security.html-in-template-string
     sections.push(`
       <div style="margin-bottom:24px;">
         <div style="font-family:'Quicksand',Arial,sans-serif;font-weight:700;font-size:15px;color:#0D9488;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;border-bottom:2px solid #0D9488;padding-bottom:4px;">Our recommendations</div>
@@ -584,6 +694,16 @@ export async function sendReviewFeedback(data: ReviewFeedbackData): Promise<{ su
     `);
   }
 
+  const dashboardCta = data.dashboardUrl
+    // nosemgrep: javascript.lang.security.html-in-template-string
+    ? `
+          <div style="margin:16px 0;">
+            <a href="${escapeHtml(data.dashboardUrl)}" style="display:inline-block;background:#328555;color:white;font-weight:700;font-size:15px;padding:12px 28px;border-radius:10px;text-decoration:none;font-family:'Quicksand',Arial,sans-serif;">Open My Dashboard</a>
+          </div>
+          `
+    : "";
+
+  // nosemgrep: javascript.lang.security.html-in-template-string
   const html = `
     <div style="font-family:'Nunito',Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px;">
       <div style="background:#1E293B;border-radius:12px 12px 0 0;padding:20px 24px;text-align:center;margin-bottom:0;">
@@ -610,11 +730,7 @@ export async function sendReviewFeedback(data: ReviewFeedbackData): Promise<{ su
           <p style="color:#475569;line-height:1.7;font-size:15px;margin:0;">
             Your model is saved in your SchoolStack Budget dashboard. You can update your assumptions anytime and re-run your analysis.
           </p>
-          ${data.dashboardUrl ? `
-          <div style="margin:16px 0;">
-            <a href="${escapeHtml(data.dashboardUrl)}" style="display:inline-block;background:#328555;color:white;font-weight:700;font-size:15px;padding:12px 28px;border-radius:10px;text-decoration:none;font-family:'Quicksand',Arial,sans-serif;">Open My Dashboard</a>
-          </div>
-          ` : ""}
+          ${dashboardCta}
           <p style="color:#475569;line-height:1.7;font-size:15px;margin:12px 0 0 0;">
             If you have questions about this review or want to talk through your plan, just reply to this email — we read every one.
           </p>
@@ -707,6 +823,7 @@ export async function sendPasswordResetEmail(
       "",
       " - The SchoolStack Budget Team",
     ].join("\n"),
+    // nosemgrep: javascript.lang.security.html-in-template-string
     html: `
       <div style="font-family: 'Nunito', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
         <h2 style="color: #1E293B; font-family: 'Quicksand', Arial, sans-serif;">Reset your password</h2>
@@ -715,7 +832,7 @@ export async function sendPasswordResetEmail(
           Click the button below to create a new password. This link is valid for 1 hour.
         </p>
         <div style="text-align: center; margin: 32px 0;">
-          <a href="${resetUrl}" style="background-color: #D97706; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">
+          <a href="${escapeHtml(resetUrl)}" style="background-color: #D97706; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">
             Reset Password
           </a>
         </div>
@@ -780,6 +897,7 @@ export async function sendVerifyEmail(
       "",
       " - The SchoolStack Budget Team",
     ].join("\n"),
+    // nosemgrep: javascript.lang.security.html-in-template-string
     html: `
       <div style="font-family:'Nunito',Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
         <h2 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;">Confirm your email</h2>
@@ -787,11 +905,11 @@ export async function sendVerifyEmail(
           Welcome to SchoolStack Budget. Click the button below to finish creating your account. This link is valid for 1 hour.
         </p>
         <div style="text-align:center;margin:32px 0;">
-          <a href="${verifyUrl}" style="background-color:#D97706;color:white;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">Confirm Email</a>
+          <a href="${escapeHtml(verifyUrl)}" style="background-color:#D97706;color:white;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">Confirm Email</a>
         </div>
         <p style="color:#475569;line-height:1.6;font-size:13px;">
           If the button doesn't work, paste this URL into your browser:<br/>
-          <span style="word-break:break-all;color:#1E293B;">${verifyUrl}</span>
+          <span style="word-break:break-all;color:#1E293B;">${escapeHtml(verifyUrl)}</span>
         </p>
         <p style="color:#475569;line-height:1.6;">
           If you did not request this, you can safely ignore this email.
@@ -933,9 +1051,10 @@ export async function sendWelcomeEmail(
   const firstName = (name || "").split(" ")[0] || name || "there";
 
   const ctaButton = ctaUrl
+    // nosemgrep: javascript.lang.security.html-in-template-string
     ? `
         <div style="text-align:center;margin:32px 0;">
-          <a href="${ctaUrl}" style="background-color:#D97706;color:white;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">${escapeHtml(copy.ctaLabel)}</a>
+          <a href="${escapeHtml(ctaUrl)}" style="background-color:#D97706;color:white;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">${escapeHtml(copy.ctaLabel)}</a>
         </div>`
     : "";
   const ctaText = ctaUrl ? `\n${copy.ctaLabel}: ${ctaUrl}\n` : "";
@@ -960,6 +1079,7 @@ export async function sendWelcomeEmail(
       "",
       " — The SchoolStack Budget Team",
     ].join("\n"),
+    // nosemgrep: javascript.lang.security.html-in-template-string
     html: `
       <div style="font-family:'Nunito',Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
         <h2 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;">${escapeHtml(copy.headline)}</h2>
@@ -1030,6 +1150,7 @@ export async function sendAccountAlreadyExistsEmail(
       "",
       " - The SchoolStack Budget Team",
     ].join("\n"),
+    // nosemgrep: javascript.lang.security.html-in-template-string
     html: `
       <div style="font-family:'Nunito',Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
         <h2 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;">You already have an account</h2>
@@ -1037,8 +1158,8 @@ export async function sendAccountAlreadyExistsEmail(
           Somebody (probably you) just tried to create a SchoolStack Budget account with this email address — but you already have one.
         </p>
         <div style="text-align:center;margin:24px 0;">
-          <a href="${loginUrl}" style="background-color:#1E293B;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;margin:4px;">Sign in</a>
-          <a href="${resetUrl}" style="background-color:#D97706;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;margin:4px;">Reset password</a>
+          <a href="${escapeHtml(loginUrl)}" style="background-color:#1E293B;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;margin:4px;">Sign in</a>
+          <a href="${escapeHtml(resetUrl)}" style="background-color:#D97706;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;margin:4px;">Reset password</a>
         </div>
         <p style="color:#475569;line-height:1.6;font-size:13px;">
           ${resetToken ? "The password reset link is valid for 1 hour." : "If you didn't recently request a reset, use the button above to start one."}
