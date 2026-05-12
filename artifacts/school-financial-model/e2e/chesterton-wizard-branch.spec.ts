@@ -8,7 +8,7 @@ import {
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { registerAndVerifyE2E } from "./utils/register-and-verify";
 
 // Task #334: end-to-end exercise of the Chesterton (CSN) wizard branch.
@@ -396,11 +396,13 @@ test("Chesterton wizard branch renders the CSN flow and exports the Operating Ma
   // ----- 5. Parse the workbook and assert the sheet list. -----
   const fileBuffer = fs.readFileSync(tmpPath);
   expect(fileBuffer.length).toBeGreaterThan(0);
-  const workbook = XLSX.read(fileBuffer, { type: "buffer" });
-  // ExcelJS-emitted files are valid xlsx; XLSX.read throws on corruption,
-  // so a populated SheetNames array is sufficient proof of validity.
-  expect(workbook.SheetNames.length).toBeGreaterThan(0);
-  expect(workbook.SheetNames).toEqual(EXPECTED_TABS);
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(fileBuffer);
+  // ExcelJS-emitted files are valid xlsx; xlsx.load throws on corruption,
+  // so a populated worksheet name array is sufficient proof of validity.
+  const sheetNames = workbook.worksheets.map((w) => w.name);
+  expect(sheetNames.length).toBeGreaterThan(0);
+  expect(sheetNames).toEqual(EXPECTED_TABS);
 
   // Tidy up the temp file. Failure here is non-fatal — OS will clean tmpdir.
   try {

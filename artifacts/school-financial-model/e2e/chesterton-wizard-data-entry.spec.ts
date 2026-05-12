@@ -8,7 +8,7 @@ import {
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { registerAndVerifyE2E } from "./utils/register-and-verify";
 
 // Task #339: data-entry coverage for the Chesterton (CSN) wizard branch.
@@ -261,15 +261,22 @@ function fieldLocator(page: Page, name: string) {
   return page.locator(`#${escaped}`);
 }
 
-// Pull a numeric value from a parsed XLSX cell. xlsx stores formulas as
-// objects with `v` (calculated value) + `f` (formula string); literals
-// are stored with just `v`. ExcelJS-emitted workbooks always include a
-// cached `v` for formulas, so reading it directly is safe.
-function cellNumber(ws: XLSX.WorkSheet, address: string): number {
-  const cell = ws[address] as XLSX.CellObject | undefined;
-  if (!cell) throw new Error(`cell ${address} missing`);
-  const raw = cell.v;
+// Pull a numeric value from a parsed ExcelJS cell. ExcelJS represents
+// formula cells as `{ formula, result }` objects; literals are stored
+// directly as a number or string. ExcelJS-emitted workbooks always
+// include a cached `result` for formulas, so reading it is safe.
+function cellNumber(ws: ExcelJS.Worksheet, address: string): number {
+  const raw = ws.getCell(address).value;
+  if (raw == null) throw new Error(`cell ${address} missing`);
   if (typeof raw === "number") return raw;
+  if (typeof raw === "object" && raw !== null && "result" in raw) {
+    const result = (raw as { result?: unknown }).result;
+    if (typeof result === "number") return result;
+    if (typeof result === "string" && result.trim() !== "") {
+      const parsed = Number(result);
+      if (!Number.isNaN(parsed)) return parsed;
+    }
+  }
   if (typeof raw === "string" && raw.trim() !== "") {
     const parsed = Number(raw);
     if (!Number.isNaN(parsed)) return parsed;
@@ -437,7 +444,8 @@ test("Chesterton wizard data entry persists through reload and into the workbook
 
   const fileBuffer = fs.readFileSync(tmpPath);
   expect(fileBuffer.length).toBeGreaterThan(0);
-  const workbook = XLSX.read(fileBuffer, { type: "buffer" });
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(fileBuffer);
 
   // Cell positions mirror the layout in
   // artifacts/api-server/src/lib/packets/chesterton-operating-manual.ts.
@@ -447,17 +455,17 @@ test("Chesterton wizard data entry persists through reload and into the workbook
   //   the gift-amount input cell for the first pyramid tier.
   // - Recruiting tab data rows start at row 5 (header row 4); col C is
   //   the prospect-count input cell for the first recruiting source.
-  const fundraisingSheet = workbook.Sheets["4 - FUNDRAISING GOALS"];
+  const fundraisingSheet = workbook.getWorksheet("4 - FUNDRAISING GOALS");
   expect(fundraisingSheet).toBeDefined();
-  expect(cellNumber(fundraisingSheet, "C6")).toBe(175000);
+  expect(cellNumber(fundraisingSheet!, "C6")).toBe(175000);
 
-  const giftSheet = workbook.Sheets["5 - GIFT CHART"];
+  const giftSheet = workbook.getWorksheet("5 - GIFT CHART");
   expect(giftSheet).toBeDefined();
-  expect(cellNumber(giftSheet, "B5")).toBe(75000);
+  expect(cellNumber(giftSheet!, "B5")).toBe(75000);
 
-  const recruitingSheet = workbook.Sheets["7 - RECRUITING PIPELINE"];
+  const recruitingSheet = workbook.getWorksheet("7 - RECRUITING PIPELINE");
   expect(recruitingSheet).toBeDefined();
-  expect(cellNumber(recruitingSheet, "C5")).toBe(35);
+  expect(cellNumber(recruitingSheet!, "C5")).toBe(35);
 
   try {
     fs.unlinkSync(tmpPath);

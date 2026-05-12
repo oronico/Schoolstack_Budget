@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { registerAndVerifyE2E } from "./utils/register-and-verify";
 import { seedPersona } from "./utils/seed-persona";
 import {
@@ -401,15 +401,17 @@ test("CSN Operating Manual export round-trips end-to-end via the wizard", async 
     // A JSON error blob with the wrong content-type would fail this.
     expect(fileBuffer.subarray(0, 2).toString("latin1")).toBe("PK");
 
-    const workbook = XLSX.read(fileBuffer, { type: "buffer" });
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(fileBuffer);
     // The Operating Manual ships multiple tabs (GETTING STARTED, the
     // 5-yr projection, salary schedule, fundraising goals, gift chart,
     // recruiting pipeline, …). Asserting "more than one" rather than
     // pinning the exact list keeps this spec focused on round-trip
     // wiring; the unit smoke test owns the per-tab shape contract.
+    const sheetNames = workbook.worksheets.map((w) => w.name);
     expect(
-      workbook.SheetNames.length,
-      `expected multiple sheets, got ${JSON.stringify(workbook.SheetNames)}`,
+      sheetNames.length,
+      `expected multiple sheets, got ${JSON.stringify(sheetNames)}`,
     ).toBeGreaterThan(1);
   } finally {
     try {

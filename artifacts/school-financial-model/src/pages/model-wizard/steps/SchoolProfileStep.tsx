@@ -714,38 +714,54 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
     }
     const lower = file.name.toLowerCase();
     const isXlsx = lower.endsWith(".xlsx");
+    const isXls = !isXlsx && lower.endsWith(".xls");
     const isCsv = lower.endsWith(".csv");
-    if (!isCsv && !isXlsx) {
-      setError("Only CSV and Excel (.xlsx) exports are supported. Re-export your Profit & Loss from QuickBooks, Xero, or Wave as CSV or Excel.");
+    if (!isCsv && !isXlsx && !isXls) {
+      setError("Only CSV and Excel (.xlsx / .xls) exports are supported. Re-export your Profit & Loss from QuickBooks, Xero, or Wave as CSV or Excel.");
+      return;
+    }
+    if (isXls) {
+      // Legacy BIFF .xls files use a different binary container than
+      // modern .xlsx (OOXML zip). Our parser only handles the latter,
+      // so prompt the founder to re-save before we try to parse.
+      setError(
+        "Legacy .xls files aren't supported. Open the file in Excel or Google Sheets and re-save it as .xlsx (or export as CSV) and try again.",
+      );
       return;
     }
     setIsParsing(true);
     try {
       let parsed: ParsedAccountingExport;
       if (isXlsx) {
-        // Parse client-side via SheetJS so the founder's books never leave
-        // their browser. We take the first sheet, convert to a string[][]
-        // grid, and feed it through the same row processor the CSV path
-        // uses so label aliases and right-most-column logic stay
-        // identical across formats. SheetJS is loaded lazily here so its
-        // ~600 KB bundle only ships to founders who actually upload an
-        // .xlsx file.
-        const XLSX = await import("xlsx");
+        // Parse client-side via ExcelJS so the founder's books never leave
+        // their browser. We take the first sheet, build a string[][] grid
+        // from each cell's displayed text (so formulas resolve to their
+        // cached result), and feed it through the same row processor the
+        // CSV path uses so label aliases and right-most-column logic stay
+        // identical across formats. ExcelJS is loaded lazily here so its
+        // bundle only ships to founders who actually upload an .xlsx file.
+        const ExcelJS = (await import("exceljs")).default;
         const buf = await file.arrayBuffer();
-        const wb = XLSX.read(buf, { type: "array" });
-        const firstName = wb.SheetNames[0];
-        if (!firstName) {
+        const wb = new ExcelJS.Workbook();
+        await wb.xlsx.load(buf);
+        const sheet = wb.worksheets[0];
+        if (!sheet) {
           setError("That Excel file didn't have any sheets we could read. Re-export the Profit & Loss as a single sheet and try again.");
           return;
         }
-        const sheet = wb.Sheets[firstName];
-        const grid = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-          header: 1,
-          blankrows: false,
-          raw: false,
-          defval: "",
+        const rows: string[][] = [];
+        sheet.eachRow({ includeEmpty: false }, (row) => {
+          const out: string[] = [];
+          let hasContent = false;
+          const len = row.cellCount;
+          for (let c = 1; c <= len; c++) {
+            const cell = row.getCell(c);
+            const text = cell.text == null ? "" : String(cell.text);
+            if (text !== "") hasContent = true;
+            out.push(text);
+          }
+          if (hasContent) rows.push(out);
         });
-        const rows: string[][] = grid.map((r) => (r ?? []).map((c) => (c == null ? "" : String(c))));
         parsed = parseAccountingExportRows(rows);
       } else {
         const text = await file.text();
@@ -889,7 +905,7 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        accept=".csv,text/csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
         className="sr-only"
         onChange={onChange}
         data-testid="accounting-export-file-input"

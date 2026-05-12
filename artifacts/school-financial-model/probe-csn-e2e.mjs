@@ -1,4 +1,4 @@
-import XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 const BASE = "http://localhost:8080";
 const stamp = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
@@ -74,6 +74,8 @@ const dl = await fetch(`${BASE}/api/models/${id}/export/chesterton-operating-man
 console.log("download:", dl.status, "ct:", dl.headers.get("content-type"));
 const buf = Buffer.from(await dl.arrayBuffer());
 console.log("size:", buf.length);
-const wb = XLSX.read(buf, { type: "buffer" });
-console.log("sheets:", JSON.stringify(wb.SheetNames, null, 2));
-console.log("count:", wb.SheetNames.length);
+const wb = new ExcelJS.Workbook();
+await wb.xlsx.load(buf);
+const sheetNames = wb.worksheets.map((w) => w.name);
+console.log("sheets:", JSON.stringify(sheetNames, null, 2));
+console.log("count:", sheetNames.length);
