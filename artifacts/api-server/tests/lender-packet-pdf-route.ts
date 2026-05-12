@@ -118,19 +118,50 @@ function extractStringLiterals(content: string): string {
 }
 
 function extractPDFText(pdf: Buffer): string {
+  // Walk the PDF stream-by-stream. Compressed stream bodies can contain byte
+  // sequences that look like the literal "stream"/"endstream" markers, so we
+  // cannot rely on `Buffer.indexOf("endstream")` to find the real end of a
+  // stream. Instead, parse the `/Length N` entry in the stream's dictionary
+  // (always present in pdfkit output) and use it to skip exactly N bytes of
+  // the encoded body, then resume scanning past `endstream`.
+  const STREAM = "stream";
+  const ENDSTREAM = "endstream";
   const out: string[] = [];
   let cursor = 0;
   while (cursor < pdf.length) {
-    const sIdx = pdf.indexOf("stream", cursor);
+    const sIdx = pdf.indexOf(STREAM, cursor);
     if (sIdx === -1) break;
-    let dataStart = sIdx + "stream".length;
+    // Reject `endstream` matches that the indexOf scan landed on.
+    if (sIdx >= 3 && pdf.slice(sIdx - 3, sIdx).toString("latin1") === "end") {
+      cursor = sIdx + STREAM.length;
+      continue;
+    }
+    // Look back to the start of the preceding dictionary `<<` for /Length.
+    const dictStart = pdf.lastIndexOf("<<", sIdx);
+    let length: number | null = null;
+    if (dictStart !== -1) {
+      const dict = pdf.subarray(dictStart, sIdx).toString("latin1");
+      const m = /\/Length\s+(\d+)/.exec(dict);
+      if (m) length = parseInt(m[1], 10);
+    }
+    let dataStart = sIdx + STREAM.length;
     if (pdf[dataStart] === 0x0d) dataStart++;
     if (pdf[dataStart] === 0x0a) dataStart++;
-    const eIdx = pdf.indexOf("endstream", dataStart);
-    if (eIdx === -1) break;
-    let dataEnd = eIdx;
-    if (pdf[dataEnd - 1] === 0x0a) dataEnd--;
-    if (pdf[dataEnd - 1] === 0x0d) dataEnd--;
+    let dataEnd: number;
+    let nextCursor: number;
+    if (length !== null) {
+      dataEnd = dataStart + length;
+      const tailIdx = pdf.indexOf(ENDSTREAM, dataEnd);
+      nextCursor = tailIdx === -1 ? pdf.length : tailIdx + ENDSTREAM.length;
+    } else {
+      // Fallback: best-effort marker scan.
+      const eIdx = pdf.indexOf(ENDSTREAM, dataStart);
+      if (eIdx === -1) break;
+      dataEnd = eIdx;
+      if (pdf[dataEnd - 1] === 0x0a) dataEnd--;
+      if (pdf[dataEnd - 1] === 0x0d) dataEnd--;
+      nextCursor = eIdx + ENDSTREAM.length;
+    }
     const raw = pdf.subarray(dataStart, dataEnd);
     let body: string;
     try {
@@ -139,7 +170,7 @@ function extractPDFText(pdf: Buffer): string {
       body = raw.toString("binary");
     }
     out.push(extractStringLiterals(body));
-    cursor = eIdx + "endstream".length;
+    cursor = nextCursor;
   }
   return out.join("\n");
 }

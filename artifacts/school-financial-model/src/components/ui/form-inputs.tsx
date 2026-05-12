@@ -46,7 +46,24 @@ export function FormInput({ name, label, helperText, prefix, suffix, className, 
             suffix && "pr-8",
             error && "border-destructive focus:border-destructive focus:ring-destructive/10"
           )}
-          {...register(name, { valueAsNumber: type === "number" })}
+          {...register(
+            name,
+            type === "number"
+              ? {
+                  // Use `setValueAs` rather than `valueAsNumber: true` so an
+                  // empty input coalesces to `undefined` instead of NaN. RHF's
+                  // built-in `valueAsNumber` does `Number("")` which is NaN,
+                  // and downstream `value={watch(name) ?? ""}` patterns do not
+                  // catch NaN (only null/undefined), producing React's
+                  // "Received NaN for the `value` attribute" warning.
+                  setValueAs: (v: unknown) => {
+                    if (v === "" || v === null || v === undefined) return undefined;
+                    const n = typeof v === "number" ? v : Number(v);
+                    return Number.isNaN(n) ? undefined : n;
+                  },
+                }
+              : {},
+          )}
           {...props}
         />
         {suffix && (
