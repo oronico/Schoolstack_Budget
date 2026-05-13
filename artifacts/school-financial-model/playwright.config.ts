@@ -58,6 +58,17 @@ export default defineConfig({
     // sufficient for diagnosing failures.
     video: "off",
   },
+  // Snapshot files default to `<name>-<projectName>-<platform>.png`, which
+  // would force us to maintain three near-identical PNG baselines (one per
+  // browser) for the same SVG sparkline. The trend-cell screenshot in
+  // admin-section-engagement-trend.spec.ts is rendered from the same
+  // committed SVG path data on every browser — so we strip the project
+  // suffix and keep a single platform-keyed baseline shared across
+  // chromium / firefox / webkit. The pixel tolerance above is loose
+  // enough to absorb the small AA/font-hinting differences between
+  // browsers on the same Linux host.
+  snapshotPathTemplate:
+    "{testFileDir}/{testFileName}-snapshots/{arg}-{platform}{ext}",
   projects: [
     {
       name: "chromium",
@@ -77,6 +88,14 @@ export default defineConfig({
             }
           : {}),
       },
+    },
+    {
+      name: "firefox",
+      use: { ...devices["Desktop Firefox"] },
+    },
+    {
+      name: "webkit",
+      use: { ...devices["Desktop Safari"] },
     },
   ],
   webServer: shouldStartServers
