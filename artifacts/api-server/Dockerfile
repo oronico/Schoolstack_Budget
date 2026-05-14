@@ -15,7 +15,7 @@ COPY artifacts/api-server/package.json artifacts/api-server/
 
 # BuildKit cache mount for the pnpm store dramatically speeds up
 # repeat deploys (Railway reuses the cache across builds).
-RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+RUN --mount=type=cache,id=s/99d67137-c0cb-44c1-ac79-23a5c5b8ef71-/root/.local/share/pnpm/store,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --prod=false
 
 # Now bring in the workspace sources and build.
