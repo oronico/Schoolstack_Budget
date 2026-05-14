@@ -57,9 +57,9 @@ Inquiry  →  Lab intake call  →  Budget account provisioned
 #### Stage 4 — Applicant exports the standard packet
 The minimum required submission packet is:
 
-1. **Lender Packet (PDF)** — primary narrative document.
-2. **Underwriting Workbook (Excel, 26 tabs)** — the full math, formula-linked.
-3. **Loan Readiness Scorecard (PDF)** — applicant's own readiness verdict.
+1. **Lender Packet (PDF)** — primary narrative document. Built from `artifacts/api-server/src/lib/packets/build-lender-packet.ts`.
+2. **Underwriting Workbook (Excel, 26 tabs)** — the full math, formula-linked. Built from `artifacts/api-server/src/lib/underwriting-workbook.ts`.
+3. **Loan Readiness Scorecard (PDF)** — applicant's own readiness verdict. Built from `artifacts/api-server/src/lib/pdf-loan-readiness.ts`.
 
 Optional / situational:
 
