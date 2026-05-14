@@ -215,42 +215,40 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="pb-12 -mt-16 relative z-10">
+      <section className="pt-4 pb-16 relative z-10">
         <div className="max-w-5xl mx-auto px-6">
-          <div className="bg-white border border-[#1E293B]/10 rounded-2xl shadow-sm px-8 py-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-0 md:divide-x md:divide-[#1E293B]/10 items-center">
-              <div className="flex items-center gap-5 md:pr-8">
-                <img
-                  src="/logos/building-hope.png"
-                  alt="Building Hope Impact Fund"
-                  className="h-12 w-auto flex-shrink-0"
-                />
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold tracking-[0.18em] text-[#1E293B]/50 mb-1">
-                    BUILT BY
-                  </p>
-                  <p className="text-sm font-semibold text-[#1E293B] leading-tight">
-                    The Building Hope Impact Fund
-                  </p>
-                </div>
-              </div>
-
-              <div className="md:pl-8">
-                <p className="text-[10px] font-semibold tracking-[0.18em] text-[#1E293B]/50 mb-3 text-center md:text-left">
-                  MADE POSSIBLE BY
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-0 md:divide-x md:divide-[#1E293B]/10 items-center">
+            <div className="flex items-center gap-5 md:pr-8">
+              <img
+                src="/logos/building-hope.png"
+                alt="Building Hope Impact Fund"
+                className="h-12 w-auto flex-shrink-0"
+              />
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold tracking-[0.18em] text-[#1E293B]/50 mb-1">
+                  BUILT BY
                 </p>
-                <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-8 gap-y-3">
-                  <img
-                    src="/logos/stand-together-trust.webp"
-                    alt="Stand Together Trust"
-                    className="h-10 w-auto"
-                  />
-                  <img
-                    src="/logos/beth-ravenel-curry-foundation.png"
-                    alt="The Beth & Ravenel Curry Foundation"
-                    className="h-6 w-auto"
-                  />
-                </div>
+                <p className="text-sm font-semibold text-[#1E293B] leading-tight">
+                  The Building Hope Impact Fund
+                </p>
+              </div>
+            </div>
+
+            <div className="md:pl-8">
+              <p className="text-[10px] font-semibold tracking-[0.18em] text-[#1E293B]/50 mb-3 text-center md:text-left">
+                MADE POSSIBLE BY
+              </p>
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-8 gap-y-3">
+                <img
+                  src="/logos/stand-together-trust.webp"
+                  alt="Stand Together Trust"
+                  className="h-10 w-auto"
+                />
+                <img
+                  src="/logos/beth-ravenel-curry-foundation.png"
+                  alt="The Beth & Ravenel Curry Foundation"
+                  className="h-6 w-auto"
+                />
               </div>
             </div>
           </div>
