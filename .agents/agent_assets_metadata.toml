@@ -136,19 +136,19 @@ title = "Pro Forma - FIXED (1 page, 2.5KB)"
 id = "0ZO-e9ok-ml1kMTPxIg9n"
 uri = "file://artifacts/api-server/qa-output/export-samples/Loan_Readiness_Report.pdf"
 type = "pdf"
-title = "Loan Readiness Report - FIXED (3 pages, 7.5KB)"
+title = "Loan Readiness Scorecard (sample PDF)"
 
 [[outputs]]
 id = "NOGSmraH34P8A3Mv63fC4"
 uri = "file://artifacts/api-server/qa-output/export-samples/Lender_Pro_Forma.xlsx"
 type = "table"
-title = "Lender Pro Forma (XLSX, 24KB)"
+title = "Lender Pro Forma (sample XLSX)"
 
 [[outputs]]
 id = "Mh0Xarg3J_2pqJKYkeO3W"
 uri = "file://artifacts/api-server/qa-output/export-samples/Lender_Packet.pdf"
 type = "pdf"
-title = "Lender Packet - FIXED (7 pages, 15.5KB)"
+title = "Lender Packet (sample PDF)"
 
 [[outputs]]
 id = "W2UBHvkh9LaSBw0_XceKU"
@@ -160,13 +160,13 @@ title = "Board Summary - FIXED (4 pages, 9KB)"
 id = "GbxvSW_2e7FjtcFCDO4hi"
 uri = "file://artifacts/api-server/qa-output/export-samples/Underwriting_Pro_Forma.xlsx"
 type = "table"
-title = "Underwriting Pro Forma (XLSX, 38KB)"
+title = "Underwriting Pro Forma (sample XLSX)"
 
 [[outputs]]
 id = "LNgmVMqjfjycSrhksg7GG"
 uri = "file://artifacts/api-server/qa-output/export-samples/Underwriting_Model_V2.xlsx"
 type = "table"
-title = "Underwriting Model V2 (XLSX, 38KB)"
+title = "Underwriting Workbook (sample XLSX)"
 
 [[outputs]]
 id = "HoNbciVrr_y8PE52n_LeF"
@@ -203,3 +203,21 @@ id = "NDQHQGNpeGyAePXUVl0-B"
 uri = "file://.local/outputs/Budget---Executive-Brief.pptx"
 type = "slides"
 title = "Budget — Executive Brief (PPTX)"
+
+[[outputs]]
+id = "s8Cg8LSHR61fhhjO888n9"
+uri = "file://artifacts/api-server/qa-output/phase2/Lender_Microschool.xlsx"
+type = "table"
+title = "Lender Packet — Microschool persona"
+
+[[outputs]]
+id = "jWsD7CTdH1ecaAu5GwYc3"
+uri = "file://artifacts/api-server/qa-output/phase2/Lender_PrivateESA.xlsx"
+type = "table"
+title = "Lender Packet — Private/ESA persona"
+
+[[outputs]]
+id = "Cp1HNf_ri41QCFgpoS7q0"
+uri = "file://artifacts/api-server/qa-output/phase2/Lender_Charter.xlsx"
+type = "table"
+title = "Lender Packet — Charter persona"
