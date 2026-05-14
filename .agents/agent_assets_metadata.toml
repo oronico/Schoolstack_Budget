@@ -118,7 +118,7 @@ title = "21-Tab Underwriting Workbook — Microschool Startup"
 id = "IxfFn0jHQL_QgN81RL5Ft"
 uri = "file://artifacts/api-server/qa-output/Underwriting_V2_(21-tab)_Charter_Public_Funding.xlsx"
 type = "table"
-title = "21-Tab Underwriting Workbook — Charter Public Funding"
+title = "Underwriting Workbook — Charter Public Funding (21 tabs, populated)"
 
 [[outputs]]
 id = "bs59FYVZ1vocjYkFdZxCd"
@@ -136,7 +136,7 @@ title = "Pro Forma - FIXED (1 page, 2.5KB)"
 id = "0ZO-e9ok-ml1kMTPxIg9n"
 uri = "file://artifacts/api-server/qa-output/export-samples/Loan_Readiness_Report.pdf"
 type = "pdf"
-title = "Loan Readiness Scorecard (sample PDF)"
+title = "Loan Readiness Scorecard (PDF)"
 
 [[outputs]]
 id = "NOGSmraH34P8A3Mv63fC4"
@@ -148,13 +148,13 @@ title = "Lender Pro Forma (sample XLSX)"
 id = "Mh0Xarg3J_2pqJKYkeO3W"
 uri = "file://artifacts/api-server/qa-output/export-samples/Lender_Packet.pdf"
 type = "pdf"
-title = "Lender Packet (sample PDF)"
+title = "Lender Packet (PDF)"
 
 [[outputs]]
 id = "W2UBHvkh9LaSBw0_XceKU"
 uri = "file://artifacts/api-server/qa-output/export-samples/Board_Summary.pdf"
 type = "pdf"
-title = "Board Summary - FIXED (4 pages, 9KB)"
+title = "Board Summary / Board Packet (PDF)"
 
 [[outputs]]
 id = "GbxvSW_2e7FjtcFCDO4hi"
@@ -221,3 +221,21 @@ id = "Cp1HNf_ri41QCFgpoS7q0"
 uri = "file://artifacts/api-server/qa-output/phase2/Lender_Charter.xlsx"
 type = "table"
 title = "Lender Packet — Charter persona"
+
+[[outputs]]
+id = "s8PHVdhfSpWo43JSHiDch"
+uri = "file://artifacts/api-server/qa-output/Lender_Pro_Forma_Charter_Public_Funding.xlsx"
+type = "table"
+title = "Lender Pro Forma — Charter Public Funding"
+
+[[outputs]]
+id = "KoSkXT7nqJO6TF797t0nF"
+uri = "file://artifacts/api-server/qa-output/Standard_Export_Charter_Public_Funding.xlsx"
+type = "table"
+title = "Standard Export — Charter Public Funding"
+
+[[outputs]]
+id = "wQMQveMJqsfd4p6v1IDiM"
+uri = "file://artifacts/api-server/qa-output/Single-Year_Pro_Forma_Charter_Public_Funding.xlsx"
+type = "table"
+title = "Single-Year Pro Forma — Charter Public Funding"
