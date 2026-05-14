@@ -232,7 +232,6 @@ export function LandingPage() {
                   <p className="text-sm font-semibold text-[#1E293B] leading-tight">
                     The Building Hope Impact Fund
                   </p>
-                  <p className="text-xs text-[#1E293B]/50 mt-0.5">A public charity</p>
                 </div>
               </div>
 
