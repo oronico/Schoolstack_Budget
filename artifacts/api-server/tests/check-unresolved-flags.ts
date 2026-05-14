@@ -132,6 +132,37 @@ check(
   mixed.blocked === true && /structural inconsistency/i.test(mixed.message),
 );
 
+// Task #860 EXPANDED — funding_mix_unmigrated is a hard-block flag.
+// Cannot be cleared by an explanation reason; the founder must re-open
+// the wizard so the v2 migration runs and `revenueModelVersion` is
+// stamped.
+check(
+  "Task #860 EXPANDED — funding_mix_unmigrated registered as hard-block",
+  HARD_BLOCK_FLAG_TYPES.has("funding_mix_unmigrated"),
+);
+
+const unmigratedWithReason = checkUnresolvedFlags(
+  [
+    flag({
+      flagType: "funding_mix_unmigrated",
+      field: "revenueModelVersion",
+      severity: "critical",
+    }),
+  ],
+  [
+    {
+      flagType: "funding_mix_unmigrated",
+      field: "revenueModelVersion",
+      reason: "founder said it's fine",
+    },
+  ],
+);
+check(
+  "funding_mix_unmigrated + reason STILL blocked",
+  unmigratedWithReason.blocked === true,
+  `expected blocked=true, got ${unmigratedWithReason.blocked}`,
+);
+
 if (failures.length > 0) {
   console.error(`check-unresolved-flags: ${failures.length} failed:`);
   for (const f of failures) console.error(f);

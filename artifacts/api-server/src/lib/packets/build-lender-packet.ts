@@ -10,11 +10,13 @@ import {
   computeProgramBreakEven,
   computeSensitivityGrid,
   computeFounderCompNormalization,
+  buildPerSeatFundingMix,
   type ForecastAccuracyFilter,
   type ForecastAccuracyRollup,
   type DecisionEngineModelData,
   type DownsideBand,
   type LenderStressTestResults,
+  type PerSeatFundingMix,
   type ProgramBreakEven,
   type SensitivityGrid,
   getFounderCompBenchmarkPerYear,
@@ -145,6 +147,15 @@ export interface LenderPacket extends PacketData {
    * show identical numbers (Task #213).
    */
   cashRunway: CashRunwayView;
+  /**
+   * Task #860 EXPANDED — Per-seat funding mix for Year 1, computed via
+   * the same engine helper that powers the dashboard card and consultant
+   * view, so the lender PDF agrees with every other surface on how each
+   * seat is funded (sticker → net → ESA / voucher / tax-credit funders →
+   * residual family pay). `null` for models with no per-student tuition
+   * row (e.g. fully-grant-funded microschool variants).
+   */
+  perSeatFundingMixY1: PerSeatFundingMix | null;
   // Projected-vs-actual roll-up across every Pursued saved scenario that has
   // realized actuals captured. Empty arrays when no eligible scenarios exist
   // — the PDF renderer skips the section gracefully in that case (Task #216).
@@ -345,6 +356,19 @@ export function buildLenderPacket(
     0,
   );
 
+  // Task #860 EXPANDED — Year-1 per-seat funding mix. Reuses the same
+  // engine helper that powers the dashboard PerSeatFundingMixCard so the
+  // lender PDF, board PDF, and on-screen views all show identical
+  // numbers (sticker → net → ESA / voucher / tax-credit funders →
+  // residual family pay). `null` for non-tuition models.
+  const y1Enrollment = modelData.enrollment?.year1 ?? 0;
+  const perSeatFundingMixY1 = buildPerSeatFundingMix(
+    (modelData.revenueRows ?? []) as unknown as Parameters<typeof buildPerSeatFundingMix>[0],
+    0,
+    y1Enrollment,
+    (modelData.tuitionTiers ?? []) as unknown as Parameters<typeof buildPerSeatFundingMix>[3],
+  );
+
   return {
     ...basePacket,
     sections: enrichedSections,
@@ -359,6 +383,7 @@ export function buildLenderPacket(
     flaggedAssumptions,
     decisionHistory,
     cashRunway,
+    perSeatFundingMixY1,
     forecastAccuracy,
     forecastAccuracyFilter: normalizedFilter,
     forecastAccuracyUnfilteredCount: fullForecastAccuracy.entries.length,

@@ -14,10 +14,12 @@ import {
 import {
   computeForecastAccuracy,
   filterForecastAccuracy,
+  buildPerSeatFundingMix,
   type ForecastAccuracyFilter,
   type ForecastAccuracyRollup,
   type DecisionEngineModelData,
   type LenderStressTestResults,
+  type PerSeatFundingMix,
 } from "@workspace/finance";
 import { buildPacketData } from "./build-packet-data";
 import { buildFounderCompPdfBlock, type FounderCompPdfBlock } from "./build-lender-packet";
@@ -136,6 +138,13 @@ export interface BoardPacket extends PacketData {
   boardNarrative: BoardNarrativeData;
   boardFlaggedAssumptions: BoardFlaggedAssumption[];
   decisionHistory: DecisionHistoryItem[];
+  /**
+   * Task #860 EXPANDED — Year-1 per-seat funding mix. Same shape and
+   * source as the lender packet so both PDFs reconcile to the dollar
+   * (sticker → net → ESA / voucher / tax-credit funders → residual
+   * family pay). `null` for non-tuition models.
+   */
+  perSeatFundingMixY1: PerSeatFundingMix | null;
   // Projected-vs-actual roll-up across every Pursued saved scenario that has
   // realized actuals captured. Empty arrays when no eligible scenarios exist
   // — the PDF renderer skips the section gracefully in that case (Task #216).
@@ -375,6 +384,16 @@ export function buildBoardPacket(
   // founder-edited grant draft (if present) winning over this fallback.
   const narrativeBundle = buildNarrativeBundle(modelData, consultantOutput);
 
+  // Task #860 EXPANDED — Year-1 per-seat funding mix; same engine
+  // helper as build-lender-packet so the PDFs reconcile.
+  const y1Enrollment = modelData.enrollment?.year1 ?? 0;
+  const perSeatFundingMixY1 = buildPerSeatFundingMix(
+    (modelData.revenueRows ?? []) as unknown as Parameters<typeof buildPerSeatFundingMix>[0],
+    0,
+    y1Enrollment,
+    (modelData.tuitionTiers ?? []) as unknown as Parameters<typeof buildPerSeatFundingMix>[3],
+  );
+
   return {
     ...basePacket,
     sections: enrichedSections,
@@ -382,6 +401,7 @@ export function buildBoardPacket(
     focusAreas,
     scenarioSnapshots,
     cashRunway,
+    perSeatFundingMixY1,
     financialOutlook,
     boardNarrative,
     boardFlaggedAssumptions,

@@ -12,6 +12,8 @@ import {
 import {
   detectFragileFunding,
   detectFundingMixInconsistencies,
+  hasLegacyStackedPattern,
+  CURRENT_REVENUE_MODEL_VERSION,
   HIGH_IMPACT_CONFIDENCE_KEYS,
   isEstimateWithoutEvidence,
   ASSUMPTION_REGISTRY,
@@ -520,6 +522,38 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
         nextStep: `Open Step 5: Revenue and reconcile ${yearList} so per-student school-choice (ESA / voucher / tax-credit) amounts sum to no more than the per-student net tuition (after tier discounts).`,
       });
     }
+  }
+
+  // Task #860 EXPANDED — Funding-mix unmigrated. Hard-block flag for
+  // legacy v1 models that still carry the stacked per-student tuition +
+  // per-student school_choice pattern. The engine corrects the math
+  // either way, but until the founder accepts the migration we block
+  // export so they can review the changelog entry showing exactly how
+  // Year-1 revenue moved from "naive sum" to "engine-corrected".
+  const revenueModelVersion =
+    (data as { revenueModelVersion?: number }).revenueModelVersion ?? 1;
+  if (
+    revenueModelVersion < CURRENT_REVENUE_MODEL_VERSION &&
+    revRows.length > 0 &&
+    enrollmentByYear[0] > 0 &&
+    hasLegacyStackedPattern(
+      revRows as unknown as Parameters<typeof hasLegacyStackedPattern>[0],
+      enrollmentByYear[0],
+      (data.tuitionTiers || []) as unknown as Parameters<typeof hasLegacyStackedPattern>[2],
+      yearCount,
+    )
+  ) {
+    flags.push({
+      field: "revenueModelVersion",
+      flagType: "funding_mix_unmigrated",
+      currentValue: `revenueModelVersion=${revenueModelVersion} (legacy stacked tuition + school-choice pattern detected)`,
+      benchmark: `revenueModelVersion ≥ ${CURRENT_REVENUE_MODEL_VERSION}`,
+      severity: "critical",
+      defaultPrompt:
+        "Your model still uses the legacy revenue shape where ESA / voucher / tax-credit rows are added on top of tuition for the same seat. The engine corrects this for you, but you need to open the wizard once so we can stamp the funding-mix v2 migration and show you the before/after Year-1 revenue change.",
+      nextStep:
+        "Open the wizard's Revenue step (Step 5). The migration runs automatically on load — review the changelog entry and save the model so the funding-mix v2 stamp persists.",
+    });
   }
 
   // Task #686 — guardrail: every emitted AssumptionFlag must carry a

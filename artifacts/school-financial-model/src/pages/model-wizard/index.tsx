@@ -15,6 +15,7 @@ import {
   DEFAULT_PAYROLL_TAX_RATE,
   ASSUMPTION_REGISTRY,
   isAssumptionKey,
+  migrateLegacyFundingMix,
 } from "@workspace/finance";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { MicroLessonContainer } from "@/components/coaching/MicroLessonCard";
@@ -656,6 +657,26 @@ export function ModelWizardPage() {
       if (Array.isArray(d.revenueRows)) {
         normalizeAmounts(d.revenueRows as Array<{ amounts?: number[] }>);
         d.revenueRows = migrateGrantsToPhilanthropy(d.revenueRows as RevenueRowData[]);
+      }
+      // Task #860 expanded scope — one-shot migration: stamp the model
+      // as `revenueModelVersion: 2` (funding-mix corrected) and append
+      // a per-model changelog entry showing the founder the before/
+      // after Y1 revenue delta caused by the funding-mix correction.
+      // No-op for models already at v2 or with nothing to correct.
+      try {
+        const migrated = migrateLegacyFundingMix(
+          d as unknown as Record<string, unknown> & { revenueModelVersion?: number },
+        );
+        if (migrated.applied) {
+          d.revenueModelVersion = migrated.data.revenueModelVersion as number;
+          d.modelMigrations = (migrated.data as { modelMigrations?: unknown[] })
+            .modelMigrations;
+        } else if ((migrated.data as { revenueModelVersion?: number }).revenueModelVersion) {
+          d.revenueModelVersion = (migrated.data as { revenueModelVersion: number })
+            .revenueModelVersion;
+        }
+      } catch {
+        // Best-effort migration; never block load.
       }
       if (Array.isArray(d.expenseRows)) normalizeAmounts(d.expenseRows as Array<{ amounts?: number[] }>);
       if (Array.isArray(d.capitalAndDebtRows)) normalizeAmounts(d.capitalAndDebtRows as Array<{ amounts?: number[] }>);

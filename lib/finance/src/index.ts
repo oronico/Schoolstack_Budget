@@ -314,6 +314,22 @@ export {
 } from "./revenue-quality.js";
 
 export {
+  buildPerSeatFundingMix,
+  PER_SEAT_FUNDER_LABELS,
+  type PerSeatFundingMix,
+  type PerSeatFunder,
+} from "./per-seat-funding-mix.js";
+
+export {
+  CURRENT_REVENUE_MODEL_VERSION,
+  hasLegacyStackedPattern,
+  migrateLegacyFundingMix,
+  type ModelMigrationEntry,
+  type FundingMixMigratableModel,
+  type FundingMixMigrationResult,
+} from "./funding-mix-migration.js";
+
+export {
   ASSUMPTION_CONFIDENCE_POSTURE_DESCRIPTIONS,
   rollupAssumptionConfidence,
   type AssumptionConfidencePosture,

@@ -26,6 +26,12 @@ import type { AssumptionFlag } from "./assumption-flags";
  */
 export const HARD_BLOCK_FLAG_TYPES = new Set<string>([
   "funding_mix_inconsistent",
+  // Task #860 EXPANDED — legacy v1 models that haven't yet been
+  // migrated to the funding-mix v2 stamp. The founder must open the
+  // wizard once so the migration runs and the changelog entry is
+  // recorded. An explanation reason can never clear this — only
+  // re-saving the model bumps `revenueModelVersion` to 2.
+  "funding_mix_unmigrated",
 ]);
 
 export function checkUnresolvedFlags(
