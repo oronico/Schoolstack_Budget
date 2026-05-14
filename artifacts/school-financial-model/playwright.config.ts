@@ -69,6 +69,16 @@ export default defineConfig({
   // browsers on the same Linux host.
   snapshotPathTemplate:
     "{testFileDir}/{testFileName}-snapshots/{arg}-{platform}{ext}",
+  // Browser matrix is gated by E2E_ALL_BROWSERS. The Replit container only
+  // ships the system libraries Chromium needs; Firefox and WebKit require a
+  // long list of distro-specific shared objects (libavif, libenchant-2,
+  // libwoff2dec, libflite_*, libharfbuzz-icu, libmanette-0.2, etc.) that
+  // aren't easily provisioned through Nix. Running them on Replit therefore
+  // fails every test with a "Host system is missing dependencies" error and
+  // masks real signal from the chromium project. Engineers with a fully
+  // provisioned local environment (or a future CI image with the deps
+  // installed) can opt back into the full matrix by setting
+  // E2E_ALL_BROWSERS=1 before invoking `pnpm test:e2e`.
   projects: [
     {
       name: "chromium",
@@ -89,14 +99,18 @@ export default defineConfig({
           : {}),
       },
     },
-    {
-      name: "firefox",
-      use: { ...devices["Desktop Firefox"] },
-    },
-    {
-      name: "webkit",
-      use: { ...devices["Desktop Safari"] },
-    },
+    ...(process.env.E2E_ALL_BROWSERS === "1"
+      ? [
+          {
+            name: "firefox",
+            use: { ...devices["Desktop Firefox"] },
+          },
+          {
+            name: "webkit",
+            use: { ...devices["Desktop Safari"] },
+          },
+        ]
+      : []),
   ],
   webServer: shouldStartServers
     ? [
