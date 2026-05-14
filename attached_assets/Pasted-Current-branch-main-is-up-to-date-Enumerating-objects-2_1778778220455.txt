@@ -1,0 +1,51 @@
+Current branch main is up to date.
+Enumerating objects: 239, done.
+Counting objects: 100% (239/239), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (183/183), done.
+Writing objects: 100% (190/190), 108.95 KiB | 1.22 MiB/s, done.
+Total 190 (delta 127), reused 6 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (127/127), completed with 43 local objects.
+To https://github.com/oronico/Schoolstack_Budget
+ ! [remote rejected]   main -> main (refusing to allow an OAuth App to create or update workflow `.github/workflows/playwright-cross-browser.yml` without `workflow` scope)
+error: failed to push some refs to 'https://github.com/oronico/Schoolstack_Budget'
+~/workspace$ git status              # shows the conflicted file
+# Open the file, find the <<<<<<< / ======= / >>>>>>> markers,
+# keep the version you want, delete the markers, save.
+git add <the-file>
+git rebase --continue
+git push origin main
+On branch main
+Your branch is ahead of 'origin/main' by 20 commits.
+  (use "git push" to publish your local commits)
+
+nothing to commit, working tree clean
+bash: syntax error near unexpected token `newline'
+fatal: no rebase in progress
+Enumerating objects: 239, done.
+Counting objects: 100% (239/239), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (183/183), done.
+Writing objects: 100% (190/190), 108.95 KiB | 6.41 MiB/s, done.
+Total 190 (delta 127), reused 6 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (127/127), completed with 43 local objects.
+To https://github.com/oronico/Schoolstack_Budget
+ ! [remote rejected]   main -> main (refusing to allow an OAuth App to create or update workflow `.github/workflows/playwright-cross-browser.yml` without `workflow` scope)
+error: failed to push some refs to 'https://github.com/oronico/Schoolstack_Budget'
+~/workspace$ git rebase --abort      # back to where you were before the pull
+git pull -X ours origin main   # take "ours" on any conflict
+git push origin main
+fatal: no rebase in progress
+From https://github.com/oronico/Schoolstack_Budget
+ * branch              main       -> FETCH_HEAD
+Already up to date.
+Enumerating objects: 239, done.
+Counting objects: 100% (239/239), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (183/183), done.
+Writing objects: 100% (190/190), 109.07 KiB | 6.06 MiB/s, done.
+Total 190 (delta 126), reused 6 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (126/126), completed with 43 local objects.
+To https://github.com/oronico/Schoolstack_Budget
+ ! [remote rejected]   main -> main (refusing to allow an OAuth App to create or update workflow `.github/workflows/playwright-cross-browser.yml` without `workflow` scope)
+error: failed to push some refs to 'https://github.com/oronico/Schoolstack_Budget'
