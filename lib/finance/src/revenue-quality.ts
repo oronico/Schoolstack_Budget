@@ -288,12 +288,19 @@ export function computeRevenueRowAmountsForYear(
   //   - gross_tuition is enabled AND uses the per_student driver, AND
   //   - at least one school_choice row is enabled AND uses per_student.
   //
-  // We then treat the school_choice per-student amounts as funding sources
-  // for the same seat. The gross_tuition row's dollars are reduced to the
-  // residual family-pay portion: max(0, (seat - choice) * students). The
-  // school_choice row dollars are capped if their sum would otherwise
-  // exceed seat * students (in which case the residual is 0 and we emit
-  // a `funding_mix_inconsistent` flag downstream).
+  // We treat the school_choice per-student amounts as funding sources for
+  // the same seat. The basis we cap against is the *net* per-student
+  // tuition AFTER tier discounts (grossCurrent / students), NOT the
+  // sticker price. This matters because a school may charge $10K sticker
+  // but discount to $5K average via tuition tiers — an ESA can pay at
+  // most that net charge, not the sticker. Without this, an $8K ESA on a
+  // 50%-discounted seat would still be reported at $8K and overstate
+  // revenue (architect review of Task #860, round 2).
+  //
+  // gross_tuition is reduced to the residual family-pay portion. Choice
+  // rows are capped proportionally if their sum exceeds the net seat
+  // basis (in which case the residual is 0 and we emit a
+  // `funding_mix_inconsistent` flag downstream).
   //
   // Non-per-student tuition rows (registration fees, aftercare) and
   // non-per-student school_choice rows (annual ESA grants) are genuinely
@@ -307,13 +314,17 @@ export function computeRevenueRowAmountsForYear(
       (r) => r.enabled && r.category === "school_choice" && r.driverType === "per_student",
     );
     if (choiceRows.length > 0 && seatPerStudent > 0) {
+      const grossCurrent = rowValues.get("gross_tuition") || 0;
+      // Net per-student tuition charge, after tuition-tier discounts.
+      const netPerStudent = grossCurrent / students;
       let choicePerStudentTotal = 0;
       for (const cr of choiceRows) {
         choicePerStudentTotal += perStudentValue(cr, yearIdx);
       }
-      const cappedChoicePerStudent = Math.min(choicePerStudentTotal, seatPerStudent);
-      // Cap school_choice rows proportionally if they would exceed the seat.
-      if (choicePerStudentTotal > seatPerStudent && choicePerStudentTotal > 0) {
+      const cappedChoicePerStudent = Math.min(choicePerStudentTotal, netPerStudent);
+      // Cap school_choice rows proportionally if their sum would exceed
+      // the net per-student tuition charge actually billed to families.
+      if (choicePerStudentTotal > netPerStudent && choicePerStudentTotal > 0) {
         const scale = cappedChoicePerStudent / choicePerStudentTotal;
         for (const cr of choiceRows) {
           const cur = rowValues.get(cr.id) || 0;
@@ -321,34 +332,27 @@ export function computeRevenueRowAmountsForYear(
         }
       }
       // Reduce gross_tuition to the residual family-pay portion.
-      const residualPerStudent = Math.max(0, seatPerStudent - cappedChoicePerStudent);
-      const grossCurrent = rowValues.get("gross_tuition") || 0;
-      // Preserve the tuition-tier vs flat scaling: scale by ratio of
-      // residual to seat so tier discounts continue to apply correctly.
-      const seatTotal = seatPerStudent * students;
-      const scaledResidual = seatTotal > 0
-        ? grossCurrent * (residualPerStudent / seatPerStudent)
-        : 0;
-      rowValues.set("gross_tuition", scaledResidual);
+      const residualPerStudent = Math.max(0, netPerStudent - cappedChoicePerStudent);
+      rowValues.set("gross_tuition", residualPerStudent * students);
 
       // Task #860 — runtime invariant. After the correction the sum of
-      // gross_tuition + per-student school_choice dollars must not exceed
-      // the seat * students cap. If this ever trips, a future refactor
-      // re-introduced the double-counting bug. Throws in dev / test;
-      // best-effort warn in production so a stray rounding edge case
-      // never breaks a founder's session.
+      // gross_tuition + per-student school_choice dollars must not
+      // exceed the net per-student tuition * students cap. If this ever
+      // trips, a future refactor re-introduced the double-counting bug.
+      // Throws in dev / test; best-effort warn in production so a
+      // rounding edge case never breaks a founder's session.
       const postGross = rowValues.get("gross_tuition") || 0;
       let postChoice = 0;
       for (const cr of choiceRows) postChoice += rowValues.get(cr.id) || 0;
-      const cap = seatPerStudent * students;
-      // 0.01% tolerance for FP error from proportional scaling.
+      const cap = netPerStudent * students;
       const tolerance = Math.max(1, cap * 0.0001);
       if (postGross + postChoice > cap + tolerance) {
         const msg =
           `[funding-mix invariant] year ${yearIdx + 1}: ` +
           `gross_tuition (${postGross.toFixed(2)}) + per-student school_choice ` +
           `(${postChoice.toFixed(2)}) = ${(postGross + postChoice).toFixed(2)} ` +
-          `exceeds seat cap ${cap.toFixed(2)} (${seatPerStudent} × ${students}). ` +
+          `exceeds net seat cap ${cap.toFixed(2)} ` +
+          `(net ${netPerStudent.toFixed(2)} × ${students}). ` +
           `This indicates the funding-mix correction was bypassed.`;
         const env = (typeof process !== "undefined" && process.env) || {};
         if (env.NODE_ENV === "test" || env.NODE_ENV === "development") {
@@ -413,22 +417,26 @@ export function applyFundingMixCorrection(
   );
   if (choiceRows.length === 0) return vals;
 
+  const grossCurrent = vals.get("gross_tuition") || 0;
+  // Net per-student tuition charge after tier discounts. We cap funding
+  // sources against this — not the sticker price — so a discounted seat
+  // can never collect more in ESA + family pay than its actual net
+  // billed tuition (architect review of Task #860, round 2).
+  const netPerStudent = grossCurrent / students;
   let choicePerStudentTotal = 0;
   for (const cr of choiceRows) {
     choicePerStudentTotal += perStudentValue(cr, yearIdx);
   }
-  const cappedChoicePerStudent = Math.min(choicePerStudentTotal, seatPerStudent);
-  if (choicePerStudentTotal > seatPerStudent && choicePerStudentTotal > 0) {
+  const cappedChoicePerStudent = Math.min(choicePerStudentTotal, netPerStudent);
+  if (choicePerStudentTotal > netPerStudent && choicePerStudentTotal > 0) {
     const scale = cappedChoicePerStudent / choicePerStudentTotal;
     for (const cr of choiceRows) {
       const cur = vals.get(cr.id) || 0;
       vals.set(cr.id, cur * scale);
     }
   }
-  const residualPerStudent = Math.max(0, seatPerStudent - cappedChoicePerStudent);
-  const grossCurrent = vals.get("gross_tuition") || 0;
-  const scaledResidual = grossCurrent * (residualPerStudent / seatPerStudent);
-  vals.set("gross_tuition", scaledResidual);
+  const residualPerStudent = Math.max(0, netPerStudent - cappedChoicePerStudent);
+  vals.set("gross_tuition", residualPerStudent * students);
   return vals;
 }
 
@@ -451,6 +459,8 @@ export interface FundingMixInconsistency {
 export function detectFundingMixInconsistencies(
   rows: readonly RevenueRowAmountsRowLike[],
   yearCount: number,
+  students?: number,
+  tuitionTiers?: TuitionTierLike[],
 ): FundingMixInconsistency[] {
   const grossTuitionRow = rows.find(
     (r) => r.enabled && r.id === "gross_tuition" && r.driverType === "per_student",
@@ -463,16 +473,26 @@ export function detectFundingMixInconsistencies(
 
   const out: FundingMixInconsistency[] = [];
   for (let y = 0; y < yearCount; y++) {
-    const seat = perStudentValue(grossTuitionRow, y);
-    if (seat <= 0) continue;
+    const stickerSeat = perStudentValue(grossTuitionRow, y);
+    if (stickerSeat <= 0) continue;
+    // The cap basis we report is the *net* per-student tuition after
+    // tuition-tier discounts, so the flag's dollars match what the
+    // engine actually caps revenue at. Falls back to sticker price when
+    // no enrollment / tiers are supplied (defensive: keeps existing
+    // call sites working).
+    let netSeat = stickerSeat;
+    if (students && students > 0 && tuitionTiers && tuitionTiers.length > 0) {
+      const tuitionTotal = computeTuitionWithTiers(stickerSeat, y, students, tuitionTiers);
+      netSeat = tuitionTotal / students;
+    }
     let funding = 0;
     for (const cr of choiceRows) funding += perStudentValue(cr, y);
-    if (funding > seat) {
+    if (funding > netSeat) {
       out.push({
         yearIdx: y,
-        seatPerStudent: seat,
+        seatPerStudent: netSeat,
         fundingPerStudent: funding,
-        excessPerStudent: funding - seat,
+        excessPerStudent: funding - netSeat,
       });
     }
   }

@@ -481,18 +481,24 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
     }
   }
 
-  // Task #860 — Funding-mix inconsistency. Per-student ESA / voucher /
-  // tax-credit amounts that sum above the seat sticker price imply the
-  // founder either entered the seat price too low or stacked funding
-  // sources that can't actually co-fund the same seat. The engine caps
-  // total revenue at seat * students so the model stays defensible, but
-  // the founder needs to reconcile the inputs before exporting a
-  // Lender / Board packet.
+  // Task #860 — Funding-mix inconsistency. The detector scans only
+  // `school_choice` per-student rows (ESA, voucher, tax-credit
+  // scholarships funded by school-choice programs). When their sum
+  // exceeds the *net* per-student tuition (sticker price after tuition
+  // tier discounts), the founder has either understated tuition or
+  // stacked funding sources that can't actually co-fund the same seat.
+  // The engine caps combined tuition + choice revenue at the net seat
+  // basis so the model stays defensible, but the founder must
+  // reconcile the inputs before exporting a Lender / Board packet.
+  // Tuition_offsets / privately funded scholarship rows are NOT in this
+  // detector's scope — they're treated as discounts elsewhere.
   const revRows = (data.revenueRows || []) as RevenueRow[];
   if (revRows.length > 0) {
     const mismatches = detectFundingMixInconsistencies(
       revRows as unknown as Parameters<typeof detectFundingMixInconsistencies>[0],
       yearCount,
+      enrollmentByYear[0] || 0,
+      (data.tuitionTiers || []) as unknown as Parameters<typeof detectFundingMixInconsistencies>[3],
     );
     if (mismatches.length > 0) {
       const first = mismatches[0];
@@ -507,11 +513,11 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
       flags.push({
         field: "revenueRows.gross_tuition",
         flagType: "funding_mix_inconsistent",
-        currentValue: `${yearLabel}: seat ${seat}/student, ESA + voucher + scholarship total ${funding}/student (over by ${excess})`,
-        benchmark: "Per-student funding sources ≤ per-student seat price",
+        currentValue: `${yearLabel}: net tuition ${seat}/student, school-choice (ESA + voucher + tax-credit) total ${funding}/student (over by ${excess})`,
+        benchmark: "Per-student school-choice funding ≤ per-student net tuition",
         severity: "warning",
-        defaultPrompt: `Tuition is the seat price. Your per-student ESA / voucher / scholarship rows sum to ${funding} in ${yearLabel} — more than the ${seat} seat price. Either raise tuition to reflect the true seat cost, or lower the per-student funding amounts so they represent what each funder actually pays toward one seat. Until then we cap the combined tuition + choice revenue at the seat price so the model stays defensible.`,
-        nextStep: `Open Step 5: Revenue and reconcile ${yearList} so per-student ESA / voucher / scholarship amounts sum to no more than the per-student tuition (seat price).`,
+        defaultPrompt: `Tuition is the seat price. Your per-student school-choice rows (ESA / voucher / tax-credit) sum to ${funding} in ${yearLabel} — more than the ${seat} per-student tuition you actually charge. Either raise tuition to reflect the true seat cost, or lower the per-student funding amounts so each funder's row represents what that funder pays toward one seat. Until then we cap combined tuition + school-choice revenue at the net seat basis so the model stays defensible.`,
+        nextStep: `Open Step 5: Revenue and reconcile ${yearList} so per-student school-choice (ESA / voucher / tax-credit) amounts sum to no more than the per-student net tuition (after tier discounts).`,
       });
     }
   }

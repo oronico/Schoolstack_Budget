@@ -217,6 +217,61 @@ function main() {
     }
   }
 
+  // --- Tier discount: ESA cap is NET tuition, not sticker ---
+  // Architect review round 2: with a 50% tier discount, an $8K ESA on a
+  // $10K sticker seat must cap at the discounted $5K net charge — not
+  // collect $8K and overstate revenue.
+  {
+    // 100 students; tier gives 100% of them a 50% discount.
+    const tiers = [{ discountPercent: 50, studentCounts: [100, 100, 100] }];
+    const rows = [tuitionRow([10000]), choiceRow("esa_revenue", [8000])];
+    const a = computeRevenueRowAmountsForYear(rows, 0, 100, tiers);
+    const total = (a.get("gross_tuition") || 0) + (a.get("esa_revenue") || 0);
+    // Net per-student tuition after 50% discount = $5K. ESA caps at $5K.
+    // Family residual = $0. Total program revenue = $500K.
+    check(
+      "tier discount: total tuition + ESA capped at net seat revenue ($500K)",
+      approxEqual(total, 500000, 1),
+      `got ${total}`,
+    );
+    check(
+      "tier discount: ESA capped to net per-student ($500K, not $800K)",
+      approxEqual(a.get("esa_revenue") || 0, 500000, 1),
+      `got ${a.get("esa_revenue")}`,
+    );
+    check(
+      "tier discount: gross_tuition zeroed since ESA covers full net seat",
+      approxEqual(a.get("gross_tuition") || 0, 0, 1),
+      `got ${a.get("gross_tuition")}`,
+    );
+  }
+
+  // --- Tier discount with partial ESA: family pays the rest ---
+  {
+    // 50% discount → net $5K per student. ESA $3K → family $2K.
+    const tiers = [{ discountPercent: 50, studentCounts: [100, 100, 100] }];
+    const rows = [tuitionRow([10000]), choiceRow("esa_revenue", [3000])];
+    const a = computeRevenueRowAmountsForYear(rows, 0, 100, tiers);
+    check(
+      "tier + small ESA: ESA reported at funder amount ($300K)",
+      approxEqual(a.get("esa_revenue") || 0, 300000, 1),
+      `got ${a.get("esa_revenue")}`,
+    );
+    check(
+      "tier + small ESA: gross_tuition shows residual family-pay ($200K)",
+      approxEqual(a.get("gross_tuition") || 0, 200000, 1),
+      `got ${a.get("gross_tuition")}`,
+    );
+    check(
+      "tier + small ESA: total = net seat revenue ($500K)",
+      approxEqual(
+        (a.get("gross_tuition") || 0) + (a.get("esa_revenue") || 0),
+        500000,
+        1,
+      ),
+    );
+  }
+
   // --- detectFundingMixInconsistencies: ignores annual_fixed ---
   {
     const rows = [
