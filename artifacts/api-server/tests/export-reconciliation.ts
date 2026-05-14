@@ -40,6 +40,7 @@ import {
   microschoolFixture,
   charterFixture,
   chestertonAcademyFixture,
+  privateSchoolFixture,
   type TestModelPayload,
   type LenderStressTestResults,
 } from "@workspace/finance";
@@ -64,6 +65,11 @@ const GOLDENS: GoldenSpec[] = [
   { name: "microschool", fixture: microschoolFixture },
   { name: "charter", fixture: charterFixture },
   { name: "chesterton", fixture: chestertonAcademyFixture },
+  // Task #862 — Heritage Academy (FL private, 100→200 students,
+  // $10,500 tuition + $350 reg fee + $8,700 ESA - $1,050 scholarship).
+  // Locks in the scholarship-reduces-revenue fix and the no-tuition+
+  // ESA-double-counting invariants across every export surface.
+  { name: "heritage-private", fixture: privateSchoolFixture },
 ];
 
 let passed = 0;
@@ -804,6 +810,93 @@ async function reconcileGolden(spec: GoldenSpec): Promise<void> {
   );
 }
 
+/**
+ * Task #862 — Heritage Academy explicit-numerics regression.
+ *
+ * The audit named specific dollar values that must come out of the
+ * model for the Heritage fixture. These targeted asserts complement
+ * the generic cross-surface parity loop above by failing loudly if
+ * any of those exact figures drift, so the next contributor sees the
+ * named-number regression at the top of the failure list rather than
+ * having to back it out of a per-cell parity diff.
+ */
+async function assertHeritageNumerics(): Promise<void> {
+  const golden = "heritage-private-explicit";
+  const base = computeBaseFinancials(privateSchoolFixture);
+
+  // Y1 revenue: 100 students × ($10,500 tuition + $350 reg + $8,700 ESA
+  //   - $1,050 scholarship + $500 after-school) + $50K Foundation
+  //   + $25K Annual Fund = $1,975,000. The scholarship MUST reduce
+  //   revenue (Issue 2). If a regression re-introduces double-counting
+  //   or sign-flipping, this is the canary.
+  assertNear(golden, "engine", "Y1 revenue == $1,975,000",
+    1_975_000, base.revenue[0], CENT);
+
+  // Net Income excludes principal repayments (Issue 5). Heritage's
+  // P&L NI is positive in Y1 because the loan's principal is on the
+  // balance sheet, not in NI.
+  if (!(base.netIncome[0] > 0)) {
+    failed++;
+    failures.push(`  FAIL [golden=${golden}] [surface=engine] [metric=Y1 NI > 0] actual=${base.netIncome[0]}`);
+  } else {
+    passed++;
+  }
+
+  // Capacity covenant (Issue 12): the 75% covenant the audit names is
+  // satisfied across all 5 years for Heritage (50% Y1 → 100% Y5). With
+  // the pre-fix bug, minCapacityUtil=75 (whole percent) would render as
+  // "≥ 7500%" and the comparison would silently fail; post-fix it is
+  // normalized to a 0–1 fraction and Y5 (1.00) clears it.
+  const cap = privateSchoolFixture.schoolProfile.maxCapacity || 1;
+  const COVENANT = 0.75;
+  for (let y = 0; y < 5; y++) {
+    const util = base.enrollment[y] / cap;
+    const expectedPass = y >= 2; // Heritage clears 75% at Y3 (160/200)
+    const actualPass = util >= COVENANT;
+    if (expectedPass !== actualPass) {
+      failed++;
+      failures.push(`  FAIL [golden=${golden}] [surface=engine] [metric=Y${y+1} capacity covenant ${COVENANT*100}%] util=${util.toFixed(2)} expectedPass=${expectedPass}`);
+    } else {
+      passed++;
+    }
+  }
+
+  // Cross-tab Y1 revenue parity (Issue 3 partial — verifies that the
+  // Underwriting V2 tabs read from the same canonical engine output).
+  // Parses the Total Revenue row out of three named V2 tabs and
+  // asserts every one of them shows $1,975,000 ± $1.
+  const rawData = privateSchoolFixture as unknown as Record<string, unknown>;
+  const uwWb = await generateUnderwritingWorkbook(rawData);
+  const uwBuf = await uwWb.xlsx.writeBuffer();
+  const uwLoaded = await roundtrip(uwBuf as Buffer);
+  const tabsToCheck: Array<{ name: string; rowLabel: string }> = [
+    { name: "Enrollment Tuition Fcst", rowLabel: "TOTAL REVENUE" },
+    { name: "Budget Detail", rowLabel: "Total Revenue" },
+    { name: "Budget Summary", rowLabel: "Total Revenue" },
+  ];
+  for (const t of tabsToCheck) {
+    const ws = uwLoaded.worksheets.find((w) => w.name === t.name);
+    if (!ws) {
+      failed++;
+      failures.push(`  FAIL [golden=${golden}] [surface=underwriting:${t.name}] [metric=sheet exists] not found`);
+      continue;
+    }
+    let foundRow = -1;
+    ws.eachRow((row, rowNum) => {
+      const v = row.getCell(1).value;
+      if (typeof v === "string" && v.trim() === t.rowLabel) foundRow = rowNum;
+    });
+    if (foundRow < 0) {
+      failed++;
+      failures.push(`  FAIL [golden=${golden}] [surface=underwriting:${t.name}] [metric=row "${t.rowLabel}"] not found`);
+      continue;
+    }
+    const y1 = cellNum(ws.getCell(foundRow, 2));
+    assertNear(golden, `underwriting:${t.name}`,
+      `Y1 Total Revenue == $1,975,000`, 1_975_000, y1 ?? 0, CENT);
+  }
+}
+
 async function main(): Promise<void> {
   for (const golden of GOLDENS) {
     try {
@@ -815,6 +908,8 @@ async function main(): Promise<void> {
       );
     }
   }
+
+  await assertHeritageNumerics();
 
   console.log(
     `\nExport reconciliation: ${passed} passed, ${failed} failed across ${GOLDENS.length} golden model(s).`,

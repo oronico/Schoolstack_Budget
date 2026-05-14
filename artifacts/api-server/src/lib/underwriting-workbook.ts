@@ -985,9 +985,9 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
             if (edProgRow) {
               const enrollCol = edRefs.startCol + y;
               const enrollAddr = `'${edRefs.sheetName}'!${colLetter(enrollCol)}${edProgRow}`;
-              setFormula(cell, `${rateAddr}*${enrollAddr}`, Math.round(escalated * sign));
+              setFormula(cell, `${rateAddr}*${enrollAddr}`, Math.round(Math.abs(escalated) * sign));
             } else {
-              setFormula(cell, `${rateAddr}*${progEnroll}`, Math.round(escalated * sign));
+              setFormula(cell, `${rateAddr}*${progEnroll}`, Math.round(Math.abs(escalated) * sign));
             }
             cell.numFmt = CUR; dc(cell);
           }
@@ -1002,7 +1002,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
           const cell = ws.getCell(r, col);
           const students = enrollment[y];
           const val = computeRevLineItem(rv, y, students, tiers, costInflPct, sp, computeNewStudents(enrollment, tfRR, y), computeReturningStudents(enrollment, tfRR, y));
-          setFormula(cell, `SUM(${cn(progDetailFirstRow, col)}:${cn(progDetailLastRow, col)})`, Math.round(val * sign));
+          setFormula(cell, `SUM(${cn(progDetailFirstRow, col)}:${cn(progDetailLastRow, col)})`, Math.round(Math.abs(val) * sign));
           cell.numFmt = CUR; gc(cell);
         }
       } else {
@@ -1013,7 +1013,11 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
           const students = enrollment[y];
           const val = computeRevLineItem(rv, y, students, tiers, costInflPct, sp, computeNewStudents(enrollment, tfRR, y), computeReturningStudents(enrollment, tfRR, y));
           const cell = ws.getCell(r, y + 2);
-          cell.value = Math.round(val * sign); cell.numFmt = CUR; dc(cell);
+          // Task #862 (Issue 2) — fixtures may store tuition_offsets as
+          // negative values (per_student) OR positive percent_of_base.
+          // `Math.abs(val) * sign` yields the same negative discount
+          // either way, so scholarships always REDUCE revenue.
+          cell.value = Math.round(Math.abs(val) * sign); cell.numFmt = CUR; dc(cell);
           if (rv.driverType === "annual_fixed" && y === 0) inputCell(cell);
         }
       }
@@ -1028,7 +1032,10 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
       let catTotal = 0;
       for (const rv of rows) {
         const s = cat === "tuition_offsets" ? -1 : 1;
-        catTotal += computeRevLineItem(rv, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, tfRR, y), computeReturningStudents(enrollment, tfRR, y)) * s;
+        // Task #862 (Issue 2) — abs(val)*sign normalizes both stored
+        // conventions (negative per_student vs positive percent_of_base).
+        const v = computeRevLineItem(rv, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, tfRR, y), computeReturningStudents(enrollment, tfRR, y));
+        catTotal += Math.abs(v) * s;
       }
       const sumParts = lineSubtotalRows.map(sr => cn(sr, col)).join(",");
       setFormula(cell, `SUM(${sumParts})`, Math.round(catTotal));
@@ -1312,7 +1319,9 @@ function buildEnrollmentTuitionForecast(wb: ExcelJS.Workbook, data: ModelData, e
     for (let y = 0; y < yc; y++) {
       const val = computeRevLineItem(rv, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, etfRR, y), computeReturningStudents(enrollment, etfRR, y));
       const sign = rv.category === "tuition_offsets" ? -1 : 1;
-      ws.getCell(r, y + 2).value = Math.round(val * sign); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
+      // Task #862 (Issue 2) — abs(val)*sign so scholarships always
+      // appear as a negative discount on Enrollment & Tuition Fcst.
+      ws.getCell(r, y + 2).value = Math.round(Math.abs(val) * sign); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
     }
   }
   const etfLastRow = r;
@@ -2607,7 +2616,14 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
   const minDSCR = ct.minDSCR ?? BENCHMARK_DSCR_GREEN;
   const minDaysCash = ct.minDaysCashOnHand ?? 45;
   const minMonths = ct.minMonthsRunway ?? 2;
-  const minCapUtil = ct.minCapacityUtil ?? 0.7;
+  // Task #862 (Issue 12) — covenant-threshold inputs are inconsistently
+  // stored as either a 0–1 fraction (per zod schema) or a 0–100 whole
+  // percent (legacy sample payloads). Normalize to a fraction so the
+  // covenant label and the comparison both behave correctly; otherwise
+  // a stored "75" rendered as "Capacity ≥ 7500%" and silently failed
+  // every year.
+  const minCapUtilRaw = ct.minCapacityUtil ?? 0.7;
+  const minCapUtil = minCapUtilRaw > 1 ? minCapUtilRaw / 100 : minCapUtilRaw;
   const cap = sp.maxCapacity || 0;
   ws.columns = [{ width: 36 }, ...Array(yc).fill({ width: 16 })];
   printSetup(ws);

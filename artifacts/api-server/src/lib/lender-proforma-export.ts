@@ -466,6 +466,7 @@ interface LenderResults {
   principalCapByYear: number[];
   dscr: number[];
   netIncomeAfterDebt: number[];
+  netIncomePnL: number[];
   cumulativeCash: number[];
   adminFte: number[];
   managementFee: number[];
@@ -601,6 +602,7 @@ function computeLenderResults(input: Record<string, string | number>): LenderRes
 
   const dscr: number[] = [];
   const netIncomeAfterDebt: number[] = [];
+  const netIncomePnL: number[] = [];
   const cumulativeCash: number[] = [];
   for (let y = 0; y < 5; y++) {
     if (totalDebtService > 0) {
@@ -609,6 +611,7 @@ function computeLenderResults(input: Record<string, string | number>): LenderRes
       dscr.push(noi[y] > 0 ? 99.9 : 0);
     }
     netIncomeAfterDebt.push(noi[y] - totalDebtService);
+    netIncomePnL.push(noi[y] - interestByYear[y]);
     cumulativeCash.push(y === 0 ? startingCash + netIncomeAfterDebt[0] : cumulativeCash[y - 1] + netIncomeAfterDebt[y]);
   }
 
@@ -619,7 +622,7 @@ function computeLenderResults(input: Record<string, string | number>): LenderRes
     existingDebtService: existingDebt, proposedDebtService, totalDebtService,
     interestByYear, principalCapByYear,
     managementFee, hasManagementFee: hasMgmtFee, managementFeePercent: n("managementFeePercent"),
-    dscr, netIncomeAfterDebt, cumulativeCash, adminFte,
+    dscr, netIncomeAfterDebt, netIncomePnL, cumulativeCash, adminFte,
   };
 }
 
@@ -1318,11 +1321,18 @@ function buildPnL(wb: ExcelJS.Workbook, res: LenderResults) {
   // "Principal & Capital Outlays" so the lender P&L tab matches the GAAP-style
   // operating statement in the underwriting workbook (task #663). Net Income
   // still subtracts the full debt service so totals tie to Cash Flow & DSCR.
+  // Task #862 (Issue 6) — Interest Expense uses CUMIPMT against the
+  // Assumptions inputs so an Excel re-amortization stays in sync with
+  // the loan amount, rate, and term cells. Existing debt has no
+  // rate/term, so it does not contribute to interest.
   const interestRow = marginRow + 2;
   lbl(interestRow, "Interest Expense");
   for (let y = 0; y < 5; y++) {
     const cell = ws.getCell(interestRow, y + 3);
-    cell.value = Math.round(res.interestByYear[y] || 0);
+    const startPer = y * 12 + 1;
+    const endPer = (y + 1) * 12;
+    const cumipmt = `IF(Assumptions!$D$59>0,IF(${y + 1}<=Assumptions!$D$61,-CUMIPMT(Assumptions!$D$60/12,Assumptions!$D$61*12,Assumptions!$D$59,${startPer},${endPer},0),0),0)`;
+    setFormula(cell, cumipmt, Math.round(res.interestByYear[y] || 0));
     cell.numFmt = CUR; cell.font = NF; cell.border = BORDER;
     cell.alignment = { horizontal: "right" };
   }
@@ -1338,50 +1348,60 @@ function buildPnL(wb: ExcelJS.Workbook, res: LenderResults) {
     cell.alignment = { horizontal: "right" };
   }
 
+  // Task #862 (Issue 5) — Net Income on the P&L is GAAP-style:
+  // NOI − Interest only. Principal repayments are a balance-sheet
+  // movement and reduce cash (Cash Flow & DSCR), not net income.
   const niRow = principalRow + 2;
   lbl(niRow, "Net Income", true);
   localFormula(niRow,
-    [0, 1, 2, 3, 4].map(y => `${YEAR_COLS[y]}${noiRow}-${YEAR_COLS[y]}${interestRow}-${YEAR_COLS[y]}${principalRow}`),
-    res.netIncomeAfterDebt, CUR, true, true);
+    [0, 1, 2, 3, 4].map(y => `${YEAR_COLS[y]}${noiRow}-${YEAR_COLS[y]}${interestRow}`),
+    res.netIncomePnL, CUR, true, true);
 
   const niMarginRow = niRow + 1;
   lbl(niMarginRow, "Net Margin");
   localFormula(niMarginRow,
     [0, 1, 2, 3, 4].map(y => `IF(${YEAR_COLS[y]}10>0,${YEAR_COLS[y]}${niRow}/${YEAR_COLS[y]}10,0)`),
-    res.totalRevenue.map((rev, i) => rev > 0 ? res.netIncomeAfterDebt[i] / rev : 0), PCT);
+    res.totalRevenue.map((rev, i) => rev > 0 ? res.netIncomePnL[i] / rev : 0), PCT);
 
   const cumRow = niMarginRow + 2;
   lbl(cumRow, "Cumulative Net Income", true);
   for (let y = 0; y < 5; y++) {
     const cell = ws.getCell(cumRow, y + 3);
     if (y === 0) {
-      setFormula(cell, `${YEAR_COLS[0]}${niRow}`, res.netIncomeAfterDebt[0]);
+      setFormula(cell, `${YEAR_COLS[0]}${niRow}`, res.netIncomePnL[0]);
     } else {
-      const cumVal = res.netIncomeAfterDebt.slice(0, y + 1).reduce((a, b) => a + b, 0);
+      const cumVal = res.netIncomePnL.slice(0, y + 1).reduce((a, b) => a + b, 0);
       setFormula(cell, `${YEAR_COLS[y - 1]}${cumRow}+${YEAR_COLS[y]}${niRow}`, cumVal);
     }
     cell.numFmt = CUR; cell.font = BF; cell.border = BORDER;
     cell.alignment = { horizontal: "right" };
   }
 
+  // Task #862 (Issue 8) — Break-even cell is a live formula keyed off
+  // Cumulative Net Income, so users editing assumptions in Excel see
+  // the indicator move automatically.
   const beRow = cumRow + 1;
   lbl(beRow, "Break-even", true);
   let lenderBeYear = -1;
   let lenderCumNI = 0;
   for (let y = 0; y < 5; y++) {
-    lenderCumNI += res.netIncomeAfterDebt[y];
+    lenderCumNI += res.netIncomePnL[y];
     if (lenderBeYear < 0 && lenderCumNI >= 0) lenderBeYear = y;
   }
   for (let y = 0; y < 5; y++) {
     const cell = ws.getCell(beRow, y + 3);
-    if (y === lenderBeYear) {
-      cell.value = "✓ Break-even";
-      cell.font = { bold: true, size: 11, name: "Calibri", color: { argb: DASHBOARD_GREEN } };
-    } else {
-      cell.value = "";
-    }
+    const formula = y === 0
+      ? `IF(${YEAR_COLS[0]}${cumRow}>=0,"✓ Break-even","")`
+      : `IF(AND(${YEAR_COLS[y]}${cumRow}>=0,${YEAR_COLS[y - 1]}${cumRow}<0),"✓ Break-even","")`;
+    setFormula(cell, formula, y === lenderBeYear ? "✓ Break-even" : "");
+    cell.font = { bold: true, size: 11, name: "Calibri", color: { argb: DASHBOARD_GREEN } };
     cell.border = BORDER; cell.alignment = { horizontal: "center" };
   }
+
+  // Task #862 (Issue 4) — expose niRow on the worksheet so buildSummary
+  // can reference it without recomputing layout offsets.
+  (ws as unknown as { __niRow?: number }).__niRow = niRow;
+  (ws as unknown as { __totExpRow?: number }).__totExpRow = totExpRow;
 
   ws.views = [{ state: "frozen", xSplit: 2, ySplit: 3 }];
 }
@@ -1794,13 +1814,19 @@ function buildSummary(wb: ExcelJS.Workbook, input: Record<string, string | numbe
   ws.getCell("C12").border = BORDER;
   ws.getRow(12).height = 24;
 
+  // Task #862 (Issue 4) — Net Margin must reference the actual Net
+  // Income row on the P&L tab (which depends on whether a management
+  // fee row was inserted), not the hard-coded G21 (Principal row).
   const y5Rev = res.totalRevenue[4];
-  const y5NI = res.netIncomeAfterDebt[4];
+  const y5NI = res.netIncomePnL[4];
   const y5NetMargin = y5Rev > 0 ? y5NI / y5Rev : 0;
+  const pnlSheet = wb.getWorksheet("5-Year P&L");
+  const niRow = (pnlSheet as unknown as { __niRow?: number } | undefined)?.__niRow ?? 22;
+  const totExpRow = (pnlSheet as unknown as { __totExpRow?: number } | undefined)?.__totExpRow ?? 15;
 
   lbl(13, "Net Margin (Year 5)");
   const s13 = ws.getCell("C13");
-  setFormula(s13, `IF(Drivers!G10>0,'5-Year P&L'!G21/Drivers!G10,0)`, y5NetMargin);
+  setFormula(s13, `IF(Drivers!G10>0,'5-Year P&L'!G${niRow}/Drivers!G10,0)`, y5NetMargin);
   s13.numFmt = PCT; s13.font = NF; s13.border = BORDER; s13.alignment = { horizontal: "right" };
   s13.fill = { type: "pattern", pattern: "solid", fgColor: { argb: y5NetMargin >= 0 ? GREEN_BG : RED_BG } };
 
@@ -1836,11 +1862,16 @@ function buildSummary(wb: ExcelJS.Workbook, input: Record<string, string | numbe
   const dscrV5 = res.dscr[4];
   s18.fill = { type: "pattern", pattern: "solid", fgColor: { argb: dscrV5 >= BENCHMARK_DSCR_GREEN ? GREEN_BG : dscrV5 >= BENCHMARK_DSCR_AMBER ? AMBER_BG : RED_BG } };
 
+  // Task #862 (Issue 8) — DCOH is now a live formula referencing
+  // Ending Cash on Cash Flow & DSCR (row 16) and Total Expenses on
+  // the P&L (totExpRow), so Excel edits stay in sync.
   const y1DcohLender = computeDaysCashOnHand(res.cumulativeCash[0] || 0, res.totalExpenses[0] || 0);
   const y1DcohRoundedLender = Math.round(y1DcohLender);
   lbl(19, "Days Cash on Hand (Year 1)");
   const s19 = ws.getCell("C19");
-  s19.value = y1DcohRoundedLender;
+  setFormula(s19,
+    `IF('5-Year P&L'!C${totExpRow}>0,ROUND('Cash Flow & DSCR'!C16*365/'5-Year P&L'!C${totExpRow},0),0)`,
+    y1DcohRoundedLender);
   s19.numFmt = "#,##0"; s19.font = BF; s19.border = BORDER; s19.alignment = { horizontal: "right" };
   s19.fill = { type: "pattern", pattern: "solid", fgColor: { argb: y1DcohRoundedLender >= BENCHMARK_DCOH_GREEN ? GREEN_BG : y1DcohRoundedLender >= BENCHMARK_DCOH_AMBER ? AMBER_BG : RED_BG } };
 
