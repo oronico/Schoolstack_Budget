@@ -82,6 +82,13 @@ function runStaticGuard(): void {
   const allowed = new Set([
     path.resolve(srcRoot, "lib", "decrypt-sensitive-and-audit.ts"),
     path.resolve(srcRoot, "lib", "sensitive-encryption.ts"),
+    // The KEK rotation script is an operator tool that re-encrypts every
+    // sensitive ciphertext with a new key. By definition it has to call
+    // `decryptSensitive` directly: there is no end-user actor to attribute
+    // the read to, and the rotation itself is the audit event (see
+    // `test:sensitive-encryption-rotation-smoke`). Allow-listed here so
+    // the static guard doesn't false-positive on it.
+    path.resolve(srcRoot, "scripts", "rotate-sensitive-encryption-key.ts"),
   ]);
 
   const offenders: string[] = [];
