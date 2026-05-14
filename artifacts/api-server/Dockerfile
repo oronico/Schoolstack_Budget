@@ -14,10 +14,11 @@ COPY lib/tenant/package.json lib/tenant/
 COPY artifacts/api-server/package.json artifacts/api-server/
 
 # BuildKit cache mount for the pnpm store dramatically speeds up
-# repeat deploys. We omit an explicit `id=` so the Replit Metal builder
-# (which requires its own cacheKey prefix on custom ids) can derive one
-# from the target path automatically.
-RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+# repeat deploys (Railway/Replit reuses the cache across builds).
+# The id is prefixed with the Replit Metal builder's required cacheKey
+# (`s/<service-id>-`) so the build doesn't fail with
+# "missing the cacheKey prefix from its id".
+RUN --mount=type=cache,id=s/99d67137-c0cb-44c1-ac79-23a5c5b8ef71-/root/.local/share/pnpm/store,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --prod=false
 
 # Now bring in the workspace sources and build.
