@@ -330,6 +330,33 @@ export function computeRevenueRowAmountsForYear(
         ? grossCurrent * (residualPerStudent / seatPerStudent)
         : 0;
       rowValues.set("gross_tuition", scaledResidual);
+
+      // Task #860 — runtime invariant. After the correction the sum of
+      // gross_tuition + per-student school_choice dollars must not exceed
+      // the seat * students cap. If this ever trips, a future refactor
+      // re-introduced the double-counting bug. Throws in dev / test;
+      // best-effort warn in production so a stray rounding edge case
+      // never breaks a founder's session.
+      const postGross = rowValues.get("gross_tuition") || 0;
+      let postChoice = 0;
+      for (const cr of choiceRows) postChoice += rowValues.get(cr.id) || 0;
+      const cap = seatPerStudent * students;
+      // 0.01% tolerance for FP error from proportional scaling.
+      const tolerance = Math.max(1, cap * 0.0001);
+      if (postGross + postChoice > cap + tolerance) {
+        const msg =
+          `[funding-mix invariant] year ${yearIdx + 1}: ` +
+          `gross_tuition (${postGross.toFixed(2)}) + per-student school_choice ` +
+          `(${postChoice.toFixed(2)}) = ${(postGross + postChoice).toFixed(2)} ` +
+          `exceeds seat cap ${cap.toFixed(2)} (${seatPerStudent} × ${students}). ` +
+          `This indicates the funding-mix correction was bypassed.`;
+        const env = (typeof process !== "undefined" && process.env) || {};
+        if (env.NODE_ENV === "test" || env.NODE_ENV === "development") {
+          throw new Error(msg);
+        } else if (typeof console !== "undefined" && console.warn) {
+          console.warn(msg);
+        }
+      }
     }
   }
 
