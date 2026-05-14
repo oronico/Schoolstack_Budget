@@ -497,7 +497,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
     const mismatches = detectFundingMixInconsistencies(
       revRows as unknown as Parameters<typeof detectFundingMixInconsistencies>[0],
       yearCount,
-      enrollmentByYear[0] || 0,
+      enrollmentByYear,
       (data.tuitionTiers || []) as unknown as Parameters<typeof detectFundingMixInconsistencies>[3],
     );
     if (mismatches.length > 0) {

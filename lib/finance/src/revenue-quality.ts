@@ -470,7 +470,7 @@ export interface FundingMixInconsistency {
 export function detectFundingMixInconsistencies(
   rows: readonly RevenueRowAmountsRowLike[],
   yearCount: number,
-  students?: number,
+  students?: number | readonly number[],
   tuitionTiers?: TuitionTierLike[],
 ): FundingMixInconsistency[] {
   const grossTuitionRow = rows.find(
@@ -482,6 +482,17 @@ export function detectFundingMixInconsistencies(
   );
   if (choiceRows.length === 0) return [];
 
+  // Architect review r4: enrollment can vary by year (e.g. growth +
+  // varying scholarship counts), and net-per-seat tuition with tiers
+  // is enrollment-sensitive. Accept either a single number (back-compat)
+  // or an array of per-year enrollments. Apply per-year so we don't
+  // produce false `funding_mix_inconsistent` flags in escalated years.
+  const studentsByYear: number[] = Array.isArray(students)
+    ? (students as readonly number[]).slice()
+    : typeof students === "number"
+      ? new Array(yearCount).fill(students)
+      : [];
+
   const out: FundingMixInconsistency[] = [];
   for (let y = 0; y < yearCount; y++) {
     const stickerSeat = perStudentValue(grossTuitionRow, y);
@@ -492,9 +503,10 @@ export function detectFundingMixInconsistencies(
     // no enrollment / tiers are supplied (defensive: keeps existing
     // call sites working).
     let netSeat = stickerSeat;
-    if (students && students > 0 && tuitionTiers && tuitionTiers.length > 0) {
-      const tuitionTotal = computeTuitionWithTiers(stickerSeat, y, students, tuitionTiers);
-      netSeat = tuitionTotal / students;
+    const studentsY = studentsByYear[y] ?? 0;
+    if (studentsY > 0 && tuitionTiers && tuitionTiers.length > 0) {
+      const tuitionTotal = computeTuitionWithTiers(stickerSeat, y, studentsY, tuitionTiers);
+      netSeat = tuitionTotal / studentsY;
     }
     let funding = 0;
     for (const cr of choiceRows) funding += perStudentValue(cr, y);

@@ -272,6 +272,41 @@ function main() {
     );
   }
 
+  // --- detectFundingMixInconsistencies: per-year enrollment + tiers ---
+  // Architect review r4: callers must pass per-year enrollment so the
+  // net-seat cap (which is enrollment-sensitive when tier discounts
+  // are configured with absolute studentCounts) is computed correctly
+  // in each year. Pinning Year 1 enrollment for all years previously
+  // produced false `funding_mix_inconsistent` flags in escalated years.
+  {
+    // 50% tier discount applies to a fixed 50 students each year while
+    // total enrollment grows: Y1=100, Y2=150, Y3=200. Net per-seat
+    // tuition therefore RISES across years (fewer discounted as a %).
+    //   Y1: (50*5K + 50*10K)/100 = 7,500 net seat
+    //   Y2: (50*5K + 100*10K)/150 = 8,333 net seat
+    //   Y3: (50*5K + 150*10K)/200 = 8,750 net seat
+    // ESA = $8,000/student. Should ONLY flag Y1 ($8K > $7.5K).
+    const tiers = [{ discountPercent: 50, studentCounts: [50, 50, 50] }];
+    const rows = [
+      tuitionRow([10000, 10000, 10000]),
+      choiceRow("esa_revenue", [8000, 8000, 8000]),
+    ];
+    const out = detectFundingMixInconsistencies(rows, 3, [100, 150, 200], tiers);
+    check(
+      "per-year enrollment: only Y1 flagged (Y2/Y3 net seat > ESA)",
+      out.length === 1 && out[0].yearIdx === 0,
+      `got ${out.length} flags: ${out.map((o) => `Y${o.yearIdx + 1}`).join(",")}`,
+    );
+    // Pinning Y1 enrollment for all years would (incorrectly) net to
+    // 7,500 in every year and falsely flag all three.
+    const pinnedOut = detectFundingMixInconsistencies(rows, 3, 100, tiers);
+    check(
+      "per-year enrollment: pinning Y1 enrollment falsely flags Y2/Y3 (regression check)",
+      pinnedOut.length === 3,
+      `got ${pinnedOut.length}`,
+    );
+  }
+
   // --- detectFundingMixInconsistencies: ignores annual_fixed ---
   {
     const rows = [
