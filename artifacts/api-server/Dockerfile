@@ -14,8 +14,10 @@ COPY lib/tenant/package.json lib/tenant/
 COPY artifacts/api-server/package.json artifacts/api-server/
 
 # BuildKit cache mount for the pnpm store dramatically speeds up
-# repeat deploys (Railway reuses the cache across builds).
-RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+# repeat deploys. We omit an explicit `id=` so the Replit Metal builder
+# (which requires its own cacheKey prefix on custom ids) can derive one
+# from the target path automatically.
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --prod=false
 
 # Now bring in the workspace sources and build.
