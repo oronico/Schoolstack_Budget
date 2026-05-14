@@ -275,3 +275,57 @@ id = "18Y-6tu7S5XXUPJ9S9Csg"
 uri = "file://attached_assets/sample-proofs/Civic_Scholars_Charter__Sources_and_Uses.csv"
 type = "table"
 title = "Sources & Uses (CSV proof)"
+
+[[outputs]]
+id = "b7gwSX3BNE6YExXx9b8Ze"
+uri = "file://artifacts/api-server/qa-output/populated-samples/Lender_Packet__Charter_Public_Funding.pdf"
+type = "pdf"
+title = "Lender Packet — Charter (Liberty STEM, populated, 19 pp)"
+
+[[outputs]]
+id = "9AVwlMFm8ejrynkTIVHJv"
+uri = "file://artifacts/api-server/qa-output/populated-samples/Board_Packet__Charter_Public_Funding.pdf"
+type = "pdf"
+title = "Board Packet — Charter (Liberty STEM, populated)"
+
+[[outputs]]
+id = "s_wYysgIwPw1tbUzde3WN"
+uri = "file://artifacts/api-server/qa-output/populated-samples/Loan_Readiness__Charter_Public_Funding.pdf"
+type = "pdf"
+title = "Loan Readiness Scorecard — Charter (Liberty STEM, populated)"
+
+[[outputs]]
+id = "48WTfN7YFExbYemLsiMMl"
+uri = "file://artifacts/api-server/qa-output/populated-samples/Lender_Packet__Private_School_ESA.pdf"
+type = "pdf"
+title = "Lender Packet — Private/ESA (Riverside Christian, populated)"
+
+[[outputs]]
+id = "cOP4NgBcka_jZ2bf3aVMZ"
+uri = "file://artifacts/api-server/qa-output/populated-samples/Board_Packet__Private_School_ESA.pdf"
+type = "pdf"
+title = "Board Packet — Private/ESA (Riverside Christian, populated)"
+
+[[outputs]]
+id = "15oUuhWX0VJjY-gJ_BhTy"
+uri = "file://artifacts/api-server/qa-output/populated-samples/Loan_Readiness__Private_School_ESA.pdf"
+type = "pdf"
+title = "Loan Readiness Scorecard — Private/ESA (populated)"
+
+[[outputs]]
+id = "j38R4bzpnzaGMnzBkDPow"
+uri = "file://artifacts/api-server/qa-output/populated-samples/Lender_Packet__Microschool_Startup.pdf"
+type = "pdf"
+title = "Lender Packet — Microschool (Oakwood Learning, populated)"
+
+[[outputs]]
+id = "AZdowygFdsc6vthcVdG8d"
+uri = "file://artifacts/api-server/qa-output/populated-samples/Board_Packet__Microschool_Startup.pdf"
+type = "pdf"
+title = "Board Packet — Microschool (Oakwood Learning, populated)"
+
+[[outputs]]
+id = "y7WzXwlk_1Y0QR00QmNV0"
+uri = "file://artifacts/api-server/qa-output/populated-samples/Loan_Readiness__Microschool_Startup.pdf"
+type = "pdf"
+title = "Loan Readiness Scorecard — Microschool (populated)"
