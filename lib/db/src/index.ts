@@ -74,7 +74,7 @@ const IDLE_TIMEOUT_MS = 30_000;
 //      (helium / 127.0.0.1 / ::1 / .local / .internal / Replit's helium DB)
 //      stays plaintext so dev + e2e keep working.
 //   5. Otherwise (dev / test against an unknown host), SSL stays off.
-function shouldEnableSsl(url: string): boolean {
+export function shouldEnableSsl(url: string): boolean {
   let host = "";
   let urlSslMode: string | null = null;
   try {
