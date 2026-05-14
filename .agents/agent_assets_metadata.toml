@@ -197,3 +197,9 @@ id = "1gmvJ4Z71eCsfpF7Jh1Vo"
 uri = "file://docs/RUNBOOK-lending-lab.md"
 type = "text"
 title = "Lending Lab Operations Runbook"
+
+[[outputs]]
+id = "NDQHQGNpeGyAePXUVl0-B"
+uri = "file://.local/outputs/Budget---Executive-Brief.pptx"
+type = "slides"
+title = "Budget — Executive Brief (PPTX)"
