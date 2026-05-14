@@ -82,3 +82,11 @@ netlify-rebuild.txt
 nohup.out
 
 artifacts/school-financial-model/public/opengraph.jpg
+
+# Large attached assets — keep out of git so Railway/Replit deploys don't OOM
+attached_assets/**/*.zip
+attached_assets/**/*.pdf
+attached_assets/**/*.docx
+attached_assets/**/*.pptx
+attached_assets/**/*.mp4
+attached_assets/**/*.mov
