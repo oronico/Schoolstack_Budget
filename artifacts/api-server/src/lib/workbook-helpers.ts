@@ -10,8 +10,10 @@ import {
   defaultCollectionRateForMethod,
   distributeRevenueMonthly,
   computeAssumptionConfidenceRollup,
+  applyFundingMixCorrection,
   type MonthlyRevenueRowLike,
   type AssumptionConfidenceRollup,
+  type RevenueRowAmountsRowLike,
 } from "@workspace/finance";
 export {
   computeAnnualDebt,
@@ -718,6 +720,11 @@ export function computeRevenueForYear(
     }
     vals.set(r.id, baseVal * (pctVal / 100));
   }
+  // Task #860 — "Tuition is just price." Apply the funding-mix
+  // correction so per-student ESA / voucher / tax-credit rows are
+  // treated as funders of the same seat as gross_tuition (residual
+  // family-pay model), not additive revenue stacked on top.
+  applyFundingMixCorrection(vals, rows as unknown as RevenueRowAmountsRowLike[], y, students);
   let total = 0;
   for (const r of rows) {
     if (!r.enabled) continue;

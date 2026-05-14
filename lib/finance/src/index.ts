@@ -300,6 +300,8 @@ export {
   inferRevenueQuality,
   computeRevenueQualityRollup,
   computeRevenueRowAmountsForYear,
+  detectFundingMixInconsistencies,
+  applyFundingMixCorrection,
   REVENUE_QUALITY_LABELS,
   REVENUE_QUALITY_DEFINITIONS,
   REVENUE_QUALITY_ORDER,

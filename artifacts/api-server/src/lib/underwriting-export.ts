@@ -5,7 +5,11 @@
 import ExcelJS from "exceljs";
 import { addDecisionHistorySheet } from "./packets/build-decision-history.js";
 import { computeEffectiveFte, computeTotalFTE, resolveEsc as resolveEscShared } from "./workbook-helpers.js";
-import { computeAnnualDebt } from "@workspace/finance";
+import {
+  computeAnnualDebt,
+  applyFundingMixCorrection,
+  type RevenueRowAmountsRowLike,
+} from "@workspace/finance";
 
 interface SchoolProfile {
   schoolName?: string;
@@ -378,6 +382,10 @@ function computeRevenueForYear(
     }
     vals.set(r.id, baseVal * (pctVal / 100));
   }
+  // Task #860 — "Tuition is just price." Apply the funding-mix
+  // correction so the single-year underwriting export does not
+  // double-count tuition + per-student ESA / voucher / tax-credit rows.
+  applyFundingMixCorrection(vals, rows as unknown as RevenueRowAmountsRowLike[], y, students);
   let total = 0;
   for (const r of rows) {
     if (!r.enabled) continue;

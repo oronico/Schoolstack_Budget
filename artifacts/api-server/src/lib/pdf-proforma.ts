@@ -11,7 +11,9 @@ import {
   computeYear1MonthlyCashFlow,
   findLowestCashMonth,
   findLowestCashMonthAcrossYears,
+  applyFundingMixCorrection,
   type MonthlyRevenueRowLike,
+  type RevenueRowAmountsRowLike,
 } from "@workspace/finance";
 import { computeFlatDebtSplit, computeMonthlyCashInflow } from "./workbook-helpers.js";
 
@@ -278,6 +280,11 @@ function computeRevenueForYear(rows: RevenueRow[], yearIdx: number, students: nu
     const base = vals.get(r.percentBase || "") || 0;
     vals.set(r.id, base * ((r.amounts?.[yearIdx] ?? 0) / 100));
   }
+  // Task #860 — "Tuition is just price." See workbook-helpers
+  // computeRevenueForYear; PDF pro-forma exports must apply the same
+  // residual-family-pay correction or lender-facing PDF tables would
+  // re-introduce the tuition + ESA double-count.
+  applyFundingMixCorrection(vals, rows as unknown as RevenueRowAmountsRowLike[], yearIdx, students);
   let total = 0;
   for (const r of rows) {
     if (!r.enabled) continue;
@@ -304,6 +311,10 @@ function computeRevenueByCat(rows: RevenueRow[], yearIdx: number, students: numb
     const base = vals.get(r.percentBase || "") || 0;
     vals.set(r.id, base * ((r.amounts?.[yearIdx] ?? 0) / 100));
   }
+  // Task #860 — Apply funding-mix correction before bucketing into
+  // categories so the PDF revenue-by-category breakdown matches the
+  // corrected per-row dollars.
+  applyFundingMixCorrection(vals, rows as unknown as RevenueRowAmountsRowLike[], yearIdx, students);
   const cats = new Map<string, number>();
   for (const r of rows) {
     if (!r.enabled) continue;

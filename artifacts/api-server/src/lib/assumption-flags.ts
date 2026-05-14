@@ -11,6 +11,7 @@ import {
 } from "./workbook-helpers.js";
 import {
   detectFragileFunding,
+  detectFundingMixInconsistencies,
   HIGH_IMPACT_CONFIDENCE_KEYS,
   isEstimateWithoutEvidence,
   ASSUMPTION_REGISTRY,
@@ -476,6 +477,41 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
         severity: "warning",
         defaultPrompt: `Your ${meta.label.toLowerCase()} is one of the biggest swing factors in the model. Drop in the source you're leaning on — a peer-school benchmark, a draft tuition schedule, or last year's roster — so a reviewer can see the reasoning, not just the number.`,
         nextStep: `Open Step ${meta.defaultStepNumber}: ${meta.stepTitle}, raise the confidence above estimate, or add a short evidence note (peer benchmark, prior-year roster, draft tuition schedule) to anchor the number.`,
+      });
+    }
+  }
+
+  // Task #860 — Funding-mix inconsistency. Per-student ESA / voucher /
+  // tax-credit amounts that sum above the seat sticker price imply the
+  // founder either entered the seat price too low or stacked funding
+  // sources that can't actually co-fund the same seat. The engine caps
+  // total revenue at seat * students so the model stays defensible, but
+  // the founder needs to reconcile the inputs before exporting a
+  // Lender / Board packet.
+  const revRows = (data.revenueRows || []) as RevenueRow[];
+  if (revRows.length > 0) {
+    const mismatches = detectFundingMixInconsistencies(
+      revRows as unknown as Parameters<typeof detectFundingMixInconsistencies>[0],
+      yearCount,
+    );
+    if (mismatches.length > 0) {
+      const first = mismatches[0];
+      const yearLabel = `Year ${first.yearIdx + 1}`;
+      const seat = `$${Math.round(first.seatPerStudent).toLocaleString()}`;
+      const funding = `$${Math.round(first.fundingPerStudent).toLocaleString()}`;
+      const excess = `$${Math.round(first.excessPerStudent).toLocaleString()}`;
+      const yearList =
+        mismatches.length === 1
+          ? yearLabel
+          : `${mismatches.length} years (starting ${yearLabel})`;
+      flags.push({
+        field: "revenueRows.gross_tuition",
+        flagType: "funding_mix_inconsistent",
+        currentValue: `${yearLabel}: seat ${seat}/student, ESA + voucher + scholarship total ${funding}/student (over by ${excess})`,
+        benchmark: "Per-student funding sources ≤ per-student seat price",
+        severity: "warning",
+        defaultPrompt: `Tuition is the seat price. Your per-student ESA / voucher / scholarship rows sum to ${funding} in ${yearLabel} — more than the ${seat} seat price. Either raise tuition to reflect the true seat cost, or lower the per-student funding amounts so they represent what each funder actually pays toward one seat. Until then we cap the combined tuition + choice revenue at the seat price so the model stays defensible.`,
+        nextStep: `Open Step 5: Revenue and reconcile ${yearList} so per-student ESA / voucher / scholarship amounts sum to no more than the per-student tuition (seat price).`,
       });
     }
   }

@@ -157,9 +157,17 @@ describe("computeRevenueSourceMix", () => {
     expect(result.taxonomy).toBe("private");
     expect(result.buckets).toEqual(PRIVATE_BUCKET_ORDER);
     const y1 = result.years[0];
-    // 10k * 100 = 1M tuition; 5k * 100 = 500k ESA; 50k fundraising → total 1.55M
-    expect(y1.total).toBe(1_550_000);
-    expect(y1.totalsByBucket.get("private_pay")).toBe(1_000_000);
+    // Task #860 — "Tuition is just price." A $10k seat partially funded
+    // by a $5k ESA does NOT add to $15k/student. ESA is a *funder* of
+    // the same seat, not additional revenue. So:
+    //   - seat:        10k * 100 students = 1.0M
+    //   - ESA pays:     5k * 100         = 500k of that 1.0M
+    //   - family pays:  5k * 100         = 500k residual (private_pay)
+    //   - fundraising:                    50k additive
+    //   - total:                         1.05M (NOT 1.55M as the old
+    //     double-counting math produced).
+    expect(y1.total).toBe(1_050_000);
+    expect(y1.totalsByBucket.get("private_pay")).toBe(500_000);
     expect(y1.totalsByBucket.get("esa")).toBe(500_000);
     expect(y1.totalsByBucket.get("fundraising")).toBe(50_000);
     const sumShares = Array.from(y1.sharesByBucket.values()).reduce(
@@ -167,8 +175,9 @@ describe("computeRevenueSourceMix", () => {
       0,
     );
     expect(sumShares).toBeCloseTo(100, 5);
-    expect(y1.sharesByBucket.get("private_pay")).toBeCloseTo(64.516, 2);
-    expect(y1.sharesByBucket.get("esa")).toBeCloseTo(32.258, 2);
+    // 500k / 1050k = 47.619%
+    expect(y1.sharesByBucket.get("private_pay")).toBeCloseTo(47.619, 2);
+    expect(y1.sharesByBucket.get("esa")).toBeCloseTo(47.619, 2);
   });
 
   it("nets tuition_offsets into private_pay (no double-count of full-price seats)", () => {

@@ -50,6 +50,11 @@ export const PRIVATE_SCHOOL_DEMO = {
       { id: "gross_tuition", category: "tuition_and_fees", lineItem: "Annual Tuition (K-8)", enabled: true, driverType: "per_student", amounts: [12500, 13000, 13520, 14061, 14623], escalationRate: 4, billingMonths: 10 },
       { id: "r2", category: "tuition_and_fees", lineItem: "Registration & Activity Fees", enabled: true, driverType: "per_student", amounts: [750, 750, 750, 750, 750] },
       { id: "scholarships_aid", category: "tuition_offsets", lineItem: "Scholarships / Financial Aid", enabled: true, driverType: "percent_of_base", amounts: [12, 12, 12, 12, 12], percentBase: "gross_tuition" },
+      // Task #860 — Florida FES-EO voucher demo. The per-student amount
+      // represents what FES pays *toward the same seat* as gross_tuition,
+      // not additional revenue stacked on top. The engine reduces the
+      // gross_tuition row to the residual family-pay portion automatically.
+      { id: "voucher_revenue", category: "school_choice", lineItem: "FL FES-EO Voucher", enabled: true, driverType: "per_student", amounts: [8000, 8200, 8400, 8600, 8800] },
       { id: "r3", category: "philanthropy", lineItem: "Annual Fund Donations", enabled: true, driverType: "annual_fixed", amounts: [75000, 85000, 95000, 100000, 110000] },
       { id: "r4", category: "philanthropy", lineItem: "Foundation Grants", enabled: true, driverType: "annual_fixed", amounts: [50000, 40000, 30000, 25000, 20000] },
       { id: "r5", category: "other_revenue", lineItem: "After-School Programs", enabled: true, driverType: "per_student", amounts: [500, 500, 500, 500, 500] },

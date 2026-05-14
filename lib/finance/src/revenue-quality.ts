@@ -276,7 +276,180 @@ export function computeRevenueRowAmountsForYear(
     }
   }
 
+  // Task #860 — "Tuition is just price." Funding-mix correction.
+  //
+  // Founders enter the seat sticker price on the gross_tuition row and
+  // ESA/voucher/tax-credit per-student amounts on school_choice rows. In
+  // the founder's mental model these are different *funders* of the same
+  // seat, not additive revenue streams. Without correction a $10k seat
+  // partially funded by an $8k ESA double-counts to $18k/student.
+  //
+  // The correction only fires when:
+  //   - gross_tuition is enabled AND uses the per_student driver, AND
+  //   - at least one school_choice row is enabled AND uses per_student.
+  //
+  // We then treat the school_choice per-student amounts as funding sources
+  // for the same seat. The gross_tuition row's dollars are reduced to the
+  // residual family-pay portion: max(0, (seat - choice) * students). The
+  // school_choice row dollars are capped if their sum would otherwise
+  // exceed seat * students (in which case the residual is 0 and we emit
+  // a `funding_mix_inconsistent` flag downstream).
+  //
+  // Non-per-student tuition rows (registration fees, aftercare) and
+  // non-per-student school_choice rows (annual ESA grants) are genuinely
+  // additive — they're left alone by this correction.
+  const grossTuitionRow = rows.find(
+    (r) => r.enabled && r.id === "gross_tuition" && r.driverType === "per_student",
+  );
+  if (grossTuitionRow && students > 0) {
+    const seatPerStudent = perStudentValue(grossTuitionRow, yearIdx);
+    const choiceRows = rows.filter(
+      (r) => r.enabled && r.category === "school_choice" && r.driverType === "per_student",
+    );
+    if (choiceRows.length > 0 && seatPerStudent > 0) {
+      let choicePerStudentTotal = 0;
+      for (const cr of choiceRows) {
+        choicePerStudentTotal += perStudentValue(cr, yearIdx);
+      }
+      const cappedChoicePerStudent = Math.min(choicePerStudentTotal, seatPerStudent);
+      // Cap school_choice rows proportionally if they would exceed the seat.
+      if (choicePerStudentTotal > seatPerStudent && choicePerStudentTotal > 0) {
+        const scale = cappedChoicePerStudent / choicePerStudentTotal;
+        for (const cr of choiceRows) {
+          const cur = rowValues.get(cr.id) || 0;
+          rowValues.set(cr.id, cur * scale);
+        }
+      }
+      // Reduce gross_tuition to the residual family-pay portion.
+      const residualPerStudent = Math.max(0, seatPerStudent - cappedChoicePerStudent);
+      const grossCurrent = rowValues.get("gross_tuition") || 0;
+      // Preserve the tuition-tier vs flat scaling: scale by ratio of
+      // residual to seat so tier discounts continue to apply correctly.
+      const seatTotal = seatPerStudent * students;
+      const scaledResidual = seatTotal > 0
+        ? grossCurrent * (residualPerStudent / seatPerStudent)
+        : 0;
+      rowValues.set("gross_tuition", scaledResidual);
+    }
+  }
+
   return rowValues;
+}
+
+/**
+ * Resolve a per-student amount for a row honoring escalation. Mirrors the
+ * inline escalation handling in the main loop above. Defined here as a
+ * helper so the funding-mix correction reads it the same way the original
+ * driver computation did.
+ */
+function perStudentValue(
+  row: RevenueRowAmountsRowLike,
+  yearIdx: number,
+): number {
+  const esc =
+    row.escalationRate !== undefined && row.escalationRate !== 0
+      ? row.escalationRate
+      : 0;
+  if (esc !== 0 && yearIdx > 0) {
+    return (row.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, yearIdx);
+  }
+  return row.amounts?.[yearIdx] ?? 0;
+}
+
+/**
+ * Task #860 — Apply the funding-mix correction in-place to a per-row
+ * dollar Map keyed by `row.id`. Mirrors the correction baked into
+ * `computeRevenueRowAmountsForYear` so legacy duplicate revenue
+ * summations (PDF / workbook / underwriting exports) can stay in-shape
+ * without re-implementing the math. The Map is mutated and returned.
+ *
+ * Caller contract: `vals` already contains per-row dollars *as if* the
+ * tuition + choice rows were additive — we then reduce gross_tuition to
+ * the residual family-pay portion and proportionally cap stacked choice
+ * rows. Non-per-student rows are untouched.
+ */
+export function applyFundingMixCorrection(
+  vals: Map<string, number>,
+  rows: readonly RevenueRowAmountsRowLike[],
+  yearIdx: number,
+  students: number,
+): Map<string, number> {
+  if (students <= 0) return vals;
+  const grossTuitionRow = rows.find(
+    (r) => r.enabled && r.id === "gross_tuition" && r.driverType === "per_student",
+  );
+  if (!grossTuitionRow) return vals;
+  const seatPerStudent = perStudentValue(grossTuitionRow, yearIdx);
+  if (seatPerStudent <= 0) return vals;
+  const choiceRows = rows.filter(
+    (r) => r.enabled && r.category === "school_choice" && r.driverType === "per_student",
+  );
+  if (choiceRows.length === 0) return vals;
+
+  let choicePerStudentTotal = 0;
+  for (const cr of choiceRows) {
+    choicePerStudentTotal += perStudentValue(cr, yearIdx);
+  }
+  const cappedChoicePerStudent = Math.min(choicePerStudentTotal, seatPerStudent);
+  if (choicePerStudentTotal > seatPerStudent && choicePerStudentTotal > 0) {
+    const scale = cappedChoicePerStudent / choicePerStudentTotal;
+    for (const cr of choiceRows) {
+      const cur = vals.get(cr.id) || 0;
+      vals.set(cr.id, cur * scale);
+    }
+  }
+  const residualPerStudent = Math.max(0, seatPerStudent - cappedChoicePerStudent);
+  const grossCurrent = vals.get("gross_tuition") || 0;
+  const scaledResidual = grossCurrent * (residualPerStudent / seatPerStudent);
+  vals.set("gross_tuition", scaledResidual);
+  return vals;
+}
+
+/**
+ * Task #860 — Detect a year where the founder has entered per-student
+ * funding sources (ESA, voucher, tax-credit) that exceed the per-student
+ * seat price. Used by the assumption-flags pipeline to surface a
+ * `funding_mix_inconsistent` warning that blocks Lender Packet exports.
+ *
+ * Returns one entry per affected year with the seat price, total funding,
+ * and the difference, so the flag message can name concrete dollars.
+ */
+export interface FundingMixInconsistency {
+  yearIdx: number;
+  seatPerStudent: number;
+  fundingPerStudent: number;
+  excessPerStudent: number;
+}
+
+export function detectFundingMixInconsistencies(
+  rows: readonly RevenueRowAmountsRowLike[],
+  yearCount: number,
+): FundingMixInconsistency[] {
+  const grossTuitionRow = rows.find(
+    (r) => r.enabled && r.id === "gross_tuition" && r.driverType === "per_student",
+  );
+  if (!grossTuitionRow) return [];
+  const choiceRows = rows.filter(
+    (r) => r.enabled && r.category === "school_choice" && r.driverType === "per_student",
+  );
+  if (choiceRows.length === 0) return [];
+
+  const out: FundingMixInconsistency[] = [];
+  for (let y = 0; y < yearCount; y++) {
+    const seat = perStudentValue(grossTuitionRow, y);
+    if (seat <= 0) continue;
+    let funding = 0;
+    for (const cr of choiceRows) funding += perStudentValue(cr, y);
+    if (funding > seat) {
+      out.push({
+        yearIdx: y,
+        seatPerStudent: seat,
+        fundingPerStudent: funding,
+        excessPerStudent: funding - seat,
+      });
+    }
+  }
+  return out;
 }
 
 /**
