@@ -1,1 +1,82 @@
-[]
+[
+  {
+    "id": "11111111-1111-4111-8111-000000000001",
+    "position": 1,
+    "filepath": "src/pages/slides/Cover.tsx",
+    "title": "Budget — From Founder Spreadsheet to Lender-Ready in One Sitting",
+    "description": "Cover slide for the Budget executive brief.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "11111111-1111-4111-8111-000000000002",
+    "position": 2,
+    "filepath": "src/pages/slides/Problem.tsx",
+    "title": "The Problem We're Solving",
+    "description": "Frames the underwriting gap between school founders and credit committees.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "11111111-1111-4111-8111-000000000003",
+    "position": 3,
+    "filepath": "src/pages/slides/WhatBudgetIs.tsx",
+    "title": "What Budget Is",
+    "description": "Defines the product in one sentence with three supporting points.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "11111111-1111-4111-8111-000000000004",
+    "position": 4,
+    "filepath": "src/pages/slides/Wizard.tsx",
+    "title": "The 12-Step Wizard",
+    "description": "Walks the founder's linear path through the model.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "11111111-1111-4111-8111-000000000005",
+    "position": 5,
+    "filepath": "src/pages/slides/DesignedFor.tsx",
+    "title": "Designed for Leaders With Limited Time and Limited Finance Background",
+    "description": "Four design choices that make Budget usable for non-financial founders.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "11111111-1111-4111-8111-000000000006",
+    "position": 6,
+    "filepath": "src/pages/slides/OutputSuite.tsx",
+    "title": "The Lender-Grade Output Suite",
+    "description": "Inventory of the five export artifacts produced from a single model.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "11111111-1111-4111-8111-000000000007",
+    "position": 7,
+    "filepath": "src/pages/slides/WhyHoldUp.tsx",
+    "title": "Why the Outputs Hold Up Under Underwriting",
+    "description": "Five engineering principles separating Budget outputs from a polished founder spreadsheet.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "11111111-1111-4111-8111-000000000008",
+    "position": 8,
+    "filepath": "src/pages/slides/LenderLogic.tsx",
+    "title": "Built-In Lender Logic",
+    "description": "DSCR, DCOH, scenario engine, and loan readiness verdict.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "11111111-1111-4111-8111-000000000009",
+    "position": 9,
+    "filepath": "src/pages/slides/LendingLab.tsx",
+    "title": "The Lending Lab Recommendation",
+    "description": "Why every Lending Lab applicant should use Budget before submitting.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "11111111-1111-4111-8111-000000000010",
+    "position": 10,
+    "filepath": "src/pages/slides/Recommendation.tsx",
+    "title": "Recommendation",
+    "description": "Three-step adoption plan and closing.",
+    "speakerNotes": ""
+  }
+]

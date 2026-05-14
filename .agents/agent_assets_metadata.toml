@@ -185,3 +185,15 @@ id = "t9_Y5B_2G2dobdnnwUdFY"
 uri = "file://docs/RESTORE_TRIAL_WORKSHEET.md"
 type = "text"
 title = "Restore trial worksheet (Option A pair-live)"
+
+[[outputs]]
+id = "K4HX4yeN4stgBKem0L7ZP"
+uri = "file://docs/RUNBOOK-engineering.md"
+type = "text"
+title = "Engineering Runbook"
+
+[[outputs]]
+id = "1gmvJ4Z71eCsfpF7Jh1Vo"
+uri = "file://docs/RUNBOOK-lending-lab.md"
+type = "text"
+title = "Lending Lab Operations Runbook"
