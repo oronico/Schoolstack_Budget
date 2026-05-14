@@ -1,0 +1,107 @@
+SchoolStack Budget Models — Math Audit
+Files reviewed:
+
+Single-Year_Pro_Forma_Private_School___ESA.xlsx
+Lender_Pro_Forma_Private_School___ESA.xlsx
+Underwriting_V2__21-tab__Private_School___ESA.xlsx
+
+Test school: Heritage Academy (FL private school, 501(c)(3), 100 students Year 1 growing to 200 by Year 5)
+Headline
+All three files pass mechanical formula validation. There are zero #REF!, #DIV/0!, #VALUE!, #NAME?, or #N/A errors across 685 formulas total. But the math underneath has serious problems: the same school shows materially different revenue and net income depending on which sheet a reader lands on, the scholarship discount sign convention is broken in V2, and large blocks of figures are hardcoded rather than computed, so changing inputs would not flow through.
+The core issue is not arithmetic. It is that several sheets contain pasted values that no longer reconcile to the live formulas elsewhere, and one consistent revenue treatment error (tuition + ESA additive, scholarship offsets added rather than subtracted) overstates revenue by 10–14% and overstates net income by 30–40%.
+
+Issue 1 — Revenue double-counting (all three files)
+The model treats Gross Tuition per Student and ESA / FTC Scholarship per Student as additive revenue lines. For Heritage Academy that produces $10,500 + $8,700 = $19,200 per student in Year 1 before fees, scholarships, or philanthropy.
+In Florida, the Family Empowerment Scholarship (the program "FL FTC" is meant to capture, post-2023 consolidation) is paid by the state on behalf of the family in lieu of tuition, not on top of it. If a school's published tuition is $10,500 and ESA pays $8,700, the family pays the $1,800 difference. Total revenue per ESA student is $10,500, not $19,200.
+If the school's intent is to model a mixed population (some ESA students, some private-pay), the inputs need to capture that split rather than applying both rates to all students. As written, every student is being credited with both streams.
+Year 5 net margins of 50–70% are the visible symptom. Real K–12 private schools run mid-single-digit margins in steady state.
+Issue 2 — Scholarship discount sign flip (Underwriting V2)
+In the V2 Assumptions sheet, the user-facing input is correct:
+LineDriverAmountScholarship DiscountPer Student-1,050 (negative)
+But the value flows into Tuition & Funding!B9, Budget Detail!B7, and the row totals as positive $105,000 for Year 1, growing to $236,357 by Year 5. The GRAND TOTAL REVENUE formula on Tuition & Funding is =SUM(B7,B10,B13,B17,B20), which adds the "Tuition Offsets" line to revenue instead of subtracting it.
+Effect on Heritage Academy in Budget Detail / Budget Summary:
+YearStated RevenueTrue Revenue (offset subtracted)OverstatementY1$2,185,000$1,975,000+$210,000Y2$2,902,540$2,621,350+$281,190Y5$4,834,061$4,361,347+$472,714
+The Single-Year Pro Forma stores the discount as negative in monthly cells, so it does net correctly there. The V2 Tuition & Funding sheet appears to have lost the sign when amounts were pre-computed and pasted.
+Issue 3 — Cross-sheet revenue is inconsistent (Underwriting V2)
+The same Year 1 revenue for the same school appears as four different numbers across V2:
+SheetYear 1 RevenueSourceTuition & Funding (GRAND TOTAL)$2,185,000Formula, but Issue 2 aboveBudget Detail / Budget Summary$2,185,000Formula reference5-Year Operating Stmt / Monthly Cash Flow Y1 / DSCR / Lender Snapshot / Scenarios$1,922,500HardcodedFinancial Health$1,992,500Hardcoded — matches the Lender Pro Forma engine instead
+Year 1 Net Income / Change in Net Assets has the same problem with four different values:
+SheetY1 Change in Net AssetsNotesBudget Summary$999,763Formula5-Year Operating Stmt$711,549Formula off $1,922,500 baseDSCR & Covenants / Lender Snapshot / Financial Health$737,264HardcodedScenarios Base Case$762,264Hardcoded ($25K higher = F&E capex omission)
+The downstream summary tabs (Lender Snapshot, Financial Health, DSCR & Covenants) are the ones an underwriter would actually open first. They show numbers that no longer match the underlying budget. The Lender Snapshot promises "5-Year Financial Trend" pulled from the canonical engine, but it is in fact a snapshot frozen from an earlier model state.
+Issue 4 — Net Margin (Year 5) formula error (Lender Pro Forma)
+Summary!C13 formula:
+=IF(Drivers!G10>0,'5-Year P&L'!G21/Drivers!G10,0)
+Cell '5-Year P&L'!G21 is empty. The Year 5 Net Income is in G22. The Summary tab shows Net Margin (Year 5) = 0% as a result. It should be ~50%.
+Issue 5 — Net Income subtracts principal as a P&L expense (Lender Pro Forma)
+'5-Year P&L'!B22 = NOI − Interest − Principal & Capital Outlays
+Principal repayment is a balance-sheet reduction, not a P&L expense. Net Income should subtract interest only. By including principal, Net Income is understated by the principal portion of debt service (~$43K Year 1, declining). This also flows through to Net Margin and Cumulative Net Income.
+The Cash Flow & DSCR sheet correctly subtracts both interest and principal from NOI to get Net Cash Flow. That treatment is fine on the cash flow statement. The bug is that the same formula is used for accrual Net Income.
+Issue 6 — Interest expense hardcoded (Lender Pro Forma)
+'5-Year P&L'!C19:G19 (Interest Expense) is hardcoded as 15710, 14480, 13169, 11769, 10276. These values are correct for a $250K, 6.5%, 10-year amortizing loan, but they will not update if the user changes the loan amount, rate, or term in Assumptions. The Underwriting V2 file uses live CUMIPMT and CUMPRINC formulas — that is the right pattern. Lender Pro Forma should match.
+Issue 7 — Staffing does not scale with enrollment (Underwriting V2)
+Heritage Academy grows from 100 students Year 1 to 200 students Year 5 (a doubling), but the Staffing Drivers table holds FTE counts constant:
+
+Teachers: 6 FTE for all 5 years
+Total FTE: 13 for all 5 years
+
+Result: students per FTE rises from 7.7 in Year 1 to 15.4 by Year 5, with no commentary or warning. By contrast, the Lender Pro Forma uses =CEILING(Enrollment / Students_per_Teacher, 1) and correctly grows the teacher count from 10 to 19 over the same period.
+This is the largest single driver of V2's 70% Year 5 net margin: revenue scales with enrollment, but the largest expense line does not.
+Issue 8 — Hardcoded values that should be formulas
+Locations where a downstream metric appears as a typed-in number rather than a live calculation. If any input changes, these stop matching:
+Underwriting V2:
+
+Budget Summary!B13:F13 Cumulative Change in Net Assets — does not equal the running sum of B11:F11
+Budget Summary!B14:F14 Revenue per Student — $19,225 vs the implied $21,850 from Total Revenue ÷ 100
+Budget Summary!B15:F15 Cost per Student
+Enrollment Tuition Fcst!B16:F16 Revenue per Student — yet a third version at $19,750
+Staffing Drivers!B13:F13 Total Personnel (off by $1 from formula version in Staffing Costs Fcst due to rounding compound)
+Staffing Costs Fcst — every line item value is typed in
+OpEx Drivers!B5:F5, B8:F8, B11:F14, B17:F19 — all line items typed in
+Tuition & Funding!B5:F19 — all revenue line items typed in
+5-Year Operating Stmt!B5:F12 — revenue, personnel, opex, interest, principal, depreciation all typed in
+DSCR & Covenants!B5:F10, B12:F12, B15:F25, B28:F33 — most of the sheet
+Balance Sheet!B6:F8, B12:F12 — AR, Fixed Assets, Other Assets, AP
+Scenarios!B6:F11, B16:F21, B26:F31 — all three scenario blocks
+Financial Health — nearly every value
+Lender Snapshot — every value
+Stress Tests (Lender Pro Forma) — every value
+
+Lender Pro Forma:
+
+AR & Restricted Recon!C12:G12 — Total Cash Position (should reference Cash Flow & DSCR!C16:G16)
+Summary!C19 — Days Cash on Hand
+5-Year P&L!C19:G19 — Interest Expense (see Issue 6)
+5-Year P&L!C26 — Break-even label
+
+Single-Year Pro Forma:
+
+Every monthly value on Revenue, Personnel, and Operating Expenses
+
+In a model intended to be used by underwriters or to drive borrower-facing PDFs, hardcoded summary figures that diverge from the live engine are an integrity problem. If Heritage Academy edits its enrollment assumption from 100 to 90, Budget Summary will update; DSCR & Covenants, Lender Snapshot, and Financial Health will not.
+Issue 9 — Line-item escalation rates that are not actually used (Underwriting V2)
+In Assumptions!E21:E27, each revenue line has an Escalation % column. Every value is 0. But in Tuition & Funding, Gross Tuition grows 3% per year. After-School grows 33.9% per year (enrollment growth × 3% inflation).
+The actual escalation rate being used is Assumptions!B75 (global "Tuition Escalation Rate" = 3%). The per-line override at E21 displays 0% but has no effect on output. This will confuse anyone trying to model a scenario by changing a line-level rate.
+Issue 10 — Single-Year Pro Forma personnel data is broken
+The Single-Year file's Personnel sheet shows monthly amounts that, when summed across 12 months, total $21.3M of personnel cost for a 100-student school. Per-line examples:
+
+Head of School: $266,396/month → $3,196,752/year
+Teachers: $807,600/month → $9,691,200/year
+
+For comparison, V2 shows total annual personnel of $854,773 for the same school. The Single-Year file appears to have annual figures entered in monthly cells (a 12x inflation), or simply has corrupted sample data. Either way, the resulting Net Income of −$19.7M is implausible.
+Issue 11 — Sources & Uses missing the Annual Fund / Operating Cash split (V2)
+Sources & Uses!A6:B6 lists "Operating Cash $75,000" as a source, but Assumptions!B71 Starting Cash is also $75,000. Either the loan is funding the starting cash (which is a circular use), or starting cash is being double-counted. The Total Sources = Total Uses = $375K reconciles, but the logic of how starting cash relates to the loan disbursement is unclear from the sheet.
+Issue 12 — "Capacity ≥ 7500%" covenant (V2)
+DSCR & Covenants!A31: "Capacity ≥ 7500%" shows FAIL for all five years. This appears to be a units bug — likely intended to be "Capacity ≥ 75%" written as 0.75 but rendered as 7500% when formatted. As written, no school could ever pass this covenant.
+
+What to fix first (priority order)
+
+Scholarship discount sign in V2 — change Tuition & Funding, Budget Detail, and Enrollment Tuition Fcst so the offset reduces revenue. Either store as negative and SUM, or store as positive and subtract.
+Reconcile revenue across V2 sheets — pick one engine output and have every downstream sheet pull from it via formula. The current pattern of pasting different revenue numbers into different summary sheets means a borrower's lender packet does not match its budget.
+Tuition + ESA logic — decide whether the model is for tuition-only, ESA-only, or mixed populations, and adjust the per-student inputs accordingly. Document the convention on the Instructions tab.
+Lender Pro Forma Summary!C13 — change G21 to G22.
+Lender Pro Forma Net Income — stop subtracting principal as a P&L expense.
+Lender Pro Forma interest — replace hardcoded interest schedule with CUMIPMT (matching V2's pattern).
+Staffing scaling in V2 — pull teacher FTE from a formula like Lender Pro Forma's, or document that fixed staffing is an intentional modeling choice.
+Capacity covenant typo in V2 — 7500% → 75%.
+Single-Year file — sample data on Personnel sheet needs to be recalibrated; current state is unusable as a demo.
+Hardcoded summary metrics — convert to formulas so the model stays consistent when assumptions change.

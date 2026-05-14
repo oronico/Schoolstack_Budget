@@ -317,9 +317,15 @@ export function computeRevenueRowAmountsForYear(
       const grossCurrent = rowValues.get("gross_tuition") || 0;
       // Net per-student tuition charge, after tuition-tier discounts.
       const netPerStudent = grossCurrent / students;
+      // Architect review r3: derive choice per-student from already-
+      // computed dollars in `rowValues`, NOT from raw row config. The
+      // dollar values may include fallback cost inflation (workbook /
+      // PDF / underwriting paths) on top of row.escalationRate; using
+      // perStudentValue() here would under-cap and let total revenue
+      // still exceed the net seat basis.
       let choicePerStudentTotal = 0;
       for (const cr of choiceRows) {
-        choicePerStudentTotal += perStudentValue(cr, yearIdx);
+        choicePerStudentTotal += (rowValues.get(cr.id) || 0) / students;
       }
       const cappedChoicePerStudent = Math.min(choicePerStudentTotal, netPerStudent);
       // Cap school_choice rows proportionally if their sum would exceed
@@ -423,9 +429,14 @@ export function applyFundingMixCorrection(
   // can never collect more in ESA + family pay than its actual net
   // billed tuition (architect review of Task #860, round 2).
   const netPerStudent = grossCurrent / students;
+  // Architect review r3: derive choice per-student from the already-
+  // computed dollars in `vals`, NOT from raw row config. Callers may
+  // have applied fallback cost inflation on top of row.escalationRate
+  // (workbook-helpers driverVal) — recomputing via perStudentValue
+  // would under-cap and let combined revenue exceed the net seat basis.
   let choicePerStudentTotal = 0;
   for (const cr of choiceRows) {
-    choicePerStudentTotal += perStudentValue(cr, yearIdx);
+    choicePerStudentTotal += (vals.get(cr.id) || 0) / students;
   }
   const cappedChoicePerStudent = Math.min(choicePerStudentTotal, netPerStudent);
   if (choicePerStudentTotal > netPerStudent && choicePerStudentTotal > 0) {
