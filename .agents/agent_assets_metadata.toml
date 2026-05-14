@@ -239,3 +239,39 @@ id = "wQMQveMJqsfd4p6v1IDiM"
 uri = "file://artifacts/api-server/qa-output/Single-Year_Pro_Forma_Charter_Public_Funding.xlsx"
 type = "table"
 title = "Single-Year Pro Forma — Charter Public Funding"
+
+[[outputs]]
+id = "GvG0m-e7axck86GSjjYxp"
+uri = "file://attached_assets/sample-proofs/Civic_Scholars_Charter__Assumptions.csv"
+type = "table"
+title = "Assumptions — Civic Scholars Charter (CSV proof)"
+
+[[outputs]]
+id = "QcKSCcQRv7R3zHh2WcFD5"
+uri = "file://attached_assets/sample-proofs/Civic_Scholars_Charter__5-Year_Operating_Stmt.csv"
+type = "table"
+title = "5-Year Operating Statement (CSV proof)"
+
+[[outputs]]
+id = "s3kJoyLV9yBHKhivIqGTD"
+uri = "file://attached_assets/sample-proofs/Civic_Scholars_Charter__Monthly_Cash_Flow_Y1.csv"
+type = "table"
+title = "Year 1 Monthly Cash Flow (CSV proof)"
+
+[[outputs]]
+id = "i_ADZdC33d_F1TVbIOekh"
+uri = "file://attached_assets/sample-proofs/Civic_Scholars_Charter__DSCR_and_Covenants.csv"
+type = "table"
+title = "DSCR & Covenants (CSV proof)"
+
+[[outputs]]
+id = "hqBj0ItYCGQ_9wYFSF_2d"
+uri = "file://attached_assets/sample-proofs/Civic_Scholars_Charter__Lender_Snapshot.csv"
+type = "table"
+title = "Lender Snapshot (CSV proof)"
+
+[[outputs]]
+id = "18Y-6tu7S5XXUPJ9S9Csg"
+uri = "file://attached_assets/sample-proofs/Civic_Scholars_Charter__Sources_and_Uses.csv"
+type = "table"
+title = "Sources & Uses (CSV proof)"

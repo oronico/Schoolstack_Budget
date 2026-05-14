@@ -1,0 +1,17 @@
+Civic Scholars Charter - 5-Year Operating Statement,,,,,
+Projections prepared on an accrual basis. School currently keeps books on a undetermined basis.,,,,,
+,2026-27,2027-28,2028-29,2029-30,2030-31
+REVENUE,,,,,
+Total Revenue,1288333,2522800,3784600,4759125,5184400
+EXPENSES,,,,,
+Personnel,997040,1522959,1905399,2232337,2378698
+Operating Expenses,545000,887860,1190330,1439121,1555453
+Interest Expense,28186,26908,25555,24122,22605
+Principal & Capital Outlays,136639,62917,64270,50702,47220
+Depreciation,0,0,0,0,0
+Total Expenses,=SUM(B8:B12),=SUM(C8:C12),=SUM(D8:D12),=SUM(E8:E12),=SUM(F8:F12)
+BOTTOM LINE,,,,,
+Change in Net Assets,=B5-B13,=C5-C13,=D5-D13,=E5-E13,=F5-F13
+Net Margin %,"=IF(B5=0,0,B16/B5)","=IF(C5=0,0,C16/C5)","=IF(D5=0,0,D16/D5)","=IF(E5=0,0,E16/E5)","=IF(F5=0,0,F16/F5)"
+Cumulative Profit,=B16,=B18+C16,=C18+D16,=D18+E16,=E18+F16
+Break-even,,,✓ Break-even,,

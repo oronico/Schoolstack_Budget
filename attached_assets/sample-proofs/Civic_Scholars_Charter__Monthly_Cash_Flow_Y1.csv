@@ -1,0 +1,18 @@
+Civic Scholars Charter - Year 1 Monthly Cash Flow,,,,,,,,,,,,,
+,July,August,September,October,November,December,January,February,March,April,May,June,Annual Total
+REVENUE,,,,,,,,,,,,,
+Total Revenue,248600,118600,118600,118600,118600,118600,118600,118600,118600,118600,115000,115000,=SUM(B4:M4)
+EXPENSES,,,,,,,,,,,,,
+Personnel,99704,99704,99704,99704,99704,99704,99704,99704,99704,99704,0,0,=SUM(B7:M7)
+Operating Expenses,54500,54500,54500,54500,54500,54500,54500,54500,54500,54500,0,0,=SUM(B8:M8)
+Debt Service,13735,13735,13735,13735,13735,13735,13735,13735,13735,13735,13735,13735,=SUM(B9:M9)
+CASH FLOW,,,,,,,,,,,,,
+Total Expenses,=B7+B8+B9,=C7+C8+C9,=D7+D8+D9,=E7+E8+E9,=F7+F8+F9,=G7+G8+G9,=H7+H8+H9,=I7+I8+I9,=J7+J8+J9,=K7+K8+K9,=L7+L8+L9,=M7+M8+M9,=SUM(B12:M12)
+Net Cash Flow,=B4-B12,=C4-C12,=D4-D12,=E4-E12,=F4-F12,=G4-G12,=H4-H12,=I4-I12,=J4-J12,=K4-K12,=L4-L12,=M4-M12,=SUM(B13:M13)
+Cumulative Cash,=B17+B13,=B14+C13,=C14+D13,=D14+E13,=E14+F13,=F14+G13,=G14+H13,=H14+I13,=I14+J13,=J14+K13,=K14+L13,=L14+M13,=M14
+CASH FLOW METRICS,,,,,,,,,,,,,
+Starting Cash,0,,,,,,,,,,,,
+Ending Cash (Month 12),=M14,,,,,,,,,,,,
+Minimum Cash Month,=MIN(B14:M14),,,,,,,,,,,,
+Cash Trough: April (Month 10),,,,,,,,,,,,,
+Your lowest cash point is the month lenders focus on to ensure you won't run out of money before collections start. Plan reserves to cover this trough.,,,,,,,,,,,,,

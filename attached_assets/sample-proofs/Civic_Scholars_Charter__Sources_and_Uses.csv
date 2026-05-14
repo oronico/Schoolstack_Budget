@@ -1,0 +1,9 @@
+Sources & Uses,,,,
+SOURCES,Amount,,USES,Amount
+Facility Improvement Loan,500000,,Facility Buildout,400000
+CSP Startup Grant,100000,,FF&E,75000
+Capital Campaign Gifts,50000,,Technology Setup,40000
+,,,Pre-Opening Staffing,60000
+,,,Working Capital,75000
+Total Sources,650000,,Total Uses,650000
+Sources - Uses (should = 0),0,,,
