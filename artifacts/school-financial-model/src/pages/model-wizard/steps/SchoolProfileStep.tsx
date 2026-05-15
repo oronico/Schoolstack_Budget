@@ -733,35 +733,22 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
     try {
       let parsed: ParsedAccountingExport;
       if (isXlsx) {
-        // Parse client-side via ExcelJS so the founder's books never leave
-        // their browser. We take the first sheet, build a string[][] grid
-        // from each cell's displayed text (so formulas resolve to their
-        // cached result), and feed it through the same row processor the
-        // CSV path uses so label aliases and right-most-column logic stay
-        // identical across formats. ExcelJS is loaded lazily here so its
-        // bundle only ships to founders who actually upload an .xlsx file.
-        const ExcelJS = (await import("exceljs")).default;
+        // Parse client-side via a tiny read-only xlsx reader (fflate +
+        // DOMParser) so the founder's books never leave their browser
+        // and the lazy-loaded parser bundle stays small. The reader
+        // returns the first sheet as a `string[][]` grid built from
+        // each cell's displayed text (so formulas resolve to their
+        // cached result), and we feed it through the same row
+        // processor the CSV path uses so label aliases and
+        // right-most-column logic stay identical across formats. The
+        // chunk only ships to founders who pick an .xlsx file.
+        const { readXlsxFirstSheetRows } = await import("@/lib/xlsx-reader");
         const buf = await file.arrayBuffer();
-        const wb = new ExcelJS.Workbook();
-        await wb.xlsx.load(buf);
-        const sheet = wb.worksheets[0];
-        if (!sheet) {
+        const rows = await readXlsxFirstSheetRows(buf);
+        if (rows.length === 0) {
           setError("That Excel file didn't have any sheets we could read. Re-export the Profit & Loss as a single sheet and try again.");
           return;
         }
-        const rows: string[][] = [];
-        sheet.eachRow({ includeEmpty: false }, (row) => {
-          const out: string[] = [];
-          let hasContent = false;
-          const len = row.cellCount;
-          for (let c = 1; c <= len; c++) {
-            const cell = row.getCell(c);
-            const text = cell.text == null ? "" : String(cell.text);
-            if (text !== "") hasContent = true;
-            out.push(text);
-          }
-          if (hasContent) rows.push(out);
-        });
         parsed = parseAccountingExportRows(rows);
       } else {
         const text = await file.text();
