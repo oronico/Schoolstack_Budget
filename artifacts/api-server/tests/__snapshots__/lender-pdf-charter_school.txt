@@ -1,0 +1,3610 @@
+--- PAGE 1 ---
+Sc
+hoolStac
+k Budg
+et
+Lender Con
+v
+ersation Snapshot
+Liber
+ty STEM Char
+ter Sc
+hool
+5-Y
+ear Financial Model
+Prepared <DATE>
+Built from assumptions
+Almost there  a f
+e
+w tar
+g
+eted edits will tighten the stor
+y
+.
+Y
+our model has real promise
+, and there are just a f
+e
+w areas to strengthen.
+ 
+The recommendations abo
+v
+e will 
+help y
+ou b
+uild a more resilient financial plan, and e
+v
+er
+y impro
+v
+ement mak
+es y
+our projections more achie
+v
+ab
+le
+.
+P
+ac
+ket Contents
+1.
+  Ex
+ecutiv
+e Summar
+y
+2.
+  School Ov
+er
+vie
+w
+3.
+  Enrollment Plan
+4.
+  Re
+v
+en
+ue Model
+5.
+  Staffing Plan
+6.
+  Expense Summar
+y
+7.
+  Capital & Debt
+8.
+  5-Y
+ear Financial Projection
+9.
+  Opening Balance Sheet
+10.
+  F
+acility & K
+e
+y P
+erf
+or
+mance Indicators
+11.
+  Cash Flo
+w Analysis
+12.
+  Debt Ser
+vice Co
+v
+er
+age
+13.
+  Stress 
+T
+esting
+14.
+  Lender Readiness
+15.
+  Financial Health Assessment
+16.
+  K
+e
+y Risks
+17.
+  Decision Histor
+y
+18.
+  Appendix:
+ K
+e
+y Assumptions
+This pac
+k
+et is gener
+ated from the school's financial model and is intended f
+or lender re
+vie
+w
+.
+All projections are based on assumptions entered b
+y the school f
+ounder
+.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 1 of 19
+--- PAGE 2 ---
+Lender Commentar
+y
+Liber
+ty STEM Char
+ter School is a char
+ter school, based in AZ.
+ Liber
+ty STEM Char
+ter School projects enrollment 
+of 200 students in 
+Y
+ear 1, g
+ro
+wing to 600 b
+y 
+Y
+ear 5 against a stated capacity of 600 seats
+.
+ Based on the 
+canonical financial engine that po
+w
+ers this pac
+k
+et, the model reads as:
+ Almost there - a f
+e
+w targeted edits will 
+tighten the stor
+y
+.
+ 
+Y
+our model has real promise
+, and there are just a f
+e
+w areas to strengthen.
+ 
+The 
+recommendations abo
+v
+e will help y
+ou b
+uild a more resilient financial plan, and e
+v
+er
+y impro
+v
+ement mak
+es y
+our 
+projections more achie
+v
+ab
+le
+.
+On the nor
+maliz
+ed base case (f
+ounder compensation mar
+k
+ed to mar
+k
+et), 
+Y
+ear 1 debt ser
+vice co
+v
+er
+age is 30.65x.
+ 
+Cash remains positiv
+e across the full 5-y
+ear projection, with reser
+v
+es reaching 78 months of oper
+ating e
+xpense 
+b
+y 
+Y
+ear 5.
+ 
+The model crosses oper
+ating break-e
+v
+en in 
+Y
+ear 1, and 
+Y
+ear 1 requires 93 students to co
+v
+er fix
+ed 
+costs and debt ser
+vice (16% of stated capacity).
+Y
+ear 1 re
+v
+en
+ue mix is 0% contr
+acted, 1% projected enrollment-dr
+iv
+en, 95% policy-dependent, and 4% donor-
+dependent.
+ 
+The top 2 r
+isks surf
+aced are:
+ Let's bac
+k the enrollment r
+amp with e
+vidence (medium).
+ Mitigant:
+ Bac
+k 
+e
+v
+er
+y enrollment target with documented demand - signed letters of intent, w
+aitlist depth, comm
+unity sur
+v
+e
+y 
+results
+, or recr
+uitment pipeline data.
+ Gro
+wth o
+v
+er 25% per y
+ear typically requires an e
+xceptional recr
+uitment 
+engine or f
+acility e
+xpansion.;
+ Let's tie ne
+w hires to enrollment milestones (medium).
+ Mitigant:
+ Align staffing 
+additions to enrollment milestones
+.
+ Hire when students are enrolled, not when y
+ou hope the
+y will be
+.
+ Use par
+t-
+time or contr
+act roles to br
+idge gaps
+..
+F
+ounder compensation has been nor
+maliz
+ed to mar
+k
+et f
+or underwr
+iting.
+ Across the modeled per
+iod the f
+ounder is 
+dr
+a
+wing $344,883 belo
+w a mar
+k
+et salar
+y f
+or the role
+.
+ On a planned-comp basis the 
+Y
+ear 1 DSCR w
+ould read 
+30.84x;
+ on the nor
+maliz
+ed basis it lands at 30.65x, which is the figure used throughout this pac
+k
+et.
+ 
+The lender-
+pr
+imar
+y vie
+w in this pac
+k
+et underwr
+ites the school at the mar
+k
+et cost of r
+unning it, not the f
+ounder's v
+oluntar
+y 
+discount.
+Under the toughest stress in the lender batter
+y (ESA / Pub
+lic Funding Dela
+y
+ed 3 Months), minim
+um DSCR holds 
+at 14.23x and minim
+um ending cash at $1,118,711.
+ Strong 
+Y
+ear 5 net income 
+The full r
+isk and recommendation 
+set f
+ollo
+ws in the body of the pac
+k
+et.
+Ev
+er
+y figure in this commentar
+y is sourced from the same canonical engine that po
+w
+ers the rest of this pac
+k
+et.
+Ex
+ecutive Summar
+y
+Liber
+ty STEM Char
+ter School projects $18,125,509 in 
+Y
+ear 5 re
+v
+en
+ue with a 69.3% net margin.
+ 
+There is 1 area to 
+strengthen, and the recommendations belo
+w will help y
+ou b
+uild a more compelling financial stor
+y
+.
+[ ] 
+Lender Readiness:
+ Needs 
+W
+or
+k
+[ ] 
+Biggest Strength:
+ Strong 
+Y
+ear 5 net income
+[ ] 
+Biggest Risk:
+ Pub
+lic funding is the pr
+imar
+y re
+v
+en
+ue source  model disb
+ursement timing carefully and maintain cash 
+reser
+v
+es f
+or funding gaps
+[ ] 
+Cash Runw
+a
+y:
+ 60+ months
+Budg
+et Narrative
+Liber
+ty STEM Char
+ter School projects $18,125,509 in 
+Y
+ear 5 re
+v
+en
+ue with a 69.3% net margin.
+ 
+There is 1 area to 
+strengthen, and the recommendations belo
+w will help y
+ou b
+uild a more compelling financial stor
+y
+.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 2 of 19
+--- PAGE 3 ---
+Fla
+g
+g
+ed Assumptions
+[W
+arning] 
+50% g
+ro
+wth (Y
+ear 1 ! 2)
+[Inf
+o] 
+200 students (33% of 600 capacity)
+[Inf
+o] 
+T
+uition co
+v
+ers 2% of 
+Y
+ear 1 total e
+xpenses
+Assumptions Confidence
+Overall:
+ Needs Suppor
+t
+   0% w
+eighted e
+vidence  ·  0 of 22 tagged   
+PR
+OJECTED
+This does not mean y
+our plan is w
+eak.
+ It means this par
+t needs more clar
+ity
+.
+Each major assumption belo
+w is tagged b
+y the f
+ounder with the source the
+y leaned on.
+ Higher-
+confidence sources (actuals
+, signed ag
+reements
+, wr
+itten quotes) are stronger e
+vidence than research 
+benchmar
+ks or estimates
+.
+0 of 22 assumptions tagged y
+et  the f
+ounder has not anchored an
+y inputs to e
+vidence
+.
+ P
+osture def
+aults to "Needs Suppor
+t" 
+until at least some k
+e
+ys are tagged.
+Sc
+hool Over
+vie
+w
+Liber
+ty STEM Char
+ter School is a Star
+tup / Pre-Opening Char
+ter School organiz
+ed as a 501(c)(3) Nonprofit with 
+a Pub
+lic Funded (Char
+ter) funding profile
+.
+Suppor
+ting Assumptions
+School Stage
+  Star
+tup / Pre-Opening
+School 
+T
+ype
+  Char
+ter Sc
+hool
+Funding Profile
+  Pub
+lic Funded (Char
+ter)
+Entity 
+T
+ype
+  501(c)(3) Nonpr
+ofit
+State
+  AZ
+Opening 
+Y
+ear
+  2026
+Enr
+ollment Plan
+Enrollment star
+ts at 200 students in 
+Y
+ear 1 and g
+ro
+ws to 600 b
+y 
+Y
+ear 5 (200% g
+ro
+wth).
+ 
+Enr
+ollment b
+y 
+Y
+ear
+Y
+ear
+Students
+Y
+ear 1
+200
+Y
+ear 2
+300
+Y
+ear 3
+400
+Y
+ear 4
+500
+Y
+ear 5
+600
+Suppor
+ting Assumptions
+Y
+ear 1 Enrollment
+  200
+Y
+ear 2 Enrollment
+  300
+Y
+ear 3 Enrollment
+  400
+Y
+ear 4 Enrollment
+  500
+Y
+ear 5 Enrollment
+  600
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 3 of 19
+--- PAGE 4 ---
+Re
+ven
+ue Model
+The re
+v
+en
+ue model is pr
+imar
+ily pub
+licly funded (94.7% of 
+Y
+ear 1 re
+v
+en
+ue).
+ 
+Y
+ear 1 total re
+v
+en
+ue is projected at 
+$5.8M, g
+ro
+wing to $18.5M b
+y 
+Y
+ear 5.
+[ ] 
+T
+uition %:
+ 1.0%
+[ ] 
+Pub
+lic Funding %:
+ 94.7%
+[ ] 
+Philanthrop
+y %:
+ 4.3%
+[ ] 
+Y
+ear 1 Contr
+acted Re
+v
+en
+ue %:
+ 0.0%
+[ ] 
+Hard Re
+v
+en
+ue Co
+v
+er
+age (Y1):
+ 0.00×
+Re
+ven
+ue b
+y 
+Y
+ear
+Y
+ear
+T
+otal Re
+ven
+ue
+Y
+ear 1
+$5.8M
+Y
+ear 2
+$8.8M
+Y
+ear 3
+$11.9M
+Y
+ear 4
+$15.1M
+Y
+ear 5
+$18.5M
+Re
+ven
+ue Quality (Contracted vs.
+ Pr
+ojected vs.
+ Donor / P
+olic
+y Dependent)
+Buc
+ket
+Y
+ear 2
+Y
+ear 3
+Y
+ear 4
+Y
+ear 5
+Y
+ear 6
+Contr
+acted
+$0 (0.0%)
+$0 (0.0%)
+$0 (0.0%)
+$0 (0.0%)
+$0 (0.0%)
+P
+olicy-Dependent
+$4.6M (94.7%)
+$8.5M (97.2%)
+$11.5M (98.9%)
+$14.7M (98.9%)
+$17.9M (98.9%)
+Projected
+$50K (1.0%)
+$92K (1.1%)
+$125K (1.1%)
+$159K (1.1%)
+$195K (1.1%)
+Donor-Dependent
+$208K (4.3%)
+$150K (1.7%)
+$0 (0.0%)
+$0 (0.0%)
+$0 (0.0%)
+Hard re
+v
+en
+ue co
+v
+er
+age of fix
+ed + debt
+0.00×
+0.00×
+0.00×
+0.00×
+0.00×
+Re
+ven
+ue 
+Lines (Y
+ear 1)
+Line Item
+Y
+ear 1
+State P
+er-Pupil Funding (K-5)
+$1.6M
+State P
+er-Pupil Funding (6-8)
+$1.8M
+State P
+er-Pupil Funding (9-12)
+$1.9M
+Title I F
+eder
+al Funding
+$240K
+Char
+ter Star
+tup Gr
+ant (CSPP)
+$250K
+After-School & Summer Prog
+r
+ams
+$60K
+Suppor
+ting Assumptions
+State P
+er-Pupil Funding (K-5)
+  $1.6M
+State P
+er-Pupil Funding (6-8)
+  $1.8M
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 4 of 19
+--- PAGE 5 ---
+State P
+er-Pupil Funding (9-12)
+  $1.9M
+Title I F
+eder
+al Funding
+  $240K
+Char
+ter Star
+tup Gr
+ant (CSPP)
+  $250K
+After-School & Summer Prog
+r
+ams
+  $60K
+Staffing Plan
+Staffing costs are $1.7M in 
+Y
+ear 1, representing 29.4% of re
+v
+en
+ue
+.
+ 
+This lea
+v
+es health
+y room f
+or other oper
+ating 
+costs
+.
+ F
+ounder compensation is nor
+maliz
+ed to mar
+k
+et r
+ate f
+or the lender / board vie
+w
+.
+ 
+The 5-y
+ear nor
+malization 
+adjustment increases fully-loaded staffing cost b
+y +$344,883 (salar
+y + benefits + pa
+yroll tax).
+ 
+Y
+ear-1 DSCR 
+mo
+v
+es from 30.84x to 30.65x and cash r
+unw
+a
+y mo
+v
+es from 60.0 to 60.0 months when nor
+maliz
+ed.
+ DSCR, 
+r
+unw
+a
+y
+, and net income figures else
+where in this pac
+k
+et reflect the nor
+maliz
+ed vie
+w;
+ the f
+ounder dashboard 
+reflects the as-planned vie
+w
+.
+Suggested f
+ounder compensation steps up y
+ear o
+v
+er y
+ear as projected enrollment crosses NAIS / NA
+CSA siz
+e 
+bands (escalated b
+y COLA from 
+Y1).
+ Source:
+ NA
+CSA member sur
+v
+e
+ys and state char
+ter author
+iz
+er 
+compensation disclosures (CO
+, 
+TX, CA), 2022-24.
+ Median Ex
+ecutiv
+e Director / Head of School cash 
+compensation b
+y enrollment..
+ Siz
+e-band tr
+ansitions dur
+ing the f
+orecast:
+ 
+Y
+ear 2 (150300 students to 300500 
+students
+, suggested r
+ate $155,000);
+ 
+Y
+ear 4 (300500 students to 5001,000 students
+, suggested r
+ate $202,000).
+ 
+Each crossing b
+umps the lender-side mar
+k
+et r
+ate f
+or the f
+ounder / head-of-school role
+.
+[+] 
+Staffing % of Re
+v
+en
+ue:
+ 35.3%
+Sug
+g
+ested Founder Compensation Benc
+hmark b
+y 
+Y
+ear
+Y
+ear
+Pr
+ojected Enr
+ollment
+Siz
+e Band
+Sug
+g
+ested Market Rate
+Y
+ear 1
+200
+150300 students
+$120,000
+Y
+ear 2
+300
+300500 students (ne
+w band)
+$155,000
+Y
+ear 3
+400
+300500 students
+$159,000
+Y
+ear 4
+500
+5001,000 students (ne
+w 
+band)
+$202,000
+Y
+ear 5
+600
+5001,000 students
+$208,000
+Founder Compensation 
+Normalization
+Y
+ear
+As Planned (Repor
+ted)
+Market Rate (Normaliz
+ed)
+Loaded Adjustment
+Y
+ear 1
+$110,000
+$120,000
+$13,265
+Y
+ear 2
+$113,300
+$155,000
+$55,315
+Y
+ear 3
+$116,699
+$159,000
+$56,112
+Y
+ear 4
+$120,200
+$202,000
+$108,508
+Y
+ear 5
+$123,806
+$208,000
+$111,683
+T
+otal adjustment (Y1Y5)
+
+
+$344,883
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 5 of 19
+--- PAGE 6 ---
+As-Planned vs Normaliz
+ed:
+ Net Income & DSCR
+Y
+ear
+Net Income 
+(Repor
+ted)
+Net Income 
+(Normaliz
+ed)
+DSCR (Repor
+ted)
+DSCR (Normaliz
+ed)
+Y
+ear 1
+$2,072,877
+$2,059,612
+30.84x
+30.65x
+Y
+ear 2
+$4,808,465
+$4,753,150
+70.23x
+69.43x
+Y
+ear 3
+$6,968,143
+$6,912,031
+101.32x
+100.51x
+Y
+ear 4
+$9,664,873
+$9,556,366
+140.15x
+138.59x
+Y
+ear 5
+$12,577,839
+$12,466,156
+182.09x
+180.48x
+As-Planned vs 
+Normaliz
+ed:
+ Cash 
+Runwa
+y
+Vie
+w
+Cash Runwa
+y (months)
+Reser
+ve (months)
+As Planned (Repor
+ted)
+60.0
+78.1
+Lender 
+Vie
+w (Nor
+maliz
+ed)
+60.0
+75.8
+Suppor
+ting Assumptions
+Ex
+ecutiv
+e Director
+  $110,000,
+ 1 FTE
+Pr
+incipal
+  $90,000,
+ 1 FTE
+Dean of Students
+  $75,000,
+ 1 FTE
+STEM 
+T
+eachers
+  $55,000,
+ 8 FTE
+Gener
+al 
+T
+eachers
+  $48,000,
+ 4 FTE
+Special Education Staff
+  $52,000,
+ 2 FTE
+Office & Finance Staff
+  $45,000,
+ 3 FTE
+Custodial / Maintenance
+  $35,000,
+ 2 FTE
+Expense Summar
+y
+T
+otal e
+xpenses g
+ro
+w from $2.9M in 
+Y
+ear 1 to $5.5M b
+y 
+Y
+ear 5.
+Expenses b
+y 
+Y
+ear
+Y
+ear
+Staffing
+Operating
+Debt Ser
+vice
+T
+otal
+Y
+ear 1
+$1.7M
+$1.1M
+$69K
+$2.9M
+Y
+ear 2
+$2.8M
+$1.0M
+$69K
+$3.9M
+Y
+ear 3
+$3.3M
+$1.3M
+$69K
+$4.7M
+Y
+ear 4
+$3.5M
+$1.6M
+$69K
+$5.2M
+Y
+ear 5
+$3.6M
+$1.9M
+$69K
+$5.5M
+Capital & Debt
+The model includes 2 debt instr
+uments totaling $575K.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 6 of 19
+--- PAGE 7 ---
+Suppor
+ting Assumptions
+F
+acility Expansion Loan
+  $500K at 6.5% f
+or 15 
+y
+ear
+s
+Equipment Financing (STEM lab)
+  $75K at 5.5% 
+f
+or 5 y
+ear
+s
+5-Y
+ear Financial Pr
+ojection
+The model reaches break-e
+v
+en in 
+Y
+ear 1.
+ 
+Y
+ear 5 change in net assets is projected at $12.9M (70.0% margin).
+ Breake
+ven enr
+ollment
+Break
+e
+v
+en enrollment is 80 students (150% abo
+v
+e 
+Y
+ear 1 enrollment).
+ Accounting basis
+All projections are prepared on an accr
+ual basis;
+ the school currently k
+eeps books on a undeter
+mined basis
+.
+[+] 
+Re
+v
+en
+ue per Student (Y
+ear 1):
+ $24,375 (benchmar
+k:
+ Char
+ter a
+vg:
+ $10,000$15,000)
+[+] 
+Cost per Student (Y
+ear 1):
+ $14,082 (benchmar
+k:
+ 
+T
+arget:
+ "d 85% of re
+v
+en
+ue per student)
+[+] 
+Staffing Cost (% of Re
+v
+en
+ue):
+ 35.3% (benchmar
+k:
+ Industr
+y a
+vg:
+ 5065% of re
+v
+en
+ue)
+[+] 
+Oper
+ating Cost (% of Re
+v
+en
+ue):
+ 22.2% (benchmar
+k:
+ 
+T
+arget:
+ under 30% of re
+v
+en
+ue)
+[+] 
+Net margin (Y
+ear 1):
+ 42.2% (benchmar
+k:
+ Star
+tup target:
+ 05%;
+ mature:
+ 10%+)
+[+] 
+Net margin (Y
+ear 5):
+ 69.3% (benchmar
+k:
+ 
+T
+arget:
+ 1015%+)
+[+] 
+5-Y
+ear Re
+v
+en
+ue Gro
+wth:
+ 271.8% (benchmar
+k:
+ Health
+y schools:
+ 3080% o
+v
+er 5 y
+ears)
+[+] 
+Capacity Utilization (Y
+ear 5):
+ 100.0% (benchmar
+k:
+ Optimal:
+ 8095% utilization)
+5-Y
+ear Chang
+e in Net Assets Pr
+ojection
+Y
+ear
+Students
+Re
+ven
+ue
+Expenses
+Chang
+e in Net 
+Assets
+Mar
+gin
+Y
+ear 1
+200
+$5.8M
+$2.9M
+$2.9M
+49.8%
+Y
+ear 2
+300
+$8.8M
+$3.9M
+$4.9M
+55.8%
+Y
+ear 3
+400
+$11.9M
+$4.7M
+$7.3M
+60.9%
+Y
+ear 4
+500
+$15.1M
+$5.2M
+$10.0M
+66.0%
+Y
+ear 5
+600
+$18.5M
+$5.5M
+$12.9M
+70.0%
+Opening Balance Sheet
+Net position at model star
+t:
+ $300K.
+[ ] 
+T
+otal Assets:
+ $300K
+[ ] 
+T
+otal Liabilities:
+ $0
+[ ] 
+Net P
+osition:
+ $300K
+Assets
+Item
+Amount
+Cash & Equiv
+alents
+$200K
+Accounts Receiv
+ab
+le
+$0
+Fix
+ed Assets
+$100K
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 7 of 19
+--- PAGE 8 ---
+Other Assets
+$0
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 8 of 19
+--- PAGE 9 ---
+T
+otal Assets
+$300K
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 9 of 19
+--- PAGE 10 ---
+Liabilities
+Item
+Amount
+Accounts P
+a
+y
+ab
+le
+$0
+Current Debt P
+or
+tion
+$0
+Long-T
+er
+m Debt
+$0
+T
+otal Liabilities
+$0
+F
+acility & K
+e
+y P
+erf
+ormance Indicator
+s
+Break
+e
+v
+en enrollment is 80 students
+.
+ 
+Y
+ear 1 projects 200 students
+, pro
+viding a 150.0% cushion.
+[ ] 
+Break
+e
+v
+en Enrollment:
+ 80
+[ ] 
+F
+acility Cost/Student:
+ $1K
+K
+e
+y P
+erf
+ormance Indicator
+s
+Metric
+V
+alue
+F
+acility Cost / Student
+$1K
+Rene
+w
+al Option
+No
+Break
+e
+v
+en Enrollment
+80 students
+Enrollment Cushion
++150.0%
+Cash Flo
+w Anal
+ysis
+Cash sta
+ys positiv
+e throughout the entire 5-y
+ear projection.
+ Opening balance:
+ $300K total assets
+, $0 total 
+liabilities
+, $300K net position.
+ Lo
+w
+est cash month across the 5-y
+ear f
+orecast:
+ 
+Y
+ear 1  J
+ul at $625K.
+[ ] 
+Cash Runw
+a
+y:
+ 60+ months
+[ ] 
+Lo
+w
+est Cash Month:
+ 
+Y
+ear 1  J
+ul ($625K)
+Cum
+ulative Cash P
+osition
+Y
+ear
+Cum
+ulative Net Income
+Reser
+ve Months
+Y
+ear 1
+$2.1M
+8.8 months
+Y
+ear 2
+$6.9M
+21.0 months
+Y
+ear 3
+$13.8M
+35.4 months
+Y
+ear 4
+$23.5M
+54.5 months
+Y
+ear 5
+$36.0M
+77.7 months
+Y
+ear 1 Monthl
+y Cash Flo
+w Summar
+y
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 10 of 19
+--- PAGE 11 ---
+Month
+Beginning
+Inflo
+ws
+Outflo
+ws
+Net Cash Flo
+w
+Ending
+J
+ul
+$200K
+$718K
+($292K)
+$425K
+$625K
+A
+ug
+$625K
+$468K
+($292K)
+$175K
+$801K
+Sep
+$801K
+$468K
+($292K)
+$175K
+$976K
+Oct
+$976K
+$468K
+($292K)
+$175K
+$1.2M
+No
+v
+$1.2M
+$468K
+($292K)
+$175K
+$1.3M
+Dec
+$1.3M
+$468K
+($292K)
+$175K
+$1.5M
+J
+an
+$1.5M
+$468K
+($292K)
+$175K
+$1.7M
+F
+eb
+$1.7M
+$468K
+($292K)
+$175K
+$1.9M
+Mar
+$1.9M
+$468K
+($292K)
+$175K
+$2.0M
+Apr
+$2.0M
+$468K
+($292K)
+$175K
+$2.2M
+Ma
+y
+$2.2M
+$462K
+($6K)
+$456K
+$2.7M
+J
+un
+$2.7M
+$462K
+($6K)
+$456K
+$3.1M
+Y
+ear 2 
+Monthl
+y Cash 
+Flo
+w 
+Summar
+y
+Month
+Beginning
+Inflo
+ws
+Outflo
+ws
+Net Cash Flo
+w
+Ending
+J
+ul
+$3.1M
+$863K
+($325K)
+$538K
+$3.7M
+A
+ug
+$3.7M
+$713K
+($325K)
+$388K
+$4.0M
+Sep
+$4.0M
+$713K
+($325K)
+$388K
+$4.4M
+Oct
+$4.4M
+$713K
+($325K)
+$388K
+$4.8M
+No
+v
+$4.8M
+$713K
+($325K)
+$388K
+$5.2M
+Dec
+$5.2M
+$713K
+($325K)
+$388K
+$5.6M
+J
+an
+$5.6M
+$713K
+($325K)
+$388K
+$6.0M
+F
+eb
+$6.0M
+$713K
+($325K)
+$388K
+$6.4M
+Mar
+$6.4M
+$713K
+($325K)
+$388K
+$6.8M
+Apr
+$6.8M
+$713K
+($325K)
+$388K
+$7.1M
+Ma
+y
+$7.1M
+$713K
+($325K)
+$388K
+$7.5M
+J
+un
+$7.5M
+$713K
+($325K)
+$388K
+$7.9M
+Y
+ear 3 
+Monthl
+y Cash 
+Flo
+w 
+Summar
+y
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 11 of 19
+--- PAGE 12 ---
+Month
+Beginning
+Inflo
+ws
+Outflo
+ws
+Net Cash Flo
+w
+Ending
+J
+ul
+$7.9M
+$969K
+($389K)
+$580K
+$8.5M
+A
+ug
+$8.5M
+$969K
+($389K)
+$580K
+$9.1M
+Sep
+$9.1M
+$969K
+($389K)
+$580K
+$9.7M
+Oct
+$9.7M
+$969K
+($389K)
+$580K
+$10.2M
+No
+v
+$10.2M
+$969K
+($389K)
+$580K
+$10.8M
+Dec
+$10.8M
+$969K
+($389K)
+$580K
+$11.4M
+J
+an
+$11.4M
+$969K
+($389K)
+$580K
+$12.0M
+F
+eb
+$12.0M
+$969K
+($389K)
+$580K
+$12.6M
+Mar
+$12.6M
+$969K
+($389K)
+$580K
+$13.1M
+Apr
+$13.1M
+$969K
+($389K)
+$580K
+$13.7M
+Ma
+y
+$13.7M
+$969K
+($389K)
+$580K
+$14.3M
+J
+un
+$14.3M
+$969K
+($389K)
+$580K
+$14.9M
+Y
+ear 4 
+Monthl
+y Cash 
+Flo
+w 
+Summar
+y
+Month
+Beginning
+Inflo
+ws
+Outflo
+ws
+Net Cash Flo
+w
+Ending
+J
+ul
+$14.9M
+$1.2M
+($430K)
+$805K
+$15.7M
+A
+ug
+$15.7M
+$1.2M
+($430K)
+$805K
+$16.5M
+Sep
+$16.5M
+$1.2M
+($430K)
+$805K
+$17.3M
+Oct
+$17.3M
+$1.2M
+($430K)
+$805K
+$18.1M
+No
+v
+$18.1M
+$1.2M
+($430K)
+$805K
+$18.9M
+Dec
+$18.9M
+$1.2M
+($430K)
+$805K
+$19.7M
+J
+an
+$19.7M
+$1.2M
+($430K)
+$805K
+$20.5M
+F
+eb
+$20.5M
+$1.2M
+($430K)
+$805K
+$21.3M
+Mar
+$21.3M
+$1.2M
+($430K)
+$805K
+$22.1M
+Apr
+$22.1M
+$1.2M
+($430K)
+$805K
+$22.9M
+Ma
+y
+$22.9M
+$1.2M
+($430K)
+$805K
+$23.7M
+J
+un
+$23.7M
+$1.2M
+($430K)
+$805K
+$24.5M
+Y
+ear 5 
+Monthl
+y Cash 
+Flo
+w 
+Summar
+y
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 12 of 19
+--- PAGE 13 ---
+Month
+Beginning
+Inflo
+ws
+Outflo
+ws
+Net Cash Flo
+w
+Ending
+J
+ul
+$24.5M
+$1.5M
+($462K)
+$1.0M
+$25.6M
+A
+ug
+$25.6M
+$1.5M
+($462K)
+$1.0M
+$26.6M
+Sep
+$26.6M
+$1.5M
+($462K)
+$1.0M
+$27.7M
+Oct
+$27.7M
+$1.5M
+($462K)
+$1.0M
+$28.7M
+No
+v
+$28.7M
+$1.5M
+($462K)
+$1.0M
+$29.8M
+Dec
+$29.8M
+$1.5M
+($462K)
+$1.0M
+$30.8M
+J
+an
+$30.8M
+$1.5M
+($462K)
+$1.0M
+$31.9M
+F
+eb
+$31.9M
+$1.5M
+($462K)
+$1.0M
+$32.9M
+Mar
+$32.9M
+$1.5M
+($462K)
+$1.0M
+$34.0M
+Apr
+$34.0M
+$1.5M
+($462K)
+$1.0M
+$35.0M
+Ma
+y
+$35.0M
+$1.5M
+($462K)
+$1.0M
+$36.1M
+J
+un
+$36.1M
+$1.5M
+($462K)
+$1.0M
+$37.1M
+Lo
+west Cash 
+Month b
+y 
+Y
+ear
+Y
+ear
+Month
+Ending Cash
+Y
+ear 1
+J
+ul
+$625K
+Y
+ear 2
+J
+ul
+$3.7M
+Y
+ear 3
+J
+ul
+$8.5M
+Y
+ear 4
+J
+ul
+$15.7M
+Y
+ear 5
+J
+ul
+$25.6M
+Debt Ser
+vice Co
+vera
+g
+e
+DSCR is abo
+v
+e 1.25x, and y
+our oper
+ating income comf
+or
+tab
+ly co
+v
+ers debt pa
+yments
+.
+ Current DSCR is 30.64x.
+ 
+Benchmar
+k:
+ Health
+y minim
+um:
+ 1.15x;
+ target:
+ 1.25x.
+[+] 
+Debt Ser
+vice Co
+v
+er
+age Ratio (Y
+ear 1):
+ 30.64x (benchmar
+k:
+ Health
+y minim
+um:
+ 1.15x;
+ target:
+ 1.25x)
+[+] 
+Y
+ear 1 Reser
+v
+e Months:
+ 8.8 months (benchmar
+k:
+ 
+T
+arget:
+ 3+ months)
+[+] 
+Y
+ear 2 Reser
+v
+e Months:
+ 21.0 months (benchmar
+k:
+ 
+T
+arget:
+ 3+ months)
+[+] 
+Y
+ear 3 Reser
+v
+e Months:
+ 35.4 months (benchmar
+k:
+ 
+T
+arget:
+ 3+ months)
+[+] 
+Y
+ear 4 Reser
+v
+e Months:
+ 54.5 months (benchmar
+k:
+ 
+T
+arget:
+ 3+ months)
+[+] 
+Y
+ear 5 Reser
+v
+e Months:
+ 77.7 months (benchmar
+k:
+ 
+T
+arget:
+ 3+ months)
+DSCR Summar
+y
+Current DSCR:
+  30.64x
+Benchmar
+k:
+  Health
+y minim
+um:
+ 1.15x;
+ tar
+g
+et:
+ 
+1.25x
+T
+rend:
+  DSCR is abo
+ve 1.25x,
+ and y
+our 
+operating income comf
+or
+tab
+l
+y co
+ver
+s debt 
+pa
+yments.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 13 of 19
+--- PAGE 14 ---
+Operating Reser
+ve & Ending Cash
+Y
+ear
+Ending Cash
+Reser
+ve Months
+Status
+Y
+ear 1 (trough)
+$2.3M
+8.8 months
+Adequate
+Y
+ear 2
+$7.1M
+21.0 months
+Adequate
+Y
+ear 3
+$14.0M
+35.4 months
+Adequate
+Y
+ear 4
+$23.7M
+54.5 months
+Adequate
+Y
+ear 5
+$36.2M
+77.7 months
+Adequate
+Tightest cash y
+ear:
+ 
+Y
+ear 1 ends at $2.3M.
+Y
+ear
+-end unrestricted cash:
+ $36.2M
+vs accr
+ual:
+ $36.2M (no restr
+icted gifts).
+ Unrestr
+icted is the headline DSCR + r
+unw
+a
+y are computed off;
+ restr
+icted gifts can't 
+legally fund oper
+ations or debt ser
+vice
+.
+Stress 
+T
+esting
+1 of 6 stress scenar
+ios result in negativ
+e 
+Y
+ear 5 net income
+, suggesting the model has limited cushion against 
+adv
+erse conditions
+.
+Stress 
+T
+est Results
+Scenario
+Y1 Net 
+Income
+Y5 Net 
+Income
+Break-Even
+Reser
+ve (mo)
+Y1 DSCR
+Runwa
+y (mo)
+Enrollment 20% Belo
+w Plan
+$1.4M
+$9.2M
+Y
+ear 1
+60.7
+21.74x
+60+
+Loss of Philanthrop
+y
+$1.9M
+$12.6M
+Y
+ear 1
+77.3
+27.84x
+60+
+Hard re
+v
+en
+ue only
+$-2.8M
+$-5.4M
+Ne
+v
+er
+0.0
+-38.62x
+1
+Occupancy +15%, P
+ersonnel +5%
+$1.9M
+$12.3M
+Y
+ear 1
+71.5
+28.81x
+60+
+Re
+v
+en
+ue Dela
+y
+ed 3 Months
+$854K
+$8.2M
+Y
+ear 1
+47.9
+13.30x
+60+
+Interest Rate +2%
+$2.1M
+$12.6M
+Y
+ear 1
+77.9
+27.78x
+60+
+Lender Readiness
+Lender Readiness:
+ Needs 
+W
+or
+k.
+ 
+Y
+our model has real promise
+, and there are just a f
+e
+w areas to strengthen.
+ 
+The 
+recommendations abo
+v
+e will help y
+ou b
+uild a more resilient financial plan, and e
+v
+er
+y impro
+v
+ement mak
+es y
+our 
+projections more achie
+v
+ab
+le
+.
+[~] 
+Readiness Le
+v
+el:
+ Needs 
+W
+or
+k
+Financial Health Assessment
+Across 8 health dimensions:
+ 7 health
+y
+, 1 on w
+atch, 0 at r
+isk.
+[+] 
+viability:
+ Health
+y
+[+] 
+liquidity:
+ Health
+y
+[+] 
+staffing b
+urden:
+ Health
+y
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 14 of 19
+--- PAGE 15 ---
+[+] 
+f
+acility b
+urden:
+ Health
+y
+[+] 
+debt aff
+ordability:
+ Health
+y
+[~] 
+re
+v
+en
+ue concentr
+ation:
+ 
+W
+atch closely
+[+] 
+da
+ys cash:
+ Health
+y
+[+] 
+reser
+v
+e strength:
+ Health
+y
+Health Dimensions
+Dimension
+Status
+Details
+Viability
+Health
+y
+The model reaches net income ear
+ly and 
+sustains strong margins through 
+Y
+ear 5.
+Liquidity
+Health
+y
+Cash sta
+ys positiv
+e throughout the projection 
+and reser
+v
+es e
+xceed 3 months of e
+xpenses
+.
+Staffing Burden
+Health
+y
+Staffing at 35% of re
+v
+en
+ue lea
+v
+es room f
+or 
+f
+acilities
+, prog
+r
+ams
+, and reser
+v
+es
+.
+F
+acility Burden
+Health
+y
+F
+acility costs at 5% of re
+v
+en
+ue are w
+ell-
+managed and lea
+v
+e b
+udget f
+or prog
+r
+ams
+.
+Debt Aff
+ordability
+Health
+y
+DSCR of 30.64x pro
+vides comf
+or
+tab
+le co
+v
+er
+age 
+of debt pa
+yments with room to spare
+.
+Re
+v
+en
+ue Concentr
+ation
+W
+atch closely
+95% of re
+v
+en
+ue comes from pub
+lic funding.
+ 
+This 
+is typical f
+or char
+ter schools
+, b
+ut disb
+ursement 
+timing and policy changes can create cash flo
+w 
+gaps
+.
+Da
+ys Cash
+Health
+y
+267 da
+ys of cash on hand e
+xceeds the 90-da
+y 
+benchmar
+k, pro
+viding a strong liquidity cushion.
+Reser
+v
+e Strength
+Health
+y
+77.7 months of reser
+v
+es b
+y 
+Y
+ear 5  a strong 
+b
+uff
+er f
+or une
+xpected costs
+.
+K
+e
+y Risks
+2 r
+isk f
+actors ha
+v
+e been identified.
+ None are r
+ated cr
+itical, b
+ut each should ha
+v
+e a documented mitigation plan.
+[+] 
+Let's bac
+k the enrollment r
+amp with e
+vidence:
+ medium
+[+] 
+Let's tie ne
+w hires to enrollment milestones:
+ medium
+MEDIUM
+Let's bac
+k the enr
+ollment ramp with e
+vidence
+Enrollment is the engine of e
+v
+er
+y re
+v
+en
+ue and staffing assumption do
+wnstream.
+ 
+The more e
+vidence w
+e can attach to each y
+ear's n
+umber
+, 
+the more confident the rest of the model becomes
+.
+Evidence:
+ 
+Y
+ear 1:
+ 200 students  |  
+Y
+ear 2:
+ 300 students  |  
+Y
+ear 3:
+ 400 students  |  
+Y
+ear 4:
+ 500 students  |  
+Y
+ear 5:
+ 600 students  |  Capacity:
+ 600
+Mitigation:
+ 
+Bac
+k e
+v
+er
+y enrollment target with documented demand  signed letters of intent, w
+aitlist depth, comm
+unity sur
+v
+e
+y results
+, or 
+recr
+uitment pipeline data.
+ Gro
+wth o
+v
+er 25% per y
+ear typically requires an e
+xceptional recr
+uitment engine or f
+acility e
+xpansion.
+ Ne
+xt step:
+ 
+Open Step 4:
+ Enrollment and either soften the steepest y
+ear to a 15-25% jump
+, or paste y
+our w
+aitlist count, signed letters of intent, and 
+recr
+uitment plan into the Stor
+y step so re
+vie
+w
+ers see the e
+vidence
+.
+MEDIUM
+Let's tie ne
+w hires to enr
+ollment milestones
+Hir
+ing slightly behind enrollment, r
+ather than ahead of it, k
+eeps fix
+ed costs aligned with the re
+v
+en
+ue actually arr
+iving.
+ It also giv
+es y
+ou a clean 
+ans
+w
+er to 'what tr
+iggers each ne
+w role'.
+Evidence:
+ 
+Y
+ear 2 enrollment:
+ 300 students  |  
+Y
+ear 2 staffing cost:
+ $2,787,507
+Mitigation:
+ 
+Align staffing additions to enrollment milestones
+.
+ Hire when students are enrolled, not when y
+ou hope the
+y will be
+.
+ Use par
+t-time 
+or contr
+act roles to br
+idge gaps
+.
+ Ne
+xt step:
+ Open Step 6:
+ Staffing and tie each ne
+w role's star
+t date to a specific enrollment milestone (e
+.g.
+ 
+'add when 
+Y2 enrollment hits 60'), or push the role into a later y
+ear
+.
+[+] 
+Let's bac
+k the enrollment r
+amp with e
+vidence:
+ medium
+[+] 
+Let's tie ne
+w hires to enrollment milestones:
+ medium
+See Appendix f
+or complete assumption details
+.
+Decision Histor
+y
+No decisions ha
+v
+e been tr
+ac
+k
+ed with an outcome y
+et.
+ As the team mar
+ks sa
+v
+ed scenar
+ios as Pursued, Declined, 
+or On hold, those outcomes (and an
+y retrospectiv
+e notes) will appear here so re
+vie
+w
+ers can see what actually 
+happened v
+ersus what w
+as modeled.
+Once decisions are sa
+v
+ed with a Pursued / Declined / On hold outcome inside the planner
+, the
+y will be summar
+iz
+ed here
+.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 15 of 19
+--- PAGE 16 ---
+Appendix:
+ K
+e
+y Assumptions
+Complete list of 24 assumptions used in this financial model, with each headline metr
+ic tied to its dr
+iving 
+assumptions
+.
+Suppor
+ting Assumptions
+ Assumption sources b
+y headline metr
+ic 
+  
+(maps eac
+h ke
+y output to the assumptions 
+and wizar
+d step that drive it)
+Y
+ear 1 re
+v
+en
+ue
+  
+Y
+ear 1 enr
+ollment:
+ 200;
+ 
+T
+uition 
+per student:
+ Not entered;
+ 
+T
+uition collection 
+rate:
+ Not entered;
+ 
+T
+uition escalation:
+ Not 
+entered
+Dr
+iv
+en b
+y inputs in:
+ Enrollment, Re
+v
+en
+ue
+.
+Y
+ear 1 total e
+xpenses
+  
+Y
+ear 1 staffing cost:
+ 
+$1,720,999;
+ 
+Y
+ear 1 facility cost:
+ $220,000;
+ 
+Y
+ear 
+1 operating e
+xpenses:
+ $441,667;
+ 
+Y
+ear 1 debt 
+ser
+vice:
+ $69,457;
+ General cost inflation:
+ 3.0%
+Dr
+iv
+en b
+y inputs in:
+ Staffing, Expenses
+, Capital & Financing.
+Y
+ear 1 net income
+  
+Y
+ear 1 enr
+ollment:
+ 200;
+ 
+T
+uition per student:
+ Not entered;
+ 
+Y
+ear 1 
+staffing cost:
+ $1,720,999;
+ 
+Y
+ear 1 facility cost:
+ 
+$220,000;
+ 
+Y
+ear 1 operating e
+xpenses:
+ $441,667
+Dr
+iv
+en b
+y inputs in:
+ Enrollment, Re
+v
+en
+ue
+, Staffing, Expenses
+.
+Y
+ear 1 oper
+ating sur
+plus
+  
+Y
+ear 1 enr
+ollment:
+ 
+200;
+ 
+T
+uition per student:
+ Not entered;
+ 
+Y
+ear 1 
+staffing cost:
+ $1,720,999;
+ 
+Y
+ear 1 facility cost:
+ 
+$220,000;
+ 
+Y
+ear 1 operating e
+xpenses:
+ $441,667
+Dr
+iv
+en b
+y inputs in:
+ Enrollment, Re
+v
+en
+ue
+, Staffing, Expenses
+.
+Debt ser
+vice co
+v
+er
+age (DSCR)
+  Loan principal:
+ 
+$500,000;
+ Loan interest rate:
+ 6.5%;
+ Loan term:
+ 
+15 yr;
+ 
+Y
+ear 1 debt ser
+vice:
+ $69,457;
+ 
+Y
+ear 1 
+staffing cost:
+ $1,720,999
+Dr
+iv
+en b
+y inputs in:
+ Capital & Financing, Staffing.
+Cash reser
+v
+e (months)
+  Star
+ting cash:
+ 
+$200,000;
+ 
+Y
+ear 1 operating e
+xpenses:
+ 
+$441,667;
+ 
+Y
+ear 1 staffing cost:
+ $1,720,999;
+ 
+T
+uition collection rate:
+ Not entered
+Dr
+iv
+en b
+y inputs in:
+ Assumptions & Sensitivity
+, Expenses
+, Staffing, Re
+v
+en
+ue
+.
+Y
+ear 1 ending cash
+  Star
+ting cash:
+ $200,000;
+ 
+Y
+ear 1 enr
+ollment:
+ 200;
+ 
+T
+uition per student:
+ 
+Not entered;
+ 
+Y
+ear 1 staffing cost:
+ $1,720,999;
+ 
+Y
+ear 1 debt ser
+vice:
+ $69,457
+Dr
+iv
+en b
+y inputs in:
+ Assumptions & Sensitivity
+, Enrollment, Re
+v
+en
+ue
+, Staffing, Capital & Financing.
+Y
+ear 5 ending cash
+  Star
+ting cash:
+ $200,000;
+ 
+Y
+ear 5 enr
+ollment:
+ 600;
+ Retention rate:
+ 88.0%;
+ 
+T
+uition escalation:
+ Not entered;
+ Ann
+ual salar
+y 
+increase:
+ 3.0%
+Dr
+iv
+en b
+y inputs in:
+ Assumptions & Sensitivity
+, Enrollment, Re
+v
+en
+ue
+, Staffing.
+Break-e
+v
+en y
+ear
+  
+Y
+ear 1 enr
+ollment:
+ 200;
+ 
+Y
+ear 5 
+enr
+ollment:
+ 600;
+ 
+T
+uition per student:
+ Not 
+entered;
+ 
+Y
+ear 1 staffing cost:
+ $1,720,999;
+ 
+Y
+ear 
+1 facility cost:
+ $220,000
+Dr
+iv
+en b
+y inputs in:
+ Enrollment, Re
+v
+en
+ue
+, Staffing, Expenses
+.
+  ...
+ and 24 more (see Appendix)
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 16 of 19
+--- PAGE 17 ---
+Break-Even & Do
+wnside Sensitivity
+Break-e
+v
+en student counts assume current re
+v
+en
+ue and cost mix.
+ Utilization compares break-e
+v
+en to the stated 
+max capacity of 600 students
+.
+P
+er
+-Y
+ear Break-Even
+Y
+ear 1 (planned 200):
+  93 students · 16% of 
+capacity
+Y
+ear 2 (planned 300):
+  121 students · 20% of 
+capacity
+Y
+ear 3 (planned 400):
+  140 students · 23% of 
+capacity
+Y
+ear 4 (planned 500):
+  146 students · 24% of 
+capacity
+Y
+ear 5 (planned 600):
+  147 students · 25% of 
+capacity
+Do
+wnside Enr
+ollment Band
+If 10% f
+e
+wer students enr
+oll
+  
+Y
+ear 1 (180 students):
+  DSCR 26.32x · Ending 
+cash $1,958,775
+  
+Y
+ear 2 (270 students):
+  DSCR 61.94x · Ending 
+cash $6,191,258
+  
+Y
+ear 3 (360 students):
+  DSCR 88.65x · Ending 
+cash $12,279,550
+  
+Y
+ear 4 (450 students):
+  DSCR 120.55x · Ending 
+cash $20,583,131
+  
+Y
+ear 5 (540 students):
+  DSCR 158.13x · Ending 
+cash $31,496,744
+If 20% f
+e
+wer students enr
+oll
+  
+Y
+ear 1 (160 students):
+  DSCR 21.74x · Ending 
+cash $1,640,891
+  
+Y
+ear 2 (240 students):
+  DSCR 53.11x · Ending 
+cash $5,260,668
+  
+Y
+ear 3 (320 students):
+  DSCR 75.44x · Ending 
+cash $10,431,285
+  
+Y
+ear 4 (400 students):
+  DSCR 102.63x · Ending 
+cash $17,490,452
+  
+Y
+ear 5 (480 students):
+  DSCR 134.17x · Ending 
+cash $26,739,840
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 17 of 19
+--- PAGE 18 ---
+Enr
+ollment × 
+T
+uition Sensitivity (Yr 1 DSCR / 
+Yr 5 ending cash)
+Each cell re-r
+uns the canonical engine with the ro
+w's enrollment delta and the column's tuition delta applied 
+together
+.
+ Cells shaded g
+reen clear the 1.25x DSCR benchmar
+k;
+ amber sit betw
+een 1.15x1.25x;
+ red are belo
+w 
+1.15x.
+Enr
+ollment ! / 
+T
+uition !
+-5% tuition
+0% tuition
++5% tuition
++10% tuition
+-20% enr
+oll
+27.33x
+$33,383,969
+30.84x
+$36,292,199
+34.35x
+$39,200,428
+37.86x
+$42,108,657
+-15% enr
+oll
+27.33x
+$33,383,969
+30.84x
+$36,292,199
+34.35x
+$39,200,428
+37.86x
+$42,108,657
+-10% enr
+oll
+27.33x
+$33,383,969
+30.84x
+$36,292,199
+34.35x
+$39,200,428
+37.86x
+$42,108,657
+-5% enr
+oll
+27.33x
+$33,383,969
+30.84x
+$36,292,199
+34.35x
+$39,200,428
+37.86x
+$42,108,657
+0% enr
+oll
+27.33x
+$33,383,969
+30.84x
+$36,292,199
+34.35x
+$39,200,428
+37.86x
+$42,108,657
++5% enr
+oll
+27.33x
+$33,383,969
+30.84x
+$36,292,199
+34.35x
+$39,200,428
+37.86x
+$42,108,657
++10% enr
+oll
+27.33x
+$33,383,969
+30.84x
+$36,292,199
+34.35x
+$39,200,428
+37.86x
+$42,108,657
+Standar
+d Lender Stress 
+T
+ests
+Fiv
+e fix
+ed do
+wnside scenar
+ios re-r
+un against the canonical model.
+ Each ro
+w sho
+ws the w
+orst-y
+ear DSCR, ending-
+cash trough, and 
+Y
+ear-1 net-income delta vs base
+.
+ Identical figures appear on the f
+ounder dashboard and in the 
+lender pro-f
+or
+ma w
+or
+kbook.
+Base case:
+  Min DSCR 30.84x · Min ending 
+cash $2,272,877 · Runwa
+y 60.0 mo
+Enr
+ollment -10%
+All fiv
+e enrollment y
+ears scaled do
+wn b
+y 10%  the standard lender enrollment-miss sensitivity
+.
+  Min DSCR:
+ 26.32x
+   ·   Min ending cash:
+ $1,958,775   ·   Runw
+a
+y:
+ 60.0 mo   ·   Break-e
+v
+en:
+ 
+Y
+ear 1
+  
+Y
+ear-1 net income vs base:
+ -$314,102
+Enr
+ollment -20%
+All fiv
+e enrollment y
+ears scaled do
+wn b
+y 20%  the stretch do
+wnside lenders use to confir
+m the school can sur
+viv
+e a soft-launch.
+  Min DSCR:
+ 21.74x
+   ·   Min ending cash:
+ $1,640,891   ·   Runw
+a
+y:
+ 60.0 mo   ·   Break-e
+v
+en:
+ 
+Y
+ear 1
+  
+Y
+ear-1 net income vs base:
+ -$631,986
+ESA / Pub
+lic Funding Dela
+y
+ed 3 Months
+Y
+ear-1 ESA, school-choice
+, and pub
+lic-funding receipts reduced b
+y 25% ("H 3 months dela
+y
+ed) to sim
+ulate a slo
+w first disb
+ursement.
+  Min DSCR:
+ 14.23x
+   ·   Min ending cash:
+ $1,118,711   ·   Runw
+a
+y:
+ 60.0 mo   ·   Break-e
+v
+en:
+ 
+Y
+ear 1
+  
+Y
+ear-1 net income vs base:
+ -$1,154,167
+Rent Shoc
+k +25%
+Occupancy & f
+acility e
+xpense ro
+ws escalated b
+y 25%  co
+v
+ers a lease rene
+w
+al, mar
+k
+et-r
+ate reset, or unb
+udgeted CAM/utilities 
+sur
+pr
+ise
+.
+  Min DSCR:
+ 30.05x
+   ·   Min ending cash:
+ $2,217,877   ·   Runw
+a
+y:
+ 60.0 mo   ·   Break-e
+v
+en:
+ 
+Y
+ear 1
+  
+Y
+ear-1 net income vs base:
+ -$55,000
+Founder Comp Normaliz
+ed to Market
+F
+ounder compensation re-cast at the mar
+k
+et-r
+ate benchmar
+k (with benefits + pa
+yroll tax).
+ 
+The lender / board vie
+w of tr
+ue oper
+ating cost.
+  Min DSCR:
+ 30.65x
+   ·   Min ending cash:
+ $2,272,877   ·   Runw
+a
+y:
+ 60.0 mo   ·   Break-e
+v
+en:
+ 
+Y
+ear 1
+  
+Y
+ear-1 net income vs base:
+ -$13,265
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 18 of 19
+--- PAGE 19 ---
+Founder Compensation
+P
+er-y
+ear f
+ounder pa
+y sho
+wn tw
+o w
+a
+ys:
+ as planned (what the f
+ounder dr
+a
+ws) and at mar
+k
+et r
+ate (what a 
+compar
+ab
+le hire w
+ould cost).
+ 
+The lender adjustment is the gap underwr
+iters apply to staffing cost and DSCR.
+Line
+Y1
+Y2
+Y3
+Y4
+Y5
+5-Yr 
+T
+otal
+As planned (repor
+ted)
+$110,000
+$113,300
+$116,699
+$120,200
+$123,806
+$584,005
+  Fully-loaded (incl.
+ benefits + pa
+yroll tax)
+$145,915
+$150,292
+$154,801
+$159,445
+$164,229
+$774,683
+Mar
+k
+et r
+ate (nor
+maliz
+ed)
+$120,000
+$155,000
+$159,000
+$202,000
+$208,000
+$844,000
+  Fully-loaded (incl.
+ benefits + pa
+yroll tax)
+$159,180
+$205,608
+$210,914
+$267,953
+$275,912
+$1,119,566
+Lender adjustment (market - planned)
+$13,265
+$55,315
+$56,112
+$108,508
+$111,683
+$344,883
+Note:
+ F
+ounder is pa
+ying themselv
+es belo
+w mar
+k
+et r
+ate (s
+w
+eat equity).
+ Lenders and boards underwr
+ite to the mar
+k
+et-r
+ate line;
+ the adjustment 
+sho
+ws the gap
+.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 19 of 19
