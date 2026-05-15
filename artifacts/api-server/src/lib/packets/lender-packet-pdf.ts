@@ -30,6 +30,7 @@ import type { LenderSummaryData } from "./build-lender-summary.js";
 import type { NarrativeCommentary } from "./build-narrative-commentary.js";
 import { lenderReadinessCoachingHeadline } from "../lender-readiness-coaching.js";
 import { ObjectStorageService, ObjectNotFoundError } from "../objectStorage.js";
+import { rasterizePdfFirstPage } from "../pdf-rasterize.js";
 import { PDFDocument as PdfLibDocument } from "pdf-lib";
 
 export async function generateLenderPacketPDF(
@@ -694,44 +695,11 @@ function isPdfFile(file: AppendixFileLike): boolean {
   return name.endsWith(".pdf");
 }
 
-// Task #761 — lazy-load the mupdf wasm module so the API server's
-// cold-start cost is unaffected when no PDFs need to be rasterized.
-// The module is only paid for the first time a packet is generated
-// that has a PDF evidence attachment.
-let mupdfModulePromise: Promise<typeof import("mupdf")> | null = null;
-function getMupdf(): Promise<typeof import("mupdf")> {
-  if (!mupdfModulePromise) {
-    mupdfModulePromise = import("mupdf");
-  }
-  return mupdfModulePromise;
-}
-
-/** Task #761 — rasterize the first page of a PDF to a PNG thumbnail
- *  using mupdf-wasm. Returns null on any failure so the caller can
- *  fall back to the file-type indicator badge. */
-async function rasterizePdfFirstPage(bytes: Buffer): Promise<Buffer | null> {
-  try {
-    const mupdf = await getMupdf();
-    const doc = mupdf.Document.openDocument(bytes, "application/pdf");
-    try {
-      if (doc.countPages() < 1) return null;
-      const page = doc.loadPage(0);
-      // 0.5x source-pixel scale produces a thumbnail roughly the size
-      // of a fingernail at typical letter / A4 page dimensions, plenty
-      // of detail at the 56pt rendered box without bloating the embed.
-      const matrix = mupdf.Matrix.scale(0.5, 0.5);
-      const pixmap = page.toPixmap(matrix, mupdf.ColorSpace.DeviceRGB, false, true);
-      const png = pixmap.asPNG();
-      return Buffer.from(png);
-    } finally {
-      // Document objects hold wasm memory; let the GC clean up if a
-      // .destroy() helper isn't available on this version.
-      (doc as unknown as { destroy?: () => void }).destroy?.();
-    }
-  } catch {
-    return null;
-  }
-}
+// Task #761 — first-page PDF rasterization uses the shared
+// `rasterizePdfFirstPage` helper (Task #839 lifted it to
+// `lib/pdf-rasterize.ts` so the in-app evidence thumbnail endpoint
+// can reuse the same mupdf-wasm path without dragging the entire
+// packet renderer into the route module).
 
 function fileTypeBadgeLabel(file: AppendixFileLike): string {
   const name = (file.name || "").toLowerCase();

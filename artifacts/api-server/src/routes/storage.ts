@@ -4,8 +4,13 @@ import {
   RequestUploadUrlBody,
   RequestUploadUrlResponse,
 } from "@workspace/api-zod";
+import {
+  EVIDENCE_INLINE_PREVIEW_MAX_BYTES,
+  classifyEvidenceFileEmbed,
+} from "@workspace/finance";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { ObjectPermission } from "../lib/objectAcl";
+import { rasterizePdfFirstPage } from "../lib/pdf-rasterize";
 import { authMiddleware, type AuthRequest } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -215,6 +220,125 @@ router.get(
       }
       console.error("[storage] Error serving object", error);
       res.status(500).json({ error: "Failed to serve object" });
+    }
+  },
+);
+
+/**
+ * GET /storage/evidence-thumbnail/objects/*
+ *
+ * Task #839 — return a small PNG/JPEG thumbnail for an evidence file
+ * stored in App Storage so the wizard's Review-step rollup (and other
+ * in-app surfaces showing the assumption-confidence rollup) can render
+ * the same first-page preview that the lender / board PDFs embed —
+ * without shipping mupdf-wasm to the browser. Behaviour:
+ *
+ *   - Auth + ACL identical to /storage/objects/*  — only the founder
+ *     who uploaded the file can fetch its thumbnail.
+ *   - PNG / JPEG: pass the original bytes through with their Content-Type.
+ *   - PDF: rasterize the first page server-side via the shared
+ *     `rasterizePdfFirstPage` helper (mupdf-wasm) and return PNG bytes.
+ *   - Anything else (DOCX / XLSX / GIF / WEBP / HEIC / oversize): 415 so
+ *     the UI degrades to the per-file-type indicator badge.
+ *
+ * The per-file size cap mirrors the lender appendix's
+ * `EVIDENCE_INLINE_PREVIEW_MAX_BYTES` so the wizard preview tells the
+ * founder exactly which files will preview inline in the export.
+ */
+router.get(
+  "/storage/evidence-thumbnail/objects/*path",
+  authMiddleware,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const raw = req.params.path;
+      const wildcardPath = Array.isArray(raw) ? raw.join("/") : raw;
+      const objectPath = `/objects/${wildcardPath}`;
+      const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
+
+      const userIdStr = String(req.userId);
+
+      const canAccess = await objectStorageService.canAccessObjectEntity({
+        userId: userIdStr,
+        objectFile,
+        requestedPermission: ObjectPermission.READ,
+      });
+      const plannedOwner = objectStorageService.parseOwnerUserIdFromObjectPath(objectPath);
+      const plannedOwnerMatches = plannedOwner !== undefined && plannedOwner === userIdStr;
+      if (!canAccess && !plannedOwnerMatches) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+
+      const [meta] = await objectFile.getMetadata();
+      const sourceContentType =
+        (meta as { contentType?: string } | undefined)?.contentType ?? "";
+      const sourceSize = Number(
+        (meta as { size?: number | string } | undefined)?.size ?? 0,
+      );
+
+      // Use the shared classifier so this endpoint and the wizard's
+      // attachments-preview surface (and the PDF appendix renderer)
+      // never disagree about which files preview inline.
+      const klass = classifyEvidenceFileEmbed({
+        mimeType: sourceContentType,
+        name: objectPath,
+        size: Number.isFinite(sourceSize) ? sourceSize : undefined,
+      });
+      const lower = sourceContentType.toLowerCase();
+      const isImage = lower === "image/png" || lower === "image/jpeg" || lower === "image/jpg";
+      const isPdf = lower === "application/pdf";
+
+      if (!isImage && !isPdf) {
+        res.status(415).json({ error: "Thumbnail not available for this file type" });
+        return;
+      }
+      if (klass.disposition === "too_large") {
+        res.status(413).json({ error: "File exceeds the inline-preview size cap" });
+        return;
+      }
+
+      const [bytes] = await objectFile.download();
+      if (!bytes || bytes.length === 0) {
+        res.status(404).json({ error: "Object not found" });
+        return;
+      }
+      // Belt-and-braces: re-check the actual byte length against the
+      // per-file cap in case the Cloud Storage metadata under-reported
+      // the size (e.g. legacy uploads predating finalize).
+      if (bytes.length > EVIDENCE_INLINE_PREVIEW_MAX_BYTES) {
+        res.status(413).json({ error: "File exceeds the inline-preview size cap" });
+        return;
+      }
+
+      // Caching: thumbnails are derived from immutable App Storage
+      // objects, so the founder's browser can hold onto them for the
+      // life of the session without coordination. Private so the
+      // shared CDN never reuses one founder's bytes for another.
+      res.setHeader("Cache-Control", "private, max-age=3600");
+
+      if (isImage) {
+        res.setHeader("Content-Type", lower === "image/jpg" ? "image/jpeg" : lower);
+        res.status(200).send(bytes);
+        return;
+      }
+
+      // PDF — rasterize first page to PNG. Failures (encrypted /
+      // malformed) fall back to a 415 so the UI shows the file-type
+      // badge instead of a broken image.
+      const png = await rasterizePdfFirstPage(bytes);
+      if (!png || png.length === 0) {
+        res.status(415).json({ error: "Could not rasterize PDF first page" });
+        return;
+      }
+      res.setHeader("Content-Type", "image/png");
+      res.status(200).send(png);
+    } catch (error) {
+      if (error instanceof ObjectNotFoundError) {
+        res.status(404).json({ error: "Object not found" });
+        return;
+      }
+      console.error("[storage] Error generating evidence thumbnail", error);
+      res.status(500).json({ error: "Failed to generate thumbnail" });
     }
   },
 );

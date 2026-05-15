@@ -1,10 +1,14 @@
-import { ShieldCheck, ShieldAlert, Shield } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Shield, Paperclip } from "lucide-react";
 import {
   ASSUMPTION_REGISTRY,
   computeAssumptionConfidenceRollup,
   type AssumptionConfidenceStatus,
+  type AssumptionConfidenceEntry,
+  type AssumptionEvidenceFile,
+  type AssumptionKey,
 } from "@workspace/finance";
 import { ActualVsProjectedBadge } from "./ActualVsProjectedBadge";
+import { EvidenceThumbnail } from "./EvidenceThumbnail";
 
 // Task #703 — Assumptions Confidence rollup card on the Review step.
 //
@@ -39,7 +43,7 @@ export function AssumptionConfidenceRollupCard({
   data,
   provenance,
 }: {
-  data: { assumptionConfidence?: Record<string, { confidence: string; evidenceNote?: string }> | undefined };
+  data: { assumptionConfidence?: Record<string, AssumptionConfidenceEntry | { confidence: string; evidenceNote?: string }> | undefined };
   /**
    * Task #720 — when supplied, render the same Actual / Projected pill
    * the wizard Review screen and board PDF show next to the rollup
@@ -53,6 +57,30 @@ export function AssumptionConfidenceRollupCard({
   const theme = STATUS_THEME[rollup.status];
   const { Icon } = theme;
   const pct = Math.round(rollup.evidenceRatio * 100);
+
+  // Task #839 — flatten the assumption-confidence map into a list of
+  // attached evidence files grouped by assumption so the founder can
+  // sanity-check the same image / PDF first-page previews a reviewer
+  // will see in the lender or board packet PDF appendix. Pure read —
+  // the rollup card is a summary surface, no edit affordances here.
+  const evidenceGroups: Array<{
+    assumptionKey: AssumptionKey;
+    label: string;
+    files: AssumptionEvidenceFile[];
+  }> = [];
+  for (const [k, entry] of Object.entries(data.assumptionConfidence || {})) {
+    if (!Object.prototype.hasOwnProperty.call(ASSUMPTION_REGISTRY, k)) continue;
+    const files = (entry as { evidenceFiles?: AssumptionEvidenceFile[] } | undefined)?.evidenceFiles;
+    if (!Array.isArray(files) || files.length === 0) continue;
+    const valid = files.filter((f) => f && typeof f.id === "string" && typeof f.name === "string");
+    if (valid.length === 0) continue;
+    evidenceGroups.push({
+      assumptionKey: k as AssumptionKey,
+      label: ASSUMPTION_REGISTRY[k as AssumptionKey].label,
+      files: valid,
+    });
+  }
+  const totalFiles = evidenceGroups.reduce((n, g) => n + g.files.length, 0);
 
   return (
     <div
@@ -111,6 +139,63 @@ export function AssumptionConfidenceRollupCard({
               >
                 <span className="mt-1 inline-block h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
                 <span>{ASSUMPTION_REGISTRY[k]?.label ?? k}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Task #839 — inline previews of every uploaded evidence file
+          (image or first-page-of-PDF) grouped by assumption. Mirrors
+          what a reviewer will see in the lender / board packet PDF
+          appendix so the founder can sanity-check before exporting.
+          Files past the per-file size cap, or in formats the appendix
+          can't inline, degrade to the same file-type indicator badge
+          the appendix renders. */}
+      {totalFiles > 0 && (
+        <div
+          className="mt-4 rounded-xl bg-white/70 border border-border/60 p-3"
+          data-testid="assumption-confidence-rollup-evidence-files"
+        >
+          <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+            <Paperclip className="h-3 w-3" />
+            Evidence file previews
+            <span className="font-normal text-muted-foreground">
+              · {totalFiles} file{totalFiles === 1 ? "" : "s"} attached
+            </span>
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            This is what a reviewer will see in the packet appendix — image
+            attachments and first-page PDF previews render inline; other
+            file types show a type badge.
+          </p>
+          <ul className="mt-3 space-y-3">
+            {evidenceGroups.map((group) => (
+              <li
+                key={group.assumptionKey}
+                data-testid={`assumption-confidence-rollup-evidence-group-${group.assumptionKey}`}
+              >
+                <p className="text-[11px] font-semibold text-foreground">{group.label}</p>
+                <ul className="mt-1.5 flex flex-wrap gap-3">
+                  {group.files.map((f) => (
+                    <li
+                      key={f.id}
+                      className="flex flex-col items-start gap-1 max-w-[140px]"
+                      data-testid={`assumption-confidence-rollup-evidence-file-${group.assumptionKey}-${f.id}`}
+                    >
+                      <EvidenceThumbnail
+                        file={f}
+                        testIdPrefix={`assumption-confidence-rollup-evidence-thumb-${group.assumptionKey}`}
+                      />
+                      <span
+                        className="text-[10px] text-foreground leading-tight w-[64px] truncate"
+                        title={f.name}
+                      >
+                        {f.name}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </li>
             ))}
           </ul>
