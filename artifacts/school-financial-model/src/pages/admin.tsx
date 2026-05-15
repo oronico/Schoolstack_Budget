@@ -1423,6 +1423,213 @@ function FeedbackSection() {
   );
 }
 
+// Task #883 — Surface KEK-rotation failures (Task #871 writes them
+// to error_logs as `route: "key_rotation_failure"`) as a dedicated,
+// dismissible banner on every admin tab. Without this, rotation
+// failures hide in the generic Errors list and look identical to a
+// 500.
+interface KeyRotationAlertItem {
+  id: number;
+  createdAt: string;
+  errorMessage: string;
+  activeKekId: string | null;
+  loadedKekIds: string[];
+  totalFailed: number;
+  tables: {
+    table: string;
+    scanned: number;
+    rewrapped: number;
+    failed: number;
+    sampleFailures: { id: number; error: string }[];
+  }[];
+  acknowledgedAt: string | null;
+  acknowledgedBy: string | null;
+}
+
+interface KeyRotationAlertsResponse {
+  items: KeyRotationAlertItem[];
+  unresolvedCount: number;
+  totalFailedRows: number;
+}
+
+function KeyRotationAlertsBanner() {
+  const [data, setData] = useState<KeyRotationAlertsResponse | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [acking, setAcking] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/key-rotation-alerts");
+      if (!res.ok) {
+        // 403 here just means the viewer isn't an admin — Layout already
+        // gates the page; stay quiet.
+        if (res.status === 403) return;
+        throw new Error("Failed to fetch key-rotation alerts");
+      }
+      const json: KeyRotationAlertsResponse = await res.json();
+      setData(json);
+      setError(null);
+    } catch {
+      setError("Failed to load key-rotation alerts.");
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const acknowledge = async (id: number) => {
+    setAcking(id);
+    try {
+      const res = await fetch(
+        `/api/admin/key-rotation-alerts/${id}/acknowledge`,
+        { method: "POST" },
+      );
+      if (!res.ok) throw new Error("Failed to acknowledge alert");
+      await refresh();
+    } catch {
+      setError("Failed to acknowledge alert.");
+    } finally {
+      setAcking(null);
+    }
+  };
+
+  if (error && !data) {
+    return null;
+  }
+  if (!data || data.unresolvedCount === 0) {
+    return null;
+  }
+
+  const unresolved = data.items.filter((i) => !i.acknowledgedAt);
+
+  return (
+    <div
+      data-testid="key-rotation-alerts-banner"
+      className="mb-6 rounded-2xl border border-red-300 bg-red-50 dark:bg-red-950/30 dark:border-red-900 shadow-sm overflow-hidden"
+    >
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-start gap-3 p-4 text-left hover:bg-red-100/60 dark:hover:bg-red-900/30 transition-colors"
+      >
+        <div className="p-2 rounded-xl bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-200 flex-shrink-0">
+          <KeyRound className="h-4 w-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-red-800 dark:text-red-200">
+              Key rotation failures need attention
+            </span>
+            <span
+              data-testid="key-rotation-alerts-count"
+              className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-600 text-white"
+            >
+              {data.unresolvedCount} unresolved
+            </span>
+            <span className="text-xs text-red-700/80 dark:text-red-200/80">
+              {data.totalFailedRows} row{data.totalFailedRows === 1 ? "" : "s"} failed to re-wrap
+            </span>
+          </div>
+          <p className="text-xs text-red-700/80 dark:text-red-200/80 mt-1">
+            Investigate before the previous KEK is removed from the deployment env, or those rows will become unreadable.
+          </p>
+        </div>
+        <div className="flex-shrink-0 mt-1 text-red-700 dark:text-red-200">
+          {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="px-4 pb-4 space-y-3" data-testid="key-rotation-alerts-detail">
+          {unresolved.map((alert) => (
+            <div
+              key={alert.id}
+              data-testid={`key-rotation-alert-${alert.id}`}
+              className="rounded-xl bg-white dark:bg-card border border-red-200 dark:border-red-900 p-4"
+            >
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div className="min-w-0">
+                  <div className="text-xs text-muted-foreground">
+                    {format(new Date(alert.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                    {alert.activeKekId ? (
+                      <>
+                        {" · "}active KEK <span className="font-mono">{alert.activeKekId}</span>
+                      </>
+                    ) : null}
+                  </div>
+                  <p className="text-sm font-medium text-foreground mt-1">
+                    {alert.errorMessage}
+                  </p>
+                </div>
+                <button
+                  onClick={() => acknowledge(alert.id)}
+                  disabled={acking === alert.id}
+                  data-testid={`key-rotation-alert-ack-${alert.id}`}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                >
+                  {acking === alert.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  )}
+                  Acknowledge
+                </button>
+              </div>
+
+              {alert.tables.length > 0 && (
+                <div className="mt-3 overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-left text-muted-foreground border-b border-border/60">
+                        <th className="py-1.5 pr-3 font-semibold uppercase tracking-wide">Table</th>
+                        <th className="py-1.5 px-3 text-right font-semibold uppercase tracking-wide">Scanned</th>
+                        <th className="py-1.5 px-3 text-right font-semibold uppercase tracking-wide">Re-wrapped</th>
+                        <th className="py-1.5 px-3 text-right font-semibold uppercase tracking-wide">Failed</th>
+                        <th className="py-1.5 pl-3 font-semibold uppercase tracking-wide">Sample row ids</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {alert.tables.map((t) => (
+                        <tr key={t.table} className="border-b border-border/40 last:border-0 align-top">
+                          <td className="py-1.5 pr-3 font-mono text-foreground">{t.table}</td>
+                          <td className="py-1.5 px-3 text-right text-muted-foreground">{t.scanned}</td>
+                          <td className="py-1.5 px-3 text-right text-muted-foreground">{t.rewrapped}</td>
+                          <td className="py-1.5 px-3 text-right font-semibold text-red-700 dark:text-red-300">
+                            {t.failed}
+                          </td>
+                          <td className="py-1.5 pl-3">
+                            {t.sampleFailures.length === 0 ? (
+                              <span className="text-muted-foreground">-</span>
+                            ) : (
+                              <ul className="space-y-0.5">
+                                {t.sampleFailures.map((f, i) => (
+                                  <li key={i} className="font-mono text-foreground">
+                                    <span className="text-muted-foreground">id={f.id}:</span> {f.error}
+                                  </li>
+                                ))}
+                                {t.failed > t.sampleFailures.length && (
+                                  <li className="text-muted-foreground italic">
+                                    …and {t.failed - t.sampleFailures.length} more
+                                  </li>
+                                )}
+                              </ul>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface ErrorLogItem {
   id: number;
   userId: string | null;
@@ -2982,6 +3189,9 @@ export function AdminPage() {
           <p className="text-muted-foreground mt-2">
             Platform usage overview and key metrics.
           </p>
+          <div className="mt-6">
+            <KeyRotationAlertsBanner />
+          </div>
           <div className="flex gap-2 mt-6">
             <button
               onClick={() => setActiveTab("analytics")}
