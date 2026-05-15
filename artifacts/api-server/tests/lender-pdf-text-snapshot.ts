@@ -37,6 +37,7 @@ import {
   PRIVATE_SCHOOL_MODEL,
   CHARTER_SCHOOL_MODEL,
 } from "../src/lib/seed-preview-data.js";
+import { LENDER_PDF_FIXTURES } from "./fixtures/lender-pdf-fixtures.js";
 
 const UPDATE = process.env.UPDATE_SNAPSHOTS === "1";
 const SNAP_DIR = path.join(import.meta.dirname ?? __dirname, "__snapshots__");
@@ -223,15 +224,23 @@ function extractPdfFragments(pdf: Buffer): string[] {
   return out;
 }
 
-interface PersonaCase {
+interface SnapshotCase {
   label: string;
-  model: typeof MICROSCHOOL_MODEL;
+  data: Record<string, unknown>;
 }
 
-const CASES: PersonaCase[] = [
-  { label: "microschool",    model: MICROSCHOOL_MODEL },
-  { label: "private_school", model: PRIVATE_SCHOOL_MODEL },
-  { label: "charter_school", model: CHARTER_SCHOOL_MODEL },
+// Three seeded demo personas (microschool / private / charter) plus
+// the real-founder-shaped fixtures from task #895 (multi-debt stack,
+// restricted-gift-heavy, capital-campaign mid-cycle, voucher +
+// scholarship combo) — see tests/fixtures/lender-pdf-fixtures.ts.
+const CASES: SnapshotCase[] = [
+  { label: "microschool",    data: MICROSCHOOL_MODEL.data    as unknown as Record<string, unknown> },
+  { label: "private_school", data: PRIVATE_SCHOOL_MODEL.data as unknown as Record<string, unknown> },
+  { label: "charter_school", data: CHARTER_SCHOOL_MODEL.data as unknown as Record<string, unknown> },
+  ...LENDER_PDF_FIXTURES.map((f) => ({
+    label: f.label,
+    data: f.data as unknown as Record<string, unknown>,
+  })),
 ];
 
 function diffLines(actual: string[], expected: string[], maxShown = 25): string {
@@ -261,9 +270,9 @@ function diffLines(actual: string[], expected: string[], maxShown = 25): string 
   return lines.join("\n");
 }
 
-async function runOne(c: PersonaCase): Promise<void> {
+async function runOne(c: SnapshotCase): Promise<void> {
   const tag = `[${c.label}]`;
-  const data = c.model.data as unknown as Record<string, unknown>;
+  const data = c.data;
   const consultant = await runConsultantEngine(data);
   const packet = buildLenderPacket(
     data as unknown as Parameters<typeof buildLenderPacket>[0],

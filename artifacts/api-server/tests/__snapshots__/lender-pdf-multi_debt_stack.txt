@@ -6,36 +6,38 @@ et
 Lender Con
 v
 ersation Snapshot
-Oakw
-ood Learning Studio
+Three-Loan Stac
+k Micr
+osc
+hool
 5-Y
 ear Financial Model
 Prepared <DATE>
 Built from assumptions
-Read
-y to share  keep polishing the narrative
-.
-This model demonstr
-ates strong financial fundamentals:
- a clear path to profit, controlled costs
-, a sustainab
-le 
-re
-v
-en
-ue mix, and adequate debt co
-v
-er
-age
-.
- 
+W
+or
+th another pass bef
+ore y
+ou send it out.
 Y
-our projections are g
-rounded and achie
-v
-ab
-le
+our model is a solid star
+ting point, and no
+w it's time to refine it.
+ F
+ocus on the high-pr
+ior
+ity recommendations 
+first, and y
+ou'll see real prog
+ress
 .
+ Ev
+er
+y g
+reat school's financial stor
+y star
+ted as a first dr
+aft.
 P
 ac
 ket Contents
@@ -125,13 +127,12 @@ age 1 of 17
 --- PAGE 2 ---
 Lender Commentar
 y
-Oakw
-ood Lear
-ning Studio is a microschool, based in AZ.
- Oakw
-ood Lear
-ning Studio projects enrollment of 20 
-students in 
+Three-Loan Stac
+k Microschool is a microschool, based in AZ.
+ 
+Three-Loan Stac
+k Microschool projects enrollment 
+of 20 students in 
 Y
 ear 1, g
 ro
@@ -146,34 +147,33 @@ w
 ers this pac
 k
 et, the model reads as:
- Ready to share - k
-eep polishing the narr
-ativ
-e
-.
  
-This 
-model demonstr
-ates strong financial fundamentals:
- a clear path to profit, controlled costs
-, a sustainab
-le re
-v
-en
-ue 
-mix, and adequate debt co
-v
-er
-age
-.
+W
+or
+th another pass bef
+ore y
+ou send it out.
  
 Y
-our projections are g
-rounded and achie
-v
-ab
-le
+our 
+model is a solid star
+ting point, and no
+w it's time to refine it.
+ F
+ocus on the high-pr
+ior
+ity recommendations first, and 
+y
+ou'll see real prog
+ress
 .
+ Ev
+er
+y g
+reat school's financial stor
+y star
+ted as a first dr
+aft.
 On the nor
 maliz
 ed base case (f
@@ -187,7 +187,7 @@ ear 1 debt ser
 vice co
 v
 er
-age is 3.11x.
+age is 0.09x.
  
 Oper
 ating cash r
@@ -197,23 +197,30 @@ y e
 xtends 1 months from the open bef
 ore additional capital w
 ould be required, with the 
-tightest position at $34,397 of ending cash in 
+tightest position at ($687,958) of ending cash in 
 Y
-ear 1.
+ear 5.
  
-The model crosses oper
-ating break-e
+The model does not y
+et reach cum
+ulativ
+e break-e
 v
-en in 
+en 
+within the 5-y
+ear windo
+w
+, and 
 Y
-ear 1, and 
-Y
-ear 
-1 requires 17 students to co
+ear 1 w
+ould require 30 students to co
 v
 er fix
 ed costs and debt ser
-vice (38% of stated capacity).
+vice in the 
+opening y
+ear
+.
 Y
 ear 1 re
 v
@@ -227,6 +234,58 @@ dependent.
 The top 3 r
 isks surf
 aced are:
+ Let's close a cash gap in y
+our ear
+ly y
+ears (cr
+itical).
+ Mitigant:
+ Identify ho
+w 
+y
+ou'll br
+idge the $782,958 gap - star
+tup g
+r
+ants
+, a line of credit, or phased e
+xpense reductions
+.
+ 
+Then adjust y
+our 
+re
+v
+en
+ue or cost assumptions to close it f
+aster
+.;
+ Let's strengthen y
+our debt-co
+v
+er
+age cushion (cr
+itical).
+ Mitigant:
+ 
+Look at lo
+w
+er
+ing loan amounts
+, e
+xtending ter
+ms
+, or phasing the cape
+x into smaller tr
+anches so debt ser
+vice fits 
+comf
+or
+tab
+ly inside y
+our oper
+ating income
+.;
  Let's e
 xtend y
 our cash r
@@ -252,52 +311,7 @@ unw
 a
 y 
 bef
-ore opening.;
- Let's bac
-k the enrollment r
-amp with e
-vidence (medium).
- Mitigant:
- Bac
-k e
-v
-er
-y enrollment target 
-with documented demand - signed letters of intent, w
-aitlist depth, comm
-unity sur
-v
-e
-y results
-, or recr
-uitment 
-pipeline data.
- Gro
-wth o
-v
-er 25% per y
-ear typically requires an e
-xceptional recr
-uitment engine or f
-acility 
-e
-xpansion.;
- Let's tie ne
-w hires to enrollment milestones (medium).
- Mitigant:
- Align staffing additions to enrollment 
-milestones
-.
- Hire when students are enrolled, not when y
-ou hope the
-y will be
-.
- Use par
-t-time or contr
-act roles to 
-br
-idge gaps
-..
+ore opening..
 F
 ounder compensation has been nor
 maliz
@@ -322,10 +336,10 @@ or the role
 Y
 ear 1 DSCR w
 ould read 
-5.86x;
+0.21x;
  on the nor
 maliz
-ed basis it lands at 3.11x, which is the figure used throughout this pac
+ed basis it lands at 0.09x, which is the figure used throughout this pac
 k
 et.
  
@@ -346,18 +360,25 @@ y
 discount.
 Under the toughest stress in the lender batter
 y (Enrollment -20%), minim
-um DSCR holds at -0.06x and minim
+um DSCR holds at -0.04x and minim
 um 
-ending cash at $5,200.
- Strong 
+ending cash at ($306,789).
+ 
+W
+ell-controlled staffing costs Recommended ne
+xt step bef
+ore lender con
+v
+ersations:
+ 
+Plan f
+or 
 Y
-ear 5 profit 
-The full r
-isk and recommendation set f
-ollo
-ws in the body of the pac
-k
-et.
+our 
+Y
+ear 1 Star
+tup Phase
+.
 Ev
 er
 y figure in this commentar
@@ -369,41 +390,54 @@ et.
 Ex
 ecutive Summar
 y
-Oakw
-ood Lear
-ning Studio projects $400,145 in 
+Three-Loan Stac
+k Microschool projects $400,145 in 
 Y
 ear 5 re
 v
 en
-ue with a 37.6% profit margin.
- 
-The model tells a 
-strong financial stor
-y with 8 of 13 k
+ue
+, with 7 of 13 k
 e
 y metr
-ics in health
-y r
-ange
-, a g
-reat f
-oundation f
-or y
-our mission.
+ics that need attention.
+ 
+This is a star
+ting point, and w
+or
+king through the recommendations belo
+w will help y
+ou b
+uild the financial stor
+y 
+y
+our mission deser
+v
+es
+.
 [ ] 
 Lender Readiness:
- Strong
+ Not 
+Y
+et Ready
 [ ] 
 Biggest Strength:
- Strong 
-Y
-ear 5 profit
+ 
+W
+ell-controlled staffing costs
 [ ] 
 Biggest Risk:
- No major red flags detected, so contin
-ue refining assumptions as y
-ou gather real data.
+ 
+Y
+ear 1 projects a $215,643 shor
+tf
+all, which is v
+er
+y common f
+or ear
+ly-stage schools and w
+or
+th planning around
 [ ] 
 Cash Runw
 a
@@ -411,28 +445,31 @@ y:
  1 months
 Budg
 et Narrative
-Oakw
-ood Lear
-ning Studio projects $400,145 in 
+Three-Loan Stac
+k Microschool projects $400,145 in 
 Y
 ear 5 re
 v
 en
-ue with a 37.6% profit margin.
- 
-The model tells a 
-strong financial stor
-y with 8 of 13 k
+ue
+, with 7 of 13 k
 e
 y metr
-ics in health
-y r
-ange
-, a g
-reat f
-oundation f
-or y
-our mission.
+ics that need attention.
+ 
+This is a star
+ting point, and w
+or
+king through the recommendations belo
+w will help y
+ou b
+uild the financial stor
+y 
+y
+our mission deser
+v
+es
+.
 SchoolStac
 k Budget - Gener
 ated <DATE>
@@ -446,6 +483,20 @@ ed Assumptions
 [Inf
 o] 
 20 students (44% of 45 capacity)
+[W
+arning] 
+-54.3% net margin in 
+Y
+ear 1
+[Inf
+o] 
+T
+uition co
+v
+ers 57% of 
+Y
+ear 1 total e
+xpenses
 Assumptions Confidence
 Overall:
  Needs Suppor
@@ -494,11 +545,11 @@ Sc
 hool Over
 vie
 w
-Oakw
-ood Lear
-ning Studio is a Star
+Three-Loan Stac
+k Microschool is a Star
 tup / Pre-Opening Microschool organiz
-ed as a LLC (Single Member) with a 
+ed as a LLC (Single Member) with 
+a 
 T
 uition-Based funding profile
 .
@@ -641,7 +692,7 @@ ue Co
 v
 er
 age (Y1):
- 1.20×
+ 0.63×
 Re
 ven
 ue b
@@ -723,11 +774,11 @@ v
 er
 age of fix
 ed + debt
-1.20×
-1.15×
-1.42×
-1.65×
-1.79×
+0.63×
+0.74×
+0.93×
+1.09×
+1.19×
 Re
 ven
 ue 
@@ -837,12 +888,12 @@ Y
 ear-1 DSCR mo
 v
 es 
-from 5.86x to 3.11x and cash r
+from 0.21x to 0.09x and cash r
 unw
 a
 y mo
 v
-es from 60.0 to 60.0 months when nor
+es from 13.0 to 12.0 months when nor
 maliz
 ed.
  DSCR, r
@@ -1006,34 +1057,34 @@ DSCR (Normaliz
 ed)
 Y
 ear 1
-$22,826
-$9,908
-5.86x
-3.11x
+-$89,928
+-$102,846
+0.21x
+0.09x
 Y
 ear 2
-$27,563
-$14,365
-6.87x
-4.06x
+-$82,191
+-$95,389
+0.28x
+0.16x
 Y
 ear 3
-$75,862
-$62,440
-17.16x
-14.30x
+-$33,392
+-$46,814
+0.71x
+0.59x
 Y
 ear 4
-$120,148
-$106,560
-26.59x
-23.69x
+$10,893
+-$2,694
+1.10x
+0.98x
 Y
 ear 5
-$152,096
-$137,327
-33.39x
-30.24x
+$42,842
+$28,073
+1.38x
+1.25x
 As-Planned vs 
 Normaliz
 ed:
@@ -1048,15 +1099,15 @@ Reser
 ve (months)
 As Planned (Repor
 ted)
-60.0
-19.2
+13.0
+0.0
 Lender 
 Vie
 w (Nor
 maliz
 ed)
-60.0
-15.0
+12.0
+0.0
 Suppor
 ting Assumptions
 F
@@ -1081,9 +1132,9 @@ T
 otal e
 xpenses g
 ro
-w from $152K in 
+w from $264K in 
 Y
-ear 1 to $249K b
+ear 1 to $358K b
 y 
 Y
 ear 5.
@@ -1102,42 +1153,56 @@ otal
 Y
 ear 1
 $86K
-$61K
-$5K
-$152K
+$65K
+$113K
+$264K
 Y
 ear 2
 $160K
-$59K
-$5K
-$224K
+$60K
+$113K
+$333K
 Y
 ear 3
 $164K
-$63K
-$5K
-$232K
+$64K
+$113K
+$342K
 Y
 ear 4
 $169K
-$67K
-$5K
-$241K
+$68K
+$113K
+$350K
 Y
 ear 5
 $174K
-$70K
-$5K
-$249K
+$71K
+$113K
+$358K
 Capital & Debt
-The model includes 1 debt instr
-ument totaling $20K.
+The model includes 4 debt instr
+uments totaling $1.1M.
 Suppor
 ting Assumptions
-SchoolStac
-k Lending Lab Microloan
-  $20K at 
-6.5% f
+Building Mor
+tgage
+  $850K at 6.3% f
+or 25 y
+ear
+s
+Reno
+v
+ation Line of Credit
+  $175K at 8.5% f
+or 10 
+y
+ear
+s
+Equipment Financing (kitchen + A
+V)
+  $60K at 
+7.0% f
 or 5 y
 ear
 s
@@ -1147,6 +1212,13 @@ ated <DATE>
 P
 age 6 of 17
 --- PAGE 7 ---
+SchoolStac
+k Lending Lab Microloan
+  $25K at 
+6.5% f
+or 5 y
+ear
+s
 5-Y
 ear Financial Pr
 ojection
@@ -1154,19 +1226,18 @@ The model reaches break-e
 v
 en in 
 Y
-ear 1.
+ear 4.
  
 Y
-ear 5 net income is projected at $171K (40.8% margin).
+ear 5 net income is projected at $62K (14.8% margin).
  Breake
 ven enr
 ollment
 Break
 e
 v
-en enrollment is 15 students (33% abo
-v
-e 
+en enrollment is 26 students (23% belo
+w 
 Y
 ear 1 enrollment).
  Accounting basis
@@ -1189,10 +1260,10 @@ iv
 ate a
 vg:
  $12,000$25,000)
-[~] 
+[!] 
 Cost per Student (Y
 ear 1):
- $7,162 (benchmar
+ $19,064 (benchmar
 k:
  
 T
@@ -1215,13 +1286,13 @@ vg:
 v
 en
 ue)
-[~] 
+[!] 
 Oper
 ating Cost (% of Re
 v
 en
 ue):
- 34.2% (benchmar
+ 102.3% (benchmar
 k:
  
 T
@@ -1230,20 +1301,20 @@ arget:
 v
 en
 ue)
-[+] 
+[!] 
 Profit margin (Y
 ear 1):
- 13.5% (benchmar
+ -130.2% (benchmar
 k:
  Star
 tup target:
  05%;
  mature:
  10%+)
-[+] 
+[!] 
 Profit margin (Y
 ear 5):
- 37.6% (benchmar
+ -21.0% (benchmar
 k:
  
 T
@@ -1288,71 +1359,71 @@ Y
 ear 1
 20
 $199K
-$152K
-$48K
-23.9%
+$264K
+$-65K
+-32.8%
 Y
 ear 2
 26
 $258K
-$224K
-$34K
-13.3%
+$333K
+$-76K
+-29.3%
 Y
 ear 3
 32
 $322K
-$232K
-$89K
-27.8%
+$342K
+$-20K
+-6.2%
 Y
 ear 4
 37
 $380K
-$241K
-$139K
-36.6%
+$350K
+$30K
+7.9%
 Y
 ear 5
 40
 $421K
-$249K
-$171K
-40.8%
+$358K
+$62K
+14.8%
 Opening Balance Sheet
 Net position at model star
 t:
- $15K.
+ $-135K.
 [ ] 
 T
 otal Assets:
- $15K
+ $975K
 [ ] 
 T
 otal Liabilities:
- $0
+ $1.1M
 [ ] 
 Net P
 osition:
- $15K
+ $-135K
 Assets
 Item
 Amount
 Cash & Equiv
 alents
-$12K
+$95K
 Accounts Receiv
 ab
 le
 $0
 Fix
 ed Assets
-$3K
+$880K
 Other Assets
 $0
 T
 otal Assets
-$15K
+$975K
 SchoolStac
 k Budget - Gener
 ated <DATE>
@@ -1375,10 +1446,10 @@ $0
 Long-T
 er
 m Debt
-$0
+$1.1M
 T
 otal Liabilities
-$0
+$1.1M
 F
 acility & K
 e
@@ -1389,19 +1460,19 @@ s
 Break
 e
 v
-en enrollment is 15 students
+en enrollment is 26 students
 .
  
 Y
 ear 1 projects 20 students
 , pro
-viding a 33.3% cushion.
+viding a -23.1% cushion.
 [ ] 
 Break
 e
 v
 en Enrollment:
- 15
+ 26
 [ ] 
 F
 acility Cost/Student:
@@ -1426,9 +1497,9 @@ Break
 e
 v
 en Enrollment
-15 students
+26 students
 Enrollment Cushion
-+33.3%
+-23.1%
 Cash Flo
 w Anal
 ysis
@@ -1439,9 +1510,9 @@ The school will need additional funding or cost adjustments
 .
  Opening balance:
  
-$15K total assets
-, $0 total liabilities
-, $15K net position.
+$975K total assets
+, $1.1M total liabilities
+, $-135K net position.
  Lo
 w
 est cash month across the 5-y
@@ -1449,9 +1520,8 @@ ear f
 orecast:
  
 Y
-ear 1  
-J
-ul at $5K.
+ear 4  J
+ul at $-57K.
 [ ] 
 Cash Runw
 a
@@ -1463,8 +1533,8 @@ w
 est Cash Month:
  
 Y
-ear 1  J
-ul ($5K)
+ear 4  J
+ul ($-57K)
 Cum
 ulative Cash P
 osition
@@ -1476,24 +1546,24 @@ Reser
 ve Months
 Y
 ear 1
-$22K
-1.9 months
+$-216K
+0.0 months
 Y
 ear 2
-$49K
-2.6 months
+$-424K
+0.0 months
 Y
 ear 3
-$124K
-6.4 months
+$-583K
+0.0 months
 Y
 ear 4
-$243K
-12.1 months
+$-699K
+0.0 months
 Y
 ear 5
-$394K
-18.9 months
+$-783K
+0.0 months
 Y
 ear 1 Monthl
 y Cash Flo
@@ -1516,83 +1586,83 @@ w
 Ending
 J
 ul
-$12K
+$95K
 $8K
-($15K)
-$-7K
-$5K
+($25K)
+$-16K
+$79K
 A
 ug
-$5K
+$79K
 $19K
-($15K)
-$4K
-$9K
+($25K)
+$-6K
+$73K
 Sep
-$9K
+$73K
 $19K
-($15K)
-$4K
-$13K
+($25K)
+$-6K
+$67K
 Oct
-$13K
+$67K
 $34K
-($15K)
-$19K
-$32K
+($25K)
+$9K
+$77K
 No
 v
-$32K
+$77K
 $19K
-($15K)
-$4K
-$35K
+($25K)
+$-6K
+$71K
 Dec
-$35K
+$71K
 $19K
-($15K)
-$4K
-$39K
+($25K)
+$-6K
+$65K
 J
 an
-$39K
+$65K
 $19K
-($15K)
-$4K
-$43K
+($25K)
+$-6K
+$59K
 F
 eb
-$43K
+$59K
 $19K
-($15K)
-$4K
-$46K
-Mar
-$46K
-$19K
-($15K)
-$4K
-$50K
-Apr
-$50K
-$19K
-($15K)
-$4K
+($25K)
+$-6K
 $54K
+Mar
+$54K
+$19K
+($25K)
+$-6K
+$48K
+Apr
+$48K
+$19K
+($25K)
+$-6K
+$42K
 Ma
 y
-$54K
+$42K
 $19K
-($391)
-$18K
-$72K
+($9K)
+$9K
+$52K
 J
 un
-$72K
+$52K
 $417
-($391)
-$25
-$72K
+($9K)
+$-9K
+$43K
 Y
 ear 2 
 Monthl
@@ -1612,83 +1682,83 @@ w
 Ending
 J
 ul
-$72K
+$43K
 $8K
-($19K)
-$-11K
-$61K
+($28K)
+$-20K
+$22K
 A
 ug
-$61K
+$22K
 $25K
-($19K)
-$7K
-$68K
+($28K)
+$-3K
+$20K
 Sep
-$68K
+$20K
 $25K
-($19K)
-$7K
-$74K
-Oct
-$74K
-$35K
-($19K)
+($28K)
+$-3K
 $17K
-$91K
+Oct
+$17K
+$35K
+($28K)
+$7K
+$25K
 No
 v
-$91K
 $25K
-($19K)
-$7K
-$98K
+$25K
+($28K)
+$-3K
+$22K
 Dec
-$98K
+$22K
 $25K
-($19K)
-$7K
-$104K
+($28K)
+$-3K
+$19K
 J
 an
-$104K
+$19K
 $25K
-($19K)
-$7K
-$111K
+($28K)
+$-3K
+$17K
 F
 eb
-$111K
+$17K
 $25K
-($19K)
-$7K
-$117K
+($28K)
+$-3K
+$14K
 Mar
-$117K
+$14K
 $25K
-($19K)
-$7K
-$124K
+($28K)
+$-3K
+$12K
 Apr
-$124K
+$12K
 $25K
-($19K)
-$7K
-$130K
+($28K)
+$-3K
+$9K
 Ma
 y
-$130K
+$9K
 $25K
-($19K)
-$7K
-$137K
+($28K)
+$-3K
+$6K
 J
 un
-$137K
+$6K
 $542
-($19K)
-$-18K
-$119K
+($28K)
+$-27K
+$-21K
 Y
 ear 3 
 Monthl
@@ -1714,83 +1784,83 @@ w
 Ending
 J
 ul
-$119K
+$-21K
 $6K
-($19K)
-$-14K
-$105K
+($28K)
+$-23K
+$-44K
 A
 ug
-$105K
+$-44K
 $32K
-($19K)
-$13K
-$118K
+($28K)
+$3K
+$-40K
 Sep
-$118K
+$-40K
 $32K
-($19K)
-$13K
-$130K
+($28K)
+$3K
+$-37K
 Oct
-$130K
+$-37K
 $37K
-($19K)
-$18K
-$148K
+($28K)
+$8K
+$-28K
 No
 v
-$148K
+$-28K
 $32K
-($19K)
-$13K
-$160K
+($28K)
+$3K
+$-25K
 Dec
-$160K
+$-25K
 $32K
-($19K)
-$13K
-$173K
+($28K)
+$3K
+$-21K
 J
 an
-$173K
+$-21K
 $32K
-($19K)
-$13K
-$185K
+($28K)
+$3K
+$-18K
 F
 eb
-$185K
+$-18K
 $32K
-($19K)
-$13K
-$198K
+($28K)
+$3K
+$-15K
 Mar
-$198K
+$-15K
 $32K
-($19K)
-$13K
-$210K
+($28K)
+$3K
+$-11K
 Apr
-$210K
+$-11K
 $32K
-($19K)
-$13K
-$223K
+($28K)
+$3K
+$-8K
 Ma
 y
-$223K
+$-8K
 $32K
-($19K)
-$13K
-$235K
+($28K)
+$3K
+$-4K
 J
 un
-$235K
+$-4K
 $667
-($19K)
-$-19K
-$217K
+($28K)
+$-28K
+$-32K
 Y
 ear 4 
 Monthl
@@ -1810,83 +1880,83 @@ w
 Ending
 J
 ul
-$217K
+$-32K
 $5K
-($20K)
-$-15K
-$201K
+($29K)
+$-24K
+$-57K
 A
 ug
-$201K
+$-57K
 $38K
-($20K)
-$18K
-$219K
+($29K)
+$9K
+$-48K
 Sep
-$219K
+$-48K
 $38K
-($20K)
-$18K
-$237K
+($29K)
+$9K
+$-39K
 Oct
-$237K
+$-39K
 $38K
-($20K)
-$18K
-$255K
+($29K)
+$9K
+$-30K
 No
 v
-$255K
+$-30K
 $38K
-($20K)
-$18K
-$273K
+($29K)
+$9K
+$-21K
 Dec
-$273K
+$-21K
 $38K
-($20K)
-$18K
-$291K
+($29K)
+$9K
+$-13K
 J
 an
-$291K
+$-13K
 $38K
-($20K)
-$18K
-$309K
+($29K)
+$9K
+$-4K
 F
 eb
-$309K
+$-4K
 $38K
-($20K)
-$18K
-$326K
+($29K)
+$9K
+$5K
 Mar
-$326K
+$5K
 $38K
-($20K)
-$18K
-$344K
+($29K)
+$9K
+$14K
 Apr
-$344K
+$14K
 $38K
-($20K)
-$18K
-$362K
+($29K)
+$9K
+$22K
 Ma
 y
-$362K
+$22K
 $38K
-($20K)
-$18K
-$380K
+($29K)
+$9K
+$31K
 J
 un
-$380K
+$31K
 $771
-($20K)
-$-19K
-$361K
+($29K)
+$-28K
+$3K
 Y
 ear 5 
 Monthl
@@ -1912,83 +1982,83 @@ w
 Ending
 J
 ul
-$361K
+$3K
 $4K
-($21K)
-$-17K
-$344K
+($30K)
+$-26K
+$-23K
 A
 ug
-$344K
+$-23K
 $42K
-($21K)
-$21K
-$365K
+($30K)
+$12K
+$-11K
 Sep
-$365K
+$-11K
 $42K
-($21K)
-$21K
-$387K
+($30K)
+$12K
+$1K
 Oct
-$387K
+$1K
 $42K
-($21K)
-$21K
-$408K
+($30K)
+$12K
+$14K
 No
 v
-$408K
+$14K
 $42K
-($21K)
-$21K
-$430K
+($30K)
+$12K
+$26K
 Dec
-$430K
+$26K
 $42K
-($21K)
-$21K
-$451K
+($30K)
+$12K
+$39K
 J
 an
-$451K
+$39K
 $42K
-($21K)
-$21K
-$473K
+($30K)
+$12K
+$51K
 F
 eb
-$473K
+$51K
 $42K
-($21K)
-$21K
-$494K
+($30K)
+$12K
+$63K
 Mar
-$494K
+$63K
 $42K
-($21K)
-$21K
-$516K
+($30K)
+$12K
+$76K
 Apr
-$516K
+$76K
 $42K
-($21K)
-$21K
-$537K
+($30K)
+$12K
+$88K
 Ma
 y
-$537K
+$88K
 $42K
-($21K)
-$21K
-$559K
+($30K)
+$12K
+$100K
 J
 un
-$559K
+$100K
 $833
-($21K)
-$-20K
-$539K
+($30K)
+$-29K
+$71K
 Lo
 west Cash 
 Month b
@@ -2001,47 +2071,42 @@ Month
 Ending Cash
 Y
 ear 1
-J
-ul
-$5K
+Apr
+$42K
 Y
 ear 2
 J
-ul
-$61K
+un
+$-21K
 Y
 ear 3
 J
 ul
-$105K
+$-44K
 Y
 ear 4
 J
 ul
-$201K
+$-57K
 Y
 ear 5
 J
 ul
-$344K
+$-23K
 Debt Ser
 vice Co
 vera
 g
 e
-DSCR is abo
+DSCR is belo
+w 1.15x, meaning debt co
 v
-e 1.25x, and y
-our oper
-ating income comf
-or
-tab
-ly co
-v
-ers debt pa
-yments
-.
- Current DSCR is 5.77x.
+er
+age is cr
+itically thin.
+ 
+This needs to be addressed.
+ Current DSCR is N/A.
  
 Benchmar
 k:
@@ -2051,14 +2116,14 @@ um:
  1.15x;
  target:
  1.25x.
-[+] 
+[!] 
 Debt Ser
 vice Co
 v
 er
 age Ratio (Y
 ear 1):
- 5.77x (benchmar
+ N/A (benchmar
 k:
  Health
 y minim
@@ -2066,56 +2131,56 @@ um:
  1.15x;
  target:
  1.25x)
-[~] 
+[!] 
 Y
 ear 1 Reser
 v
 e Months:
- 1.9 months (benchmar
+ 0.0 months (benchmar
 k:
  
 T
 arget:
  3+ months)
-[~] 
+[!] 
 Y
 ear 2 Reser
 v
 e Months:
- 2.6 months (benchmar
+ 0.0 months (benchmar
 k:
  
 T
 arget:
  3+ months)
-[+] 
+[!] 
 Y
 ear 3 Reser
 v
 e Months:
- 6.4 months (benchmar
+ 0.0 months (benchmar
 k:
  
 T
 arget:
  3+ months)
-[+] 
+[!] 
 Y
 ear 4 Reser
 v
 e Months:
- 12.1 months (benchmar
+ 0.0 months (benchmar
 k:
  
 T
 arget:
  3+ months)
-[+] 
+[!] 
 Y
 ear 5 Reser
 v
 e Months:
- 18.9 months (benchmar
+ 0.0 months (benchmar
 k:
  
 T
@@ -2124,7 +2189,7 @@ arget:
 DSCR Summar
 y
 Current DSCR:
-  5.77x
+  N/A
 Benchmar
 k:
   Health
@@ -2138,19 +2203,18 @@ et:
 1.25x
 T
 rend:
-  DSCR is abo
-ve 1.25x,
- and y
-our 
-operating income comf
-or
-tab
-l
-y co
-ver
-s debt 
-pa
-yments.
+  DSCR is belo
+w 1.15x,
+ meaning debt 
+co
+vera
+g
+e is criticall
+y thin.
+ 
+This needs to be 
+ad
+dressed.
 SchoolStac
 k Budget - Gener
 ated <DATE>
@@ -2166,48 +2230,44 @@ Reser
 ve Months
 Status
 Y
-ear 1 (trough)
-$34K
-1.9 months
-Belo
-w 
-T
-arget
+ear 1
+$-121K
+0.0 months
+Insufficient
 Y
 ear 2
-$61K
-2.6 months
-Belo
-w 
-T
-arget
+$-329K
+0.0 months
+Insufficient
 Y
 ear 3
-$136K
-6.4 months
-Adequate
+$-488K
+0.0 months
+Insufficient
 Y
 ear 4
-$255K
-12.1 months
-Adequate
+$-604K
+0.0 months
+Insufficient
 Y
-ear 5
-$406K
-18.9 months
-Adequate
+ear 5 (trough)
+$-688K
+0.0 months
+Insufficient
 Tightest cash y
 ear:
  
 Y
-ear 1 ends at $34K.
+ear 5 dips to $-688K  ad
+ditional funding or cost cuts needed bef
+ore then.
 Y
 ear
 -end unrestricted cash:
- $406K
+ $-688K
 vs accr
 ual:
- $406K (no restr
+ $-688K (no restr
 icted gifts).
  Unrestr
 icted is the headline DSCR + r
@@ -2215,20 +2275,22 @@ unw
 a
 y are computed off;
  restr
-icted gifts can't legally 
-fund oper
+icted gifts can't 
+legally fund oper
 ations or debt ser
 vice
 .
 Stress 
 T
 esting
-All 6 stress scenar
-ios maintain positiv
+2 of 6 stress scenar
+ios result in negativ
 e 
 Y
 ear 5 net income
-, indicating financial resilience
+, suggesting the model has limited cushion against 
+adv
+erse conditions
 .
 Stress 
 T
@@ -2246,105 +2308,109 @@ Runwa
 y (mo)
 Enrollment 20% Belo
 w Plan
-$-5K
-$76K
-Y
-ear 3
-7.2
--0.06x
-60+
+$-118K
+$-34K
+Ne
+v
+er
+0.0
+-0.04x
+10
 Loss of Philanthrop
 y
-$4K
-$148K
+$-109K
+$39K
 Y
-ear 1
-16.5
-1.78x
-60+
+ear 4
+0.0
+0.04x
+11
 Hard re
 v
 en
 ue only
-$4K
-$148K
+$-109K
+$39K
 Y
-ear 1
-16.5
-1.78x
-60+
+ear 4
+0.0
+0.04x
+11
 Occupancy +15%, P
 ersonnel +5%
-$14K
-$135K
+$-99K
+$26K
 Y
-ear 1
-14.8
-3.88x
-60+
+ear 5
+0.0
+0.13x
+12
 Re
 v
 en
 ue Dela
 y
 ed 3 Months
-$-16K
-$52K
-Y
-ear 3
-1.7
--2.46x
-9
-Interest Rate +2%
-$23K
-$151K
-Y
-ear 1
-19.0
-5.59x
-60+
-Lender Readiness
-Lender Readiness:
- Strong.
- 
-This model demonstr
-ates strong financial fundamentals:
- a clear path to profit, 
-controlled costs
-, a sustainab
-le re
-v
-en
-ue mix, and adequate debt co
+$-129K
+$-58K
+Ne
 v
 er
-age
+0.0
+-0.14x
+9
+Interest Rate +2%
+$-106K
+$25K
+Y
+ear 5
+0.0
+0.18x
+11
+Lender Readiness
+Lender Readiness:
+ Not 
+Y
+et Ready
 .
  
 Y
-our projections are g
-rounded and 
-achie
-v
-ab
-le
+our model is a solid star
+ting point, and no
+w it's time to refine it.
+ F
+ocus on the 
+high-pr
+ior
+ity recommendations first, and y
+ou'll see real prog
+ress
 .
-[+] 
+ Ev
+er
+y g
+reat school's financial stor
+y star
+ted as a 
+first dr
+aft.
+[!] 
 Readiness Le
 v
 el:
- Strong
+ Not 
+Y
+et Ready
 Financial Health Assessment
 Across 8 health dimensions:
- 5 health
+ 2 health
 y
-, 2 on w
-atch, 1 at r
+, 1 on w
+atch, 5 at r
 isk.
-[+] 
+[!] 
 viability:
- Health
-y
+ Needs attention
 [!] 
 liquidity:
  Needs attention
@@ -2353,6 +2419,12 @@ staffing b
 urden:
  Health
 y
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 12 of 17
+--- PAGE 13 ---
 [~] 
 f
 acility b
@@ -2360,17 +2432,10 @@ urden:
  
 W
 atch closely
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 12 of 17
---- PAGE 13 ---
-[+] 
+[!] 
 debt aff
 ordability:
- Health
-y
+ Needs attention
 [+] 
 re
 v
@@ -2379,30 +2444,32 @@ ue concentr
 ation:
  Health
 y
-[~] 
+[!] 
 da
 ys cash:
- 
-W
-atch closely
-[+] 
+ Needs attention
+[!] 
 reser
 v
 e strength:
- Health
-y
+ Needs attention
 Health Dimensions
 Dimension
 Status
 Details
 Viability
-Health
+Needs attention
+The model does not reach break-e
+v
+en within 5 
 y
-The model reaches profit ear
-ly and sustains 
-strong margins through 
-Y
-ear 5.
+ears
+.
+ 
+This needs to be addressed bef
+ore 
+approaching lenders
+.
 Liquidity
 Needs attention
 Cash goes negativ
@@ -2450,18 +2517,21 @@ w
 .
 Debt Aff
 ordability
-Health
-y
-DSCR of 5.77x pro
-vides comf
-or
-tab
-le co
+Needs attention
+DSCR of -0.90x is belo
+w the 1.15x amber 
+threshold.
+ An
+y shor
+tf
+all in re
 v
-er
-age 
-of debt pa
-yments with room to spare
+en
+ue mak
+es debt 
+unaff
+ordab
+le
 .
 Re
 v
@@ -2492,52 +2562,61 @@ y dependab
 le demand.
 Da
 ys Cash
-W
-atch closely
-57 da
-ys of cash on hand is abo
-v
-e the minim
-um 
-b
-ut belo
-w the 90-da
-y target.
- A large une
-xpected 
-cost could create a cash cr
-unch.
+Needs attention
+Only 0 da
+ys of cash on hand  w
+ell belo
+w the 
+45-da
+y minim
+um.
+ 
+The school is at r
+isk of 
+r
+unning out of cash.
 Reser
 v
 e Strength
-Health
-y
-18.9 months of reser
+Needs attention
+Less than 1 month of reser
 v
 es b
 y 
 Y
-ear 5  a strong 
-b
-uff
-er f
-or une
-xpected costs
-.
+ear 5.
+ 
+The 
+school has no financial cushion.
 K
 e
 y Risks
-4 r
+8 r
 isk f
 actors ha
 v
 e been identified.
  Of these
-, 1 is r
+, 3 are r
 ated cr
 itical and should be addressed pr
 ior to lender 
 submission.
+[!] 
+Let's close a cash gap in y
+our ear
+ly y
+ears:
+ cr
+itical
+[!] 
+Let's strengthen y
+our debt-co
+v
+er
+age cushion:
+ cr
+itical
 [!] 
 Let's e
 xtend y
@@ -2547,16 +2626,156 @@ a
 y:
  cr
 itical
-[+] 
-Let's bac
-k the enrollment r
-amp with e
-vidence:
- medium
-[+] 
-Let's tie ne
-w hires to enrollment milestones:
- medium
+CRITICAL
+Let's c
+lose a cash gap in y
+our earl
+y y
+ear
+s
+When the model dips belo
+w z
+ero cash, y
+ou'd need outside funding to mak
+e pa
+yroll that month.
+ Surf
+acing it no
+w lets y
+ou plan the br
+idge 
+bef
+ore re
+vie
+w
+ers notice it.
+Evidence:
+ Deepest shor
+tf
+all:
+ -$782,958  |  
+Y
+ears negativ
+e:
+ 1, 2, 3, 4, 5
+Mitigation:
+ 
+Identify ho
+w y
+ou'll br
+idge the $782,958 gap  star
+tup g
+r
+ants
+, a line of credit, or phased e
+xpense reductions
+.
+ 
+Then adjust y
+our 
+re
+v
+en
+ue or cost assumptions to close it f
+aster
+.
+ Ne
+xt step:
+ Open Step 7:
+ Expenses and tr
+im $156,592 of ann
+ual cost, or re
+visit Step 5:
+ 
+Re
+v
+en
+ue to add a funding source co
+v
+er
+ing the gap
+.
+CRITICAL
+Let's strengthen y
+our debt-co
+vera
+g
+e cushion
+A DSCR belo
+w 1.15x lea
+v
+es v
+er
+y little room f
+or a slo
+w enrollment y
+ear
+.
+ 
+T
+uning the debt str
+ucture or re
+v
+en
+ue mix giv
+es lenders a clearer stor
+y 
+to suppor
+t.
+Evidence:
+ DSCR:
+ -0.90x  |  Ann
+ual debt ser
+vice:
+ $125,450  |  Minim
+um target:
+ 1.25x
+Mitigation:
+ 
+Look at lo
+w
+er
+ing loan amounts
+, e
+xtending ter
+ms
+, or phasing the cape
+x into smaller tr
+anches so debt ser
+vice fits comf
+or
+tab
+ly 
+inside y
+our oper
+ating income
+.
+ Ne
+xt step:
+ Open Step 5:
+ Re
+v
+en
+ue and lo
+w
+er the loan pr
+incipal in y
+our capital and debt ro
+ws
+, e
+xtend the loan 
+ter
+m, or phase the cape
+x into smaller tr
+anches
+, then re-r
+un the model.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 13 of 17
+--- PAGE 14 ---
 CRITICAL
 Let's e
 xtend y
@@ -2620,6 +2839,33 @@ a
 y clears 18 months
 .
 HIGH
+Viability
+The model does not reach break-e
+v
+en within 5 y
+ears
+.
+ 
+This needs to be addressed bef
+ore approaching lenders
+.
+Evidence:
+ viability:
+ Needs attention
+Mitigation:
+ 
+Re
+vie
+w re
+v
+en
+ue assumptions and cost str
+ucture to ensure oper
+ating margins suppor
+t long-ter
+m sustainability
+.
+HIGH
 Liquidity
 Cash goes negativ
 e in month 1.
@@ -2639,148 +2885,107 @@ es through fundr
 aising, lines of credit, or phased e
 xpense deplo
 yment to maintain adequate cash position.
-MEDIUM
-Let's bac
-k the enr
-ollment ramp with e
-vidence
-Enrollment is the engine of e
-v
-er
-y re
-v
-en
-ue and staffing assumption do
-wnstream.
- 
-The more e
-vidence w
-e can attach to each y
-ear's n
-umber
-, 
-the more confident the rest of the model becomes
-.
-Evidence:
- 
-Y
-ear 1:
- 20 students  |  
-Y
-ear 2:
- 26 students  |  
-Y
-ear 3:
- 32 students  |  
-Y
-ear 4:
- 37 students  |  
-Y
-ear 5:
- 40 students  |  Capacity:
- 45
-Mitigation:
- 
-Bac
-k e
-v
-er
-y enrollment target with documented demand  signed letters of intent, w
-aitlist depth, comm
-unity sur
-v
-e
-y results
-, or 
-recr
-uitment pipeline data.
- Gro
-wth o
-v
-er 25% per y
-ear typically requires an e
-xceptional recr
-uitment engine or f
-acility e
-xpansion.
- Ne
-xt step:
- 
-Open Step 4:
- Enrollment and either soften the steepest y
-ear to a 15-25% jump
-, or paste y
-our w
-aitlist count, signed letters of intent, and 
-recr
-uitment plan into the Stor
-y step so re
-vie
-w
-ers see the e
-vidence
-.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 13 of 17
---- PAGE 14 ---
-MEDIUM
-Let's tie ne
-w hires to enr
-ollment milestones
-Hir
-ing slightly behind enrollment, r
-ather than ahead of it, k
-eeps fix
-ed costs aligned with the re
+HIGH
+Debt aff
+or
+dability
+DSCR of -0.90x is belo
+w the 1.15x amber threshold.
+ An
+y shor
+tf
+all in re
 v
 en
-ue actually arr
-iving.
- It also giv
-es y
-ou a clean 
-ans
-w
-er to 'what tr
-iggers each ne
-w role'.
+ue mak
+es debt unaff
+ordab
+le
+.
 Evidence:
- 
-Y
-ear 2 enrollment:
- 26 students  |  
-Y
-ear 2 staffing cost:
- $159,666
+ debt aff
+ordability:
+ Needs attention
 Mitigation:
  
-Align staffing additions to enrollment milestones
+Restr
+ucture debt ter
+ms
+, e
+xtend matur
+ities
+, or increase oper
+ating income to impro
+v
+e Debt Ser
+vice Co
+v
+er
+age Ratio
 .
- Hire when students are enrolled, not when y
-ou hope the
-y will be
-.
- Use par
-t-time 
-or contr
-act roles to br
-idge gaps
-.
- Ne
-xt step:
- Open Step 6:
- Staffing and tie each ne
-w role's star
-t date to a specific enrollment milestone (e
-.g.
+HIGH
+Da
+ys cash
+Only 0 da
+ys of cash on hand  w
+ell belo
+w the 45-da
+y minim
+um.
  
-'add when 
-Y2 enrollment hits 60'), or push the role into a later y
-ear
+The school is at r
+isk of r
+unning out of cash.
+Evidence:
+ da
+ys cash:
+ Needs attention
+Mitigation:
+ 
+Monitor this metr
+ic and de
+v
+elop a remediation plan if trends persist.
+HIGH
+Reser
+ve strength
+Less than 1 month of reser
+v
+es b
+y 
+Y
+ear 5.
+ 
+The school has no financial cushion.
+Evidence:
+ reser
+v
+e strength:
+ Needs attention
+Mitigation:
+ 
+Estab
+lish a reser
+v
+e fund policy targeting 3-6 months of oper
+ating e
+xpenses
 .
+[!] 
+Let's close a cash gap in y
+our ear
+ly y
+ears:
+ cr
+itical
+[!] 
+Let's strengthen y
+our debt-co
+v
+er
+age cushion:
+ cr
+itical
 [!] 
 Let's e
 xtend y
@@ -2790,16 +2995,6 @@ a
 y:
  cr
 itical
-[+] 
-Let's bac
-k the enrollment r
-amp with e
-vidence:
- medium
-[+] 
-Let's tie ne
-w hires to enrollment milestones:
- medium
 See Appendix f
 or complete assumption details
 .
@@ -2887,6 +3082,12 @@ v
 en
 ue
 .
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 14 of 17
+--- PAGE 15 ---
 Y
 ear 1 total e
 xpenses
@@ -2910,7 +3111,7 @@ Y
 ear 1 debt 
 ser
 vice:
- $4,696;
+ $113,450;
  General cost inflation:
  3.0%
 Dr
@@ -2998,17 +3199,17 @@ er
 age (DSCR)
   Loan principal:
  
-$20,000;
+$850,000;
  Loan interest rate:
- 6.5%;
+ 6.3%;
  Loan term:
  
-5 yr;
+25 yr;
  
 Y
 ear 1 debt ser
 vice:
- $4,696;
+ $113,450;
  
 Y
 ear 1 
@@ -3024,7 +3225,7 @@ v
 e (months)
   Star
 ting cash:
- $12,000;
+ $95,000;
  
 Y
 ear 1 operating e
@@ -3051,17 +3252,11 @@ v
 en
 ue
 .
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 14 of 17
---- PAGE 15 ---
 Y
 ear 1 ending cash
   Star
 ting cash:
- $12,000;
+ $95,000;
  
 Y
 ear 1 enr
@@ -3081,7 +3276,7 @@ Y
 ear 1 
 debt ser
 vice:
- $4,696
+ $113,450
 Dr
 iv
 en b
@@ -3096,7 +3291,7 @@ Y
 ear 5 ending cash
   Star
 ting cash:
- $12,000;
+ $95,000;
  
 Y
 ear 5 enr
@@ -3182,24 +3377,30 @@ er
 ear Break-Even
 Y
 ear 1 (planned 20):
-  17 students · 38% of 
+  30 students · 67% of 
 capacity
 Y
 ear 2 (planned 26):
-  23 students · 51% of 
+  35 students · 78% of 
 capacity
 Y
 ear 3 (planned 32):
-  24 students · 53% of 
+  36 students · 80% of 
 capacity
 Y
 ear 4 (planned 37):
-  24 students · 53% of 
+  36 students · 80% of 
 capacity
 Y
 ear 5 (planned 40):
-  24 students · 53% of 
+  36 students · 80% of 
 capacity
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 15 of 17
+--- PAGE 16 ---
 Do
 wnside Enr
 ollment Band
@@ -3210,28 +3411,28 @@ oll
   
 Y
 ear 1 (18 students):
-  DSCR 2.90x · Ending 
-cash $20,928
+  DSCR 0.08x · Ending 
+cash -$8,826
   
 Y
 ear 2 (23 students):
-  DSCR 1.41x · Ending 
-cash $22,872
+  DSCR 0.05x · Ending 
+cash -$116,637
   
 Y
 ear 3 (29 students):
-  DSCR 11.51x · Ending 
-cash $72,204
+  DSCR 0.47x · Ending 
+cash -$176,558
   
 Y
 ear 4 (33 students):
-  DSCR 18.78x · Ending 
-cash $155,693
+  DSCR 0.77x · Ending 
+cash -$202,324
   
 Y
 ear 5 (36 students):
-  DSCR 25.34x · Ending 
-cash $269,983
+  DSCR 1.04x · Ending 
+cash -$197,288
 If 20% f
 e
 wer students enr
@@ -3240,33 +3441,27 @@ oll
 Y
 ear 1 (16 students):
   DSCR N/A · Ending cash 
-$7,031
+-$22,723
   
 Y
 ear 2 (21 students):
-  DSCR 0.61x · Ending 
-cash $5,200
+  DSCR 0.02x · Ending 
+cash -$134,308
   
 Y
 ear 3 (26 students):
-  DSCR 5.86x · Ending 
-cash $28,003
+  DSCR 0.24x · Ending 
+cash -$220,760
   
 Y
 ear 4 (30 students):
-  DSCR 12.92x · Ending 
-cash $83,997
+  DSCR 0.53x · Ending 
+cash -$274,019
   
 Y
 ear 5 (32 students):
-  DSCR 17.29x · Ending 
-cash $160,481
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 15 of 17
---- PAGE 16 ---
+  DSCR 0.71x · Ending 
+cash -$306,789
 Enr
 ollment × 
 T
@@ -3295,74 +3490,74 @@ uition !
 +10% tuition
 -20% enr
 oll
-4.10x
-$336,115
-5.86x
-$410,495
-7.62x
-$484,875
-9.39x
-$559,255
+0.13x
+-$131,156
+0.21x
+-$56,776
+0.28x
+$17,604
+0.35x
+$91,984
 -15% enr
 oll
-4.10x
-$336,115
-5.86x
-$410,495
-7.62x
-$484,875
-9.39x
-$559,255
+0.13x
+-$131,156
+0.21x
+-$56,776
+0.28x
+$17,604
+0.35x
+$91,984
 -10% enr
 oll
-4.10x
-$336,115
-5.86x
-$410,495
-7.62x
-$484,875
-9.39x
-$559,255
+0.13x
+-$131,156
+0.21x
+-$56,776
+0.28x
+$17,604
+0.35x
+$91,984
 -5% enr
 oll
-4.10x
-$336,115
-5.86x
-$410,495
-7.62x
-$484,875
-9.39x
-$559,255
+0.13x
+-$131,156
+0.21x
+-$56,776
+0.28x
+$17,604
+0.35x
+$91,984
 0% enr
 oll
-4.10x
-$336,115
-5.86x
-$410,495
-7.62x
-$484,875
-9.39x
-$559,255
+0.13x
+-$131,156
+0.21x
+-$56,776
+0.28x
+$17,604
+0.35x
+$91,984
 +5% enr
 oll
-4.10x
-$336,115
-5.86x
-$410,495
-7.62x
-$484,875
-9.39x
-$559,255
+0.13x
+-$131,156
+0.21x
+-$56,776
+0.28x
+$17,604
+0.35x
+$91,984
 +10% enr
 oll
-4.10x
-$336,115
-5.86x
-$410,495
-7.62x
-$484,875
-9.39x
-$559,255
+0.13x
+-$131,156
+0.21x
+-$56,776
+0.28x
+$17,604
+0.35x
+$91,984
 Standar
 d Lender Stress 
 T
@@ -3390,9 +3585,15 @@ ma w
 or
 kbook.
 Base case:
-  Min DSCR 5.86x · Min ending cash 
-$34,826 · Runwa
-y 60.0 mo
+  Min DSCR 0.21x · Min ending cash 
+-$110,511 · Runwa
+y 15.0 mo
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 16 of 17
+--- PAGE 17 ---
 Enr
 ollment -10%
 All fiv
@@ -3402,17 +3603,17 @@ wn b
 y 10%  the standard lender enrollment-miss sensitivity
 .
   Min DSCR:
- 1.41x
+ 0.05x
    ·   Min ending cash:
- $20,928   ·   Runw
+ -$202,324   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 13.0 mo   ·   Break-e
 v
 en:
  
 Y
-ear 1
+ear 5 (+1y vs base)
   
 Y
 ear-1 net income vs base:
@@ -3429,17 +3630,17 @@ m the school can sur
 viv
 e a soft-launch.
   Min DSCR:
- -0.06x
+ -0.04x
    ·   Min ending cash:
- $5,200   ·   Runw
+ -$306,789   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 10.0 mo   ·   Break-e
 v
 en:
- 
-Y
-ear 3 (+2y vs base)
+ Ne
+v
+er
   
 Y
 ear-1 net income vs base:
@@ -3459,17 +3660,17 @@ ulate a slo
 w first disb
 ursement.
   Min DSCR:
- 5.86x
+ 0.21x
    ·   Min ending cash:
- $34,826   ·   Runw
+ -$110,511   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 15.0 mo   ·   Break-e
 v
 en:
  
 Y
-ear 1
+ear 4
   
 Y
 ear-1 net income vs base:
@@ -3494,17 +3695,17 @@ pr
 ise
 .
   Min DSCR:
- 4.38x
+ 0.15x
    ·   Min ending cash:
- $27,867   ·   Runw
+ -$134,929   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 14.0 mo   ·   Break-e
 v
 en:
  
 Y
-ear 1
+ear 4
   
 Y
 ear-1 net income vs base:
@@ -3524,27 +3725,21 @@ w of tr
 ue oper
 ating cost.
   Min DSCR:
- 3.11x
+ 0.09x
    ·   Min ending cash:
- $34,826   ·   Runw
+ -$110,511   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 15.0 mo   ·   Break-e
 v
 en:
  
 Y
-ear 1
+ear 5 (+1y vs base)
   
 Y
 ear-1 net income vs base:
  -$12,918
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 16 of 17
---- PAGE 17 ---
 Reading the 
 T
 w

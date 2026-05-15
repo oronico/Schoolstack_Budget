@@ -3505,6 +3505,76 @@ ated <DATE>
 P
 age 18 of 19
 --- PAGE 19 ---
+Reading the 
+T
+w
+o 
+W
+orkbooks
+This pac
+k
+et ships tw
+o Excel w
+or
+kbooks
+.
+ 
+The 5-Y
+ear Financial Model (underwr
+iting) is the canonical bottom line 
+and uses the full dr
+iv
+er engine;
+ its Oper
+ating Statement Net Income subtr
+acts personnel, oper
+ating e
+xpenses
+, 
+interest, pr
+incipal & capital outla
+ys
+, and depreciation.
+ 
+The Lender Pro-F
+or
+ma is a simplified compar
+ator b
+uilt from 
+per-student / per-ro
+w a
+v
+er
+ages so a re
+vie
+w
+er can re-r
+un sensitivities b
+y editing one assumption;
+ its 5-Y
+ear P&L 
+Net Income is GAAP-style (NOI min
+us interest only  pr
+incipal and depreciation are not on that P&L).
+ Because 
+the tw
+o sheets use diff
+erent dr
+iv
+er models AND diff
+erent bottom-line definitions
+, their 
+Y1 Net Income figures will 
+not tie on the same pa
+yload, and the
+y are not meant to
+.
+ 
+The figures cited in this PDF narr
+ativ
+e source from the 
+underwr
+iting model.
 Founder Compensation
 P
 er-y
