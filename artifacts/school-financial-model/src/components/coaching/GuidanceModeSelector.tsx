@@ -53,16 +53,22 @@ interface GuidanceModeSelectorProps {
 export function GuidanceModeSelector({ compact }: GuidanceModeSelectorProps = {}) {
   const { user, refetchUser } = useAuth();
   const [saving, setSaving] = useState(false);
+  // Optimistic level: drives the UI immediately on click so the buttons
+  // feel responsive even when the user isn't signed in (the PATCH below
+  // 401s silently in that case) or when the network is slow. Cleared
+  // back to undefined once `refetchUser` returns the persisted value.
+  const [optimisticLevel, setOptimisticLevel] = useState<string | null>(null);
   // Default first-run users (no persisted preference) to Guided Builder at
   // "extra" depth — the brief's stated default. Once the user clicks any
   // option we PATCH /api/auth/guidance-level so the choice persists.
-  const current = user?.guidanceLevel || "extra";
+  const current = optimisticLevel ?? user?.guidanceLevel ?? "extra";
   const currentMode =
     current === "advanced" ? "cfo" : "guided";
 
   const handleChange = async (level: string) => {
     if (level === current || saving) return;
     const oldLevel = current;
+    setOptimisticLevel(level);
     setSaving(true);
     try {
       await customFetch("/api/auth/guidance-level", {
@@ -75,8 +81,13 @@ export function GuidanceModeSelector({ compact }: GuidanceModeSelectorProps = {}
         guidanceLevel: level,
       });
       await refetchUser();
+      // refetchUser populated user.guidanceLevel; release the optimistic
+      // override so the server is the source of truth from here on.
+      setOptimisticLevel(null);
     } catch (err) {
       console.warn("Failed to update guidance level:", err);
+      // Network/auth failure: keep the optimistic value visible so the
+      // click still felt responsive, but don't tear down the UI.
     } finally {
       setSaving(false);
     }
@@ -119,7 +130,16 @@ export function GuidanceModeSelector({ compact }: GuidanceModeSelectorProps = {}
                 <span className={cn("text-sm font-semibold", isActive ? "text-foreground" : "text-foreground/80")}>
                   {mode.label}
                 </span>
-                {isActive && <Check className="h-3 w-3 text-primary shrink-0" aria-hidden="true" />}
+                {/* Always render the Check so the label position never shifts
+                    between active/inactive states — toggling visibility via
+                    opacity keeps the layout perfectly stable. */}
+                <Check
+                  className={cn(
+                    "h-3 w-3 text-primary shrink-0 transition-opacity",
+                    isActive ? "opacity-100" : "opacity-0",
+                  )}
+                  aria-hidden="true"
+                />
               </div>
               {!compact && (
                 <p className="text-[11px] leading-tight text-muted-foreground">
@@ -138,7 +158,10 @@ export function GuidanceModeSelector({ compact }: GuidanceModeSelectorProps = {}
         <div
           role="radiogroup"
           aria-label="Guidance depth"
-          className="flex flex-wrap gap-1"
+          // min-h reserves the row height so toggling between Guided
+          // (two depth pills) and CFO (one) doesn't nudge the rest of
+          // the page up and down.
+          className="flex flex-wrap items-center gap-1 min-h-[28px]"
         >
           {(currentMode === "guided" ? (["extra", "basics"] as const) : (["advanced"] as const)).map(
             (level) => {
