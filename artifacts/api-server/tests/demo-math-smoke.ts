@@ -111,15 +111,23 @@ async function loadV2Bytes(
   // The demo download route (`routes/models.ts` lines 1484/1555)
   // calls `generateUnderwritingWorkbookV2` (= `generateUnderwritingWorkbook`)
   // for the underwriting workbook. The legacy `generateWorkbook`
-  // export from `excel-export.ts` is the v1 path used elsewhere, with
-  // a totally different sheet set ("Financial Model" / "Summary"
-  // instead of "5-Year Operating Stmt" / "DSCR & Covenants" / "Tuition
-  // & Funding"), and is NOT the byte sequence reviewers actually
-  // download for the seeded demos. We therefore drive
-  // `generateUnderwritingWorkbook` directly, matching the real route.
-  const wb = await generateUnderwritingWorkbook(data);
-  const buf = (await wb.xlsx.writeBuffer()) as ArrayBuffer;
+  // export from `excel-export.ts` is the v1 path with a totally
+  // different sheet set ("Financial Model" / "Summary" instead of
+  // "5-Year Operating Stmt" / "DSCR & Covenants" / "Tuition & Funding"),
+  // and is NOT the byte sequence reviewers actually download for the
+  // seeded demos.
+  //
+  // We serialize the generated workbook to bytes, write the bytes to
+  // disk for post-failure inspection, and then re-load those bytes
+  // via `ExcelJS.Workbook().xlsx.load(...)` — i.e. all assertions run
+  // against the round-tripped file, so any serialization issue (lost
+  // formulas, mangled labels, dropped sheets) is caught here instead
+  // of being masked by the in-memory workbook the generator returned.
+  const generator = await generateUnderwritingWorkbook(data);
+  const buf = (await generator.xlsx.writeBuffer()) as ArrayBuffer;
   const bytes = Buffer.from(buf);
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(bytes as unknown as AnyBuffer);
   return { wb, bytes };
 }
 
