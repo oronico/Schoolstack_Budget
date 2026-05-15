@@ -8,7 +8,8 @@ import {
   resetMigrationStatus,
 } from "../src/lib/server-state.js";
 import { applyMigrations } from "../src/lib/apply-migrations.js";
-import { createHealthHandler, type DbStatus } from "../src/lib/health.js";
+import { createHealthHandler, type DbStatus, type EncryptionStatus } from "../src/lib/health.js";
+import { encryptSensitive } from "../src/lib/sensitive-encryption.js";
 
 let passed = 0;
 let failed = 0;
@@ -47,6 +48,12 @@ interface HealthResponse {
   migrations?: string;
   error?: string | null;
   db?: string;
+  encryption?: {
+    status?: string;
+    rowsOnRetiredKek?: number;
+    retiredKekIds?: string[];
+    error?: string;
+  };
 }
 
 async function startServer(
@@ -168,6 +175,141 @@ async function checkFailedState(baseUrl: string): Promise<void> {
       typeof body.db === "string" && VALID_DB_STATUSES.has(body.db),
       `got ${JSON.stringify(body.db)}`,
     );
+  }
+}
+
+// Pin down encryption-rotation reporting across the all-clear case and the
+// in-flight rotation case by mounting the deep handler with an injected
+// encryption check on a throwaway app.
+async function checkEncryptionStatuses(): Promise<void> {
+  resetMigrationStatus();
+  setMigrationOk();
+
+  // Helper: build a server that returns a fixed EncryptionStatus.
+  async function withInjected(status: EncryptionStatus): Promise<HealthResponse> {
+    const miniApp = express();
+    miniApp.get(
+      "/api/healthz",
+      createHealthHandler({
+        includeDb: true,
+        checkDb: async () => "connected",
+        checkEncryption: async () => status,
+      }),
+    );
+    miniApp.get(
+      "/healthz",
+      createHealthHandler({
+        includeDb: false,
+        checkEncryption: async () => {
+          throw new Error("simple handler must not invoke the encryption check");
+        },
+      }),
+    );
+    const { baseUrl, close } = await startServer(miniApp);
+    try {
+      const deep = await get(baseUrl, "/api/healthz");
+      eq("encryption case: deep HTTP status", deep.status, 200);
+      // Sanity: simple path still omits encryption.
+      const simple = await get(baseUrl, "/healthz");
+      check(
+        "encryption case: /healthz omits encryption field",
+        simple.body.encryption === undefined,
+        `got ${JSON.stringify(simple.body.encryption)}`,
+      );
+      return deep.body;
+    } finally {
+      await close();
+    }
+  }
+
+  // All-clear: no rows still wrapped under a retired KEK.
+  {
+    const body = await withInjected({
+      status: "ok",
+      rowsOnRetiredKek: 0,
+      retiredKekIds: [],
+    });
+    check(
+      "[encryption all-clear] body.encryption present",
+      body.encryption !== undefined,
+      `got ${JSON.stringify(body.encryption)}`,
+    );
+    eq("[encryption all-clear] status", body.encryption?.status, "ok");
+    eq("[encryption all-clear] rowsOnRetiredKek", body.encryption?.rowsOnRetiredKek, 0);
+    check(
+      "[encryption all-clear] retiredKekIds is empty array",
+      Array.isArray(body.encryption?.retiredKekIds) &&
+        (body.encryption?.retiredKekIds?.length ?? -1) === 0,
+      `got ${JSON.stringify(body.encryption?.retiredKekIds)}`,
+    );
+  }
+
+  // Rotation in flight: a couple of rows still on retired KEKs, two
+  // distinct kekIds. Operator must keep SENSITIVE_ENCRYPTION_KEY_PREVIOUS
+  // populated until the rotation script clears them.
+  {
+    const body = await withInjected({
+      status: "ok",
+      rowsOnRetiredKek: 7,
+      retiredKekIds: ["aaaaaaaa", "bbbbbbbb"],
+    });
+    eq("[encryption in-flight] status", body.encryption?.status, "ok");
+    eq("[encryption in-flight] rowsOnRetiredKek", body.encryption?.rowsOnRetiredKek, 7);
+    check(
+      "[encryption in-flight] retiredKekIds lists both old KEK ids",
+      JSON.stringify(body.encryption?.retiredKekIds) ===
+        JSON.stringify(["aaaaaaaa", "bbbbbbbb"]),
+      `got ${JSON.stringify(body.encryption?.retiredKekIds)}`,
+    );
+  }
+
+  // The default DB-less branch reports `not_configured` so operators can
+  // distinguish "no DB to check" from "0 rows on retired KEK".
+  {
+    const body = await withInjected({ status: "not_configured" });
+    eq("[encryption no-db] status", body.encryption?.status, "not_configured");
+    check(
+      "[encryption no-db] rowsOnRetiredKek omitted",
+      body.encryption?.rowsOnRetiredKek === undefined,
+      `got ${JSON.stringify(body.encryption?.rowsOnRetiredKek)}`,
+    );
+  }
+
+  // And: also exercise the pure summarizer through a real previous-KEK
+  // env so we catch regressions in the parsing path itself.
+  {
+    const prev = process.env.SENSITIVE_ENCRYPTION_KEY;
+    const prevPrev = process.env.SENSITIVE_ENCRYPTION_KEY_PREVIOUS;
+    try {
+      // First, encrypt under one key.
+      process.env.SENSITIVE_ENCRYPTION_KEY = Buffer.alloc(32, 1).toString("base64");
+      const onOldKek = encryptSensitive("123-45-6789").encryptedRef;
+      // Now rotate: the old key becomes "previous", a new key becomes "active".
+      process.env.SENSITIVE_ENCRYPTION_KEY_PREVIOUS = Buffer.alloc(32, 1).toString("base64");
+      process.env.SENSITIVE_ENCRYPTION_KEY = Buffer.alloc(32, 2).toString("base64");
+      const onNewKek = encryptSensitive("987-65-4321").encryptedRef;
+
+      const { summarizeRetiredKekUsage, getActiveKekId } = await import(
+        "../src/lib/sensitive-encryption.js"
+      );
+      const summary = summarizeRetiredKekUsage([onOldKek, onNewKek, null, undefined, ""]);
+      eq("[summarizer] rows on retired KEK", summary.rowsOnRetiredKek, 1);
+      eq("[summarizer] retired kek id count", summary.retiredKekIds.length, 1);
+      check(
+        "[summarizer] retired id is not the active id",
+        summary.retiredKekIds[0] !== getActiveKekId(),
+        `got ${summary.retiredKekIds[0]} vs active ${getActiveKekId()}`,
+      );
+
+      const allClear = summarizeRetiredKekUsage([onNewKek]);
+      eq("[summarizer all-clear] count", allClear.rowsOnRetiredKek, 0);
+      eq("[summarizer all-clear] ids", allClear.retiredKekIds.length, 0);
+    } finally {
+      if (prev === undefined) delete process.env.SENSITIVE_ENCRYPTION_KEY;
+      else process.env.SENSITIVE_ENCRYPTION_KEY = prev;
+      if (prevPrev === undefined) delete process.env.SENSITIVE_ENCRYPTION_KEY_PREVIOUS;
+      else process.env.SENSITIVE_ENCRYPTION_KEY_PREVIOUS = prevPrev;
+    }
   }
 }
 
@@ -324,6 +466,7 @@ async function main(): Promise<void> {
   }
 
   await checkDeepDbStatuses();
+  await checkEncryptionStatuses();
 
   await checkProductionExitOnFailure();
   await checkDevDoesNotExitOnFailure();

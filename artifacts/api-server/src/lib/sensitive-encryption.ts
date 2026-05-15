@@ -485,6 +485,50 @@ export function listLoadedKekIds(): string[] {
   return loadAllKeks().all.map((k) => k.id);
 }
 
+export interface RetiredKekUsage {
+  /** How many supplied encrypted refs are wrapped under a non-active KEK. */
+  rowsOnRetiredKek: number;
+  /**
+   * Sorted, de-duplicated list of every non-active `kekId` observed
+   * across the supplied refs. These are the KEKs an operator must
+   * keep in `SENSITIVE_ENCRYPTION_KEY_PREVIOUS` until the rotation
+   * script has re-wrapped the affected rows.
+   */
+  retiredKekIds: string[];
+}
+
+/**
+ * Walk an iterable of stored encrypted refs and report which (if
+ * any) are still wrapped under a retired KEK. Pure: callers are
+ * responsible for sourcing the refs (e.g. from `borrower_entities`
+ * and `founder_profiles`).
+ *
+ * NULL / empty refs are skipped silently. Unparseable refs are also
+ * skipped — they wouldn't decrypt under any KEK, so they don't pin
+ * a previous KEK in place.
+ */
+export function summarizeRetiredKekUsage(
+  refs: Iterable<string | null | undefined>,
+): RetiredKekUsage {
+  const activeKekId = getActiveKekId();
+  const ids = new Set<string>();
+  let rowsOnRetiredKek = 0;
+  for (const ref of refs) {
+    if (!ref) continue;
+    let kekId: string;
+    try {
+      kekId = readKekIdFromRef(ref);
+    } catch {
+      continue;
+    }
+    if (kekId !== activeKekId) {
+      rowsOnRetiredKek++;
+      ids.add(kekId);
+    }
+  }
+  return { rowsOnRetiredKek, retiredKekIds: [...ids].sort() };
+}
+
 /**
  * Test-only: report whether the helper is currently using the
  * deterministic dev key. The smoke test asserts this is NOT the case
