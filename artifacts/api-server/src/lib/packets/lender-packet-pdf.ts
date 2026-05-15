@@ -613,6 +613,59 @@ export function evidenceAttachmentDisposition(file: AppendixFileLike): EvidenceD
   }
 }
 
+// Task #878 — extracted from the inline label block in
+// `renderAssumptionsEvidenceAppendix` so the parity guard
+// (`tests/packet-attachments-evidence-appendix-parity.ts`) can pin the
+// rendered manifest wording for each disposition. Without this helper
+// the wording lived as string literals deep inside the renderer, and a
+// drive-by tweak ("5 MB embed cap" → "5 MB cap") could silently desync
+// the founder preview from the rendered PDF even though the
+// dispositions still matched. Returning `null` means the row prints no
+// disposition note (e.g. an `image` row whose preview bytes failed to
+// load is handled by the dedicated branch below).
+export type EvidenceManifestNoteTone = "info" | "warn";
+export interface EvidenceManifestNote {
+  text: string;
+  tone: EvidenceManifestNoteTone;
+}
+
+export function evidenceAttachmentManifestNote(
+  file: AppendixFileLike,
+  options: { imagePreviewLoaded: boolean } = { imagePreviewLoaded: true },
+): EvidenceManifestNote | null {
+  const disposition = evidenceAttachmentDisposition(file);
+  if (disposition === "embedded-pdf") {
+    return { text: "Full PDF embedded at end of packet.", tone: "info" };
+  }
+  if (disposition === "image") {
+    if (options.imagePreviewLoaded) {
+      return { text: "Preview embedded above.", tone: "info" };
+    }
+    return {
+      text: "Available on request — preview could not be loaded.",
+      tone: "warn",
+    };
+  }
+  if (disposition === "oversized") {
+    // Cap wording mirrors the per-mime-type caps so an oversized image
+    // (5 MB inline-preview cap) doesn't get blamed on the 10 MB PDF cap.
+    const capMb = isImageMime(file.mimeType)
+      ? Math.round(EVIDENCE_THUMBNAIL_MAX_BYTES / (1024 * 1024))
+      : Math.round(EVIDENCE_ATTACHMENT_MAX_BYTES / (1024 * 1024));
+    return {
+      text: `Available on request — exceeds ${capMb} MB embed cap.`,
+      tone: "warn",
+    };
+  }
+  if (disposition === "unsupported") {
+    return {
+      text: "Available on request — file type cannot be inlined.",
+      tone: "warn",
+    };
+  }
+  return null;
+}
+
 /**
  * Task #722 — walk the assumption-confidence map and load bytes for any
  * uploaded PDF attachments that fit under the 10 MB per-file cap (and
@@ -891,34 +944,17 @@ async function renderAssumptionsEvidenceAppendix(
     // request the source document separately (oversized or unsupported
     // file type). Mirrors the manifest convention used in the lender
     // packet so trustees and lenders see identical wording.
-    const disposition = evidenceAttachmentDisposition(file);
-    let dispositionNote = "";
-    let dispositionColor: string = BRAND.darkGray;
-    if (disposition === "embedded-pdf") {
-      dispositionNote = "Full PDF embedded at end of packet.";
-      dispositionColor = BRAND.teal;
-    } else if (disposition === "image" && imageBytes) {
-      dispositionNote = "Preview embedded above.";
-      dispositionColor = BRAND.teal;
-    } else if (disposition === "oversized") {
-      // Task #723 — message uses the type-appropriate cap so an
-      // oversized image (5 MB thumbnail cap) doesn't get blamed on the
-      // 10 MB PDF/attachment cap.
-      const capMb = isImageMime(file.mimeType)
-        ? Math.round(EVIDENCE_THUMBNAIL_MAX_BYTES / (1024 * 1024))
-        : Math.round(EVIDENCE_ATTACHMENT_MAX_BYTES / (1024 * 1024));
-      dispositionNote = `Available on request — exceeds ${capMb} MB embed cap.`;
-      dispositionColor = BRAND.amber;
-    } else if (disposition === "unsupported") {
-      dispositionNote = "Available on request — file type cannot be inlined.";
-      dispositionColor = BRAND.amber;
-    } else if (disposition === "image" && !imageBytes) {
-      dispositionNote = "Available on request — preview could not be loaded.";
-      dispositionColor = BRAND.amber;
-    }
-    if (dispositionNote) {
+    // Task #722 / #878 — disposition note wording lives in the shared
+    // `evidenceAttachmentManifestNote` helper so the parity guard
+    // (`tests/packet-attachments-evidence-appendix-parity.ts`) can pin
+    // it against the founder-facing wizard preview's labels.
+    const note = evidenceAttachmentManifestNote(file, {
+      imagePreviewLoaded: Boolean(imageBytes),
+    });
+    if (note) {
+      const dispositionColor = note.tone === "info" ? BRAND.teal : BRAND.amber;
       doc.font("Helvetica-Oblique").fontSize(8).fillColor(dispositionColor)
-        .text(dispositionNote, textX, doc.y, {
+        .text(note.text, textX, doc.y, {
           width: textWidth,
           link: null,
           underline: false,
