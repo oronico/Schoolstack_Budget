@@ -3,6 +3,7 @@ import { cleanupExpiredRateLimits } from "./lib/rate-limiter";
 import { cleanupOldErrorLogs } from "./routes/errors";
 import { cleanupExpiredPendingSignups } from "./routes/auth";
 import { runOrphanUploadsCleanup } from "./scripts/cleanup-orphan-uploads";
+import { runRotation as runSensitiveKeyRotation } from "./scripts/rotate-sensitive-encryption-key";
 import { pool, db, runMigrations } from "@workspace/db";
 import { recordErrorLog } from "./lib/error-log";
 import { applyMigrations as runApplyMigrations } from "./lib/apply-migrations";
@@ -132,6 +133,7 @@ const GRACEFUL_SHUTDOWN_TIMEOUT_MS = 15_000;
 let server: Server | undefined;
 let cleanupTimer: ReturnType<typeof setInterval>;
 let orphanUploadsTimer: ReturnType<typeof setInterval>;
+let keyRotationTimer: ReturnType<typeof setInterval>;
 let isShuttingDown = false;
 
 // Task #757 — schedule the orphan-uploads sweeper.
@@ -173,6 +175,54 @@ async function runScheduledOrphanUploadsSweep(): Promise<void> {
   }
 }
 
+// Task #837 — schedule the borrower-data KEK rotation script.
+//
+// Task #788 added `pnpm ... rotate:sensitive-encryption-key --execute`
+// as a one-shot CLI. For periodic / compromise-driven rotations we
+// also want it to run on a recurring in-process cadence (same pattern
+// as the orphan-uploads sweeper above) so a missed manual step
+// doesn't leave borrower rows wrapped under an old KEK indefinitely.
+//
+// Opt-in: the schedule only arms when
+// `SENSITIVE_ENCRYPTION_KEY_ROTATION_INTERVAL_MS` is set to a positive
+// integer. We additionally short-circuit each tick when
+// `SENSITIVE_ENCRYPTION_KEY_PREVIOUS` is unset (nothing to rotate).
+// Each run emits a tagged JSON line (`[rotation-summary] {...}`) for
+// grep-based monitoring.
+const KEY_ROTATION_INTERVAL_MS = (() => {
+  const raw = process.env["SENSITIVE_ENCRYPTION_KEY_ROTATION_INTERVAL_MS"];
+  if (!raw) return 0;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+})();
+const KEY_ROTATION_FIRST_RUN_DELAY_MS = 5 * 60 * 1000; // 5 min after boot
+let keyRotationRunning = false;
+
+async function runScheduledKeyRotation(): Promise<void> {
+  if (!process.env["SENSITIVE_ENCRYPTION_KEY_PREVIOUS"]) {
+    console.log(
+      "[key-rotation-scheduler] SENSITIVE_ENCRYPTION_KEY_PREVIOUS unset — nothing to rotate, skipping",
+    );
+    return;
+  }
+  if (keyRotationRunning) {
+    console.log("[key-rotation-scheduler] previous rotation still running — skipping this tick");
+    return;
+  }
+  keyRotationRunning = true;
+  try {
+    const summary = await runSensitiveKeyRotation({
+      execute: true,
+      limit: Number.POSITIVE_INFINITY,
+    });
+    console.log(`[rotation-summary] ${JSON.stringify(summary)}`);
+  } catch (err) {
+    console.error("[key-rotation-scheduler] rotation failed:", err);
+  } finally {
+    keyRotationRunning = false;
+  }
+}
+
 function drainAndExit(forceTimer: ReturnType<typeof setTimeout>) {
   console.log("[shutdown] Draining database pool...");
   if (pool) {
@@ -210,6 +260,7 @@ function gracefulShutdown(signal: string) {
 
   if (cleanupTimer) clearInterval(cleanupTimer);
   if (orphanUploadsTimer) clearInterval(orphanUploadsTimer);
+  if (keyRotationTimer) clearInterval(keyRotationTimer);
 
   if (!server || !server.listening) {
     console.log("[shutdown] Server not yet listening, skipping server.close.");
@@ -262,3 +313,29 @@ setTimeout(() => {
     void runScheduledOrphanUploadsSweep();
   }, ORPHAN_UPLOADS_INTERVAL_MS);
 }, ORPHAN_UPLOADS_FIRST_RUN_DELAY_MS).unref();
+
+// Task #837 — arm the KEK rotation schedule only when an interval was
+// explicitly configured AND a previous KEK is actually loaded. Default
+// off so non-production environments and freshly-bootstrapped
+// deployments don't spin up rotation work nobody asked for, and so a
+// deployment that has the interval set but no previous KEK doesn't
+// emit a "nothing to rotate" log line on every tick forever.
+if (KEY_ROTATION_INTERVAL_MS > 0) {
+  if (!process.env["SENSITIVE_ENCRYPTION_KEY_PREVIOUS"]) {
+    console.log(
+      "[key-rotation-scheduler] interval set but SENSITIVE_ENCRYPTION_KEY_PREVIOUS is unset — " +
+        "not arming scheduler (nothing to rotate). Set the previous KEK and restart to enable.",
+    );
+  } else {
+    console.log(
+      `[key-rotation-scheduler] enabled — interval=${KEY_ROTATION_INTERVAL_MS}ms, ` +
+        `first run in ${KEY_ROTATION_FIRST_RUN_DELAY_MS}ms`,
+    );
+    setTimeout(() => {
+      void runScheduledKeyRotation();
+      keyRotationTimer = setInterval(() => {
+        void runScheduledKeyRotation();
+      }, KEY_ROTATION_INTERVAL_MS);
+    }, KEY_ROTATION_FIRST_RUN_DELAY_MS).unref();
+  }
+}

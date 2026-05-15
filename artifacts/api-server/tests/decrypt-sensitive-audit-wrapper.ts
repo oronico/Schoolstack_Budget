@@ -82,6 +82,15 @@ function runStaticGuard(): void {
   const allowed = new Set([
     path.resolve(srcRoot, "lib", "decrypt-sensitive-and-audit.ts"),
     path.resolve(srcRoot, "lib", "sensitive-encryption.ts"),
+    // Task #788 / #837 — the KEK-rotation script must read every row's
+    // ciphertext under the matching previous KEK and re-wrap it under
+    // the active KEK. Routing each row through the audited wrapper
+    // would write one audit_log row per borrower record per rotation
+    // run, which would balloon the table and obscure real read events.
+    // The script logs its own per-table summary instead and is the
+    // canonical, system-only consumer of `decryptSensitive` for this
+    // purpose.
+    path.resolve(srcRoot, "scripts", "rotate-sensitive-encryption-key.ts"),
   ]);
 
   const offenders: string[] = [];
