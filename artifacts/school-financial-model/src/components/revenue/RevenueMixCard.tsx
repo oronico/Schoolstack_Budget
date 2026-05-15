@@ -262,6 +262,7 @@ export function RevenueMixCard({
                 schoolType={schoolType}
                 years={result.years}
                 testId={testId}
+                philanthropyBucket={philanthropyBucket}
               />
             ))}
           </div>
@@ -276,31 +277,71 @@ function RowTrend({
   schoolType,
   years,
   testId,
+  philanthropyBucket,
 }: {
   bucket: RevenueSourceBucket;
   schoolType?: string;
   years: ReturnType<typeof computeRevenueSourceMix>["years"];
   testId: string;
+  philanthropyBucket: RevenueSourceBucket;
 }) {
   const color = getBucketColor(bucket, schoolType);
+  const label = getBucketLabel(bucket, schoolType);
+  const isPhilanthropy = bucket === philanthropyBucket;
   return (
     <>
       <div className="text-[10px] text-muted-foreground truncate pr-1">
-        {getBucketLabel(bucket, schoolType)}
+        {label}
       </div>
       {years.map((y) => {
         const share = y.sharesByBucket.get(bucket) ?? 0;
+        const total = y.totalsByBucket.get(bucket) ?? 0;
+        const restricted = isPhilanthropy
+          ? y.restrictedByBucket.get(bucket) ?? 0
+          : 0;
+        const restrictedShareOfTotal =
+          y.total > 0 ? (restricted / y.total) * 100 : 0;
+        const unrestrictedShare = Math.max(0, share - restrictedShareOfTotal);
+        const pctFmt = (n: number) =>
+          n >= 10 ? `${Math.round(n)}%` : `${n.toFixed(1)}%`;
+        const title = isPhilanthropy
+          ? `Y${y.year + 1} ${label}: ${pctFmt(share)} of total revenue (${pctFmt(restrictedShareOfTotal)} restricted)`
+          : `Y${y.year + 1} ${label}: ${pctFmt(share)}`;
         return (
           <div
             key={`${bucket}-${y.year}`}
             className="h-3 rounded-sm bg-muted relative overflow-hidden"
             data-testid={`${testId}-trend-${bucket}-y${y.year + 1}`}
-            title={`Y${y.year + 1} ${getBucketLabel(bucket, schoolType)}: ${share.toFixed(1)}%`}
+            title={title}
           >
-            <div
-              style={{ width: `${Math.min(100, share)}%`, backgroundColor: color }}
-              className="absolute inset-y-0 left-0"
-            />
+            {isPhilanthropy && restricted > 0 ? (
+              <div
+                className="absolute inset-y-0 left-0 flex"
+                style={{ width: `${Math.min(100, share)}%` }}
+              >
+                {unrestrictedShare > 0 && (
+                  <div
+                    data-testid={`${testId}-trend-${bucket}-y${y.year + 1}-unrestricted`}
+                    style={{
+                      width: `${(unrestrictedShare / share) * 100}%`,
+                      backgroundColor: color,
+                    }}
+                  />
+                )}
+                <div
+                  data-testid={`${testId}-trend-${bucket}-y${y.year + 1}-restricted`}
+                  style={{
+                    width: `${(restrictedShareOfTotal / share) * 100}%`,
+                    backgroundImage: `repeating-linear-gradient(45deg, ${color} 0 4px, rgba(0,0,0,0.35) 4px 8px)`,
+                  }}
+                />
+              </div>
+            ) : (
+              <div
+                style={{ width: `${Math.min(100, share)}%`, backgroundColor: color }}
+                className="absolute inset-y-0 left-0"
+              />
+            )}
           </div>
         );
       })}
