@@ -45,6 +45,7 @@
     "test:no-tls-reject-unauthorized": "tsx ./tests/no-tls-reject-unauthorized.ts",
     "test:db-should-enable-ssl": "tsx ./tests/db-should-enable-ssl.ts",
     "test:sensitive-encryption-rotation-smoke": "tsx ./tests/sensitive-encryption-rotation-smoke.ts",
+    "test:key-rotation-alert": "tsx ./tests/key-rotation-alert.ts",
     "test:audit-log-redaction": "tsx ./tests/audit-log-redaction.ts",
     "test:decrypt-sensitive-audit-wrapper": "tsx ./tests/decrypt-sensitive-audit-wrapper.ts",
     "test:sensitive-access-audit-route": "tsx ./tests/sensitive-access-audit-route.ts",

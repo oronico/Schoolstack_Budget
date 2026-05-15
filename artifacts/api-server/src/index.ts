@@ -6,6 +6,7 @@ import { runOrphanUploadsCleanup } from "./scripts/cleanup-orphan-uploads";
 import { runRotation as runSensitiveKeyRotation } from "./scripts/rotate-sensitive-encryption-key";
 import { pool, db, runMigrations } from "@workspace/db";
 import { recordErrorLog } from "./lib/error-log";
+import { alertOnKeyRotationFailure } from "./lib/key-rotation-alert";
 import { applyMigrations as runApplyMigrations } from "./lib/apply-migrations";
 import { seedPreviewDataIfEmpty } from "./lib/seed-preview-data";
 import type { Server } from "http";
@@ -216,6 +217,22 @@ async function runScheduledKeyRotation(): Promise<void> {
       limit: Number.POSITIVE_INFINITY,
     });
     console.log(`[rotation-summary] ${JSON.stringify(summary)}`);
+    // Task #871 — turn `failed > 0` ticks into an active alert
+    // (error_logs row + ADMIN_EMAILS notification) instead of relying
+    // on operators to grep the rotation-summary line. Successful ticks
+    // (failed=0) intentionally produce no extra noise.
+    try {
+      const outcome = await alertOnKeyRotationFailure(summary);
+      if (outcome.dispatched) {
+        console.error(
+          `[key-rotation-scheduler] dispatched failure alert — totalFailed=${outcome.totalFailed} ` +
+            `errorLogRow=${outcome.loggedErrorRow} emailedAdmins=${outcome.emailedAdmins} ` +
+            `recipients=${outcome.emailRecipients.length}`,
+        );
+      }
+    } catch (alertErr) {
+      console.error("[key-rotation-scheduler] alert dispatch threw:", alertErr);
+    }
   } catch (err) {
     console.error("[key-rotation-scheduler] rotation failed:", err);
   } finally {
