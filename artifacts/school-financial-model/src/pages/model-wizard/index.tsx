@@ -4,7 +4,7 @@ import { useGetModel } from "@workspace/api-client-react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDebounce } from "use-debounce";
-import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, X, Building2, AlertCircle, Sparkles, Calendar, TrendingUp } from "lucide-react";
+import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, X, Building2, AlertCircle, Sparkles, Calendar, TrendingUp, BookOpen } from "lucide-react";
 import { ExtendToFiveYearModal } from "@/components/wizard/ExtendToFiveYearModal";
 import { calculatePersonnelCosts } from "@/lib/staffing-defaults";
 import { seedFiveYearFromYearOne, resolveSeedDefaults, type SeedDefaults } from "@/lib/seed-five-year";
@@ -1651,6 +1651,21 @@ export function ModelWizardPage() {
                   <span data-testid="wizard-save-status-saved" className="flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3 text-primary" /> Saved</span>
                 ) : null}
               </div>
+              {/* Task #889 — let a founder mid-flow grab the printable
+                  prep guide without losing their place. Sits next to the
+                  Start Over button in the wizard header. */}
+              <a
+                href="/prep-guide.pdf"
+                download
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground border border-border hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all"
+                data-testid="wizard-prep-guide-download"
+                title="Download a printable PDF checklist of what to gather for each wizard step"
+              >
+                <BookOpen className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Prep guide</span>
+              </a>
               <button
                 type="button"
                 onClick={handleStartOver}

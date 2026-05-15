@@ -616,6 +616,36 @@ export function LandingPage() {
           >
             Don't have everything? No problem. You can save your progress and come back anytime.
           </motion.p>
+
+          {/* Task #889 — printable Model Prep Guide. Surfaced here so a
+              founder who isn't ready to build today can grab a checklist
+              to pull their numbers together first. */}
+          <motion.div
+            {...fadeUp}
+            transition={{ duration: 0.4, delay: 0.4 }}
+            className="mt-10 max-w-2xl mx-auto bg-white border border-[#1E293B]/10 rounded-2xl p-6 sm:p-7 shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-5"
+          >
+            <div className="w-12 h-12 rounded-xl bg-[#328555]/10 flex items-center justify-center shrink-0">
+              <Download className="w-6 h-6 text-[#328555]" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-display font-bold text-lg text-[#1E293B] mb-1">
+                Want to gather these first? Download the prep guide.
+              </h3>
+              <p className="text-sm text-[#1E293B]/60 leading-relaxed">
+                A printable PDF that walks every wizard step in order, with checklists for the documents and decisions to have ready before you sit down to build.
+              </p>
+            </div>
+            <a
+              href="/prep-guide.pdf"
+              download
+              className="inline-flex items-center gap-2 bg-[#1E293B] hover:bg-[#0F172A] text-white px-5 py-3 rounded-xl font-semibold text-sm transition shadow shrink-0"
+              data-testid="landing-prep-guide-download"
+            >
+              <Download className="w-4 h-4" />
+              Download prep guide (PDF)
+            </a>
+          </motion.div>
         </div>
       </section>
 

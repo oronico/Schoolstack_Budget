@@ -279,9 +279,11 @@ export function statusBadge(doc: PDFDoc, label: string, status: "good" | "warnin
   doc.moveDown(0.2);
 }
 
-export function drawFooter(doc: PDFDoc) {
+export function drawFooter(doc: PDFDoc, opts?: { date?: Date }) {
   const pages = doc.bufferedPageRange();
-  const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  // Callers that need byte-deterministic output (e.g. the prep-guide
+  // build) can pin a fixed `date`; everyone else gets today's date.
+  const dateStr = (opts?.date ?? new Date()).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
   for (let i = 0; i < pages.count; i++) {
     doc.switchToPage(i);
