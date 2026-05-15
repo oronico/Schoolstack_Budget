@@ -4,6 +4,7 @@ import { trackExport } from "@/hooks/useExportTracker";
 import { InsightCallout } from "@/components/coaching/InsightCallout";
 import { buildForecastFilterQuery } from "@/lib/forecast-accuracy-query";
 import { CashRunwayCard, type CashRunwayView } from "./CashRunwayCard";
+import { PacketAttachmentsPreview } from "./PacketAttachmentsPreview";
 import { lenderReadinessCoachingHeadline } from "@/lib/coaching/lender-readiness-coaching";
 
 interface LinkedMetric {
@@ -244,6 +245,7 @@ export function LenderPacketPreview({
                 />
               ))}
           </div>
+          <PacketAttachmentsPreview />
         </div>
       </div>
     </div>

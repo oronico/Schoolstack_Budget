@@ -5,6 +5,7 @@ import { InsightCallout } from "@/components/coaching/InsightCallout";
 import { buildForecastFilterQuery } from "@/lib/forecast-accuracy-query";
 import { CashRunwayCard, type CashRunwayView } from "./CashRunwayCard";
 import { CommentaryBlock } from "./LenderPacketPreview";
+import { PacketAttachmentsPreview } from "./PacketAttachmentsPreview";
 import { ActualVsProjectedBadge } from "@/components/wizard/ActualVsProjectedBadge";
 import { AssumptionConfidenceRollupCard } from "@/components/wizard/AssumptionConfidenceRollupCard";
 
@@ -269,6 +270,7 @@ export function BoardPacketPreview({
                 />
               ))}
           </div>
+          <PacketAttachmentsPreview />
         </div>
       </div>
     </div>
