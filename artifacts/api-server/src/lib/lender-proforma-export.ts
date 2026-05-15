@@ -1207,6 +1207,46 @@ function buildDrivers(wb: ExcelJS.Workbook, input: Record<string, string | numbe
   ws.views = [{ state: "frozen", xSplit: 2, ySplit: 3 }];
 }
 
+/**
+ * Task #894 — The lender pro-forma 5-Year P&L is an INTENTIONALLY SIMPLIFIED
+ * comparator and will not tie to the underwriting workbook's Operating
+ * Statement Y1 Net Income on the same payload. Two divergences are
+ * deliberate and load-bearing for the lender narrative:
+ *
+ *   1. Driver model. This sheet is built from `mapModelToTemplateInput` —
+ *      a per-student / per-row averaging pass over the founder model
+ *      that collapses the full driver engine into a handful of headline
+ *      assumptions (tuition $/student, ESA $/student, teacher salary,
+ *      rent, etc.) so a lender can re-run the model in Excel by editing
+ *      the Assumptions tab. The underwriting Operating Statement uses
+ *      the FULL canonical driver engine (`computeYearFinancialsFromData`
+ *      → `computeRevenueForYear`), so its revenue and expense totals
+ *      include line items this sheet drops or averages over (programs,
+ *      tuition offsets, scholarship percent_of_base normalization,
+ *      grade-band-specific funding, percent_of_base expenses, etc.).
+ *      On the seeded demos this pushes lender-PF revenue and NOI above
+ *      the Operating Statement's figures.
+ *
+ *   2. Bottom-line definition. Net Income on this sheet is GAAP-style:
+ *      NOI − Interest only (Task #862 Issue 5). Principal repayments
+ *      live on Cash Flow & DSCR (balance-sheet movement), and
+ *      depreciation is not modeled in the lender-PF simplified path
+ *      at all. The underwriting Operating Statement subtracts Personnel
+ *      + Operating Expenses + Interest + Principal & Capital Outlays
+ *      + Depreciation from Total Revenue, so its Net Income is
+ *      structurally lower than `NOI − Interest` for any payload that
+ *      carries debt or capex.
+ *
+ * Both surfaces are correct for their audience: the Operating Statement
+ * is the canonical accounting bottom line a CFO / auditor would
+ * reconcile to; the lender PF P&L is the "if I edit one assumption,
+ * what happens to my coverage?" comparator. The lender packet PDF and
+ * the workbook's title-card reading note (B2 below) both call this out
+ * so a reader cracking open both files isn't surprised to see the
+ * figures disagree. A regression test
+ * (`tests/lender-pf-vs-operating-statement-tieout.ts`) enforces the
+ * invariant + the disclosure on every release.
+ */
 function buildPnL(wb: ExcelJS.Workbook, res: LenderResults) {
   const ws = wb.addWorksheet("5-Year P&L", { properties: { tabColor: { argb: "FF328555" } } });
   printSetup(ws);
@@ -1218,6 +1258,21 @@ function buildPnL(wb: ExcelJS.Workbook, res: LenderResults) {
   ws.getCell("B1").value = "5-Year Pro Forma Profit & Loss";
   ws.getCell("B1").font = { name: "Calibri", size: 14, bold: true, color: { argb: "FF1E293B" } };
   ws.mergeCells("B1:G1");
+
+  // Task #894 — Reading note. This sheet is a simplified comparator and
+  // will not tie to the underwriting workbook's Operating Statement Y1
+  // Net Income. See the file-level doc comment on buildPnL for the full
+  // rationale.
+  ws.getCell("B2").value =
+    "Reading note: This is a simplified comparator pro forma. " +
+    "Net Income = NOI − Interest (GAAP-style; principal & depreciation are not on this P&L). " +
+    "The canonical bottom line is the underwriting workbook's Operating Statement, " +
+    "which uses the full driver engine and also subtracts depreciation and principal — " +
+    "the two sheets will not tie on the same payload.";
+  ws.getCell("B2").font = { name: "Calibri", size: 9, italic: true, color: { argb: "FF6B7280" } };
+  ws.getCell("B2").alignment = { wrapText: true, vertical: "top" };
+  ws.mergeCells("B2:G2");
+  ws.getRow(2).height = 42;
 
   for (let c = 3; c <= 7; c++) {
     const cell = ws.getCell(3, c);

@@ -105,6 +105,14 @@ export async function generateLenderPacketPDF(
   // workbook because every surface pulls from the same canonical helper.
   renderLenderStressTestsSection(doc, packet.lenderStressTests);
 
+  // Task #894 — Methodology callout. The lender packet ships TWO Excel
+  // workbooks (underwriting + lender pro-forma), and on the same payload
+  // their Y1 Net Income figures will not tie because each uses a
+  // different driver model and a different bottom-line definition.
+  // Surface that here so a reader who cracks open both files isn't
+  // surprised. See `lender-proforma-export.ts` `buildPnL` doc comment.
+  renderProFormaMethodologyNote(doc);
+
   renderForecastAccuracySection(
     doc,
     packet.forecastAccuracy,
@@ -1296,6 +1304,26 @@ function renderProgramBreakEvenSection(doc: PDFDoc, programs: ProgramBreakEven[]
     doc.font("Helvetica").fillColor(BRAND.black);
     doc.moveDown(0.4);
   }
+}
+
+/**
+ * Task #894 — Methodology callout explaining why the two Excel workbooks
+ * shipped in the lender packet (underwriting + lender pro-forma) will not
+ * tie on Y1 Net Income for the same payload. The lender pro-forma's
+ * 5-Year P&L is an intentionally simplified comparator (see
+ * `lender-proforma-export.ts` `buildPnL` doc comment) and is the
+ * "edit-an-assumption-and-re-run" sheet; the underwriting Operating
+ * Statement is the canonical accounting bottom line. Surfacing the
+ * divergence here is the credibility-risk mitigation #894 calls for.
+ */
+export function renderProFormaMethodologyNote(doc: PDFDoc) {
+  ensureSpace(doc, 90);
+  sectionTitle(doc, "Reading the Two Workbooks");
+  bodyText(
+    doc,
+    "This packet ships two Excel workbooks. The 5-Year Financial Model (underwriting) is the canonical bottom line and uses the full driver engine; its Operating Statement Net Income subtracts personnel, operating expenses, interest, principal & capital outlays, and depreciation. The Lender Pro-Forma is a simplified comparator built from per-student / per-row averages so a reviewer can re-run sensitivities by editing one assumption; its 5-Year P&L Net Income is GAAP-style (NOI minus interest only — principal and depreciation are not on that P&L). Because the two sheets use different driver models AND different bottom-line definitions, their Y1 Net Income figures will not tie on the same payload, and they are not meant to. The figures cited in this PDF narrative source from the underwriting model.",
+  );
+  doc.moveDown(0.4);
 }
 
 export function renderLenderStressTestsSection(doc: PDFDoc, stress: LenderStressTestResults) {
