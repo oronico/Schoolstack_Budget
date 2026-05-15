@@ -138,6 +138,26 @@ This system handles EIN, SSN, banking tokens. Three layers protect them:
 
 `artifacts/api-server/tests/no-tls-reject-unauthorized.ts` scans the entire repo on every CI run for `NODE_TLS_REJECT_UNAUTHORIZED=0` bypasses. Do not add one.
 
+### Cyber incident response — who to call
+
+If you suspect a breach, ransomware, data exfiltration, or any incident that could trigger a cyber-liability claim, **notify the carrier before doing any cleanup that destroys forensic state** (don't wipe disks, rotate keys-in-place without snapshots, or delete logs until Coalition's IR team has triaged).
+
+| What | Who / How |
+| --- | --- |
+| Insurance broker | Howard Insurance |
+| Cyber liability carrier | Coalition |
+| 24/7 incident hotline | **1-833-866-1337** |
+| Claims email | claims@coalitioninc.com |
+| Policy number | **C-4LPX-254165-CYBER-2025A** |
+
+Order of operations in a suspected incident:
+
+1. Page the on-call engineer; do not discuss publicly.
+2. Call the Coalition hotline (above) and quote the policy number. They will assign an incident response lead.
+3. Preserve evidence: snapshot the affected database, copy `error_logs` and audit-log rows, save container logs. Coalition's IR team decides what to wipe and when.
+4. Only after IR triage: rotate `SENSITIVE_ENCRYPTION_KEY`, `JWT_SECRET`, and any leaked third-party tokens. Use the rotator script in `artifacts/api-server/src/scripts/rotate-sensitive-encryption-key.ts`; key-rotation failures auto-page via Task #871/#883/#884 (see admin dashboard banner).
+5. Loop in the broker (Howard Insurance) once the claim is open so they can coordinate coverage.
+
 ---
 
 ## 6. Local development
