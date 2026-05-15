@@ -47,18 +47,20 @@ describe("classifyPacketAttachment", () => {
     ).toBe("embedded-image");
   });
 
-  it("keeps a large PNG/JPEG marked as embedded (server treats all as image)", () => {
-    // Mirrors `evidenceAttachmentDisposition` in lender-packet-pdf.ts:
-    // images return the "image" disposition regardless of declared
-    // size — the 5 MB thumbnail cap is a render-time fallback.
+  it("flags an image over the 5 MB inline-preview cap as oversized", () => {
+    // Task #841 — the shared `classifyEvidenceFileEmbed` helper that
+    // drives both the server manifest and this preview size-caps
+    // images at 5 MB. An oversized PNG must surface here as
+    // "oversized" so the founder isn't told it will embed when the
+    // server will actually drop it from the inline preview.
     const r = classifyPacketAttachment({
       ...baseFile,
       name: "huge.png",
       mimeType: "image/png",
       size: PACKET_ATTACHMENT_MAX_BYTES * 2,
     });
-    expect(r.disposition).toBe("embedded-image");
-    expect(r.label).toBe("Embedded");
+    expect(r.disposition).toBe("oversized");
+    expect(r.label).toBe("Available on request — exceeds 5 MB");
   });
 
   it("flags webp/heic/gif images as unsupported (PDFKit limit)", () => {

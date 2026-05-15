@@ -591,7 +591,11 @@ function isPdfAttachment(file: AppendixFileLike): boolean {
 // the renderer can never disagree about what each file will do.
 type EvidenceDisposition = "image" | "embedded-pdf" | "oversized" | "unsupported";
 
-function evidenceAttachmentDisposition(file: AppendixFileLike): EvidenceDisposition {
+// Task #841 — exported so the wizard's preview-vs-server parity guard
+// (`tests/packet-attachments-preview-parity.ts`) can feed the same
+// fixtures through both the founder-facing `classifyPacketAttachment`
+// helper and this server-side classifier and assert they agree.
+export function evidenceAttachmentDisposition(file: AppendixFileLike): EvidenceDisposition {
   const klass = classifyEvidenceFileEmbed({
     mimeType: file.mimeType,
     name: file.name,

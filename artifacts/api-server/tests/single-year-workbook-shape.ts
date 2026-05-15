@@ -146,6 +146,9 @@ async function checkUnderwriting(label: string, payload: Record<string, unknown>
     const sheetName = spec.name(yc);
     const ws = getSheet(wb, sheetName);
     if (!ws) {
+      // Debt Schedule is conditional (Task #780) — fixtures without
+      // active debt legitimately omit the tab. Skip rather than fail.
+      if (sheetName === "Debt Schedule") continue;
       check(`[${label}] underwriting sheet "${sheetName}" exists`, false);
       continue;
     }

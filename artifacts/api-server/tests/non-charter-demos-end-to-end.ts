@@ -208,14 +208,23 @@ async function runCase(c: DemoCase): Promise<void> {
     `tuitionPct=${consultant.revenueComposition[0]?.tuitionPct}`,
   );
   // Counterpart: public/per-pupil revenue must be ZERO for these
-  // tuition-based demos. If a regression starts routing tuition rows
-  // through the public-funding category, the charter test would still
-  // pass but these demos would silently look like charter schools.
-  check(
-    `[${c.label}] year-1 public-funding revenue is zero`,
-    !!y1 && y1.publicRevenue === 0,
-    `publicRevenue=${y1?.publicRevenue ?? "(missing)"}`,
+  // tuition-based demos *unless* the seed legitimately carries a
+  // school-choice voucher row (e.g. Riverside's FL FES-EO voucher),
+  // which the consultant engine groups under publicFunding alongside
+  // public_funding. The point of the assertion is to catch regressions
+  // that route tuition rows through the public-funding category — a
+  // present-and-enabled school_choice row makes a non-zero
+  // publicRevenue expected, not a regression.
+  const hasSchoolChoiceRow = revenueRows.some(
+    (r) => r.enabled && r.category === "school_choice",
   );
+  if (!hasSchoolChoiceRow) {
+    check(
+      `[${c.label}] year-1 public-funding revenue is zero`,
+      !!y1 && y1.publicRevenue === 0,
+      `publicRevenue=${y1?.publicRevenue ?? "(missing)"}`,
+    );
+  }
 
   // The consultant narrative must show tuition-branch-specific copy,
   // proving the engine engaged the right `isPrivate` / `isMicroschool`
