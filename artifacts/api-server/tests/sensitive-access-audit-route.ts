@@ -407,6 +407,90 @@ async function main(): Promise<void> {
       badId.status === 400,
       `status=${badId.status}`,
     );
+
+    // === 6. CSV export (Task #881) ===
+    // Same admin gate; pagination bypassed; metadata-only — no plaintext
+    // and no ciphertext should ever appear in the file.
+    const csvUrl = `${server.baseUrl}/api/admin/borrower-entities/${target.id}/sensitive-access.csv`;
+    const csvUnauth = await fetch(csvUrl);
+    check(
+      "csv export rejects unauthenticated requests",
+      csvUnauth.status === 401,
+      `status=${csvUnauth.status}`,
+    );
+    const csvForbidden = await fetch(csvUrl, {
+      headers: { Authorization: `Bearer ${nonAdminToken}` },
+    });
+    check(
+      "csv export forbids non-admins",
+      csvForbidden.status === 403,
+      `status=${csvForbidden.status}`,
+    );
+
+    const csvOk = await fetch(csvUrl, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    check(
+      "admin gets 200 for csv export",
+      csvOk.ok,
+      `status=${csvOk.status}`,
+    );
+    check(
+      "csv content-type is text/csv",
+      (csvOk.headers.get("content-type") || "").startsWith("text/csv"),
+      `ct=${csvOk.headers.get("content-type")}`,
+    );
+    check(
+      "csv content-disposition is an attachment",
+      (csvOk.headers.get("content-disposition") || "").includes("attachment"),
+      `cd=${csvOk.headers.get("content-disposition")}`,
+    );
+
+    const csvText = await csvOk.text();
+    const csvLines = csvText.replace(/\r\n$/, "").split("\r\n");
+    check(
+      "csv has header + all 3 rows (pagination bypassed)",
+      csvLines.length === 4 &&
+        csvLines[0] ===
+          "timestamp,actor_email,actor_name,actor_role,purpose,note",
+      `lines=${csvLines.length}, header='${csvLines[0]}'`,
+    );
+    check(
+      "csv never contains the encrypted ref",
+      !csvText.includes(targetEnc.encryptedRef),
+    );
+    check(
+      "csv never contains the EIN plaintext",
+      !csvText.includes("123456789"),
+    );
+    check(
+      "csv contains the admin actor email and a purpose",
+      csvText.includes(ADMIN_EMAIL) &&
+        csvText.includes("Lender packet"),
+    );
+    check(
+      "csv does not leak the unrelated borrower's purpose",
+      !csvText.includes("Different borrower entirely"),
+    );
+
+    const csvNotFound = await fetch(
+      `${server.baseUrl}/api/admin/borrower-entities/9999999/sensitive-access.csv`,
+      { headers: { Authorization: `Bearer ${adminToken}` } },
+    );
+    check(
+      "csv export → 404 for unknown borrower",
+      csvNotFound.status === 404,
+      `status=${csvNotFound.status}`,
+    );
+    const csvBadId = await fetch(
+      `${server.baseUrl}/api/admin/borrower-entities/abc/sensitive-access.csv`,
+      { headers: { Authorization: `Bearer ${adminToken}` } },
+    );
+    check(
+      "csv export → 400 for non-numeric id",
+      csvBadId.status === 400,
+      `status=${csvBadId.status}`,
+    );
   } finally {
     await server.close();
     // Clean up audit rows we created so reruns stay deterministic.

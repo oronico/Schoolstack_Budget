@@ -2045,4 +2045,112 @@ router.get(
   },
 );
 
+// Task #881 — CSV export of the sensitive-access metadata for a borrower.
+// Same admin gate as the JSON endpoint above; pagination is bypassed so a
+// regulator/counsel gets a complete file in one shot. Like the JSON
+// variant, the response only ever contains metadata (actor, role, purpose,
+// note, timestamp) — never plaintext or ciphertext.
+function csvEscape(value: string | null | undefined): string {
+  if (value === null || value === undefined) return "";
+  const s = String(value);
+  if (/[",\r\n]/.test(s)) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
+router.get(
+  "/admin/borrower-entities/:id/sensitive-access.csv",
+  authMiddleware,
+  adminMiddleware,
+  async (req: AuthRequest, res) => {
+    try {
+      const borrowerId = Number.parseInt(String(req.params.id), 10);
+      if (!Number.isInteger(borrowerId) || borrowerId <= 0) {
+        res.status(400).json({ error: "Invalid borrower entity id." });
+        return;
+      }
+
+      const [borrower] = await db
+        .select({
+          id: borrowerEntitiesTable.id,
+          legalName: borrowerEntitiesTable.legalName,
+        })
+        .from(borrowerEntitiesTable)
+        .where(eq(borrowerEntitiesTable.id, borrowerId))
+        .limit(1);
+
+      if (!borrower) {
+        res.status(404).json({ error: "Borrower entity not found." });
+        return;
+      }
+
+      const whereClause = and(
+        eq(auditLogTable.entityType, "borrower_entities"),
+        eq(auditLogTable.entityId, borrowerId),
+        eq(auditLogTable.action, "decrypt"),
+      );
+
+      const rows = await db
+        .select({
+          id: auditLogTable.id,
+          actorUserId: auditLogTable.actorUserId,
+          actorRole: auditLogTable.actorRole,
+          after: auditLogTable.after,
+          note: auditLogTable.note,
+          createdAt: auditLogTable.createdAt,
+          actorEmail: usersTable.email,
+          actorName: usersTable.name,
+        })
+        .from(auditLogTable)
+        .leftJoin(usersTable, eq(auditLogTable.actorUserId, usersTable.id))
+        .where(whereClause)
+        .orderBy(desc(auditLogTable.createdAt));
+
+      const header = [
+        "timestamp",
+        "actor_email",
+        "actor_name",
+        "actor_role",
+        "purpose",
+        "note",
+      ].join(",");
+
+      const lines = rows.map((r) => {
+        const after = (r.after ?? {}) as Record<string, unknown>;
+        const purpose =
+          typeof after.purpose === "string" ? after.purpose : null;
+        return [
+          csvEscape(r.createdAt.toISOString()),
+          csvEscape(r.actorEmail),
+          csvEscape(r.actorName),
+          csvEscape(r.actorRole),
+          csvEscape(purpose),
+          csvEscape(r.note),
+        ].join(",");
+      });
+
+      const body = [header, ...lines].join("\r\n") + "\r\n";
+
+      const safeName = borrower.legalName
+        .replace(/[^a-zA-Z0-9_-]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, 60) || `borrower-${borrower.id}`;
+      const filename = `sensitive-access-${safeName}-${borrower.id}.csv`;
+
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${filename}"`,
+      );
+      res.send(body);
+    } catch (err) {
+      console.error("Sensitive-access CSV export error:", err);
+      res
+        .status(500)
+        .json({ error: "Failed to export sensitive-access audit entries." });
+    }
+  },
+);
+
 export default router;

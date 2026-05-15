@@ -2785,11 +2785,23 @@ function SensitiveAccessSection() {
                   : ""}
               </p>
             </div>
-            <p className="text-xs text-muted-foreground tabular-nums">
-              {total === 0
-                ? "0 events"
-                : `Showing ${pageStart}–${pageEnd} of ${total}`}
-            </p>
+            <div className="flex items-center gap-3">
+              <p className="text-xs text-muted-foreground tabular-nums">
+                {total === 0
+                  ? "0 events"
+                  : `Showing ${pageStart}–${pageEnd} of ${total}`}
+              </p>
+              {total > 0 ? (
+                <a
+                  href={`/api/admin/borrower-entities/${response.borrower.id}/sensitive-access.csv`}
+                  data-testid="sensitive-access-download-csv"
+                  className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold hover:bg-muted transition-colors"
+                  download
+                >
+                  Download CSV
+                </a>
+              ) : null}
+            </div>
           </div>
 
           {response.entries.length === 0 ? (
