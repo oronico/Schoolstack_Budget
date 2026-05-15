@@ -6,6 +6,8 @@ import {
   exportsTable,
   eventsTable,
   coachSurfaceOverridesTable,
+  auditLogTable,
+  borrowerEntitiesTable,
 } from "@workspace/db/schema";
 import { count, countDistinct, gte, desc, sql, eq, and, inArray } from "drizzle-orm";
 import { authMiddleware, type AuthRequest } from "../middlewares/auth";
@@ -1921,6 +1923,124 @@ router.post(
     } catch (err) {
       console.error("Send review feedback error:", err);
       res.status(500).json({ error: "Failed to send feedback." });
+    }
+  },
+);
+
+// Task #836 — surface every audited EIN/SSN unseal for a given borrower
+// entity so a lead underwriter can spot-check who unsealed sensitive
+// data and why without hand-querying the DB.
+//
+// Reads from `audit_log` rows pinned to (entityType, entityId) by the
+// `decryptSensitiveAndAudit` chokepoint. The endpoint never returns
+// any plaintext or ciphertext — only metadata (actor, role, purpose,
+// timestamp, free-text note). Capped + paginated so a noisy borrower
+// can't blow up the response.
+const SENSITIVE_ACCESS_MAX_LIMIT = 100;
+const SENSITIVE_ACCESS_DEFAULT_LIMIT = 25;
+
+router.get(
+  "/admin/borrower-entities/:id/sensitive-access",
+  authMiddleware,
+  adminMiddleware,
+  async (req: AuthRequest, res) => {
+    try {
+      const borrowerId = Number.parseInt(String(req.params.id), 10);
+      if (!Number.isInteger(borrowerId) || borrowerId <= 0) {
+        res.status(400).json({ error: "Invalid borrower entity id." });
+        return;
+      }
+
+      const rawLimit = Number.parseInt(String(req.query.limit ?? ""), 10);
+      const rawOffset = Number.parseInt(String(req.query.offset ?? ""), 10);
+      const limit =
+        Number.isInteger(rawLimit) && rawLimit > 0
+          ? Math.min(rawLimit, SENSITIVE_ACCESS_MAX_LIMIT)
+          : SENSITIVE_ACCESS_DEFAULT_LIMIT;
+      const offset =
+        Number.isInteger(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
+
+      const [borrower] = await db
+        .select({
+          id: borrowerEntitiesTable.id,
+          legalName: borrowerEntitiesTable.legalName,
+          einLast4: borrowerEntitiesTable.einLast4,
+        })
+        .from(borrowerEntitiesTable)
+        .where(eq(borrowerEntitiesTable.id, borrowerId))
+        .limit(1);
+
+      if (!borrower) {
+        res.status(404).json({ error: "Borrower entity not found." });
+        return;
+      }
+
+      const whereClause = and(
+        eq(auditLogTable.entityType, "borrower_entities"),
+        eq(auditLogTable.entityId, borrowerId),
+        eq(auditLogTable.action, "decrypt"),
+      );
+
+      const [totalRow] = await db
+        .select({ value: count() })
+        .from(auditLogTable)
+        .where(whereClause);
+      const total = totalRow?.value ?? 0;
+
+      const rows = await db
+        .select({
+          id: auditLogTable.id,
+          actorUserId: auditLogTable.actorUserId,
+          actorRole: auditLogTable.actorRole,
+          // `after` is a redacted jsonb diff; the decrypt-audit wrapper
+          // writes only `{ purpose }` here. We pull the whole column and
+          // extract just the `purpose` field below so a future schema
+          // tweak (extra metadata keys) doesn't silently get exposed.
+          after: auditLogTable.after,
+          note: auditLogTable.note,
+          createdAt: auditLogTable.createdAt,
+          actorEmail: usersTable.email,
+          actorName: usersTable.name,
+        })
+        .from(auditLogTable)
+        .leftJoin(usersTable, eq(auditLogTable.actorUserId, usersTable.id))
+        .where(whereClause)
+        .orderBy(desc(auditLogTable.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      const entries = rows.map((r) => {
+        const after = (r.after ?? {}) as Record<string, unknown>;
+        const purpose =
+          typeof after.purpose === "string" ? after.purpose : null;
+        return {
+          id: r.id,
+          actorUserId: r.actorUserId,
+          actorEmail: r.actorEmail ?? null,
+          actorName: r.actorName ?? null,
+          actorRole: r.actorRole ?? null,
+          purpose,
+          note: r.note ?? null,
+          createdAt: r.createdAt.toISOString(),
+        };
+      });
+
+      res.json({
+        borrower: {
+          id: borrower.id,
+          legalName: borrower.legalName,
+          einLast4: borrower.einLast4,
+        },
+        total,
+        limit,
+        offset,
+        entries,
+      });
+    } catch (err) {
+      console.error("Sensitive-access audit lookup error:", err);
+      res
+        .status(500)
+        .json({ error: "Failed to load sensitive-access audit entries." });
     }
   },
 );

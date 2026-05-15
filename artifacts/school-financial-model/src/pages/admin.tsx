@@ -33,6 +33,7 @@ import {
   Eye,
   MousePointerClick,
   Compass,
+  KeyRound,
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -2623,6 +2624,266 @@ function SnoozeHint({
   );
 }
 
+// Task #836 — back-office view of every audited EIN/SSN unseal for a
+// borrower entity. The list is read-only metadata: actor, role,
+// purpose, optional note, timestamp. The API never returns plaintext
+// or ciphertext (the decrypt-audit chokepoint persists only `purpose`
+// in the audit row's `after` jsonb), so there's nothing for this
+// component to redact — it just renders what comes back, capped and
+// paginated server-side.
+interface SensitiveAccessEntry {
+  id: number;
+  actorUserId: number | null;
+  actorEmail: string | null;
+  actorName: string | null;
+  actorRole: string | null;
+  purpose: string | null;
+  note: string | null;
+  createdAt: string;
+}
+
+interface SensitiveAccessResponse {
+  borrower: { id: number; legalName: string; einLast4: string | null };
+  total: number;
+  limit: number;
+  offset: number;
+  entries: SensitiveAccessEntry[];
+}
+
+const SENSITIVE_ACCESS_PAGE_SIZE = 25;
+
+function SensitiveAccessSection() {
+  const [borrowerIdInput, setBorrowerIdInput] = useState("");
+  const [submittedId, setSubmittedId] = useState<number | null>(null);
+  const [offset, setOffset] = useState(0);
+  const [response, setResponse] = useState<SensitiveAccessResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (submittedId === null) return;
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      setErrorMessage(null);
+      try {
+        const res = await fetch(
+          `/api/admin/borrower-entities/${submittedId}/sensitive-access?limit=${SENSITIVE_ACCESS_PAGE_SIZE}&offset=${offset}`,
+        );
+        if (res.status === 404) {
+          if (!cancelled) {
+            setResponse(null);
+            setErrorMessage("No borrower entity with that id.");
+          }
+          return;
+        }
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const json = (await res.json()) as SensitiveAccessResponse;
+        if (!cancelled) setResponse(json);
+      } catch {
+        if (!cancelled) setErrorMessage("Failed to load access history.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [submittedId, offset]);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const parsed = Number.parseInt(borrowerIdInput, 10);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      setErrorMessage("Enter a positive borrower entity id.");
+      setResponse(null);
+      setSubmittedId(null);
+      return;
+    }
+    setOffset(0);
+    setSubmittedId(parsed);
+  }
+
+  const total = response?.total ?? 0;
+  const pageStart = response ? response.offset + 1 : 0;
+  const pageEnd = response
+    ? Math.min(response.offset + response.entries.length, total)
+    : 0;
+  const canPrev = offset > 0;
+  const canNext = response ? offset + response.entries.length < total : false;
+
+  return (
+    <div className="space-y-6" data-testid="sensitive-access-section">
+      <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <KeyRound className="h-5 w-5 text-primary" />
+          <h2 className="font-display text-lg font-bold">
+            Sensitive-data Access
+          </h2>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Every time an underwriter unseals a borrower's full EIN or SSN, an
+          audit row is recorded. Look up a borrower entity by id to review who
+          requested plaintext and why. Plaintext is never shown here.
+        </p>
+        <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-col">
+            <label
+              htmlFor="sensitive-access-borrower-id"
+              className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1"
+            >
+              Borrower entity id
+            </label>
+            <input
+              id="sensitive-access-borrower-id"
+              data-testid="sensitive-access-borrower-id-input"
+              type="number"
+              min={1}
+              inputMode="numeric"
+              value={borrowerIdInput}
+              onChange={(e) => setBorrowerIdInput(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-border bg-background text-sm w-48"
+              placeholder="e.g. 42"
+            />
+          </div>
+          <button
+            type="submit"
+            className="px-5 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-sm hover:shadow-md transition-all"
+          >
+            Look up
+          </button>
+        </form>
+      </div>
+
+      {errorMessage ? (
+        <div className="bg-destructive/10 text-destructive border border-destructive/20 rounded-xl px-4 py-3 text-sm">
+          {errorMessage}
+        </div>
+      ) : null}
+
+      {loading ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+        </div>
+      ) : null}
+
+      {!loading && response ? (
+        <div
+          className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm"
+          data-testid="sensitive-access-results"
+        >
+          <div className="flex items-baseline justify-between mb-4">
+            <div>
+              <h3 className="font-display text-base font-bold">
+                {response.borrower.legalName}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Entity #{response.borrower.id}
+                {response.borrower.einLast4
+                  ? ` · EIN ending ${response.borrower.einLast4}`
+                  : ""}
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground tabular-nums">
+              {total === 0
+                ? "0 events"
+                : `Showing ${pageStart}–${pageEnd} of ${total}`}
+            </p>
+          </div>
+
+          {response.entries.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No sensitive-data access recorded for this borrower.
+            </p>
+          ) : (
+            <table
+              className="w-full text-sm"
+              data-testid="sensitive-access-table"
+            >
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground border-b border-border/60">
+                  <th className="py-2 pr-3 font-semibold">When</th>
+                  <th className="py-2 pr-3 font-semibold">Actor</th>
+                  <th className="py-2 pr-3 font-semibold">Role</th>
+                  <th className="py-2 pr-3 font-semibold">Purpose</th>
+                  <th className="py-2 font-semibold">Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                {response.entries.map((entry) => (
+                  <tr
+                    key={entry.id}
+                    className="border-b border-border/40 last:border-0 align-top"
+                  >
+                    <td className="py-2 pr-3 whitespace-nowrap text-muted-foreground">
+                      {format(new Date(entry.createdAt), "MMM d, yyyy HH:mm")}
+                    </td>
+                    <td className="py-2 pr-3">
+                      {entry.actorEmail ? (
+                        <div>
+                          <div className="font-medium text-foreground">
+                            {entry.actorName || entry.actorEmail}
+                          </div>
+                          {entry.actorName ? (
+                            <div className="text-xs text-muted-foreground">
+                              {entry.actorEmail}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground italic">
+                          system
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2 pr-3 text-muted-foreground">
+                      {entry.actorRole || "—"}
+                    </td>
+                    <td className="py-2 pr-3">
+                      {entry.purpose || (
+                        <span className="text-muted-foreground italic">
+                          (no purpose recorded)
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2 text-muted-foreground">
+                      {entry.note || "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {total > response.entries.length || offset > 0 ? (
+            <div className="flex items-center justify-end gap-2 mt-4">
+              <button
+                type="button"
+                disabled={!canPrev}
+                onClick={() =>
+                  setOffset(Math.max(0, offset - SENSITIVE_ACCESS_PAGE_SIZE))
+                }
+                className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                disabled={!canNext}
+                onClick={() => setOffset(offset + SENSITIVE_ACCESS_PAGE_SIZE)}
+                className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function AdminPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -2630,7 +2891,7 @@ export function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
-    "analytics" | "feedback" | "errors" | "reviews" | "coaching"
+    "analytics" | "feedback" | "errors" | "reviews" | "coaching" | "sensitive-access"
   >("analytics");
 
   useEffect(() => {
@@ -2755,6 +3016,17 @@ export function AdminPage() {
               Coaching
             </button>
             <button
+              onClick={() => setActiveTab("sensitive-access")}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                activeTab === "sensitive-access"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <KeyRound className="h-4 w-4" />
+              Sensitive Access
+            </button>
+            <button
               onClick={() => setActiveTab("errors")}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                 activeTab === "errors"
@@ -2770,6 +3042,8 @@ export function AdminPage() {
 
         {activeTab === "errors" ? (
           <ErrorsSection />
+        ) : activeTab === "sensitive-access" ? (
+          <SensitiveAccessSection />
         ) : activeTab === "reviews" ? (
           <ReviewsSection />
         ) : activeTab === "coaching" ? (
