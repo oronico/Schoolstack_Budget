@@ -214,7 +214,174 @@ async function main(): Promise<void> {
       await deleteAlertRows();
     }
 
-    console.log("\n— phase 4: failing tick with > MAX_FAILURE_SAMPLES failures truncates samples");
+    console.log("\n— phase 4: repeat tick on same row set is throttled");
+    {
+      // Task #884 — Two consecutive ticks that fail on the same
+      // `(table, row_ids)` set must produce one alert, not two. The
+      // second tick should suppress both the email AND a fresh
+      // error_logs row. A signature change (different row id, or a
+      // newly-failing table) must page immediately on the next tick.
+      process.env.ADMIN_EMAILS = "ops@example.com";
+      process.env.EMAIL_PROVIDER = "console";
+      process.env.EMAIL_FROM = "alerts@example.com";
+
+      const first = await alertOnKeyRotationFailure(makeFailingSummary());
+      check("throttle: first tick dispatched", first.dispatched === true);
+      check("throttle: first tick wrote log row", first.loggedErrorRow === true);
+      check("throttle: first tick emailed admins", first.emailedAdmins === true);
+      check("throttle: first tick not flagged as duplicate", first.suppressedAsDuplicate === false);
+
+      const second = await alertOnKeyRotationFailure(makeFailingSummary());
+      check("throttle: repeat tick suppressed", second.dispatched === false);
+      check("throttle: repeat tick flagged duplicate", second.suppressedAsDuplicate === true);
+      check("throttle: repeat tick wrote NO log row", second.loggedErrorRow === false);
+      check("throttle: repeat tick emailed NOBODY", second.emailedAdmins === false);
+      check("throttle: repeat tick reports same totalFailed", second.totalFailed === 2);
+
+      const rowsAfterRepeat = await db
+        .select()
+        .from(errorLogsTable)
+        .where(eq(errorLogsTable.route, KEY_ROTATION_FAILURE_ROUTE));
+      check(
+        "throttle: only one error_logs row after two identical ticks",
+        rowsAfterRepeat.length === 1,
+        `got ${rowsAfterRepeat.length}`,
+      );
+
+      // A new failure (different row id) must break the dedupe and
+      // page immediately, even though it is the next tick after the
+      // suppressed one.
+      const newRowSummary = {
+        activeKekId: "kek-active",
+        loadedKekIds: ["kek-active", "kek-prev"],
+        results: [
+          {
+            table: "borrower_entities",
+            scanned: 4,
+            alreadyOnActive: 1,
+            rewrapped: 1,
+            failed: 1,
+            failures: [{ id: 999, error: "brand new broken row" }],
+          } satisfies TableRotationSummary,
+        ],
+      };
+      const third = await alertOnKeyRotationFailure(newRowSummary);
+      check("throttle: new row id pages again", third.dispatched === true);
+      check("throttle: new row id NOT flagged duplicate", third.suppressedAsDuplicate === false);
+      check("throttle: new row id wrote log row", third.loggedErrorRow === true);
+      check("throttle: new row id emailed admins", third.emailedAdmins === true);
+
+      const rowsAfterChange = await db
+        .select()
+        .from(errorLogsTable)
+        .where(eq(errorLogsTable.route, KEY_ROTATION_FAILURE_ROUTE));
+      check(
+        "throttle: signature change inserts a second log row (2 total)",
+        rowsAfterChange.length === 2,
+        `got ${rowsAfterChange.length}`,
+      );
+
+      // A new table failing alongside the most recent set is also a
+      // signature change.
+      const newTableSummary = {
+        activeKekId: "kek-active",
+        loadedKekIds: ["kek-active", "kek-prev"],
+        results: [
+          {
+            table: "borrower_entities",
+            scanned: 4,
+            alreadyOnActive: 1,
+            rewrapped: 1,
+            failed: 1,
+            failures: [{ id: 999, error: "brand new broken row" }],
+          } satisfies TableRotationSummary,
+          {
+            table: "founder_profiles",
+            scanned: 2,
+            alreadyOnActive: 1,
+            rewrapped: 0,
+            failed: 1,
+            failures: [{ id: 50, error: "another table now broken too" }],
+          } satisfies TableRotationSummary,
+        ],
+      };
+      const fourth = await alertOnKeyRotationFailure(newTableSummary);
+      check("throttle: new failing table pages again", fourth.dispatched === true);
+      check("throttle: new failing table NOT duplicate", fourth.suppressedAsDuplicate === false);
+
+      // And a tick that exactly repeats the most-recent (now
+      // multi-table) signature is throttled again.
+      const fifth = await alertOnKeyRotationFailure(newTableSummary);
+      check("throttle: identical multi-table tick suppressed", fifth.dispatched === false);
+      check("throttle: identical multi-table tick is duplicate", fifth.suppressedAsDuplicate === true);
+
+      // A zero-window override must disable the throttle entirely:
+      // an invalid value falls back to the default, so use a tiny
+      // positive value and a sleep would be slow — instead, set the
+      // env to a value larger than the test runtime to confirm the
+      // window is honored, then back-date the row in-place to
+      // simulate "outside the window" and verify a fresh page.
+      const origDedupe = process.env.KEY_ROTATION_ALERT_DEDUPE_HOURS;
+      try {
+        await db
+          .update(errorLogsTable)
+          .set({ createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48) })
+          .where(eq(errorLogsTable.route, KEY_ROTATION_FAILURE_ROUTE));
+        process.env.KEY_ROTATION_ALERT_DEDUPE_HOURS = "1";
+        const sixth = await alertOnKeyRotationFailure(newTableSummary);
+        check(
+          "throttle: identical tick OUTSIDE window pages again",
+          sixth.dispatched === true && sixth.suppressedAsDuplicate === false,
+        );
+      } finally {
+        if (origDedupe === undefined) delete process.env.KEY_ROTATION_ALERT_DEDUPE_HOURS;
+        else process.env.KEY_ROTATION_ALERT_DEDUPE_HOURS = origDedupe;
+      }
+
+      // A change to an UNSAMPLED row id (i.e. beyond the first 5
+      // entries we put in `sampleFailures`) must still break the
+      // dedupe — otherwise a high-failure tick could swap rows
+      // outside the sample window and we'd silently swallow the
+      // change. Run two ticks with 12 failures each, where only the
+      // 12th id differs between them, and assert the second pages.
+      await deleteAlertRows();
+      const makeManySummary = (lastId: number) => ({
+        activeKekId: "kek-active",
+        loadedKekIds: ["kek-active"],
+        results: [
+          {
+            table: "borrower_entities",
+            scanned: 20,
+            alreadyOnActive: 0,
+            rewrapped: 0,
+            failed: 12,
+            failures: [
+              ...Array.from({ length: 11 }, (_, i) => ({
+                id: 300 + i,
+                error: `boom-${i}`,
+              })),
+              { id: lastId, error: "tail-of-list" },
+            ],
+          } satisfies TableRotationSummary,
+        ],
+      });
+      const seventh = await alertOnKeyRotationFailure(makeManySummary(900));
+      check("throttle: unsampled-tail first tick pages", seventh.dispatched === true);
+      const eighth = await alertOnKeyRotationFailure(makeManySummary(900));
+      check(
+        "throttle: unsampled-tail repeat (same ids) suppressed",
+        eighth.suppressedAsDuplicate === true,
+      );
+      const ninth = await alertOnKeyRotationFailure(makeManySummary(901));
+      check(
+        "throttle: unsampled-tail change (id past MAX_FAILURE_SAMPLES) pages again",
+        ninth.dispatched === true && ninth.suppressedAsDuplicate === false,
+      );
+
+      await deleteAlertRows();
+    }
+
+    console.log("\n— phase 5: failing tick with > MAX_FAILURE_SAMPLES failures truncates samples");
     {
       process.env.ADMIN_EMAILS = "ops@example.com";
       const many: TableRotationSummary = {

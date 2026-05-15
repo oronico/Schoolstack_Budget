@@ -229,6 +229,14 @@ async function runScheduledKeyRotation(): Promise<void> {
             `errorLogRow=${outcome.loggedErrorRow} emailedAdmins=${outcome.emailedAdmins} ` +
             `recipients=${outcome.emailRecipients.length}`,
         );
+      } else if (outcome.suppressedAsDuplicate) {
+        // Task #884 — surface the throttle so an operator grepping
+        // logs can see that we noticed the failure but treated it as
+        // a repeat of the most recent alerted set.
+        console.warn(
+          `[key-rotation-scheduler] suppressed duplicate failure alert — totalFailed=${outcome.totalFailed} ` +
+            `(matches a recent key_rotation_failure log row within the dedupe window)`,
+        );
       }
     } catch (alertErr) {
       console.error("[key-rotation-scheduler] alert dispatch threw:", alertErr);
