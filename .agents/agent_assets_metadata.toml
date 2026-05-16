@@ -329,3 +329,39 @@ id = "y7WzXwlk_1Y0QR00QmNV0"
 uri = "file://artifacts/api-server/qa-output/populated-samples/Loan_Readiness__Microschool_Startup.pdf"
 type = "pdf"
 title = "Loan Readiness Scorecard — Microschool (populated)"
+
+[[outputs]]
+id = "TNK2IWX4edOVu-HaciGaW"
+uri = "file://artifacts/api-server/tmp/Oakwood_Learning_Studio_5-Year_Financial_Model.xlsx"
+type = "table"
+title = "Microschool — Oakwood Learning Studio (Underwriting Workbook)"
+
+[[outputs]]
+id = "a0gLxJAe-X1o_sHvUv2sN"
+uri = "file://artifacts/api-server/tmp/Oakwood_Learning_Studio_Lender_Conversation_Snapshot.pdf"
+type = "pdf"
+title = "Microschool — Oakwood Learning Studio (Lender Packet PDF)"
+
+[[outputs]]
+id = "NE75bFPt-U2_fcfFjD9tX"
+uri = "file://artifacts/api-server/tmp/Riverside_Christian_Academy_5-Year_Financial_Model.xlsx"
+type = "table"
+title = "Private — Riverside Christian Academy (Underwriting Workbook)"
+
+[[outputs]]
+id = "5YeDB5c7CIfPsg7Yl66hC"
+uri = "file://artifacts/api-server/tmp/Riverside_Christian_Academy_Lender_Conversation_Snapshot.pdf"
+type = "pdf"
+title = "Private — Riverside Christian Academy (Lender Packet PDF)"
+
+[[outputs]]
+id = "zLZHlc5OCFHBAjk-wfOEl"
+uri = "file://artifacts/api-server/tmp/Liberty_STEM_Charter_School_5-Year_Financial_Model.xlsx"
+type = "table"
+title = "Charter — Liberty STEM Charter School (Underwriting Workbook)"
+
+[[outputs]]
+id = "AO0Ou_p1GQbT7g2W-iFzW"
+uri = "file://artifacts/api-server/tmp/Liberty_STEM_Charter_School_Lender_Conversation_Snapshot.pdf"
+type = "pdf"
+title = "Charter — Liberty STEM Charter School (Lender Packet PDF)"
