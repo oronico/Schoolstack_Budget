@@ -282,7 +282,11 @@ describe("genDecisionNudges: add_program-only branches", () => {
   it("emits the 'Profitable, but watch year 1 cash' nudge when year 5 rises but cash dips", () => {
     // Big late revenue + heavy fixed annual space cost: Y1-3 dip negative,
     // Y4-5 surge so yr5Delta > 0 while cashRunwayDeltaMonths < 0.
-    const data = flatProfitableModel(100_000, 0, 50_000);
+    // Task #908: base needs nonzero fixed obligations so the canonical
+    // runway (ending cash / ((Personnel + OpEx + DS) / 12)) is positive
+    // and the added space cost can push it down. With expense=0 in base,
+    // canonical base runway is always 0 and the delta would collapse.
+    const data = flatProfitableModel(100_000, 50_000, 50_000);
     const decision: DecisionInputs = {
       type: "add_program",
       inputs: {

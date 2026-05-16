@@ -77,7 +77,7 @@
       648327.8736056234,
       931043.4840548942
     ],
-    "cashRunwayMonths": 60,
+    "cashRunwayMonths": 2.4,
     "reserveMonths": 47.1,
     "breakEvenYear": 1,
     "loanDebtService": [
@@ -166,7 +166,7 @@
       6871667.473335968,
       9872430.18154996
     ],
-    "cashRunwayMonths": 60,
+    "cashRunwayMonths": 8.7,
     "reserveMonths": 88.9,
     "breakEvenYear": 1,
     "loanDebtService": [
@@ -255,7 +255,7 @@
       1608522.563781949,
       3054731.55560077
     ],
-    "cashRunwayMonths": 3,
+    "cashRunwayMonths": -2.8,
     "reserveMonths": 9.6,
     "breakEvenYear": 2,
     "loanDebtService": [
@@ -344,7 +344,7 @@
       111748.63816468604,
       180700.79770585755
     ],
-    "cashRunwayMonths": 60,
+    "cashRunwayMonths": 1.1,
     "reserveMonths": 11.7,
     "breakEvenYear": 3,
     "loanDebtService": [

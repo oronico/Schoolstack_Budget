@@ -539,7 +539,15 @@ describe("scenario-engine: net margin", () => {
 });
 
 describe("scenario-engine: cash runway and reserves", () => {
-  it("counts first depletion month as month 1 for base model", () => {
+  // Task #908 — `cashRunwayMonths` is the canonical Excel B18 figure:
+  //   ending_unrestricted_cash / ((Personnel + OpEx + Debt Service) / 12)
+  // It is months of fixed-cost coverage from year-end cash, not the legacy
+  // "month of depletion" counter (kept only on the founder-comp teaching
+  // panel via `computeCashRunwayMonths`).
+  it("goes negative when ending cash is negative (canonical formula)", () => {
+    // cash=1000, Y1 revenue=12000, Y1 OpEx=24000 → endingCashY1 = -11000.
+    // Canonical = -11000 / (24000/12) = -5.5 months. Negative is the
+    // signal lenders use to flag a model that runs out of cash mid-year.
     const m = run({
       openingBalances: { cash: 1000 },
       enrollment: { year1: 10, year2: 10, year3: 10, year4: 10, year5: 10, retentionRate: 90 },
@@ -550,17 +558,20 @@ describe("scenario-engine: cash runway and reserves", () => {
         { id: "e1", enabled: true, category: "administrative_general", driverType: "annual_fixed", amounts: [24000, 24000, 24000, 24000, 24000] },
       ],
     });
-    expect(m.cashRunwayMonths).toBe(1);
+    expect(m.cashRunwayMonths).toBeCloseTo(-5.5, 1);
   });
 
-  it("returns 60 months when always profitable", () => {
+  it("returns 0 when there are no fixed obligations (canonical formula)", () => {
+    // Revenue with no expense / debt-service rows ⇒ obligations = 0.
+    // The canonical formula returns 0 (not the legacy 60-month cap),
+    // because months-of-coverage isn't meaningful without obligations.
     const m = run({
       openingBalances: { cash: 100000 },
       revenueRows: [
         { id: "r1", enabled: true, category: "other_revenue", driverType: "annual_fixed", amounts: [200000, 200000, 200000, 200000, 200000] },
       ],
     });
-    expect(m.cashRunwayMonths).toBe(60);
+    expect(m.cashRunwayMonths).toBe(0);
   });
 });
 
