@@ -135,6 +135,28 @@ those ports are reused. Re-run after any change to:
 - the budgeting-primer modal, or
 - the Scenarios page (custom scenarios + What-If drawer).
 
+### Model Prep Guide PDF
+
+The printable Model Prep Guide (`artifacts/school-financial-model/public/prep-guide.pdf`)
+embeds wizard screenshots from `artifacts/school-financial-model/public/images/prep-guide/`.
+Both are kept in sync with the wizard UI by one command:
+
+```bash
+pnpm --filter @workspace/school-financial-model run refresh:prep-guide
+```
+
+This boots its own ephemeral api-server (port 8080) and Vite dev server
+(default port 22094), captures all 10 wizard step screenshots, rebuilds
+the PDF, and tears the servers back down. Servers that are already
+running on those ports are reused.
+
+A scheduled GitHub Action (`.github/workflows/refresh-prep-guide.yml`)
+runs the same command weekly and on demand (`workflow_dispatch`),
+installs the Playwright Chromium browser it needs, and opens a PR — or
+commits directly on `main` for manual runs — when the screenshots or
+PDF have drifted, so the printable guide stays trustworthy even when
+nobody remembers to refresh it after a wizard change.
+
 ### Environment Variables
 
 | Variable | Required | Description |

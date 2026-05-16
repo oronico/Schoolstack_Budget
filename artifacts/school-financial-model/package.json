@@ -15,7 +15,8 @@
     "test:e2e:smoke": "playwright test --grep @smoke",
     "capture:screenshots": "tsx scripts/refresh-screenshots.ts",
     "capture:prep-guide": "tsx scripts/capture-prep-guide-screenshots.ts",
-    "build:prep-guide": "pnpm --filter @workspace/api-server exec tsx scripts/build-prep-guide.ts"
+    "build:prep-guide": "pnpm --filter @workspace/api-server exec tsx scripts/build-prep-guide.ts",
+    "refresh:prep-guide": "tsx scripts/refresh-prep-guide.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
