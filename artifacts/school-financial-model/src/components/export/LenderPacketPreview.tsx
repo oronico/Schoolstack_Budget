@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { X, Download, Loader2, Shield, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, FileText, RefreshCw } from "lucide-react";
+import { Fragment, useCallback, useEffect, useState } from "react";
+import { X, Download, Loader2, Shield, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, FileText, RefreshCw, BookOpen } from "lucide-react";
 import { trackExport } from "@/hooks/useExportTracker";
 import { InsightCallout } from "@/components/coaching/InsightCallout";
 import { buildForecastFilterQuery } from "@/lib/forecast-accuracy-query";
@@ -234,18 +234,56 @@ export function LenderPacketPreview({
           {packet.cashRunway && <CashRunwayCard cash={packet.cashRunway} variant="lender" />}
           {packet.riskMitigants.length > 0 && <RiskMitigantCards risks={packet.riskMitigants} />}
           <div className="space-y-2 mt-6">
-            {packet.sections
-              .filter((s) => s.included && s.id !== "cover")
-              .map((section) => (
-                <SectionCard
-                  key={section.id}
-                  section={section}
-                  expanded={expandedSections.has(section.id)}
-                  onToggle={() => toggleSection(section.id)}
-                />
-              ))}
+            {(() => {
+              const visible = packet.sections.filter(
+                (s) => s.included && s.id !== "cover",
+              );
+              const hasStressTests = visible.some((s) => s.id === "stress_tests");
+              return (
+                <>
+                  {visible.map((section) => (
+                    <Fragment key={section.id}>
+                      <SectionCard
+                        section={section}
+                        expanded={expandedSections.has(section.id)}
+                        onToggle={() => toggleSection(section.id)}
+                        anchorId={`lender-preview-section-${section.id}`}
+                      />
+                      {section.id === "stress_tests" && (
+                        <ProFormaMethodologyNote
+                          onJumpToProjection={() =>
+                            scrollToPreviewAnchor(
+                              "lender-preview-section-five_year_projection",
+                              () => setExpandedSections((p) => new Set(p).add("five_year_projection")),
+                            )
+                          }
+                          onJumpToAttachments={() =>
+                            scrollToPreviewAnchor("lender-preview-attachments")
+                          }
+                        />
+                      )}
+                    </Fragment>
+                  ))}
+                  {!hasStressTests && (
+                    <ProFormaMethodologyNote
+                      onJumpToProjection={() =>
+                        scrollToPreviewAnchor(
+                          "lender-preview-section-five_year_projection",
+                          () => setExpandedSections((p) => new Set(p).add("five_year_projection")),
+                        )
+                      }
+                      onJumpToAttachments={() =>
+                        scrollToPreviewAnchor("lender-preview-attachments")
+                      }
+                    />
+                  )}
+                </>
+              );
+            })()}
           </div>
-          <PacketAttachmentsPreview />
+          <div id="lender-preview-attachments">
+            <PacketAttachmentsPreview />
+          </div>
         </div>
       </div>
     </div>
@@ -491,14 +529,88 @@ function RiskMitigantCards({ risks }: { risks: RiskMitigant[] }) {
   );
 }
 
+/**
+ * Task #897 — In-app twin of the "Reading the Two Workbooks" methodology
+ * callout that ships in the downloaded lender packet PDF (see
+ * `renderProFormaMethodologyNote` in
+ * `artifacts/api-server/src/lib/packets/lender-packet-pdf.ts`). The copy
+ * MUST stay in sync with that PDF block — both surfaces explain why the
+ * underwriting Operating Statement and the lender Pro-Forma 5-Year P&L
+ * will not tie on the same payload, so a founder previewing the packet
+ * in-app sees the same disclosure a lender will read in the PDF before
+ * they get a "why don't these two files agree?" question.
+ *
+ * The "Jump to" buttons scroll the modal body to the 5-Year Financial
+ * Projection card and the Packet Attachments preview (the two Excel
+ * workbooks the note is referring to). When the projection card is
+ * collapsed we expand it first so the founder lands on actual content
+ * instead of a closed header.
+ */
+const PRO_FORMA_METHODOLOGY_NOTE_BODY =
+  "This packet ships two Excel workbooks. The 5-Year Financial Model (underwriting) is the canonical bottom line and uses the full driver engine; its Operating Statement Net Income subtracts personnel, operating expenses, interest, principal & capital outlays, and depreciation. The Lender Pro-Forma is a simplified comparator built from per-student / per-row averages so a reviewer can re-run sensitivities by editing one assumption; its 5-Year P&L Net Income is GAAP-style (NOI minus interest only — principal and depreciation are not on that P&L). Because the two sheets use different driver models AND different bottom-line definitions, their Y1 Net Income figures will not tie on the same payload, and they are not meant to. The figures cited in this PDF narrative source from the underwriting model.";
+
+function scrollToPreviewAnchor(anchorId: string, beforeScroll?: () => void) {
+  if (beforeScroll) beforeScroll();
+  // Defer to next frame so any state-driven expand has rendered before we measure.
+  requestAnimationFrame(() => {
+    const el = document.getElementById(anchorId);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+
+export function ProFormaMethodologyNote({
+  onJumpToProjection,
+  onJumpToAttachments,
+}: {
+  onJumpToProjection: () => void;
+  onJumpToAttachments: () => void;
+}) {
+  return (
+    <div
+      data-testid="pro-forma-methodology-note"
+      className="rounded-xl border border-[#1E293B]/15 bg-[#FAF9F7] p-4"
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <BookOpen className="h-4 w-4 text-[#1E293B]" />
+        <span className="font-bold text-sm text-[#1E293B]">
+          Reading the Two Workbooks
+        </span>
+      </div>
+      <p className="text-sm leading-relaxed text-[#1E293B]/90">
+        {PRO_FORMA_METHODOLOGY_NOTE_BODY}
+      </p>
+      <div className="flex flex-wrap gap-2 mt-3">
+        <button
+          type="button"
+          onClick={onJumpToProjection}
+          data-testid="pro-forma-methodology-jump-projection"
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-[#1E293B]/20 bg-white text-xs font-medium text-[#1E293B] hover:bg-[#1E293B] hover:text-white transition-colors"
+        >
+          Jump to 5-Year Financial Projection
+        </button>
+        <button
+          type="button"
+          onClick={onJumpToAttachments}
+          data-testid="pro-forma-methodology-jump-attachments"
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-[#1E293B]/20 bg-white text-xs font-medium text-[#1E293B] hover:bg-[#1E293B] hover:text-white transition-colors"
+        >
+          Jump to packet attachments
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SectionCard({
   section,
   expanded,
   onToggle,
+  anchorId,
 }: {
   section: PacketSection;
   expanded: boolean;
   onToggle: () => void;
+  anchorId?: string;
 }) {
   const hasContent =
     section.narrative ||
@@ -508,7 +620,7 @@ function SectionCard({
     (section.insights && section.insights.length > 0);
 
   return (
-    <div className="border rounded-xl overflow-hidden">
+    <div id={anchorId} className="border rounded-xl overflow-hidden scroll-mt-4">
       <button
         onClick={onToggle}
         className="w-full flex items-center justify-between px-4 py-3 bg-[#FAF9F7] hover:bg-[#F5F4F0] transition-colors text-left"
