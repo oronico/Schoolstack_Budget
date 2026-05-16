@@ -113,11 +113,11 @@ ts it.
 Oper
 ating cash carr
 ies the school f
-or 3.099853717935006 months from open bef
+or 3.1 months from open bef
 ore another funding e
 v
-ent is 
-needed, with the tightest y
+ent is needed, with the 
+tightest y
 ear landing at $34,397 of cash on hand in 
 Y
 ear 1.
@@ -276,7 +276,7 @@ osition:
 y is appr
 o
 ximatel
-y 3.099853717935006 months
+y 3.1 months
 Assumptions Confidence
 Overall:
  Needs Suppor
@@ -348,18 +348,18 @@ or y
 our mission.
  
 The school 
+has appro
+ximately 3.1 months of cash r
+unw
+a
+y
+.
 SchoolStac
 k Budget - Gener
 ated <DATE>
 P
 age 2 of 7
 --- PAGE 3 ---
-has appro
-ximately 3.099853717935006 months of cash r
-unw
-a
-y
-.
 [~] 
 Lender Readiness:
  Strong
@@ -377,7 +377,7 @@ ou gather real data.
 Cash Runw
 a
 y:
- 3.099853717935006 months
+ 3.1 months
 Sc
 hool Over
 vie
@@ -1235,10 +1235,10 @@ ear
 Oper
 ating cash carr
 ies the school f
-or 3.099853717935006 months from open bef
+or 3.1 months from open bef
 ore the ne
-xt funding milestone is 
-needed, with the tightest y
+xt funding milestone is needed, with the 
+tightest y
 ear landing at $34,397 of cash on hand in 
 Y
 ear 1.
@@ -1247,7 +1247,8 @@ ating break-e
 v
 en is reached in 
 Y
-ear 1, which is the point at which ear
+ear 1, which is 
+the point at which ear
 ned re
 v
 en

@@ -195,15 +195,15 @@ ating cash r
 unw
 a
 y e
-xtends 25.12990016007627 months from the open 
-bef
-ore additional capital w
+xtends 25.1 months from the open bef
+ore additional 
+capital w
 ould be required, with the tightest position at $281,897 of ending cash in 
 Y
 ear 1.
  
-The 
-model crosses oper
+The model crosses 
+oper
 ating break-e
 v
 en in 
@@ -213,9 +213,9 @@ Y
 ear 1 requires 7 students to co
 v
 er fix
-ed costs and debt 
-ser
-vice (16% of stated capacity).
+ed costs and debt ser
+vice (16% of 
+stated capacity).
 Y
 ear 1 re
 v
@@ -435,7 +435,7 @@ ue will add stability
 Cash Runw
 a
 y:
- 25.12990016007627 months
+ 25.1 months
 Budg
 et Narrative
 Gift-Anchored F
@@ -1523,12 +1523,12 @@ orecast:
  
 Y
 ear 1  J
-ul at $167K.
+ul at $135K.
 [ ] 
 Cash Runw
 a
 y:
- 25.12990016007627 months
+ 25.1 months
 [ ] 
 Lo
 w
@@ -1536,7 +1536,7 @@ est Cash Month:
  
 Y
 ear 1  J
-ul ($167K)
+ul ($135K)
 Cum
 ulative Cash P
 osition
@@ -1589,82 +1589,82 @@ Ending
 J
 ul
 $12K
-$170K
+$138K
 ($15K)
-$155K
-$167K
+$123K
+$135K
 A
 ug
-$167K
-$19K
+$135K
+$15K
 ($15K)
-$4K
-$171K
+$190
+$135K
 Sep
-$171K
-$19K
+$135K
+$15K
 ($15K)
-$4K
-$175K
+$190
+$136K
 Oct
-$175K
-$104K
+$136K
+$84K
 ($15K)
-$89K
-$264K
+$69K
+$205K
 No
 v
-$264K
-$19K
+$205K
+$15K
 ($15K)
-$4K
-$267K
+$190
+$205K
 Dec
-$267K
-$19K
+$205K
+$15K
 ($15K)
-$4K
-$271K
+$190
+$205K
 J
 an
-$271K
-$59K
+$205K
+$48K
 ($15K)
-$44K
-$315K
+$33K
+$238K
 F
 eb
-$315K
-$19K
+$238K
+$15K
 ($15K)
-$4K
-$318K
+$190
+$238K
 Mar
-$318K
-$19K
+$238K
+$15K
 ($15K)
-$4K
-$322K
+$190
+$238K
 Apr
-$322K
-$44K
+$238K
+$36K
 ($15K)
-$29K
-$351K
+$20K
+$259K
 Ma
 y
-$351K
-$19K
+$259K
+$15K
 ($391)
-$18K
-$369K
+$15K
+$274K
 J
 un
-$369K
-$417
+$274K
+$338
 ($391)
-$25
-$369K
+$8K
+$282K
 Y
 ear 2 
 Monthl
@@ -1684,83 +1684,83 @@ w
 Ending
 J
 ul
-$369K
-$141K
+$282K
+$135K
 ($19K)
-$122K
-$491K
+$117K
+$399K
 A
 ug
-$491K
-$25K
+$399K
+$24K
 ($19K)
-$7K
-$498K
+$6K
+$404K
 Sep
-$498K
-$25K
+$404K
+$24K
 ($19K)
-$7K
-$504K
+$6K
+$410K
 Oct
-$504K
-$85K
+$410K
+$82K
 ($19K)
-$67K
-$571K
+$63K
+$474K
 No
 v
-$571K
-$25K
+$474K
+$24K
 ($19K)
-$7K
-$578K
+$6K
+$479K
 Dec
-$578K
-$25K
+$479K
+$24K
 ($19K)
-$7K
-$584K
+$6K
+$485K
 J
 an
-$584K
-$65K
+$485K
+$63K
 ($19K)
-$47K
-$631K
+$44K
+$529K
 F
 eb
-$631K
-$25K
+$529K
+$24K
 ($19K)
-$7K
-$637K
+$6K
+$535K
 Mar
-$637K
-$25K
+$535K
+$24K
 ($19K)
-$7K
-$644K
+$6K
+$540K
 Apr
-$644K
-$60K
+$540K
+$58K
 ($19K)
-$42K
-$685K
+$39K
+$580K
 Ma
 y
-$685K
-$25K
+$580K
+$24K
 ($19K)
-$7K
-$692K
+$6K
+$585K
 J
 un
-$692K
-$542
+$585K
+$522
 ($19K)
-$-18K
-$674K
+$-19K
+$567K
 Y
 ear 3 
 Monthl
@@ -1786,83 +1786,83 @@ w
 Ending
 J
 ul
-$674K
-$96K
+$567K
+$92K
 ($19K)
-$76K
-$750K
+$72K
+$639K
 A
 ug
-$750K
-$32K
+$639K
+$31K
 ($19K)
-$13K
-$763K
+$11K
+$650K
 Sep
-$763K
-$32K
+$650K
+$31K
 ($19K)
-$13K
-$775K
+$11K
+$661K
 Oct
-$775K
-$72K
+$661K
+$69K
 ($19K)
-$53K
-$828K
+$49K
+$711K
 No
 v
-$828K
-$32K
+$711K
+$31K
 ($19K)
-$13K
-$840K
+$11K
+$722K
 Dec
-$840K
-$32K
+$722K
+$31K
 ($19K)
-$13K
-$853K
+$11K
+$733K
 J
 an
-$853K
-$57K
+$733K
+$54K
 ($19K)
-$38K
-$890K
+$35K
+$768K
 F
 eb
-$890K
-$32K
+$768K
+$31K
 ($19K)
-$13K
-$903K
+$11K
+$780K
 Mar
-$903K
-$32K
+$780K
+$31K
 ($19K)
-$13K
-$915K
+$11K
+$791K
 Apr
-$915K
-$82K
+$791K
+$78K
 ($19K)
-$63K
-$978K
+$59K
+$850K
 Ma
 y
-$978K
-$32K
+$850K
+$31K
 ($19K)
-$13K
-$990K
+$11K
+$861K
 J
 un
-$990K
-$667
+$861K
+$638
 ($19K)
 $-19K
-$972K
+$842K
 Y
 ear 4 
 Monthl
@@ -1882,83 +1882,83 @@ w
 Ending
 J
 ul
-$972K
-$56K
+$842K
+$53K
 ($20K)
-$36K
-$1.0M
+$33K
+$875K
 A
 ug
-$1.0M
-$38K
+$875K
+$36K
 ($20K)
-$18K
-$1.0M
+$16K
+$891K
 Sep
-$1.0M
-$38K
+$891K
+$36K
 ($20K)
-$18K
-$1.0M
+$16K
+$907K
 Oct
-$1.0M
-$58K
+$907K
+$55K
 ($20K)
-$38K
-$1.1M
+$35K
+$942K
 No
 v
-$1.1M
-$38K
+$942K
+$36K
 ($20K)
-$18K
-$1.1M
+$16K
+$958K
 Dec
-$1.1M
-$38K
+$958K
+$36K
 ($20K)
-$18K
-$1.1M
+$16K
+$974K
 J
 an
-$1.1M
-$38K
+$974K
+$36K
 ($20K)
-$18K
-$1.1M
+$16K
+$990K
 F
 eb
-$1.1M
-$38K
+$990K
+$36K
 ($20K)
-$18K
-$1.2M
+$16K
+$1.0M
 Mar
-$1.2M
-$38K
+$1.0M
+$36K
 ($20K)
-$18K
-$1.2M
+$16K
+$1.0M
 Apr
-$1.2M
-$103K
+$1.0M
+$98K
 ($20K)
-$83K
-$1.3M
+$78K
+$1.1M
 Ma
 y
-$1.3M
-$38K
+$1.1M
+$36K
 ($20K)
-$18K
-$1.3M
+$16K
+$1.1M
 J
 un
-$1.3M
-$771
+$1.1M
+$734
 ($20K)
-$-19K
-$1.3M
+$-20K
+$1.1M
 Y
 ear 5 
 Monthl
@@ -1984,83 +1984,83 @@ w
 Ending
 J
 ul
-$1.3M
-$16K
+$1.1M
+$15K
 ($21K)
-$-5K
-$1.2M
+$-6K
+$1.1M
 A
 ug
-$1.2M
-$42K
+$1.1M
+$40K
 ($21K)
-$21K
-$1.3M
+$19K
+$1.1M
 Sep
-$1.3M
-$42K
+$1.1M
+$40K
 ($21K)
-$21K
-$1.3M
+$19K
+$1.1M
 Oct
-$1.3M
-$42K
+$1.1M
+$40K
 ($21K)
-$21K
-$1.3M
+$19K
+$1.1M
 No
 v
-$1.3M
-$42K
+$1.1M
+$40K
 ($21K)
-$21K
-$1.3M
+$19K
+$1.2M
 Dec
-$1.3M
-$42K
+$1.2M
+$40K
 ($21K)
-$21K
-$1.4M
+$19K
+$1.2M
 J
 an
-$1.4M
-$42K
+$1.2M
+$40K
 ($21K)
-$21K
-$1.4M
+$19K
+$1.2M
 F
 eb
-$1.4M
-$42K
+$1.2M
+$40K
 ($21K)
-$21K
-$1.4M
+$19K
+$1.2M
 Mar
-$1.4M
-$42K
+$1.2M
+$40K
 ($21K)
-$21K
-$1.4M
+$19K
+$1.2M
 Apr
-$1.4M
-$122K
+$1.2M
+$116K
 ($21K)
-$101K
-$1.5M
+$95K
+$1.3M
 Ma
 y
-$1.5M
-$42K
+$1.3M
+$40K
 ($21K)
-$21K
-$1.5M
+$19K
+$1.4M
 J
 un
-$1.5M
-$833
+$1.4M
+$790
 ($21K)
 $-20K
-$1.5M
+$1.3M
 Lo
 west Cash 
 Month b
@@ -2075,27 +2075,27 @@ Y
 ear 1
 J
 ul
-$167K
+$135K
 Y
 ear 2
 J
 ul
-$491K
+$399K
 Y
 ear 3
 J
 ul
-$750K
+$639K
 Y
 ear 4
 J
 ul
-$1.0M
+$875K
 Y
 ear 5
 J
 ul
-$1.2M
+$1.1M
 Debt Ser
 vice Co
 vera
@@ -2333,8 +2333,7 @@ Y
 ear 1
 52.9
 52.65x
-21.613774678
-579365
+21.6
 Loss of Philanthrop
 y
 $4K
@@ -2343,8 +2342,7 @@ Y
 ear 1
 16.5
 1.78x
-1.3157465329
-173204
+1.3
 Hard re
 v
 en
@@ -2355,8 +2353,7 @@ Y
 ear 1
 16.5
 1.78x
-1.3157465329
-173204
+1.3
 Occupancy +15%, P
 ersonnel +5%
 $261K
@@ -2365,8 +2362,7 @@ Y
 ear 1
 57.0
 56.59x
-21.540600198
-370445
+21.5
 Re
 v
 en
@@ -2379,8 +2375,7 @@ Y
 ear 1
 43.7
 37.07x
-15.239093583
-999388
+15.2
 Interest Rate +2%
 $270K
 $243K
@@ -2388,8 +2383,7 @@ Y
 ear 1
 63.9
 55.85x
-23.665257951
-828462
+23.7
 Lender Readiness
 Lender Readiness:
  Not 

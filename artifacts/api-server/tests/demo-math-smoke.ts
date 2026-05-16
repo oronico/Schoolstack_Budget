@@ -1021,6 +1021,99 @@ async function runOne(c: DemoCase): Promise<void> {
     }
   }
 
+  // ── 5b. Task #913 — Y1/Y5 ending cash parity between the lender
+  //     PDF's Monthly Cash Flow Summary tables and its Operating
+  //     Reserve & Ending Cash table. Pre-fix, `cash_flow` computed
+  //     monthly cash flow from raw `md.revenueRows` (gross sticker
+  //     × students), while the Operating Reserve table consumed
+  //     canonical `co.cumulativeFinancials` — the two revenue bases
+  //     drifted by the funding-mix correction (Liberty Y1 trough
+  //     printed $2.3M on Op Reserve vs $3.1M on Monthly Cash Flow
+  //     June ending). #913 routes Monthly Cash Flow Summary revenue
+  //     through canonical `yd.totalRevenue` AND locks each year's
+  //     M12 ending cumulative onto the Operating Reserve formula
+  //     (`openingBalances.cash + co.cumulativeFinancials[y].cumulativeNetIncome`),
+  //     so the two PDF surfaces tie within fmt()'s K/M rounding.
+  //
+  //     Scope note: we don't also re-pin DSCR & Covenants here —
+  //     its Y1 cash tie is enforced in section 5 above via
+  //     `cashPosition[0]`. The Op Reserve openingBalances basis vs
+  //     `cashPosition`'s engine-starting-cash basis (which can fold
+  //     in Sources & Uses capital infusions) is a separate concern.
+  //
+  //     Tolerance: ±$50K when target ≥ $1M (one fmt() M-decimal),
+  //     ±$1K otherwise (one fmt() K-rounding unit).
+  function parseFmtShorthand(s: string): number | null {
+    const cleaned = s.replace(/\s+/g, "");
+    const m = cleaned.match(/^\(?-?\$?(-?[0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)([KMB]?)\)?$/);
+    if (!m) return null;
+    const isNeg = /^\(/.test(cleaned) || /^-\$/.test(cleaned) || /^\$-/.test(cleaned);
+    const base = Number(m[1].replace(/,/g, ""));
+    if (!Number.isFinite(base)) return null;
+    const mult = m[2] === "M" ? 1_000_000 : m[2] === "K" ? 1_000 : m[2] === "B" ? 1_000_000_000 : 1;
+    return (isNeg ? -1 : 1) * Math.abs(base) * mult;
+  }
+  function cashParityTol(target: number): number {
+    return Math.abs(target) >= 1_000_000 ? 50_000 : 1_000;
+  }
+  // Parity target: the Operating Reserve formula in `buildCashRunway`
+  // (L58-63) = `openingBalances.cash + cumulativeNetIncome[y]`. Both
+  // Monthly Cash Flow Summary M12 ending and the Operating Reserve
+  // table endingCash must print this same value to within fmt() tol.
+  const opOpeningCash = (md as { openingBalances?: { cash?: number } }).openingBalances?.cash ?? 0;
+  const opReserveTargets = consultant.cumulativeFinancials.map(
+    (cf) => opOpeningCash + cf.cumulativeNetIncome,
+  );
+  const cashFlowSection = packet.sections.find((s) => s.id === "cash_flow");
+  check(`${tag} packet cash_flow section present`, !!cashFlowSection);
+  const yearByYearCash = packet.cashRunway?.yearByYearCash ?? [];
+  for (const yIdx of [0, 4]) {
+    const target = opReserveTargets[yIdx];
+    if (target === undefined) continue;
+    const tol = cashParityTol(target);
+    // (a)(b) Monthly Cash Flow Summary M12 ending ties to the Op
+    // Reserve formula. Ending is the 5th value (index 4) of the
+    // last (M12) row of the "Year N Monthly Cash Flow Summary" table.
+    if (cashFlowSection) {
+      const table = (cashFlowSection.tables ?? []).find((t) =>
+        t.title === `Year ${yIdx + 1} Monthly Cash Flow Summary`);
+      check(`${tag} cash_flow section has "Year ${yIdx + 1} Monthly Cash Flow Summary" table`, !!table);
+      if (table) {
+        check(`${tag} Y${yIdx + 1} Monthly Cash Flow Summary table has 12 month rows`,
+          table.rows.length === 12, `got ${table.rows.length} rows`);
+        const lastRow = table.rows[table.rows.length - 1];
+        const endingStr = String(lastRow?.values?.[4] ?? "");
+        const parsed = parseFmtShorthand(endingStr);
+        check(`${tag} Y${yIdx + 1} Monthly Cash Flow Summary M12 ending parses (${endingStr})`,
+          parsed !== null);
+        if (parsed !== null) {
+          check(
+            `${tag} Y${yIdx + 1} Monthly Cash Flow Summary ending ties to Operating Reserve formula (engine=${target.toFixed(0)}, printed=${endingStr})`,
+            Math.abs(parsed - target) <= tol,
+            `parsed=${parsed}, engine=${target}, drift=${Math.abs(parsed - target)}, tol=${tol}`,
+          );
+        }
+      }
+    }
+    // (c)(d) Operating Reserve table itself prints the formula value
+    // — pin it directly so if both halves drift together the parity
+    // assertion above doesn't silently pass.
+    const entry = yearByYearCash[yIdx];
+    check(`${tag} Operating Reserve yearByYearCash[${yIdx}] present`, !!entry);
+    if (entry) {
+      const parsed = parseFmtShorthand(String(entry.endingCash));
+      check(`${tag} Operating Reserve Y${yIdx + 1} endingCash parses (${entry.endingCash})`,
+        parsed !== null);
+      if (parsed !== null) {
+        check(
+          `${tag} Operating Reserve Y${yIdx + 1} endingCash matches its formula source (engine=${target.toFixed(0)}, printed=${entry.endingCash})`,
+          Math.abs(parsed - target) <= tol,
+          `parsed=${parsed}, engine=${target}, drift=${Math.abs(parsed - target)}, tol=${tol}`,
+        );
+      }
+    }
+  }
+
   // ── 6. Task #910 — DSCR Summary section must print the canonical
   //     normalized Y1 DSCR (and the As-Planned vs Normalized table its
   //     reported counterpart), not a third independent aggregation.

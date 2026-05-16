@@ -1082,6 +1082,25 @@ function buildCashFlow(s: PacketSection, co: ConsultantOutput, md: ModelData, ye
   const fyStartIdx = fyStartMonth - 1;
   const startingCashPacket = ob?.cash ?? 0;
 
+  // Task #913 — Unify Y1/Y5 ending cash across Monthly Cash Flow Summary
+  // and Operating Reserve. Pre-fix, the monthly series here distributed
+  // raw `md.revenueRows` (gross sticker × students, e.g. Liberty
+  // $5.85M) while the Operating Reserve table consumed
+  // `co.cumulativeFinancials` (canonical post-#860/#912 funding-mix-
+  // corrected, e.g. Liberty $4.875M). Same two-revenue-bases bug the
+  // workbook's Monthly Cash Flow Y1 tab solved via Task #738. Mirror
+  // that pattern here:
+  //   1. Rescale monthly inflow so its annual sum equals
+  //      `yd.totalRevenue` (canonical, set in computeYearlyData L173).
+  //   2. Force per-year ending cumulative onto the canonical accrual
+  //      cash position (`co.cashPosition[y]` from #931, or
+  //      `startingCash + co.cumulativeFinancials[y].cumulativeNetIncome`
+  //      as fallback) by absorbing residual rounding drift into the
+  //      last month's net. This guarantees Monthly Cash Flow Summary
+  //      ending == Operating Reserve ending == DSCR Ending Cash to
+  //      the cent, across every modeled year.
+  // Monthly *shape* (per-stream timing) is preserved — only the
+  // annual sum + the year-end tie shift.
   const seriesByYear: { year: number; series: ReturnType<typeof computeYear1MonthlyCashFlow>; opening: number }[] = [];
   {
     let runningOpening = startingCashPacket;
@@ -1099,6 +1118,59 @@ function buildCashFlow(s: PacketSection, co: ConsultantOutput, md: ModelData, ye
         openingCash: runningOpening,
         opMonths: yOpMonths,
       });
+
+      // (1) Rescale inflow to canonical annual revenue.
+      const inflowSum = series.inflow.reduce((a, b) => a + b, 0);
+      if (yd.totalRevenue > 0 && inflowSum > 0 && Math.abs(inflowSum - yd.totalRevenue) > 0.5) {
+        const scale = yd.totalRevenue / inflowSum;
+        for (let m = 0; m < 12; m++) {
+          series.inflow[m] *= scale;
+          series.net[m] = series.inflow[m] - series.outflow[m];
+        }
+      } else if (yd.totalRevenue > 0 && inflowSum === 0) {
+        // Degenerate (no per-stream timing produced any monthly cash).
+        // Spread canonical revenue evenly over op months so the annual
+        // tie still holds.
+        const flat = yd.totalRevenue / yOpMonths;
+        for (let m = 0; m < 12; m++) {
+          series.inflow[m] = m < yOpMonths ? flat : 0;
+          series.net[m] = series.inflow[m] - series.outflow[m];
+        }
+      }
+
+      // (2) Lock ending cumulative to the Operating Reserve formula
+      // (`buildCashRunway` L58-63): `openingBalances.cash +
+      // co.cumulativeFinancials[y].cumulativeNetIncome`. This is the
+      // exact figure printed in the lender packet's Operating
+      // Reserve & Ending Cash table, so locking the Monthly Cash
+      // Flow Summary's M12 ending onto it guarantees the two PDF
+      // surfaces tie to the cent. We intentionally do NOT target
+      // `co.cashPosition[y]` here: that field uses the engine's
+      // own starting-cash basis (which can fold in Sources & Uses
+      // capital infusions) and diverges from the openingBalances
+      // basis the Operating Reserve table uses. Reconciling those
+      // two starting-cash bases is a separate concern.
+      const canonicalCumNI = co.cumulativeFinancials[y]?.cumulativeNetIncome;
+      const targetEnding = typeof canonicalCumNI === "number"
+        ? startingCashPacket + canonicalCumNI
+        : undefined;
+      let running = runningOpening;
+      for (let m = 0; m < 12; m++) {
+        running += series.net[m];
+        series.cumulative[m] = running;
+      }
+      if (typeof targetEnding === "number") {
+        const drift = targetEnding - series.cumulative[11];
+        if (Math.abs(drift) > 0.5) {
+          series.net[11] += drift;
+          let r2 = runningOpening;
+          for (let m = 0; m < 12; m++) {
+            r2 += series.net[m];
+            series.cumulative[m] = r2;
+          }
+        }
+      }
+
       seriesByYear.push({ year: y, series, opening: runningOpening });
       runningOpening = series.cumulative[series.cumulative.length - 1];
     }

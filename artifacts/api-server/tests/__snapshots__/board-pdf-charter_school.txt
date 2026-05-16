@@ -116,19 +116,18 @@ ts it.
 Oper
 ating cash carr
 ies the school f
-or 11.122823375736088 months from open bef
+or 11.1 months from open bef
 ore another funding e
 v
-ent is 
-needed, with the tightest y
+ent is needed, with the 
+tightest y
 ear landing at $2,258,592 of cash on hand in 
 Y
 ear 1.
  Oper
 ating break-e
 v
-en is reached 
-in 
+en is reached in 
 Y
 ear 1.
 On the same basis a lender will use
@@ -281,7 +280,7 @@ osition:
 y is appr
 o
 ximatel
-y 11.122823375736088 months
+y 11.1 months
 Founder's Narrative
 Fla
 g
@@ -365,7 +364,7 @@ y
  
 The school has 
 appro
-ximately 11.122823375736088 months of cash r
+ximately 11.1 months of cash r
 unw
 a
 y
@@ -399,7 +398,7 @@ or funding gaps
 Cash Runw
 a
 y:
- 11.122823375736088 months
+ 11.1 months
 Sc
 hool Over
 vie
@@ -1238,20 +1237,20 @@ ear
 Oper
 ating cash carr
 ies the school f
-or 11.122823375736088 months from open bef
+or 11.1 months from open bef
 ore the ne
-xt funding milestone 
-is needed, with the tightest y
+xt funding milestone is needed, with 
+the tightest y
 ear landing at $2,258,592 of cash on hand in 
 Y
 ear 1.
  Oper
 ating break-e
 v
-en is 
-reached in 
+en is reached in 
 Y
-ear 1, which is the point at which ear
+ear 1, 
+which is the point at which ear
 ned re
 v
 en
