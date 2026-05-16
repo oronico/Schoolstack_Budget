@@ -11,12 +11,14 @@ name: prep-guide-drift
 # Without an automated PR check, a contributor can ship a wizard UI
 # tweak and not realize the printable guide is now stale — the scheduled
 # `refresh-prep-guide` workflow only catches drift weekly. This job
-# re-runs the same wrapper against the PR contents and fails if the
-# regenerated screenshots / PDF differ from what's committed. PDFKit is
-# configured to be byte-deterministic in `build-prep-guide.ts` (fixed
-# CreationDate / ModDate / file-ID), so the diff is high-signal: any
-# drift means a contributor forgot to re-run `refresh:prep-guide` (or
-# forgot to commit its output) before pushing.
+# re-runs capture against the PR contents and fails if either the
+# wizard screenshots drift beyond rasterization noise (caught by a
+# tolerant pixel diff — see task #935) or the regenerated PDF differs
+# byte-for-byte from what's committed. PDFKit is configured to be
+# byte-deterministic in `build-prep-guide.ts` (fixed CreationDate /
+# ModDate / file-ID), so the PDF diff is high-signal: any drift means a
+# contributor forgot to re-run `refresh:prep-guide` (or forgot to commit
+# its output) before pushing.
 #
 # Paths-filtered so unrelated PRs don't pay the ~Playwright-Chromium
 # cost. Both wizard component trees are included — `src/pages/model-wizard/**`
@@ -30,6 +32,7 @@ on:
     paths:
       - "artifacts/school-financial-model/scripts/prep-guide/**"
       - "artifacts/school-financial-model/scripts/capture-prep-guide-screenshots.ts"
+      - "artifacts/school-financial-model/scripts/diff-prep-guide-screenshots.ts"
       - "artifacts/school-financial-model/scripts/refresh-prep-guide.ts"
       - "artifacts/school-financial-model/src/pages/model-wizard/**"
       - "artifacts/school-financial-model/src/components/wizard/**"
@@ -43,6 +46,7 @@ on:
     paths:
       - "artifacts/school-financial-model/scripts/prep-guide/**"
       - "artifacts/school-financial-model/scripts/capture-prep-guide-screenshots.ts"
+      - "artifacts/school-financial-model/scripts/diff-prep-guide-screenshots.ts"
       - "artifacts/school-financial-model/scripts/refresh-prep-guide.ts"
       - "artifacts/school-financial-model/src/pages/model-wizard/**"
       - "artifacts/school-financial-model/src/components/wizard/**"
@@ -88,37 +92,140 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright Chromium (+ system deps)
-        # `capture:prep-guide` (invoked via the refresh wrapper) drives a
-        # headless Chromium against the ephemeral dev servers.
-        # `--with-deps` apt-installs the GTK / audio libs that aren't
-        # present in the GitHub Actions Ubuntu image by default.
+        # `capture:prep-guide` drives a headless Chromium against the
+        # ephemeral dev servers. `--with-deps` apt-installs the GTK /
+        # audio libs that aren't present in the GitHub Actions Ubuntu
+        # image by default.
         run: |
           pnpm --filter @workspace/school-financial-model exec \
             playwright install --with-deps chromium
 
-      - name: Re-capture screenshots + rebuild prep-guide.pdf
-        # Same one-shot wrapper a contributor would run locally — it
-        # boots api-server + Vite, runs capture, runs build, and tears
-        # everything back down. Keeps this check and `refresh-prep-guide.yml`
-        # in lockstep.
-        run: pnpm --filter @workspace/school-financial-model run refresh:prep-guide
-
-      - name: Fail if prep-guide.pdf or screenshots drifted from what's committed
+      - name: Start api-server (port 8080) in the background
+        env:
+          PORT: "8080"
+          # Deterministic JWT secret so the capture script's throwaway
+          # registration tokens validate. Mirrors what
+          # playwright-cross-browser.yml does.
+          JWT_SECRET: ci-prep-guide-drift-fixed-secret
+          NODE_ENV: development
         run: |
-          # Diff both the PDF and the screenshot directory. Either signal
-          # means a contributor changed wizard UI or content.ts without
-          # re-running the refresh wrapper locally and committing the result.
+          mkdir -p .local/prep-guide-logs
+          pnpm --filter @workspace/api-server run dev \
+            > .local/prep-guide-logs/api-server.log 2>&1 &
+          echo "API_PID=$!" >> "$GITHUB_ENV"
+
+      - name: Start school-financial-model dev server (port 22094) in the background
+        env:
+          PORT: "22094"
+          # Skip the Replit-only Vite plugins (cartographer / runtime-error
+          # modal / dev-banner) the same way the e2e webServer does — they
+          # watch the whole workspace and aren't needed under headless
+          # capture.
+          E2E_MODE: "1"
+          VITE_API_PROXY_TARGET: "http://127.0.0.1:8080"
+        run: |
+          pnpm --filter @workspace/school-financial-model run dev \
+            > .local/prep-guide-logs/web.log 2>&1 &
+          echo "WEB_PID=$!" >> "$GITHUB_ENV"
+
+      - name: Wait for api-server + web to become healthy
+        run: |
+          # Wait up to 120s for the api-server healthz endpoint, then up to
+          # 120s for vite to start serving HTML. Bail loudly with the tail
+          # of the relevant log if either never comes up.
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8080/api/healthz >/dev/null 2>&1; then
+              echo "api-server is healthy"
+              break
+            fi
+            if [ "$i" = "60" ]; then
+              echo "::error::api-server never became healthy. Tail of log:"
+              tail -n 200 .local/prep-guide-logs/api-server.log || true
+              exit 1
+            fi
+            sleep 2
+          done
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:22094/ >/dev/null 2>&1; then
+              echo "web dev server is healthy"
+              break
+            fi
+            if [ "$i" = "60" ]; then
+              echo "::error::web dev server never became healthy. Tail of log:"
+              tail -n 200 .local/prep-guide-logs/web.log || true
+              exit 1
+            fi
+            sleep 2
+          done
+
+      # Stash the committed baseline screenshots before re-capturing so
+      # we can both (a) tolerantly diff the captures against them and
+      # (b) restore them for the deterministic PDF rebuild below.
+      - name: Stash committed baseline screenshots
+        run: |
+          mkdir -p .local/prep-guide-baseline
+          cp -r artifacts/school-financial-model/public/images/prep-guide/. \
+                .local/prep-guide-baseline/
+
+      - name: Re-capture wizard screenshots for the Prep Guide
+        env:
+          CAPTURE_WEB_PORT: "22094"
+          CAPTURE_API_URL: "http://127.0.0.1:8080"
+        run: pnpm --filter @workspace/school-financial-model run capture:prep-guide
+
+      # Task #935 — even with the locked-down capture pipeline (bundled
+      # Latin woff2 fonts, deterministic Chromium args, animations frozen,
+      # save-status badge hidden) a handful of sub-pixel SVG/icon raster
+      # artifacts still drift by tens of pixels between runs. A strict
+      # byte-diff therefore flakes; this tolerant per-image check exits
+      # non-zero only when a screenshot drifts beyond rasterization noise,
+      # which any real wizard UI change easily clears.
+      - name: Diff captured screenshots against committed baseline (pixel-tolerant)
+        run: |
+          pnpm --filter @workspace/school-financial-model exec \
+            tsx scripts/diff-prep-guide-screenshots.ts \
+              .local/prep-guide-baseline \
+              artifacts/school-financial-model/public/images/prep-guide
+
+      # Restore the committed baselines so the PDF rebuild below uses the
+      # exact same image bytes the committed PDF was built from. Without
+      # this, any captured PNG that diffs from the baseline (even within
+      # tolerance) would change the embedded PNG bytes in the PDF and
+      # surface as a spurious PDF drift below.
+      - name: Restore committed baseline screenshots for PDF rebuild
+        run: |
+          rm -rf artifacts/school-financial-model/public/images/prep-guide
+          mkdir -p artifacts/school-financial-model/public/images/prep-guide
+          cp -r .local/prep-guide-baseline/. \
+                artifacts/school-financial-model/public/images/prep-guide/
+
+      - name: Rebuild the Prep Guide PDF from the committed screenshots + content
+        run: pnpm --filter @workspace/school-financial-model run build:prep-guide
+
+      - name: Stop background dev servers
+        if: always()
+        run: |
+          if [ -n "${WEB_PID:-}" ]; then kill "$WEB_PID" 2>/dev/null || true; fi
+          if [ -n "${API_PID:-}" ]; then kill "$API_PID" 2>/dev/null || true; fi
+
+      - name: Fail if prep-guide.pdf drifted from what's committed
+        run: |
+          # PDFKit is configured byte-deterministic in build-prep-guide.ts,
+          # and we rebuilt against the committed baseline screenshots, so
+          # any diff here means scripts/prep-guide/content.ts (or the PDF
+          # builder itself) changed without the contributor regenerating
+          # the committed PDF. Wizard UI drift is caught separately by
+          # the tolerant screenshot diff above.
           if ! git diff --exit-code -- \
-              artifacts/school-financial-model/public/prep-guide.pdf \
-              artifacts/school-financial-model/public/images/prep-guide; then
+              artifacts/school-financial-model/public/prep-guide.pdf; then
             echo ""
-            echo "::error::Prep Guide PDF or wizard screenshots are stale."
+            echo "::error::Prep Guide PDF is stale."
             echo ""
-            echo "Re-running refresh:prep-guide produced output that doesn't"
-            echo "match what's committed. Most likely you changed a wizard"
-            echo "step (src/pages/model-wizard or src/components/wizard) or"
-            echo "scripts/prep-guide/content.ts without regenerating the"
-            echo "screenshots / PDF."
+            echo "Rebuilding the PDF against the committed screenshots produced"
+            echo "output that doesn't match the committed prep-guide.pdf. Most"
+            echo "likely you changed a wizard step (src/pages/model-wizard or"
+            echo "src/components/wizard) or scripts/prep-guide/content.ts"
+            echo "without regenerating the PDF."
             echo ""
             echo "To fix locally:"
             echo "  pnpm --filter @workspace/school-financial-model run refresh:prep-guide"
@@ -126,16 +233,15 @@ jobs:
             echo "          artifacts/school-financial-model/public/images/prep-guide"
             echo ""
             git --no-pager diff --stat -- \
-              artifacts/school-financial-model/public/prep-guide.pdf \
-              artifacts/school-financial-model/public/images/prep-guide || true
+              artifacts/school-financial-model/public/prep-guide.pdf || true
             exit 1
           fi
-          echo "Prep Guide PDF + screenshots match what refresh:prep-guide produces — no drift."
+          echo "Prep Guide PDF matches what build produces — no drift."
 
       - name: Upload regenerated Prep Guide artifacts on drift
-        # When the diff check fails, surface the freshly-generated PDF +
-        # screenshots so a contributor can download them, eyeball the
-        # diff, and commit if they're the intended new output.
+        # When any of the diff checks above fail, surface the freshly-
+        # generated PDF + screenshots so a contributor can download them,
+        # eyeball the diff, and commit if they're the intended new output.
         if: failure()
         uses: actions/upload-artifact@v4
         with:

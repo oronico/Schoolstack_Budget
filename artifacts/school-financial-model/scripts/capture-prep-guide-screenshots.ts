@@ -15,8 +15,8 @@
  * Run with the same wrapper that ensures dev servers are up:
  *   pnpm --filter @workspace/school-financial-model run capture:prep-guide
  */
-import { chromium, type Page } from "@playwright/test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { chromium, type BrowserContext, type Page } from "@playwright/test";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { microschoolFixture } from "@workspace/finance";
@@ -24,6 +24,88 @@ import { microschoolFixture } from "@workspace/finance";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(__dirname, "..");
 const OUT_DIR = join(PROJECT_ROOT, "public", "images", "prep-guide");
+const FONTS_DIR = join(__dirname, "prep-guide", "fonts");
+
+// Task #935 — to make the captured PNGs byte-identical across local
+// Replit and GitHub Actions Ubuntu runners we strip every non-deterministic
+// rendering knob we can. Anything that varies between Linux hosts (system
+// fonts via fontconfig, GPU/Skia paths, LCD subpixel antialiasing, color
+// profiles, device scale factor) is forced to a fixed setting below; the
+// remaining font bytes are served from woff2 files committed alongside this
+// script so we never depend on whatever Google Fonts CDN happens to return.
+const DETERMINISTIC_LAUNCH_ARGS = [
+  // Force grayscale antialiasing — LCD subpixel rendering is the single
+  // biggest source of pixel-level diffs between hosts because it depends
+  // on the host's freetype/Skia build, not Chromium.
+  "--disable-lcd-text",
+  // No subpixel hint shifting — without this, the same glyph can land on
+  // different pixel boundaries depending on host font metrics.
+  "--font-render-hinting=none",
+  // Skia GPU rasterization is non-deterministic across hosts; route
+  // everything through software so two Linux x64 boxes produce the same
+  // bytes.
+  "--disable-gpu",
+  "--disable-skia-runtime-opts",
+  "--in-process-gpu",
+  // Pin the color profile so srgb→display conversion can't shift.
+  "--force-color-profile=srgb",
+  // Don't leak the host's scrollbar styling into the screenshot.
+  "--hide-scrollbars",
+  // Make every captured tab look "in focus" — otherwise inputs render
+  // their unfocused outline color and a re-run on a different machine
+  // can flip individual fields.
+  "--disable-renderer-backgrounding",
+  "--disable-backgrounding-occluded-windows",
+];
+
+interface LocalFont {
+  family: string;
+  style: "normal" | "italic";
+  weight: string; // single weight ("400") or range ("300 700")
+  file: string;
+}
+
+// Mirrors the @import in src/index.css:
+//   Quicksand wght@400;500;600;700
+//   Nunito ital,wght@0,300;0,400;0,500;0,600;0,700;1,400
+// The Latin Google Fonts subsets for these families are variable-axis
+// woff2 files (one per family + one italic axis), so three committed
+// files cover every weight the wizard actually uses.
+const LOCAL_FONTS: LocalFont[] = [
+  {
+    family: "Quicksand",
+    style: "normal",
+    weight: "400 700",
+    file: "quicksand-latin.woff2",
+  },
+  {
+    family: "Nunito",
+    style: "normal",
+    weight: "300 700",
+    file: "nunito-latin.woff2",
+  },
+  {
+    family: "Nunito",
+    style: "italic",
+    weight: "400",
+    file: "nunito-italic-latin.woff2",
+  },
+];
+
+function buildLocalFontsCss(): string {
+  return LOCAL_FONTS.map((font) => {
+    const bytes = readFileSync(join(FONTS_DIR, font.file));
+    const data = bytes.toString("base64");
+    return `@font-face {
+  font-family: '${font.family}';
+  font-style: ${font.style};
+  font-weight: ${font.weight};
+  font-display: block;
+  src: url(data:font/woff2;base64,${data}) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}`;
+  }).join("\n");
+}
 
 const WEB_PORT = Number(
   process.env.CAPTURE_WEB_PORT ?? process.env.PORT ?? 22094,
@@ -130,6 +212,38 @@ async function seedFounder(): Promise<Seed> {
   return { token, modelId: created.id };
 }
 
+async function installDeterministicFonts(
+  context: BrowserContext,
+  css: string,
+): Promise<void> {
+  // Intercept the Google Fonts CSS request from src/index.css and reply
+  // with a CSS payload whose @font-face rules embed our committed woff2
+  // bytes as data: URIs. This keeps the page free of any cross-machine
+  // network variance (different gstatic edge caches, subset versions,
+  // race conditions on font-display: swap firing before the screenshot)
+  // and guarantees identical glyph bytes on Replit and Ubuntu CI.
+  await context.route(
+    (url) =>
+      url.hostname === "fonts.googleapis.com" ||
+      url.hostname === "fonts.gstatic.com",
+    async (route) => {
+      const url = new URL(route.request().url());
+      if (url.hostname === "fonts.googleapis.com") {
+        await route.fulfill({
+          status: 200,
+          contentType: "text/css; charset=utf-8",
+          body: css,
+        });
+      } else {
+        // Anything that still tries to reach gstatic (e.g. preconnect
+        // probes) gets a tiny 200 so it doesn't show up as a console
+        // error or delay networkidle.
+        await route.fulfill({ status: 200, body: "" });
+      }
+    },
+  );
+}
+
 async function primeAuth(
   page: Page,
   token: string,
@@ -179,6 +293,12 @@ async function captureStep(
   // settle before we snap. 1.2s is what the existing capture script
   // settled on for the same wizard.
   await page.waitForTimeout(1200);
+  // Task #935 — wait for the deterministic webfonts (Quicksand / Nunito)
+  // to actually finish loading + activating before the screenshot. Without
+  // this, the first capture on a cold context can race the FontFaceSet
+  // ready promise and snap a frame mid-swap (visible as a system-font
+  // fallback fragment in the diff).
+  await page.evaluate(() => document.fonts.ready);
   // The seed step bumps the model version (create + re-PUT), which can
   // race with the wizard's cross-tab change listener and surface the
   // "Your other tab made changes — Reload model" banner + inline pill on
@@ -188,29 +308,63 @@ async function captureStep(
   await page.addStyleTag({
     content: `
       [data-testid="conflict-reload-banner"],
-      [data-testid="wizard-save-conflict-reload"] { display: none !important; }
+      [data-testid="wizard-save-conflict-reload"],
+      /* Task #935 — the transient "Saving..." / "Saved at HH:MM:SS"
+         badge in the wizard header flips on every keystroke / debounced
+         auto-save. It's pure status copy, not part of the prep-guide
+         story, and its presence/absence on a given run was the single
+         biggest source of cross-run drift (e.g. the actuals-intake and
+         review-export captures). Hide the whole save-status cluster so
+         it can't sneak into a screenshot mid-flicker. */
+      [data-testid="wizard-save-status-saving"],
+      [data-testid="wizard-save-status-saved"],
+      [data-testid^="wizard-save-error-"],
+      [data-testid="wizard-save-auth-relogin"] { display: none !important; }
+      /* Task #935 — freeze every animation/transition so a stray
+         in-flight transition (e.g. the wizard rail's transition-all
+         duration-500 progress fill, or a focus-ring fade) can't make
+         two back-to-back captures of the same step diverge by a few
+         pixels. Also hide the blinking text caret which is the most
+         common source of "1px column shifts on alternating runs". */
+      *, *::before, *::after {
+        animation-duration: 0s !important;
+        animation-delay: 0s !important;
+        transition-duration: 0s !important;
+        transition-delay: 0s !important;
+        caret-color: transparent !important;
+      }
     `,
   });
-  await page.waitForTimeout(150);
-  return await page.screenshot({ fullPage: false });
+  // Let the freshly-injected stylesheet settle (forces a fresh paint)
+  // before snapping. Cheap insurance against the screenshot landing
+  // mid-style-recalc.
+  await page.waitForTimeout(250);
+  return await page.screenshot({ fullPage: false, type: "png" });
 }
 
 async function main(): Promise<void> {
   mkdirSync(OUT_DIR, { recursive: true });
   console.log(`[prep-guide] capturing into ${OUT_DIR}`);
 
+  const fontsCss = buildLocalFontsCss();
+
   const seed = await seedFounder();
-  const browser = await chromium.launch();
+  // Task #935 — explicitly opt into Playwright's pinned bundled Chromium
+  // (i.e. don't honor REPLIT_PLAYWRIGHT_CHROMIUM_EXECUTABLE here). The
+  // pinned binary that ships with whatever @playwright/test version this
+  // workspace resolves is what GitHub Actions also installs, so both
+  // environments rasterize with the exact same Skia/Blink build. The
+  // deterministic args above remove the remaining sources of pixel drift.
+  const browser = await chromium.launch({ args: DETERMINISTIC_LAUNCH_ARGS });
   try {
-    const context = await browser.newContext({ viewport: VIEWPORT });
-    await primeAuth(
-      await context.newPage().then(async (p) => {
-        await p.close();
-        return context.pages()[0] ?? (await context.newPage());
-      }),
-      seed.token,
-      seed.modelId,
-    );
+    const context = await browser.newContext({
+      viewport: VIEWPORT,
+      // Force 1.0 DPR so the screenshot's pixel grid is identical to the
+      // CSS pixel grid on every host — anything else would magnify even
+      // a one-pixel font shift into a multi-pixel diff.
+      deviceScaleFactor: 1,
+    });
+    await installDeterministicFonts(context, fontsCss);
     const page = await context.newPage();
     await primeAuth(page, seed.token, seed.modelId);
 
