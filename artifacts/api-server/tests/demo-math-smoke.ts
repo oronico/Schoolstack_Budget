@@ -932,6 +932,76 @@ async function runOne(c: DemoCase): Promise<void> {
     }
   }
 
+  // ── 6. Task #910 — DSCR Summary section must print the canonical
+  //     normalized Y1 DSCR (and the As-Planned vs Normalized table its
+  //     reported counterpart), not a third independent aggregation.
+  //
+  //     Pre-#910 the DSCR Summary section ("Current DSCR:" / linked
+  //     "DSCR" metric / debt-service narrative) was seeded from
+  //     `consultantOutput.keyMetrics`' DSCR entry, a third independent
+  //     aggregation that matched neither the normalized series
+  //     (lender-primary) nor the reported / as-planned series (founder
+  //     / board view). On the seeded demos the orphan figure was
+  //     Riverside 20.91x, Liberty 30.64x, Oakwood 5.77x — none of
+  //     which appear in either canonical series. This assertion finds
+  //     each occurrence of the "Current DSCR:" label printed into the
+  //     PDF and proves the figure that follows it matches the
+  //     normalized canonical value (within .toFixed(2) rounding).
+  const nv = consultant.normalizedView;
+  if (nv) {
+    const normalizedY1 = nv.normalized.dscr[0];
+    const reportedY1 = nv.reported.dscr[0];
+    const tol = 0.02;
+    // PDFKit can split label glyphs across draw calls (e.g. "C", "u",
+    // "rrent DSCR:") so anchor permissively then look for the first
+    // "N.NNx" figure within ~120 chars of the label.
+    const labelRe = /C\s*u\s*r\s*r\s*e\s*n\s*t\s*D\s*S\s*C\s*R/gi;
+    const labelHits = Array.from(pdfText.matchAll(labelRe));
+    check(
+      `${tag} lender PDF contains a "Current DSCR" DSCR Summary label`,
+      labelHits.length > 0,
+    );
+    for (const m of labelHits) {
+      const start = m.index ?? 0;
+      const window = pdfText.slice(start, start + 200);
+      const figs = Array.from(window.matchAll(/(-?\d+(?:\.\d+)?)\s*x/g))
+        .map((mm) => Number(mm[1]))
+        .filter((n) => Number.isFinite(n));
+      const first = figs[0];
+      check(
+        `${tag} "Current DSCR" figure matches the canonical normalized Y1 DSCR (${normalizedY1.toFixed(2)}x), not the as-planned (${reportedY1.toFixed(2)}x) or any orphan value`,
+        first !== undefined && Math.abs(first - normalizedY1) <= tol,
+        `printed=${first ?? "(none)"}, normalized=${normalizedY1.toFixed(2)}, reported=${reportedY1.toFixed(2)}, window="${window.slice(0, 120).replace(/\s+/g, " ")}"`,
+      );
+    }
+    // The As-Planned vs Normalized comparison table is the canonical
+    // home of the per-year reported series — proving the reported Y1
+    // DSCR shows up there ensures we haven't accidentally collapsed
+    // the section to a single view in the course of removing the orphan.
+    // DSCR figures are formatted as `N.NNx` (1-4 integer digits + 2
+    // decimals + literal "x"). The leading `(?:^|\D)` guards against
+    // matching the tail of an adjacent dollar amount (e.g. PDFKit can
+    // emit "$9,085" + "5.86x" → "90855.86x" with no separator).
+    // PDFKit can glue adjacent cells together with no separator
+    // (e.g. "$48,522" + "22.02x" → "4852222.02x"), so a strict digit-
+    // boundary regex misses the reported DSCR. A substring check on
+    // `N.NNx` (the exact `.toFixed(2) + "x"` shape build-lender-packet
+    // emits at line ~702) is robust to that glue: the canonical value
+    // is unique enough that a hit anywhere in the cmp-table window is
+    // sufficient evidence it was printed.
+    const cmpLabelRe = /DSCR\s*\(\s*Reported\s*\)/i;
+    if (cmpLabelRe.test(pdfText)) {
+      const idx = pdfText.search(cmpLabelRe);
+      const win = pdfText.slice(idx, idx + 800);
+      const needle = `${reportedY1.toFixed(2)}x`;
+      check(
+        `${tag} As-Planned vs Normalized table prints the canonical reported Y1 DSCR (${needle})`,
+        win.includes(needle),
+        `needle="${needle}" not found in cmp-table window`,
+      );
+    }
+  }
+
   console.log(`${tag} wrote ${path.relative(process.cwd(), xlsxPath)} (${bytes.length} bytes) + ${path.relative(process.cwd(), pdfPath)} (${pdfBytes.length} bytes)`);
 }
 

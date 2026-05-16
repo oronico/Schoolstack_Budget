@@ -515,6 +515,44 @@ function enrichDebtServiceSection(
   co: ConsultantOutput,
   cashRunway: CashRunwayView,
 ): PacketSection {
+  // Task #910 — buildDebtService (shared with the board packet) seeds
+  // the section's narrative and linkedMetrics from
+  // `consultantOutput.keyMetrics`' DSCR entry, a third independent
+  // aggregation that matched neither the normalized series (printed in
+  // the DSCR Summary section) nor the as-planned series (printed in
+  // the As-Planned vs Normalized table). Repoint both at the canonical
+  // normalized Y1 DSCR so the entire debt-service section speaks with
+  // one voice and there are exactly two canonical DSCR values per year
+  // on the rendered packet.
+  const normalizedY1 = co.normalizedView?.normalized?.dscr?.[0];
+  let nextSection = section;
+  if (typeof normalizedY1 === "number" && Number.isFinite(normalizedY1)) {
+    const dscrStr = `${normalizedY1.toFixed(2)}x`;
+    const interpretation =
+      normalizedY1 >= BENCHMARK_DSCR_GREEN
+        ? `Year-1 debt service coverage is ${dscrStr} on the normalized (lender-primary) view.`
+        : normalizedY1 >= BENCHMARK_DSCR_AMBER
+          ? `Year-1 debt service coverage is ${dscrStr} on the normalized (lender-primary) view — above the ${BENCHMARK_DSCR_AMBER.toFixed(2)}x minimum but below the ${BENCHMARK_DSCR_GREEN.toFixed(2)}x target.`
+          : `Year-1 debt service coverage is ${dscrStr} on the normalized (lender-primary) view — below the ${BENCHMARK_DSCR_AMBER.toFixed(2)}x lender minimum.`;
+    const benchmark = `Minimum: ${BENCHMARK_DSCR_AMBER.toFixed(2)}x; target: ${BENCHMARK_DSCR_GREEN.toFixed(2)}x`;
+    const status: "good" | "warning" | "danger" =
+      normalizedY1 >= BENCHMARK_DSCR_GREEN
+        ? "good"
+        : normalizedY1 >= BENCHMARK_DSCR_AMBER
+          ? "warning"
+          : "danger";
+    const replacedMetrics: LinkedMetric[] = section.linkedMetrics.map((m) =>
+      m.label.toLowerCase().includes("dscr") || m.label.toLowerCase().includes("debt service")
+        ? { ...m, value: dscrStr, benchmark, status }
+        : m,
+    );
+    nextSection = {
+      ...section,
+      narrative: `${interpretation} ${benchmark}. See the "As-Planned vs Normalized: Net Income & DSCR" table for the founder / board (as-planned) view alongside this normalized series.`,
+      linkedMetrics: replacedMetrics,
+    };
+  }
+
   const reserveMetrics: LinkedMetric[] = [];
 
   for (const cf of co.cumulativeFinancials) {
@@ -552,9 +590,9 @@ function enrichDebtServiceSection(
   };
 
   return {
-    ...section,
-    linkedMetrics: [...section.linkedMetrics, ...reserveMetrics],
-    tables: [...(section.tables || []), reserveTable],
+    ...nextSection,
+    linkedMetrics: [...nextSection.linkedMetrics, ...reserveMetrics],
+    tables: [...(nextSection.tables || []), reserveTable],
   };
 }
 
@@ -806,10 +844,29 @@ function extractDSCRSummary(co: ConsultantOutput, modelData?: ModelData): DSCRSu
     benchmarkText = dscrMetric.benchmark || `Minimum: ${BENCHMARK_DSCR_AMBER.toFixed(2)}x; target: ${BENCHMARK_DSCR_GREEN.toFixed(2)}x`;
   }
 
+  // Task #910 — point the DSCR Summary at the canonical normalized
+  // (lender-primary) Y1 DSCR from `normalizedView.normalized.dscr[0]`,
+  // the same series the "As-Planned vs Normalized: Net Income & DSCR"
+  // table prints. Pre-#910 we printed `dscrMetric.value`, which is a
+  // third independent figure (a separate aggregation in the consultant
+  // engine's keyMetrics) that matched neither the normalized nor the
+  // as-planned series and showed up as the orphan third DSCR on every
+  // packet. The trend line now explicitly redirects founders / boards
+  // to the comparison table for the as-planned view.
+  const normalizedY1 = co.normalizedView?.normalized?.dscr?.[0];
+  const currentDSCR =
+    typeof normalizedY1 === "number" && Number.isFinite(normalizedY1)
+      ? `${normalizedY1.toFixed(2)}x`
+      : dscrMetric.value;
+  const trendDescription =
+    typeof normalizedY1 === "number" && Number.isFinite(normalizedY1)
+      ? "Normalized (lender-primary) Y1 DSCR. See the \u201CAs-Planned vs Normalized: Net Income & DSCR\u201D table for the founder / board (as-planned) view alongside the normalized series."
+      : dscrMetric.interpretation;
+
   return {
-    currentDSCR: dscrMetric.value,
+    currentDSCR,
     status: dscrMetric.status as "good" | "warning" | "danger",
     benchmark: benchmarkText,
-    trendDescription: dscrMetric.interpretation,
+    trendDescription,
   };
 }
