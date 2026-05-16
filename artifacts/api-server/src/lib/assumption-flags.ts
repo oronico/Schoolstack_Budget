@@ -342,19 +342,40 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
       //   ratio = tuition_capacity / total_expenses
       //
       // ⚠️  GROSS BILLING BASIS, NOT NET COLLECTED  ⚠️
+      //
       // This ratio is intentionally computed at SCHEDULED / STICKER
       // billings — gross tuition × enrollment + fee schedule. It does
       // NOT apply collection rate, scholarship discounts, voucher
       // offsets, billing-month proration, or the Task #860 funding-mix
-      // correction. The question this signal answers is "does the
-      // school's posted price sheet cover the cost base?" — a
-      // pricing-defense / business-model question — not "what cash
-      // will the school actually collect?" The realized-cash
-      // reconciliation (gross → discounts → collected) is the job of
-      // Task #911 sub-bullet 2.5 ("Net-collected tuition coverage and
-      // reconciliation to gross"); when that lands, this flag will
-      // gain a sibling that reports the NET coverage so a lender can
-      // see both numbers side-by-side.
+      // correction.
+      //
+      // For Riverside (200 students, $12,500 tuition + $750 fees), the
+      // three reference numbers diverge as follows:
+      //   • GROSS billing capacity (this signal)  = $2,650,000
+      //   • NET tuition revenue (Op Stmt)         = $2,262,500
+      //       — gross minus 12% scholarship pool
+      //   • Engine y1.tuitionRevenue (pre-fix)    =   $641,000
+      //       — net minus voucher offset (Task #860 funding-mix)
+      //
+      // We deliberately picked the GROSS basis because the question
+      // this signal answers is "does the school's posted price sheet
+      // cover the cost base?" — a pricing-defense / business-model
+      // question lenders ask at underwriting — NOT "what cash will
+      // the school actually collect?" Using NET here would conflate
+      // two distinct stories (your pricing covers costs vs your
+      // collections cover costs) and would penalize generous-aid
+      // schools whose sticker IS strong but whose realized revenue
+      // looks weak after discounts. Gross is the right anchor for
+      // the headline; NET belongs in a separate companion signal.
+      //
+      // The realized-cash reconciliation (gross → discounts →
+      // collected) is the job of Task #911 sub-bullet 2.5
+      // ("Net-collected tuition coverage and reconciliation to
+      // gross"). When 2.5 lands, this flag will gain a sibling that
+      // reports the NET coverage so the lender packet shows both
+      // numbers side-by-side. ⚠️ Task 2.5 MUST keep this gross
+      // basis intact — do not "fix" this to use net; add the net
+      // sibling alongside.
       //
       // where
       //   tuition_capacity = sum of enabled revenueRows whose
