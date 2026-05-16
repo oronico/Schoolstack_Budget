@@ -1,0 +1,179 @@
+# SchoolStack Budget — Verification & QA Protocol
+
+**For:** Replit build agent working on `budget.schoolstack.ai`
+**Pair with:** `SchoolStack_Budget_System_Remediation.md`
+
+**Read this document first.** It defines what "done" means for every task in the remediation doc. No task is complete until the verification steps below have been performed and the evidence has been shown.
+
+This protocol exists because the bugs catalogued in the remediation doc are evidence of one failure mode: someone shipped narrative changes without verifying them against the engine. The protocol prevents that failure from recurring.
+
+---
+
+## Standing rules (apply to every task)
+
+These rules apply across all 22 tasks. They are not optional and they are not per-task — they govern the entire engagement.
+
+### Rule 1 — A code change is not done. A re-rendered packet is done.
+For every task, the unit of completion is a freshly re-rendered PDF for each of the three sample packets (Riverside, Liberty, Oakwood) showing the change. Code edits without re-rendered evidence are work in progress, not complete.
+
+### Rule 2 — The narrative generator may format values but may not compute them.
+The engine computes. The narrative formats and renders. If you find yourself writing arithmetic in rendering code, that is a bug — fix it by moving the calculation into the engine layer. After Layers 1 and 2 of the remediation doc land, audit the entire narrative codepath for any remaining arithmetic.
+
+### Rule 3 — Every value in the PDF traces to a specific Excel cell.
+For every numeric figure in a rendered packet, you must be able to name the Excel sheet and cell that produced it. If you can't, you computed it in the narrative layer, which violates Rule 2.
+
+### Rule 4 — The same metric appearing in N places must equal in all N places.
+DSCR, revenue, runway, cash, net income — every metric appears in multiple sections of the rendered PDF. They must all match. Any inconsistency is a bug regardless of which task introduced it.
+
+### Rule 5 — Scope creep is itself a defect.
+If you find a bug not in the remediation doc, flag it. Do not fix it without confirmation. If a task as written cannot be completed as specified, flag it. Do not silently substitute a different approach.
+
+---
+
+## Per-task verification template
+
+For every task in the remediation doc, your "done" output must include all five sections below. If any section cannot be filled in completely, the task is not done.
+
+### Section A — What changed
+- List of files modified
+- List of functions added, modified, or deleted
+- One-sentence summary of the change
+
+### Section B — Re-rendered evidence
+For each of the three sample packets:
+- Re-render the packet end to end (input → engine → narrative → PDF)
+- Quote the specific section(s) of the rendered PDF that changed
+- Show the value(s) before the fix and after the fix
+
+### Section C — Source-of-truth trace
+For every numeric value affected by the change:
+- Excel sheet name
+- Excel cell reference
+- Formula or value at that cell
+
+### Section D — Cross-section consistency check
+- List every section of the rendered PDF that displays this metric
+- Show that all sections now display the same value
+- If any section displays a different value, identify why
+
+### Section E — Side-effect check
+- What other code paths reference the function(s) you modified?
+- Did you update them?
+- What other PDF sections use values derived from the function(s) you modified?
+- Did they update correctly?
+
+---
+
+## Plan before you code
+
+For every task in the remediation doc, before making any edits, articulate:
+
+1. What is the root cause hypothesis?
+2. What files do you expect to touch?
+3. What is the smallest possible change that addresses the root cause without scope creep?
+4. What could regress?
+
+Walking the plan before executing catches half the bugs. If the plan reveals the task is bigger than expected, flag it before starting work.
+
+---
+
+## Build the regression harness first
+
+**Before Task 1.1, build a regression harness.** This is Task 0 of the engagement and the most important single piece of infrastructure for this work.
+
+The harness must:
+
+1. Take the three canonical sample inputs (Riverside, Liberty, Oakwood) and render all three packets end-to-end via the production code path.
+2. For each canonical metric across Y1–Y5, extract the value from every section of the rendered PDF where it appears and assert equality across all sections.
+3. Compare each value against the canonical Excel cell for that metric and assert equality there too.
+4. Produce a "consistency report" listing every metric, every location it appears, and pass/fail status.
+5. Fail loudly if any inconsistency is detected.
+6. Run automatically and pass before any task is claimed complete.
+
+### Canonical metric registry for the harness
+
+| Metric | Years | Canonical source (sheet!cell) |
+|---|---|---|
+| Total Revenue | Y1–Y5 | `5-Year Operating Stmt!B5:F5` |
+| Change in Net Assets | Y1–Y5 | `5-Year Operating Stmt!B16:F16` |
+| DSCR (normalized) | Y1–Y5 | `DSCR & Covenants!B12:F12` |
+| Months of Runway | Y1–Y5 | `DSCR & Covenants!B18:F18` |
+| Ending Cash | Y1–Y5 | `DSCR & Covenants!B15:F15` |
+| Days Cash on Hand | Y1–Y5 | `DSCR & Covenants!B17:F17` |
+| Capacity Utilization | Y1–Y5 | `DSCR & Covenants!B19:F19` |
+| Break-Even Enrollment | Y1–Y5 | `DSCR & Covenants!B25:F25` |
+| Loan rate, principal, term | per loan | `Capital Stack!C:E` |
+| Personnel cost | Y1–Y5 | `5-Year Operating Stmt!B8:F8` |
+| Operating expenses | Y1–Y5 | `5-Year Operating Stmt!B9:F9` |
+| Enrollment | Y1–Y5 | `Enrollment Tuition Fcst!B4:F4` |
+
+### Baseline test before any task
+
+After building the harness, run it against the current production output as a baseline. The harness should detect every inconsistency catalogued in the remediation doc — at minimum:
+
+- Multiple revenue totals per packet
+- Three DSCR figures per packet
+- Multiple runway figures per packet
+- Loan-rate mismatches between narrative and Capital Stack
+- Off-by-one on Revenue Quality table column headers
+
+If the harness does NOT detect these, it has gaps. Add checks until it does. The harness is only useful if it catches the bugs we already know about.
+
+Once the harness reliably reports the known bugs, proceed to Task 1.1.
+
+---
+
+## What done looks like (worked example)
+
+A correctly completed **Task 1.1** (`Fix cash_runway_months calculation`) ends with this kind of output:
+
+> **Task 1.1 complete.**
+>
+> **Section A — What changed:** Refactored `compute_runway()` in `engine/cash_metrics.py` into a single canonical function. Deleted three competing implementations in `narrative/exec_summary.py`, `narrative/cumulative_cash.py`, and `narrative/health_dimensions.py`. All consumers now import from the engine.
+>
+> **Section B — Re-rendered evidence:**
+> - Riverside Executive Summary previously showed `Cash Runway: 60+ months`; now shows `Cash Runway: 17.5 months`. Matches Excel `DSCR & Covenants!B18 = 17.54`.
+> - Liberty Executive Summary previously showed `Cash Runway: 60+ months`; now shows `Cash Runway: 9.7 months`. Matches Excel `DSCR & Covenants!B18 = 9.73`.
+> - Oakwood Executive Summary previously showed `Cash Runway: 1 months`; now shows `Cash Runway: 2.9 months`. Matches Excel `DSCR & Covenants!B18 = 2.93`.
+>
+> **Section C — Source-of-truth trace:** All runway values now derive from `DSCR & Covenants!B18:F18`, formula `=B15/(SUM(B6:B7,B10)/12)`.
+>
+> **Section D — Cross-section consistency:** Runway now appears in Executive Summary, Cumulative Cash Position table, Health Dimensions, and Lender Commentary. All four sections in all three packets display the same value.
+>
+> **Section E — Side-effect check:** No other narrative sections referenced the deleted functions. The Stress Test table runway figures use a separate `compute_stressed_runway()` function — out of scope for this task, flagged for Task 1.6 review.
+>
+> **Harness:** Passes. Consistency report attached.
+
+That's done. Anything less is in progress.
+
+---
+
+## Initial onboarding prompt
+
+Paste this verbatim at the start of the Replit engagement:
+
+> You are working on `budget.schoolstack.ai`, a financial intelligence tool for K-12 school founders. The current production output has structural bugs that disqualify the packets from lender review. See `SchoolStack_Budget_System_Remediation.md` for the full 22-task list.
+>
+> Before starting any task, read `SchoolStack_Budget_Verification_Protocol.md` end to end. Confirm you understand the standing rules and the per-task verification template before proceeding.
+>
+> Start by building the regression harness described in the protocol document. Do not begin Task 1.1 until the harness exists and detects every inconsistency catalogued in the remediation doc against the current production output as a baseline.
+>
+> Once the harness is in place, work tasks in the order specified in the remediation doc. For every task, produce the five-section completion output (A–E) defined in the verification protocol. Do not mark any task complete without all five sections filled and the harness passing.
+>
+> If you find a bug not in the remediation doc, flag it. Do not fix it without confirmation. If a task as written cannot be completed as specified, flag it. Do not silently substitute a different approach.
+>
+> Re-render all three sample packets after every task. The harness must pass before you proceed to the next task.
+
+---
+
+## Quick reference: what to ask for at every checkpoint
+
+When Replit reports a task complete, the minimum response that counts as evidence:
+
+- ☐ All five sections (A–E) of the verification template filled
+- ☐ Regression harness shows green
+- ☐ Before/after values quoted for all three sample packets
+- ☐ Every changed value traced to an Excel cell
+- ☐ No new inconsistencies introduced anywhere else in the PDF
+
+If any of those is missing, the task is not done. Send it back.

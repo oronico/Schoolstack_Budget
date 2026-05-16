@@ -1,0 +1,420 @@
+# SchoolStack Budget — System Remediation Tasks
+
+**For:** Replit build agent working on `budget.schoolstack.ai`
+**Source:** Cross-reference of three sample lender packets (Riverside Christian Academy, Liberty STEM Charter School, Oakwood Learning Studio) against their canonical Excel models. **Zero formula errors in the engines (335 / 335 / 279 formulas verified).** All defects below are in the layers between the engine and the rendered output, OR in front-end inputs that allowed bad data to flow through.
+
+The three packets are **evidence**, not the work product. Every fix below is a system-level change that should be regression-tested against all three sample inputs plus any additional schools in the test corpus.
+
+---
+
+## How to use this doc
+
+Tasks are grouped by **code layer**, then ordered by **dependency** within each layer. Work Layer 1 → Layer 2 → Layer 3 → Layer 4 in sequence — downstream layers assume upstream is fixed.
+
+Each task includes:
+- **Symptom** — what users see in the output, with packet evidence
+- **Root cause** — where in the system the defect lives
+- **Fix** — the system-level change
+- **Regression test** — how to verify against the three sample packets
+
+---
+
+# LAYER 1 — Calculation Engine
+
+These are math bugs in the canonical engine. Fix here first; everything downstream consumes these outputs.
+
+## Task 1.1 — Fix `cash_runway_months` calculation
+
+**Symptom:**
+- Oakwood Executive Summary reports `Cash Runway: 1 months`
+- Oakwood Cumulative Cash Position table reports `1.9 months` reserve for Y1
+- Oakwood DSCR & Covenants Excel tab reports `2.93 months` (the correct value)
+- Same metric, three different values in the same packet
+
+**Root cause:** Multiple code paths compute "runway" with different formulas/denominators. The narrative pulls from at least two of them.
+
+**Fix:** Define one canonical function and remove competing implementations:
+```
+months_of_runway = ending_unrestricted_cash / (annual_opex / 12)
+```
+where `annual_opex` = Personnel + Operating Expenses + Debt Service (matches Excel `DSCR & Covenants!B18` formula). Delete any other runway calculation. Have all narrative consumers (Executive Summary, Cumulative Cash table, Health Dimensions, Lender Commentary) read from this one function.
+
+**Regression test:** All three packets must report identical Y1 runway across Executive Summary, Cumulative Cash Position table, Health Dimensions section, and the Excel `DSCR & Covenants` tab.
+
+---
+
+## Task 1.2 — Fix `cash_goes_negative` flag logic
+
+**Symptom:** Oakwood Health Dimensions says `Cash goes negative in month 1`. The monthly cash flow shows July cumulative cash at $4,932 — positive every month of Y1. Net cash flow is negative in July (-$7,068), but cumulative cash never goes below zero.
+
+**Root cause:** The flag is triggered on `monthly_net_cash_flow < 0` instead of `cumulative_cash < 0`.
+
+**Fix:** Change trigger condition to `min(cumulative_cash_by_month) < 0`. Add a separate, distinct flag for `negative_net_cash_flow_months` if that signal is wanted — but it's a different concept and should have different language ("burns more cash than it generates in some months" vs. "runs out of money").
+
+**Regression test:**
+- Oakwood: `cash_goes_negative` should now be `False`. Health Dimension should read something like "Y1 cash buffer is thin (under 3 months) before rising sharply" rather than "Cash goes negative."
+- A synthetic test case with cumulative cash dipping below zero should still trigger `True`.
+
+---
+
+## Task 1.3 — Eliminate the third DSCR figure
+
+**Symptom:** Every packet cites Year 1 DSCR three ways:
+
+| School | Lender Commentary | "As-planned (reported)" | DSCR Summary section |
+|---|---|---|---|
+| Riverside | 21.01x (normalized) | 22.02x | **20.91x** |
+| Liberty | 30.65x (normalized) | 30.84x | **30.64x** |
+| Oakwood | 3.11x (normalized) | 5.86x | **5.77x** |
+
+The bolded "DSCR Summary section" number matches no figure in the canonical engine. It's a stale calculation.
+
+**Root cause:** A legacy DSCR formula exists in the DSCR Summary section codepath that uses different inputs (likely a pre-normalization or pre-rounding intermediate).
+
+**Fix:** Delete the orphan DSCR calculation. The DSCR Summary section should display the **normalized** DSCR (the lender-primary view) and reference the "As-Planned vs Normalized" table for the founder/board view. Two views, two numbers, full stop.
+
+**Regression test:** Grep the rendered PDF for "DSCR" — every numeric DSCR figure must equal either the normalized or as-planned value from `DSCR & Covenants` tab. No third value should appear.
+
+---
+
+## Task 1.4 — Fix the "Tuition covers X% of Year 1 total expenses" calculation
+
+**Symptom:** Riverside flagged assumption reads `Tuition covers 39% of Year 1 total expenses`. Y1 tuition is $2,262,500; Y1 total expenses are $1,654,062. Actual coverage is 137%, not 39%. No plausible denominator produces 39%.
+
+**Root cause:** Formula is using the wrong inputs — possibly net tuition (after FES-EO voucher offset?) over a different expense base, or numerator and denominator are swapped on a related metric.
+
+**Fix:** Replace with explicit formula:
+```
+tuition_coverage_of_expenses = tuition_revenue / total_expenses
+```
+where `tuition_revenue` includes Annual Tuition + Registration/Activity Fees, and `total_expenses` matches the Operating Statement total. Document the formula in code comments.
+
+**Regression test:** All three packets should report tuition coverage that matches a hand-calc from the Op Stmt tab. For Riverside, the result should be ~137%, which should change the flag from "Info: Tuition covers 39%" to a positive signal.
+
+---
+
+## Task 1.5 — Unify Y1 ending cash across Operating Reserve table and Monthly Cash Flow
+
+**Symptom:** Liberty Operating Reserve table reports `Year 1 (trough) $2.3M`. Liberty Y1 Monthly Cash Flow June row reports ending cash $3.1M. Same school, same metric, different value.
+
+**Root cause:** The Monthly Cash Flow narrative pulls revenue from `Enrollment Tuition Fcst` ($5.85M Y1 total). The Operating Reserve table pulls from `5-Year Operating Stmt` ($4.875M Y1 total). Two different revenue bases produce two different cash trajectories.
+
+**Fix:** Bound by Task 2.1 below — once the canonical revenue source is locked, both tables will pull from it. Verify the Monthly Cash Flow narrative section is rebuilt to use the same revenue series as the Op Stmt.
+
+**Regression test:** For each packet, Y1 ending cash (June) in Monthly Cash Flow Summary must equal `DSCR & Covenants!B15` ("Ending Cash"). Y5 likewise.
+
+---
+
+## Task 1.6 — Reconcile or remove `negative_y1_net_income_under_stress` contradiction
+
+**Symptom:** Liberty Stress Testing section header reads `1 of 6 stress scenarios result in negative Year 5 net income, suggesting the model has limited cushion`. But the Lender Commentary in the same packet reads `Strong Year 5 net income` and the Executive Summary reads `No major red flags`.
+
+**Root cause:** The narrative generator computes a "scenarios with negative Y5 NI" count and writes it into the section header, but the Executive Summary / Commentary aggregator doesn't consume that count.
+
+**Fix:** When ≥1 stress scenario produces negative Y5 NI, propagate that signal to the Lender Commentary. Don't claim "no major red flags" if a stress scenario kills the model. The "Hard revenue only" scenario for Liberty produces -$5.4M Y5 NI; that should be called out in the commentary as a single-point-of-failure risk on public funding.
+
+**Regression test:**
+- Liberty: Lender Commentary should explicitly name the "Hard revenue only" scenario and explain that loss of public funding would render the school insolvent. Executive Summary "Biggest Risk" should reference public-funding concentration, not "no major red flags detected."
+
+---
+
+# LAYER 2 — Data Flow / Source-of-Truth Routing
+
+These are bugs in WHICH calculation result feeds WHICH narrative slot. The engine is right; the wiring is wrong.
+
+## Task 2.1 — Lock canonical revenue series
+
+**Symptom:** Each packet pulls revenue from up to three different tabs. The numbers don't tie:
+
+| School | Enrollment Tuition Fcst Y1 | 5-Year Op Stmt Y1 | Budget Summary Y1 | PDF "Revenue by Year" Y1 |
+|---|---|---|---|---|
+| Riverside | $4,237,488 | $3,951,750 | $4,237,488 | $2.4M (tuition only) |
+| Liberty | $5,850,000 | $4,875,000 | $4,875,000 | $5.8M (gross) |
+| Oakwood | $213,992 | $165,642 | $178,327 | $199K (mid-source) |
+
+**Root cause:** No single source-of-truth. Each PDF section has independently sourced revenue.
+
+**Fix:** Designate `5-Year Operating Stmt!B5:F5` as the canonical revenue series for **every** narrative section that says "revenue" or "total revenue." This is the post-collection-rate, post-scholarship-netting figure that the rest of the underwriting bottom line is computed against.
+
+If any section needs a different revenue view (e.g., gross tuition before scholarship netting), it must be **explicitly labeled** as such — e.g., "Gross Tuition Billing" vs. "Net Revenue."
+
+**Regression test:** Grep the generated PDF for every dollar figure described as "revenue." Every match must equal `5-Year Operating Stmt!B5:F5` for the corresponding year, OR be labeled with a non-ambiguous qualifier like "gross tuition" / "before scholarship netting."
+
+---
+
+## Task 2.2 — Fix "Revenue by Year" table source
+
+**Symptom:** Riverside "Revenue by Year" table shows Y1 = $2.4M, Y5 = $5.3M. Excel canonical Y5 revenue is $8,825,993. The $5.3M figure traces to the Annual Tuition (K-8) line only — it excludes the $3.7M FES-EO voucher, donations, and after-school. The table is labeled "Total Revenue" but shows net tuition.
+
+**Root cause:** Table is pulling a single revenue line item rather than the total.
+
+**Fix:** "Revenue by Year" table must pull `5-Year Operating Stmt!B5:F5` ("Total Revenue") for the row, matching Task 2.1.
+
+**Regression test:** "Revenue by Year" table Y1 and Y5 values must equal Executive Summary headline revenue for the same period. They are the same metric.
+
+---
+
+## Task 2.3 — Lock canonical net income / change-in-net-assets series
+
+**Symptom:** Riverside "5-Year Change in Net Assets Projection" table shows Y1 = $712K, Y5 = $2.5M with 47.3% margin. The "As-Planned vs Normalized" table on the same school shows Y1 reported NI = $2,297,688, Y5 = $6,040,104. Canonical Excel Op Stmt: Y1 change in net assets = $2,176,259, Y5 = $5,813,207.
+
+The $712K / $2.5M series traces to the truncated tuition-only revenue minus expenses. It's mathematically internally consistent within its own row but uses a different revenue base from the rest of the packet.
+
+**Root cause:** Same issue as Task 2.2 — the table's revenue input is the wrong source, which cascades to net income.
+
+**Fix:** Once Task 2.1 and 2.2 land, this table will rebuild correctly. Verify the rebuild explicitly.
+
+**Regression test:** "5-Year Change in Net Assets Projection" table values must equal `5-Year Operating Stmt!B16:F16` ("Change in Net Assets" or "Net Income") for the corresponding year.
+
+---
+
+## Task 2.4 — Read loan rates from canonical source, not narrative-only fields
+
+**Symptom:** Five out of seven loan rates across the three packets are mis-stated in the narrative "Supporting Assumptions" vs. the actual Capital Stack / Debt Schedule:
+
+| School | Loan | Narrative says | Capital Stack actually uses |
+|---|---|---|---|
+| Riverside | Building Mortgage 25yr | 5.5% | 6.0% |
+| Liberty | Facility Expansion 15yr | 6.5% | 7.0% |
+| Liberty | Equipment Financing 5yr | 5.5% | 6.0% |
+| Oakwood | SchoolStack Microloan 5yr | 6.5% | 7.0% |
+
+**Root cause:** Loan rate is stored/displayed in two places: a narrative-supporting-assumptions field AND the Capital Stack tab. The narrative field is stale or independently editable.
+
+**Fix:** Remove any duplicate storage of loan rate. The Capital Stack table (`Capital Stack!D:D`) is the single source of truth. Every narrative reference to a loan rate must read from this column. Same applies to principal, term, and annual payment.
+
+**Regression test:** For each packet, the "Supporting Assumptions" narrative lines describing each loan must match the Capital Stack table column-for-column. Any change to Capital Stack must propagate through the PDF on next render with no manual sync.
+
+---
+
+## Task 2.5 — Decide and document the gross-to-net revenue discount
+
+**Symptom:** There's a systematic gap between `Enrollment Tuition Fcst!TOTAL_REVENUE` and `5-Year Operating Stmt!Total Revenue`:
+
+| School | Tuition Fcst Y1 | Op Stmt Y1 | Implied discount |
+|---|---|---|---|
+| Riverside | $4,237,488 | $3,951,750 | 6.7% |
+| Liberty | $5,850,000 | $4,875,000 | 16.7% |
+| Oakwood | $213,992 | $165,642 | 22.6% |
+
+The discount rates are different for each school, applied silently, and never explained in the packet. A lender will ask "where did $975K of Liberty revenue go between these two tabs?"
+
+**Root cause:** The engine applies a collection rate / scholarship netting / seasonality adjustment between the gross billing forecast and the operating statement, but the calculation isn't surfaced as a line item.
+
+**Fix:** Add an explicit reconciliation line in the Revenue Model section of the PDF:
+```
+Gross Tuition Billing (per Enrollment & Tuition Forecast):   $X
+Less: Collection rate adjustment                             ($Y)
+Less: Scholarship netting                                    ($Z)
+Less: Seasonality / timing                                   ($W)
+= Net Revenue (per Operating Statement):                     $V
+```
+The exact lines depend on what the engine actually does. Whatever it does, surface it.
+
+**Regression test:** Reconciliation line must mathematically tie Tuition Fcst total to Op Stmt total for each year. Sum of adjustments equals the gap.
+
+---
+
+# LAYER 3 — PDF Rendering / Templating
+
+These are bugs in how data is presented, not what data is calculated.
+
+## Task 3.1 — Fix "Revenue Quality" table column header offset
+
+**Symptom:** All three packets render the table headers as `Year 2 / Year 3 / Year 4 / Year 5 / Year 6`. The data in the first column is actually Year 1. Verified because the bullet directly above the table cites `Hard Revenue Coverage (Y1): 0.28×` for Riverside, and the first column row reads `0.28×`.
+
+**Root cause:** Off-by-one in the column-label loop. Likely `range(2, 7)` should be `range(1, 6)`.
+
+**Fix:** Correct header to `Year 1 / Year 2 / Year 3 / Year 4 / Year 5`.
+
+**Regression test:** First column of the Revenue Quality table must align with Y1 data in the same packet's Enrollment Plan table.
+
+---
+
+## Task 3.2 — Suppress empty Decision History section
+
+**Symptom:** Every packet renders a "Decision History" heading with a body that says "No decisions have been tracked with an outcome yet." This telegraphs to reviewers that the section is unbuilt.
+
+**Root cause:** Section is always rendered regardless of whether decisions exist.
+
+**Fix:** If `decisions_with_outcome.count() == 0`, suppress the section entirely (both heading and explanatory text). Add it back only when at least one decision exists.
+
+**Regression test:** All three sample packets currently have zero decisions. After fix, the Decision History section should not appear in any of them. Add a decision to one test case and verify the section reappears.
+
+---
+
+## Task 3.3 — Suppress or generate the second workbook referenced in disclaimer
+
+**Symptom:** Every PDF ends with a paragraph titled "Reading the Two Workbooks" that explains the difference between the 5-Year Financial Model and a separate Lender Pro-Forma. Only one workbook ships per packet.
+
+**Root cause:** Disclaimer is hard-coded; second workbook generator was either never built or got removed without removing the disclaimer.
+
+**Fix:** Two options, pick one:
+1. **Build the Lender Pro-Forma export** — a simplified single-page model with per-student/per-row averages that a reviewer can sensitivity-test by editing one assumption.
+2. **Remove the disclaimer** — and remove any references in the body to "the lender pro-forma workbook."
+
+The disclaimer is sophisticated and useful — option 1 is the better outcome if scope allows.
+
+**Regression test:** If option 1: every packet zip contains exactly 2 workbooks, and the disclaimer's claims about the two workbooks' bottom-line definitions match what each one actually computes. If option 2: no PDF references a second workbook.
+
+---
+
+## Task 3.4 — Fix character encoding artifacts in PDF template
+
+**Symptom:** The following character corruptions appear throughout every PDF:
+- `"H` should be `≈` (approximately)
+- `!"` should be `↓` (down arrow)
+- `!'` should be `→` (right arrow)
+- `"d` should be `≤` (less than or equal)
+
+**Root cause:** Source markdown/template uses Unicode characters that aren't surviving the PDF render pipeline (likely a font-encoding mismatch in the PDF renderer).
+
+**Fix:** Either (a) configure the PDF renderer to use a font that supports the full Unicode range these characters require, or (b) replace the Unicode in source templates with HTML entities or LaTeX escapes that the renderer handles natively.
+
+**Regression test:** Grep rendered PDFs for `"H`, `!"`, `!'`, `"d` — should return zero matches. Spot-check that the intended characters render correctly.
+
+---
+
+## Task 3.5 — Replace `[+] / [~] / [!] / [ ]` bullet placeholders with icons
+
+**Symptom:** Status bullets render as ASCII placeholders throughout: `[+] viability: Healthy`, `[~] liquidity: Watch closely`, `[!] cash runway: Critical`. Reads as draft text.
+
+**Root cause:** Icon font / emoji not loaded into the PDF renderer, or template was authored as fallback text without the swap-in.
+
+**Fix:** Map to renderable symbols or icons:
+- `[+]` → ✓ (green check) for "Healthy / Pass"
+- `[~]` → ⚠ (amber) for "Watch closely"
+- `[!]` → ✕ (red) for "Critical / Needs attention"
+- `[ ]` → use no bullet, or `•` for neutral metric headers
+
+If using emoji isn't safe in PDF, use colored Unicode geometric shapes (●○◐) with a legend.
+
+**Regression test:** No `[+]`, `[~]`, `[!]`, `[ ]` strings in rendered PDFs.
+
+---
+
+## Task 3.6 — Reconcile stress-test label collision
+
+**Symptom:** Liberty has two stress tests with nearly identical names producing different numbers:
+- Stress Test Results table: `Revenue Delayed 3 Months — Y1 DSCR 13.30x`
+- Standard Lender Stress Tests section: `ESA / Public Funding Delayed 3 Months — Min DSCR 14.23x`
+- Lender Commentary cites only the 14.23x version as "the toughest stress"
+
+**Root cause:** Two separate stress-test code paths produce overlapping scenarios with inconsistent naming and inputs.
+
+**Fix:** Pick one stress test for "revenue/public-funding delay." Either run it once and reference it from both tables, OR rename them to make the distinction explicit (e.g., "Revenue Delayed 3 Months — full revenue stack" vs. "ESA/Public Funding Specifically Delayed 3 Months — public funding only"). Without distinct definitions, having two of them is confusing.
+
+**Regression test:** For each packet, the Lender Commentary's "toughest stress" claim should be quantitatively verifiable against the Stress Test Results table — same scenario, same number.
+
+---
+
+# LAYER 4 — Front-End Data Entry / Input Validation
+
+These are bugs that allow bad data into the engine. Fixing here prevents the symptom from being possible.
+
+## Task 4.1 — Validate scholarship/discount input as percentage, not raw value
+
+**Symptom:** All three packets render the Scholarships / Financial Aid line as a single-digit dollar value:
+- Riverside: `Scholarships / Financial Aid $12`
+- Liberty: (not applicable — public funded)
+- Oakwood: `Scholarships / Financial Aid / Discount Rate $8`
+
+The Excel stores `-8`, `-12`, etc. These appear to be percentages (-8%, -12%) entered without a percent sign and persisted as raw negative integers.
+
+**Root cause:** Front-end input field accepts a raw number without enforcing units. Backend stores it without unit conversion. Renderer prefixes `$` regardless.
+
+**Fix:** Two-part:
+1. **Front-end:** Force the scholarship/discount field to accept either a percentage (e.g., "8%" or "0.08") or a flat dollar amount, with an explicit toggle. Validate the input. Store with a `unit` field (`PCT` or `USD`).
+2. **Backend:** When `unit == PCT`, the engine should apply the discount as `-(rate * gross_tuition)`, not store the raw integer as a dollar amount. When rendering, format as `(8.0%)` if PCT, `$(8,000)` if USD.
+
+**Regression test:** Re-render Oakwood and Riverside packets after the founders re-enter their scholarship data with explicit units. Output should show e.g. "(8.0%)" or a properly formatted negative dollar amount, never "$8."
+
+---
+
+## Task 4.2 — Validate per-pupil revenue against state benchmark ranges
+
+**Symptom:** Liberty Y1 revenue per student = $24,375. Arizona charter base per-pupil aid is roughly $9,000–$12,000, with weighted adjustments rarely exceeding $18,000 for high-need populations. $24K is implausibly high and the model passes it through without warning.
+
+**Root cause:** No sanity-check on revenue-per-student against state-specific benchmarks.
+
+**Fix:** Add a soft validation in the engine that flags per-pupil revenue outside the typical range for the state + school type combination. For Arizona charters: warn if per-pupil > $18,000. For Florida private with FES-EO: warn if per-pupil > $20,000. Etc. The warning should appear in the Flagged Assumptions section, not block the model — founders may have legitimate reasons (high SPED weighting, supplemental grants), but should be required to acknowledge the anomaly.
+
+Recommended ranges to seed (these are starting points — calibrate against authoritative sources):
+- **AZ charter:** $9,000–$15,000 typical, $18,000 ceiling for high-weight populations
+- **FL private + FES-EO:** $10,000–$18,000 typical
+- **Microschool tuition-based:** $7,000–$15,000 typical
+
+**Regression test:** Liberty should now flag `Y1 revenue per student of $24,375 is above the typical AZ charter range. Verify per-pupil rate breakdown.` The flag should appear in Flagged Assumptions with severity Warning.
+
+---
+
+## Task 4.3 — Require explicit voucher/per-pupil classification: contracted vs. policy-dependent
+
+**Symptom:** Riverside `Hard Revenue Coverage (Y1): 0.28×` and Liberty `Hard Revenue Coverage (Y1): 0.00×`. Both schools' largest revenue sources (FES-EO voucher, AZ per-pupil ADM) are classified as **policy-dependent** rather than **contracted**. This is defensible (policy can change) but produces alarming-looking hard-revenue coverage ratios for schools that are actually well-funded by enrollment-based formulas.
+
+**Root cause:** The engine forces all public funding into the "policy-dependent" bucket regardless of contractual structure. Once a student is enrolled and eligible, the per-pupil payment is contractually owed at the per-pupil rate — it's closer to contracted than projected.
+
+**Fix:** Either:
+1. **Reclassify** ADM/voucher per-pupil revenue as `contracted_pending_enrollment` — a new bucket that acknowledges policy risk but recognizes contractual structure once students are enrolled. Document the classification rule.
+2. **Add a Risk Framing note** that explicitly explains the conservative classification: "We classify voucher and per-pupil funding as policy-dependent rather than contracted because state appropriations can change between fiscal years. This produces a conservative Hard Revenue Coverage. The school's revenue is more stable than this metric suggests once enrollment is locked."
+
+Option 1 is more defensible. Option 2 is faster.
+
+**Regression test:** If option 1: Liberty `Hard Revenue Coverage` should rise from 0.00× to a value reflecting the contractual nature of per-pupil aid (likely > 1.0×). If option 2: Risk Framing note must appear in both Riverside and Liberty packets explaining the classification.
+
+---
+
+## Task 4.4 — Require Tuition Collection Rate input, not silent default
+
+**Symptom:** Liberty Appendix shows `Tuition collection rate: Not entered`. The model still runs and produces a Y1 revenue figure, meaning a default is being applied silently.
+
+**Root cause:** Front-end allows a critical input to be skipped. Backend silently substitutes a default (likely 100%).
+
+**Fix:** Make Tuition Collection Rate a required field in the input wizard. If the school is tuition-based or hybrid, the founder must enter a collection rate. Provide a tooltip with typical ranges (95-100% for autopay-driven schools, 88-95% for invoice-based). The model should refuse to render a packet until the field is set.
+
+**Regression test:** A test input with `tuition_collection_rate = null` should produce a validation error and block packet generation until resolved.
+
+---
+
+## Task 4.5 — Tag-evidence assumption-confidence score should affect output prominence
+
+**Symptom:** All three packets display `Overall: Needs Support · 0% weighted evidence · 0 of 22 tagged` in the Assumptions Confidence section. The packets still render and read as confident. A 0% evidence score should not produce a "Strong" Lender Readiness rating (which is what Riverside and Oakwood currently display).
+
+**Root cause:** Lender Readiness rating doesn't factor in assumption-confidence weighting.
+
+**Fix:** Lender Readiness should downgrade when evidence-tagging is below threshold:
+- < 25% tagged: cap Lender Readiness at "Needs Work" regardless of underlying math
+- 25–50% tagged: cap at "Almost There"
+- 50%+ tagged: unconstrained, use existing logic
+
+A model with great math but zero evidence behind the assumptions is not lender-ready, and the rating should reflect that.
+
+**Regression test:** Re-render all three packets with current 0% evidence. All three should show Lender Readiness = "Needs Work" with a clear callout about evidence tagging. Tag enough evidence to cross 50% and verify the rating relaxes.
+
+---
+
+# Summary scorecard
+
+| Layer | Tasks | Severity |
+|---|---|---|
+| **Layer 1 — Engine** | 1.1, 1.2, 1.3, 1.4, 1.5, 1.6 | All Critical or High |
+| **Layer 2 — Data Flow** | 2.1, 2.2, 2.3, 2.4, 2.5 | All Critical |
+| **Layer 3 — Templating** | 3.1, 3.2, 3.3, 3.4, 3.5, 3.6 | Medium |
+| **Layer 4 — Input Validation** | 4.1, 4.2, 4.3, 4.4, 4.5 | High |
+
+**Total tasks: 22**
+
+## Suggested execution order
+1. **Sprint 1 (must-fix before any external review):** Tasks 1.1, 1.2, 1.3, 1.5, 2.1, 2.2, 2.3, 2.4
+2. **Sprint 2 (math integrity and reconciliation):** Tasks 1.4, 1.6, 2.5
+3. **Sprint 3 (presentation):** Tasks 3.1 through 3.6
+4. **Sprint 4 (prevent recurrence):** Tasks 4.1 through 4.5
+
+## Regression test corpus
+Re-render all three sample packets after each task. Add the following to the test corpus:
+- A school with `cumulative_cash < 0` in some Y1 month (for Task 1.2)
+- A school with `tuition_collection_rate = null` (for Task 4.4)
+- A school with `per_pupil_revenue > state_benchmark_ceiling` (for Task 4.2)
+- A school with `decision_history.count() > 0` (for Task 3.2)
+
+After all tasks land, the regression test should: (a) detect zero numeric contradictions within any rendered PDF, (b) ensure every dollar figure in a PDF traces to a single canonical engine output, and (c) require explicit evidence tagging before claiming "Strong" lender readiness.
