@@ -1,0 +1,231 @@
+--- PAGE 1 ---
+Sc
+hoolStac
+k Budg
+et
+b
+y SchoolStac
+k.ai
+Decision Comparison
+Char
+ter School Demo  board-ready scenar
+io compar
+ison
+A
+EV
+ALU
+A
+TE A SITE
+Lease the anne
+x on Bir
+c
+h St.
+B
+ADJUST B
+UDGET
+Def
+er e
+xpansion,
+ trim ope
+x.
+Headline outcomes
+The better n
+umber on each metr
+ic is highlighted.
+ Use this as the at-a-glance summar
+y y
+ou'd present to the board.
+Y5 NET INCOME 
+VS B
+ASE
+A
+BEST
++
+$881.3k
+to $13.44M
+B
+-$322.5k
+to $12.24M
+Y5 REVENUE 
+VS B
+ASE
+A
+BEST
++
+$906.3k
+to $19.03M
+B
+-$362.5k
+to $17.76M
+BREAK-EVEN SHIFT
+A
+Same
+to 
+Y1
+B
+Same
+to 
+Y1
+CASH R
+UNW
+A
+Y 
+VS B
+ASE
+A
+-2.0 mo
+to 58 mo
+B
+BEST
+0 mo
+to 60+ mo
+5-y
+ear impact,
+ side-b
+y-side
+Metric
+Side
+Y1
+Y2
+Y3
+Y4
+Y5
+Net income vs base
+A
++$218.8k
++$410.5k
++$556.7k
++$716.0k
++$881.3k
+B
+-$57.5k
+-$134.2k
+-$192.7k
+-$256.4k
+-$322.5k
+Re
+v
+en
+ue vs base
+A
++$243.8k
++$435.5k
++$581.7k
++$741.0k
++$906.3k
+B
+-$97.5k
+-$174.2k
+-$232.7k
+-$296.4k
+-$362.5k
+DSCR after
+A
+6.54
+76.02
+109.21
+150.33
+194.64
+B
+5.74
+68.06
+98.32
+136.22
+177.21
+Net margin after
+A
+44.5%
+56.9%
+61.5%
+66.6%
+70.6%
+B
+41.9%
+54.6%
+59.3%
+64.7%
+68.9%
+Wh
+y eac
+h decision
+A  Lease the anne
+x on Bir
+c
+h St.
+Adds the anne
+x classroom b
+loc
+k in 
+Y1;
+ assumes 5% 
+enrollment lift offset b
+y $25k/yr in rent + utilities
+.
+B  Def
+er e
+xpansion,
+ trim ope
+x.
+Holds enrollment flat (-2%) and remo
+v
+es one classified 
+position;
+ sa
+v
+es ~$40k/yr in pa
+yroll & benefits
+.
+Fla
+gs & n
+udg
+es
+A  Lease the anne
+x on Bir
+c
+h St.
+[W
+atch] Lease co
+v
+enant:
+ Confir
+m landlord allo
+ws mid-y
+ear 
+occupancy bef
+ore signing.
+B  Def
+er e
+xpansion,
+ trim ope
+x.
+[OK] Health
+y r
+unw
+a
+y:
+ Cuts e
+xtend reser
+v
+e co
+v
+er
+age past 24 
+months in 
+Y1.
+[Risk] Capacity r
+isk:
+ 
+Without the anne
+x, w
+aitlist con
+v
+ersions 
+drop belo
+w target b
+y 
+Y3.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 1 of 1

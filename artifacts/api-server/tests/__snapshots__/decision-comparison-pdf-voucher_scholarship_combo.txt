@@ -1,0 +1,229 @@
+--- PAGE 1 ---
+Sc
+hoolStac
+k Budg
+et
+b
+y SchoolStac
+k.ai
+Decision Comparison
+v
+oucher_scholarship_combo  board-ready scenar
+io compar
+ison
+A
+EV
+ALU
+A
+TE A SITE
+Lease the anne
+x on Bir
+c
+h St.
+B
+ADJUST B
+UDGET
+Def
+er e
+xpansion,
+ trim ope
+x.
+Headline outcomes
+The better n
+umber on each metr
+ic is highlighted.
+ Use this as the at-a-glance summar
+y y
+ou'd present to the board.
+Y5 NET INCOME 
+VS B
+ASE
+A
+BEST
++$29.3k
+to $866.2k
+B
++$18.3k
+to $855.2k
+Y5 REVENUE 
+VS B
+ASE
+A
+BEST
++$54.3k
+to $1.14M
+B
+-$21.7k
+to $1.06M
+BREAK-EVEN SHIFT
+A
+Same
+to 
+Y1
+B
+Same
+to 
+Y1
+CASH R
+UNW
+A
+Y 
+VS B
+ASE
+A
+-2.0 mo
+to 58 mo
+B
+BEST
+0 mo
+to 60+ mo
+5-y
+ear impact,
+ side-b
+y-side
+Metric
+Side
+Y1
+Y2
+Y3
+Y4
+Y5
+Net income vs base
+A
+-$4.4k
++$7.5k
++$16.2k
++$23.8k
++$29.3k
+B
++$31.8k
++$27.0k
++$23.5k
++$20.5k
++$18.3k
+Re
+v
+en
+ue vs base
+A
++$20.6k
++$32.5k
++$41.2k
++$48.8k
++$54.3k
+B
+-$8.2k
+-$13.0k
+-$16.5k
+-$19.5k
+-$21.7k
+DSCR after
+A
+21.83
+65.89
+99.19
+134.16
+167.75
+B
+24.81
+68.84
+100.37
+133.57
+165.61
+Net margin after
+A
+61.1%
+63.6%
+70.2%
+74.0%
+75.9%
+B
+74.5%
+71.2%
+76.1%
+78.9%
+80.3%
+Wh
+y eac
+h decision
+A  Lease the anne
+x on Bir
+c
+h St.
+Adds the anne
+x classroom b
+loc
+k in 
+Y1;
+ assumes 5% 
+enrollment lift offset b
+y $25k/yr in rent + utilities
+.
+B  Def
+er e
+xpansion,
+ trim ope
+x.
+Holds enrollment flat (-2%) and remo
+v
+es one classified 
+position;
+ sa
+v
+es ~$40k/yr in pa
+yroll & benefits
+.
+Fla
+gs & n
+udg
+es
+A  Lease the anne
+x on Bir
+c
+h St.
+[W
+atch] Lease co
+v
+enant:
+ Confir
+m landlord allo
+ws mid-y
+ear 
+occupancy bef
+ore signing.
+B  Def
+er e
+xpansion,
+ trim ope
+x.
+[OK] Health
+y r
+unw
+a
+y:
+ Cuts e
+xtend reser
+v
+e co
+v
+er
+age past 24 
+months in 
+Y1.
+[Risk] Capacity r
+isk:
+ 
+Without the anne
+x, w
+aitlist con
+v
+ersions 
+drop belo
+w target b
+y 
+Y3.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 1 of 1
