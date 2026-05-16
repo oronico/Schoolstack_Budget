@@ -126,7 +126,26 @@ function extractStringLiterals(content: string): string {
         str += c;
         i++;
       }
-      result += str;
+      let decoded = str;
+      const hasBom = str.length >= 2 && str.charCodeAt(0) === 0xFE && str.charCodeAt(1) === 0xFF;
+      let looksUtf16 = hasBom;
+      if (!looksUtf16 && str.length >= 2 && str.length % 2 === 0) {
+        let zeroHigh = 0;
+        const pairs = str.length / 2;
+        for (let p = 0; p < pairs; p++) {
+          if (str.charCodeAt(p * 2) === 0) zeroHigh++;
+        }
+        if (pairs > 0 && zeroHigh === pairs) looksUtf16 = true;
+      }
+      if (looksUtf16) {
+        const start = hasBom ? 2 : 0;
+        let folded = "";
+        for (let p = start; p + 1 < str.length; p += 2) {
+          folded += String.fromCharCode((str.charCodeAt(p) << 8) | str.charCodeAt(p + 1));
+        }
+        decoded = folded;
+      }
+      result += decoded;
       continue;
     }
 
