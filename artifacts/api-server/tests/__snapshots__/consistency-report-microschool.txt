@@ -1,7 +1,7 @@
 # Consistency report — microschool
 # Harness: tests/consistency-harness.ts (Task #930)
 
-## Canonical truth values (extracted from underwriting workbook)
+## Canonical truth values (from underwriting workbook)
 
   Total Revenue        (5-Year Operating Stmt!B5:F5)  Y1=$165,642  Y2=$251,091  Y3=$308,259  Y4=$361,289  Y5=$401,320
   Change in Net Assets (5-Year Operating Stmt!B16:F16) Y1=$22,397  Y2=$27,135  Y3=$75,433  Y4=$119,719  Y5=$151,668
@@ -19,15 +19,14 @@
 
 ## Probes
 
-[FAIL] B1.revenue-totals — Multiple revenue totals per packet
+[FAIL] B1.revenue-totals — Multiple revenue totals per packet (#912 #914)
      canonical Y1 Total Revenue (5-Year Operating Stmt!B5) = $165,642
      "projects $N" narrative occurrences: 2 (distinct values: 1)
        distinct values: $400,145
        matching truth:  (none)
        diverging:       $400,145
-     revenue-context $ tokens found (loose scan): 2 distinct
 
-[FAIL] B2.dscr-figures — Multiple DSCR figures per packet
+[FAIL] B2.dscr-figures — Multiple DSCR figures per packet (#910)
      canonical Y1 DSCR (DSCR & Covenants!B12) = 5.86x
      narrative DSCR mentions (distinct rounded): 4
        values:  5.86x, -0.06x, 5.77x, 2.9x
@@ -35,44 +34,50 @@
      DSCR (Reported) column present: true
      DSCR (Normalized) column present: true
 
-[FAIL] B3.runway-figures — Multiple runway figures per packet
+[FAIL] B3.runway-figures — Multiple runway figures per packet (#908)
      canonical Y1 Runway (DSCR & Covenants!B18) = 2.9 months
      runway narrative occurrences: 4 (distinct: 1)
        distinct values: 1 months
        diverging:       1 months
        literal hits:    "Cash Runway: 1 months", "Cash Runway: 1 months", "Cash runway: 1 months", "runway extends 1 months"
 
-[PASS] B4.loan-rate — Loan-rate narrative ↔ Capital Stack parity
-     Capital Stack loans: SchoolStack Lending Lab Microloan (6.5%, $20,000, 5y)
-     narrative "Loan interest rate: N%" occurrences: 1
-       values: 6.5%
-       all match a Capital Stack loan: true
+[FAIL] B4.loan-rate — Loan-rate narrative ↔ Capital Stack parity (#916)
+     Capital Stack loans:
+       - SchoolStack Lending Lab Microloan: principal=$20,000 rate=6.5% term=5y
+     narrative rates mentioned (near loan/mortgage/interest keywords): 2%, 6.5%
+     Capital Stack loans whose rate NEVER appears in narrative (#916): 0
+     narrative rates with NO matching loan in Capital Stack: 1
+       - 2% — ghost rate
 
-[PASS] B5.rev-quality-headers — Revenue Quality column-header off-by-one
+[FAIL] B5.rev-quality-headers — Revenue Quality column-header off-by-one (#919)
      Revenue Quality section found: true
-     nearby header sequence: ""
-     off-by-one (Year 2..Year 6) detected anywhere: false
+     nearby header sequence: "Year 2Year 3Year 4Year 5Year 6"
+     off-by-one (Year 2..Year 6) detected: true
 
-[INFO] B6.tuition-coverage — Tuition coverage % narrative vs source
+[INFO] B6.tuition-coverage — Tuition coverage narrative vs engine truth (#911)
      narrative "Tuition covers N%" occurrences: 0 (distinct: 0)
        distinct: (none)
-     for-context: total Y1 Revenue ÷ Y1 OpEx = 376% (not the same metric, but a sanity envelope)
+     engine-truth envelope (TotalRev / (TotalRev − ChangeInNA) × 100):
+       Y1 Total Revenue        = $165,642  [5-Year Operating Stmt!B5]
+       Y1 Change in Net Assets = $22,397  [5-Year Operating Stmt!B16]
+       implied total Y1 costs  = $143,245
+       envelope ratio          = 116%
+     narrative claims diverging from envelope by > 50%: 0
      persona: microschool — spec calls out 39% vs 137% on private (Riverside)
 
-[FAIL] B7.empty-bullets — Unrendered `[ ]` ASCII bullets in PDF
+[FAIL] B7.empty-bullets — Unrendered `[ ]` ASCII bullets in PDF (#923)
      ASCII "[ ]" placeholder bullets:  16
      ASCII "[+]" passing bullets:      20
      ASCII "[~]" caution bullets:      7
      ASCII "[!]" warning bullets:      3
-       → empty checkboxes leak into rendered packet (Task #908 / #909 scope).
+       → empty checkboxes leak into rendered packet (Task #923 scope).
 
-[FAIL] B8.readiness-evidence — "Strong" Lender Readiness with 0% evidence
+[FAIL] B8.readiness-evidence — "Strong" Lender Readiness with 0% evidence (#929)
      Lender Readiness verdict occurrences: 2 (distinct: Strong)
      evidence-tagged % mentioned: (not found)
      zero-evidence wording present: true
      verdict says Strong: true
-       → bug pattern: verdict=Strong with 0% / no-evidence claim leaks confidence the data doesn't support
-       (raw "Strong" fragments seen: 4)
+       → bug pattern (#929): verdict=Strong with 0% / no-evidence claim leaks confidence the data doesn't support
 
 [FAIL] C1.cross-section-revenue — Cross-section Y1 Total Revenue consistency
      canonical Y1 Total Revenue (5-Year Operating Stmt!B5) = $165,642
@@ -80,7 +85,134 @@
        values:    $400,145, $199
        off-truth: $400,145, $199
 
+[PASS] M.totalRevenue — Metric-location map — Total Revenue
+     canonical truth (5-Year Operating Stmt!B5:F5): Y1=$165,642  Y2=$251,091  Y3=$308,259  Y4=$361,289  Y5=$401,320
+     PDF locations matched (literal token → matched year):
+       - $400,145 → Y5
+       - $249K → Y2
+       - $164K → Y1
+       - $309K → Y3
+       - $362K → Y4
+       - $361K → Y4
+       - $307,930 → Y3
+       - $399,382 → Y5
+     years with ≥1 PDF occurrence: Y1, Y2, Y3, Y4, Y5
+
+[PASS] M.changeInNetAssets — Metric-location map — Change in Net Assets
+     canonical truth (5-Year Operating Stmt!B16:F16): Y1=$22,397  Y2=$27,135  Y3=$75,433  Y4=$119,719  Y5=$151,668
+     PDF locations matched (literal token → matched year):
+       - $76,000 → Y3
+       - $75,862 → Y3
+       - $120,148 → Y4
+       - $152,096 → Y5
+       - $152K → Y5
+       - $119K → Y4
+       - $76K → Y3
+       - $151K → Y5
+       - $75,355 → Y3
+     years with ≥1 PDF occurrence: Y3, Y4, Y5
+
+[PASS] M.dscrNormalized — Metric-location map — DSCR (Normalized)
+     canonical truth (DSCR & Covenants!B12:F12): Y1=5.86x  Y2=6.87x  Y3=17.16x  Y4=26.59x  Y5=33.39x
+     PDF locations matched (literal token → matched year):
+       - 5.86x → Y1
+       - 5.77x → Y1
+       - 17.29x → Y3
+     years with ≥1 PDF occurrence: Y1, Y3
+
+[PASS] M.runwayMonths — Metric-location map — Months of Runway
+     canonical truth (DSCR & Covenants!B18:F18): Y1=2.9m  Y2=3.3m  Y3=7.1m  Y4=12.9m  Y5=19.8m
+     PDF locations matched (literal token → matched year):
+       - 2.6 months → Y1
+       - 18.9 months → Y5
+       - 3 Month → Y1
+       - 3 Months → Y1
+       - 3 months → Y1
+     years with ≥1 PDF occurrence: Y1, Y5
+
+[PASS] M.endingCash — Metric-location map — Ending Cash
+     canonical truth (DSCR & Covenants!B15:F15): Y1=$34,826  Y2=$62,389  Y3=$138,251  Y4=$258,399  Y5=$410,495
+     PDF locations matched (literal token → matched year):
+       - $258K → Y4
+       - $63K → Y2
+       - $35K → Y1
+       - $137K → Y3
+       - $408K → Y5
+       - $34,826 → Y1
+       - $62,437 → Y2
+     years with ≥1 PDF occurrence: Y1, Y2, Y3, Y4, Y5
+
+[INFO] M.daysCashOnHand — Metric-location map — Days Cash on Hand
+     canonical truth (DSCR & Covenants!B17:F17): Y1=89d  Y2=102d  Y3=217d  Y4=391d  Y5=601d
+     PDF locations matched (literal token → matched year):
+       (none detected via numeric scan; metric may render in a sheet/table not text-searchable)
+     years with ≥1 PDF occurrence: (none)
+
+[PASS] M.capacityUtilization — Metric-location map — Capacity Utilization
+     canonical truth (DSCR & Covenants!B19:F19): Y1=44%  Y2=58%  Y3=71%  Y4=82%  Y5=89%
+     PDF locations matched (literal token → matched year):
+       - 44% → Y1
+       - 88.6% → Y5
+       - 90.7% → Y5
+       - 88.9% → Y5
+       - 88.0% → Y5
+     years with ≥1 PDF occurrence: Y1, Y5
+
+[PASS] M.breakEvenEnrollment — Metric-location map — Break-Even Enrollment
+     canonical truth (DSCR & Covenants!B25:F25): Y1=17  Y2=23  Y3=24  Y4=24  Y5=24
+     PDF locations matched (literal token → matched year):
+       - 17 → Y1
+       - 18 → Y1
+       - 25 → Y3
+       - 22 → Y2
+       - 24 → Y2
+       - 16 → Y1
+       - 23 → Y2
+     years with ≥1 PDF occurrence: Y1, Y2, Y3
+
+[PASS] M.personnel — Metric-location map — Personnel Cost
+     canonical truth (5-Year Operating Stmt!B8:F8): Y1=$86,120  Y2=$159,666  Y3=$164,456  Y4=$169,390  Y5=$174,472
+     PDF locations matched (literal token → matched year):
+       - $86K → Y1
+       - $160K → Y2
+       - $164K → Y3
+       - $169K → Y4
+       - $174K → Y5
+       - $171K → Y4
+       - $173K → Y5
+       - $86,120 → Y1
+       - $160,481 → Y2
+     years with ≥1 PDF occurrence: Y1, Y2, Y3, Y4, Y5
+
+[PASS] M.operatingExpenses — Metric-location map — Operating Expenses
+     canonical truth (5-Year Operating Stmt!B9:F9): Y1=$44,000  Y2=$57,165  Y3=$61,744  Y4=$66,055  Y5=$69,556
+     PDF locations matched (literal token → matched year):
+       - $70,000 → Y5
+       - $61,532 → Y3
+       - $70K → Y5
+       - $66,239 → Y4
+     years with ≥1 PDF occurrence: Y3, Y4, Y5
+
+[PASS] M.enrollment — Metric-location map — Enrollment
+     canonical truth (Enrollment Tuition Fcst!B4:F4): Y1=2  Y2=26  Y3=32  Y4=37  Y5=4
+     PDF locations matched (literal token → matched year):
+       - 20 → Y1
+       - 40 → Y5
+       - 38 → Y4
+       - 25 → Y2
+       - 37 → Y4
+       - 27 → Y2
+       - 019 → Y1
+       - 33 → Y3
+       - 31 → Y3
+       - 26 → Y2
+       - 32 → Y3
+       - 21 → Y1
+       - 36 → Y4
+       - 031 → Y3
+     years with ≥1 PDF occurrence: Y1, Y2, Y3, Y4, Y5
+
 ## Summary
-  PASS: 2   FAIL: 6   INFO: 1
+  PASS: 10   FAIL: 8   INFO: 2
 
 # End of report.
