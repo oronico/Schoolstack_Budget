@@ -179,6 +179,19 @@ async function captureStep(
   // settle before we snap. 1.2s is what the existing capture script
   // settled on for the same wizard.
   await page.waitForTimeout(1200);
+  // The seed step bumps the model version (create + re-PUT), which can
+  // race with the wizard's cross-tab change listener and surface the
+  // "Your other tab made changes — Reload model" banner + inline pill on
+  // top of the step content. Hide them (don't remove — removing the
+  // nodes races React's reconciler and trips the error boundary) before
+  // the shot so each screenshot shows the actual wizard step.
+  await page.addStyleTag({
+    content: `
+      [data-testid="conflict-reload-banner"],
+      [data-testid="wizard-save-conflict-reload"] { display: none !important; }
+    `,
+  });
+  await page.waitForTimeout(150);
   return await page.screenshot({ fullPage: false });
 }
 
