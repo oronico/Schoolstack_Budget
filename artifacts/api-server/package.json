@@ -115,6 +115,7 @@
     "test:pro-forma-pdf-text-snapshot": "tsx ./tests/pro-forma-pdf-text-snapshot.ts",
     "test:loan-readiness-pdf-text-snapshot": "tsx ./tests/loan-readiness-pdf-text-snapshot.ts",
     "test:consistency-harness": "tsx ./tests/consistency-harness.ts",
+    "test:consistency-harness:baseline": "tsx ./tests/consistency-harness.ts --baseline",
     "qa:packet-cash": "tsx ./tests/board-packet-cash-runway.ts",
     "test:inline-rationale-rollup": "tsx ./tests/inline-rationale-rollup.ts",
     "test:workbook-helpers-school-model": "tsx ./tests/workbook-helpers-school-model.ts",

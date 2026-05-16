@@ -42,26 +42,27 @@
  * Hermetic: no DB, no network, no env vars beyond UPDATE_SNAPSHOTS
  * and STRICT_HARNESS.
  *
- * ── Two-mode exit policy ──────────────────────────────────────────
+ * ── Exit policy ───────────────────────────────────────────────────
  *
- * Default mode (used by the api-server `test` chain):
- *   The script writes the latest report and compares it to the
- *   committed snapshot under `tests/__snapshots__/`. Exit 0 if the
- *   snapshot matches (preserving CI stability across the remediation
- *   window — committed snapshots ARE the current acceptable failure
- *   set); exit 1 if the report drifts from the committed snapshot
- *   (signalling either a NEW inconsistency or a remediation fix that
- *   needs an intentional snapshot refresh).
+ * Default (script `test:consistency-harness`, wired into the
+ * api-server `test` chain):
+ *   STRICT — exits non-zero whenever any probe is FAIL. This is the
+ *   protocol's hard "fails loudly on any inconsistency" requirement
+ *   (Verification Protocol step 5). The api-server `test` chain will
+ *   therefore stay red until the remediation tasks #908–#929 land.
+ *   This is intentional per the task spec: "The harness must be
+ *   green before each task is claimed complete."
  *
- * Strict mode (`STRICT_HARNESS=1` — used by individual remediation
- * tasks #908–#929 to verify their fix):
- *   Exits non-zero whenever any probe is FAIL, regardless of
- *   snapshot match. Implements the protocol's hard "fails loudly
- *   when any inconsistency is detected" requirement.
+ * Baseline mode (script `test:consistency-harness:baseline`,
+ * NOT in the `test` chain):
+ *   Writes a fresh report and snapshot-compares it to the committed
+ *   `tests/__snapshots__/consistency-report-<persona>.txt`. Used
+ *   during a remediation task to see whether a fix flipped a probe
+ *   from FAIL → PASS (snapshot drift = intentional progress).
  *
  * Snapshot refresh (after an intentional fix lands):
  *     UPDATE_SNAPSHOTS=1 pnpm --filter @workspace/api-server run \
- *       test:consistency-harness
+ *       test:consistency-harness:baseline
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -78,8 +79,13 @@ import {
 } from "../src/lib/seed-preview-data.js";
 import { extractPdfFragments, diffLines } from "./_pdf-text-snapshot-util.js";
 
-const UPDATE = process.env.UPDATE_SNAPSHOTS === "1";
-const STRICT = process.env.STRICT_HARNESS === "1";
+// CLI flags (also via env vars for back-compat).
+const ARGS = new Set(process.argv.slice(2));
+const UPDATE = process.env.UPDATE_SNAPSHOTS === "1" || ARGS.has("--update-snapshots");
+// `--baseline`: snapshot-compare mode used by `test:consistency-harness:baseline`.
+// Without this flag the script runs in STRICT mode (exits non-zero on
+// any probe FAIL, per Verification Protocol step 5).
+const BASELINE_MODE = ARGS.has("--baseline");
 const SNAP_DIR = path.join(import.meta.dirname ?? __dirname, "__snapshots__");
 
 interface PersonaCase {
@@ -161,117 +167,95 @@ async function renderLenderPdf(data: Record<string, unknown>): Promise<Buffer> {
 }
 
 // ── Canonical metric registry — every truth value the harness
-//    compares against the rendered PDF traces to one of these
-//    cells (Rule 3). Mirrors the table in task-930.md exactly.
+//    compares against the rendered PDF traces to a specific
+//    sheet!cell address (Rule 3). The METRIC_SPECS table is the
+//    single source of truth; every spec carries the exact (sheet,
+//    row, firstCol, count) the extractor reads. No label search.
+//    Mirrors the registry in task-930.md exactly.
 interface MetricTruth {
-  totalRevenue: number[];          // 5-Year Operating Stmt!B5:F5
-  changeInNetAssets: number[];     // 5-Year Operating Stmt!B16:F16
-  dscrNormalized: number[];        // DSCR & Covenants!B12:F12
-  endingCash: number[];            // DSCR & Covenants!B15:F15
-  daysCashOnHand: number[];        // DSCR & Covenants!B17:F17
-  runwayMonths: number[];          // DSCR & Covenants!B18:F18
-  capacityUtilization: number[];   // DSCR & Covenants!B19:F19
-  breakEvenEnrollment: number[];   // DSCR & Covenants!B25:F25
-  personnel: number[];             // 5-Year Operating Stmt!B8:F8
-  operatingExpenses: number[];     // 5-Year Operating Stmt!B9:F9
-  enrollment: number[];            // Enrollment Tuition Fcst!B4:F4
+  totalRevenue: number[];
+  changeInNetAssets: number[];
+  dscrNormalized: number[];
+  endingCash: number[];
+  daysCashOnHand: number[];
+  runwayMonths: number[];
+  capacityUtilization: number[];
+  breakEvenEnrollment: number[];
+  personnel: number[];
+  operatingExpenses: number[];
+  enrollment: number[];
   loans: Array<{ name: string; principal: number; ratePct: number; termYears: number }>;
 }
 
+type MetricKey = keyof Omit<MetricTruth, "loans">;
+
 interface MetricSpec {
-  key: keyof Omit<MetricTruth, "loans">;
+  key: MetricKey;
   label: string;
-  source: string;
-  // How to format Y1..Y5 truth values + parse PDF tokens for cross-section
-  // location enumeration.
+  source: string;        // human-readable "Sheet!A1:E1" address
+  sheet: string;         // exact sheet name to read
+  row: number;           // 1-based row number
+  firstCol: number;      // 1-based column number (B = 2)
+  count: number;         // number of cells to read across the row
   kind: "usd" | "ratio" | "days" | "months" | "pct" | "count";
 }
 
+// Hardcoded cell addresses per the canonical registry in
+// `.local/tasks/task-930.md`. Each row pins (sheet, row, firstCol,
+// count) so a sheet/row rearrangement in `underwriting-workbook.ts`
+// MUST update this table — it cannot drift silently the way a label
+// search would.
 const METRIC_SPECS: MetricSpec[] = [
-  { key: "totalRevenue",         label: "Total Revenue",         source: "5-Year Operating Stmt!B5:F5",   kind: "usd"    },
-  { key: "changeInNetAssets",    label: "Change in Net Assets",  source: "5-Year Operating Stmt!B16:F16", kind: "usd"    },
-  { key: "dscrNormalized",       label: "DSCR (Normalized)",     source: "DSCR & Covenants!B12:F12",      kind: "ratio"  },
-  { key: "runwayMonths",         label: "Months of Runway",      source: "DSCR & Covenants!B18:F18",      kind: "months" },
-  { key: "endingCash",           label: "Ending Cash",           source: "DSCR & Covenants!B15:F15",      kind: "usd"    },
-  { key: "daysCashOnHand",       label: "Days Cash on Hand",     source: "DSCR & Covenants!B17:F17",      kind: "days"   },
-  { key: "capacityUtilization",  label: "Capacity Utilization",  source: "DSCR & Covenants!B19:F19",      kind: "pct"    },
-  { key: "breakEvenEnrollment",  label: "Break-Even Enrollment", source: "DSCR & Covenants!B25:F25",      kind: "count"  },
-  { key: "personnel",            label: "Personnel Cost",        source: "5-Year Operating Stmt!B8:F8",   kind: "usd"    },
-  { key: "operatingExpenses",    label: "Operating Expenses",    source: "5-Year Operating Stmt!B9:F9",   kind: "usd"    },
-  { key: "enrollment",           label: "Enrollment",            source: "Enrollment Tuition Fcst!B4:F4", kind: "count"  },
+  { key: "totalRevenue",        label: "Total Revenue",         source: "5-Year Operating Stmt!B5:F5",    sheet: "5-Year Operating Stmt", row: 5,  firstCol: 2, count: 5, kind: "usd"    },
+  { key: "changeInNetAssets",   label: "Change in Net Assets",  source: "5-Year Operating Stmt!B16:F16",  sheet: "5-Year Operating Stmt", row: 16, firstCol: 2, count: 5, kind: "usd"    },
+  { key: "personnel",           label: "Personnel Cost",        source: "5-Year Operating Stmt!B8:F8",    sheet: "5-Year Operating Stmt", row: 8,  firstCol: 2, count: 5, kind: "usd"    },
+  { key: "operatingExpenses",   label: "Operating Expenses",    source: "5-Year Operating Stmt!B9:F9",    sheet: "5-Year Operating Stmt", row: 9,  firstCol: 2, count: 5, kind: "usd"    },
+  { key: "dscrNormalized",      label: "DSCR (Normalized)",     source: "DSCR & Covenants!B12:F12",       sheet: "DSCR & Covenants",      row: 12, firstCol: 2, count: 5, kind: "ratio"  },
+  { key: "endingCash",          label: "Ending Cash",           source: "DSCR & Covenants!B15:F15",       sheet: "DSCR & Covenants",      row: 15, firstCol: 2, count: 5, kind: "usd"    },
+  { key: "daysCashOnHand",      label: "Days Cash on Hand",     source: "DSCR & Covenants!B17:F17",       sheet: "DSCR & Covenants",      row: 17, firstCol: 2, count: 5, kind: "days"   },
+  { key: "runwayMonths",        label: "Months of Runway",      source: "DSCR & Covenants!B18:F18",       sheet: "DSCR & Covenants",      row: 18, firstCol: 2, count: 5, kind: "months" },
+  { key: "capacityUtilization", label: "Capacity Utilization",  source: "DSCR & Covenants!B19:F19",       sheet: "DSCR & Covenants",      row: 19, firstCol: 2, count: 5, kind: "pct"    },
+  { key: "breakEvenEnrollment", label: "Break-Even Enrollment", source: "DSCR & Covenants!B25:F25",       sheet: "DSCR & Covenants",      row: 25, firstCol: 2, count: 5, kind: "count"  },
+  { key: "enrollment",          label: "Enrollment",            source: "Enrollment Tuition Fcst!B4:F4",  sheet: "Enrollment Tuition Fcst", row: 4, firstCol: 2, count: 5, kind: "count"  },
 ];
 
 function extractRowRange(ws: ExcelJS.Worksheet, row: number, firstCol: number, count: number): number[] {
-  if (row <= 0) return new Array(count).fill(0);
   const out: number[] = [];
   for (let i = 0; i < count; i++) out.push(cellNumber(ws, row, firstCol + i));
   return out;
 }
 
 function extractTruth(wb: ExcelJS.Workbook): MetricTruth {
-  const op = wb.getWorksheet("5-Year Operating Stmt") || wb.getWorksheet("Year 1 Operating Stmt");
-  const dscr = wb.getWorksheet("DSCR & Covenants");
-  const enr = wb.getWorksheet("Enrollment Tuition Fcst");
+  const t: Partial<MetricTruth> = { loans: [] };
+  for (const spec of METRIC_SPECS) {
+    const ws = wb.getWorksheet(spec.sheet);
+    if (!ws) {
+      console.warn(`consistency-harness: missing sheet ${spec.sheet} for metric ${spec.key} (${spec.source}); reading zeroes.`);
+      (t as Record<MetricKey, number[]>)[spec.key] = new Array(spec.count).fill(0);
+      continue;
+    }
+    (t as Record<MetricKey, number[]>)[spec.key] = extractRowRange(ws, spec.row, spec.firstCol, spec.count);
+  }
+  // Loans: Capital Stack rows where col 2 = "Loan"; columns C/D/E
+  // are principal / rate / term per the canonical registry.
   const cap = wb.getWorksheet("Capital Stack");
-
-  const t: MetricTruth = {
-    totalRevenue: [], changeInNetAssets: [], dscrNormalized: [], endingCash: [],
-    daysCashOnHand: [], runwayMonths: [], capacityUtilization: [], breakEvenEnrollment: [],
-    personnel: [], operatingExpenses: [], enrollment: [], loans: [],
-  };
-
-  if (op) {
-    const revRow = findRowByLabel(op, "Total Revenue");
-    t.totalRevenue = extractRowRange(op, revRow, 2, 5);
-    let niRow = findRowByLabel(op, "Change in Net Assets");
-    if (niRow <= 0) niRow = findRowByLabel(op, "Net Income");
-    t.changeInNetAssets = extractRowRange(op, niRow, 2, 5);
-    const personnelRow = findRowStarting(op, "Personnel");
-    t.personnel = extractRowRange(op, personnelRow, 2, 5);
-    let opexRow = findRowByLabel(op, "Total Operating Expenses");
-    if (opexRow <= 0) opexRow = findRowByLabel(op, "Operating Expenses");
-    if (opexRow <= 0) opexRow = findRowStarting(op, "Operating Expenses");
-    t.operatingExpenses = extractRowRange(op, opexRow, 2, 5);
-  }
-
-  if (dscr) {
-    let dscrRow = findRowByLabel(dscr, "DSCR (Normalized)");
-    if (dscrRow <= 0) dscrRow = findRowStarting(dscr, "DSCR (Normalized");
-    if (dscrRow <= 0) dscrRow = findRowByLabel(dscr, "DSCR");
-    t.dscrNormalized = extractRowRange(dscr, dscrRow, 2, 5);
-    const cashRow = findRowStarting(dscr, "Ending Cash");
-    t.endingCash = extractRowRange(dscr, cashRow, 2, 5);
-    const dcohRow = findRowStarting(dscr, "Days Cash");
-    t.daysCashOnHand = extractRowRange(dscr, dcohRow, 2, 5);
-    const runwayRow = findRowStarting(dscr, "Months of Runway");
-    t.runwayMonths = extractRowRange(dscr, runwayRow > 0 ? runwayRow : findRowStarting(dscr, "Runway"), 2, 5);
-    const utilRow = findRowByLabel(dscr, "Capacity Utilization");
-    t.capacityUtilization = extractRowRange(dscr, utilRow, 2, 5);
-    const breakRow = findRowStarting(dscr, "Break-Even");
-    t.breakEvenEnrollment = extractRowRange(dscr, breakRow, 2, 5);
-  }
-
-  if (enr) {
-    let enrRow = findRowStarting(enr, "Total Students");
-    if (enrRow <= 0) enrRow = findRowStarting(enr, "Enrollment");
-    t.enrollment = extractRowRange(enr, enrRow, 2, 5);
-  }
-
   if (cap) {
     cap.eachRow((_row, n) => {
-      const type = cellString(cap, n, 2);
-      if (type !== "Loan") return;
+      if (cellString(cap, n, 2) !== "Loan") return;
       const name = cellString(cap, n, 1);
       const principal = cellNumber(cap, n, 3);
       const rate = cellNumber(cap, n, 4);
       const term = cellNumber(cap, n, 5);
       if (!name || principal === 0) return;
-      t.loans.push({ name, principal, ratePct: rate > 1 ? rate : rate * 100, termYears: term });
+      t.loans!.push({ name, principal, ratePct: rate > 1 ? rate : rate * 100, termYears: term });
     });
   }
-
-  return t;
+  return t as MetricTruth;
 }
+
+// label-helpers retained (unused by main extractor) — kept for
+// future ad-hoc probes; not used in canonical truth extraction.
+void findRowByLabel; void findRowStarting;
 
 // ── PDF text helpers ──────────────────────────────────────────────
 function joinPages(fragments: string[]): string[] {
@@ -639,6 +623,27 @@ function formatTruth(spec: MetricSpec, vals: number[]): string {
   }).join("  ");
 }
 
+// Per-metric keyword anchors. Each metric's narrative locations
+// in the rendered PDF appear within ±KEYWORD_WINDOW chars of one
+// of these keyword regexes. The strict metric-map probe scans
+// these windows for kind-appropriate numeric tokens; every token
+// found must match a canonical Y1..Y5 cell or the probe FAILs
+// (Rule 4 enforcement at the per-metric level).
+const KEYWORD_WINDOW = 80;
+const METRIC_KEYWORDS: Record<MetricKey, RegExp[]> = {
+  totalRevenue:        [/Total Revenue/g, /\bprojects? \$/gi, /revenue projected/gi, /projected revenue/gi],
+  changeInNetAssets:   [/Change in Net Assets/g, /Net Income/g, /net surplus/gi, /operating surplus/gi],
+  personnel:           [/Personnel/g, /staffing cost/gi, /salaries/gi],
+  operatingExpenses:   [/Operating Expenses/g, /\bOpEx\b/g, /Total Operating/g],
+  dscrNormalized:      [/DSCR/g, /Debt Service Coverage/gi],
+  endingCash:          [/Ending Cash/g, /cash balance/gi, /year[- ]end cash/gi],
+  daysCashOnHand:      [/Days? Cash/gi, /days of cash/gi, /DCOH/g],
+  runwayMonths:        [/Cash Runway/gi, /runway extends/gi, /months? of runway/gi, /runway/gi],
+  capacityUtilization: [/Capacity Utilization/gi, /of (?:stated )?capacity/gi, /capacity utilization/gi],
+  breakEvenEnrollment: [/Break[- ]?Even/gi, /breakeven enrollment/gi],
+  enrollment:          [/\benrollment\b/gi, /\bstudents?\b/gi, /Year \d enrollment/gi],
+};
+
 function probeMetricMap(spec: MetricSpec, truth: MetricTruth, pdfAll: string): ProbeResult {
   const vals = truth[spec.key];
   const tol = spec.kind === "usd" ? { abs: 1, rel: 0.01 }
@@ -648,113 +653,104 @@ function probeMetricMap(spec: MetricSpec, truth: MetricTruth, pdfAll: string): P
             : spec.kind === "pct" ? { abs: 0.01, rel: 0.02 }
             : { abs: 1, rel: 0.01 };
 
-  // Build the list of candidate PDF numeric tokens for this metric
-  // by matching keywords + numeric patterns appropriate to the kind.
-  const occurrences: Array<{ value: number; matchedYear: number; literal: string }> = [];
-  const seenLiterals = new Set<string>();
+  // Step 1: build the set of keyword-anchored windows for this metric.
+  const windows: Array<{ text: string; keyword: string; offset: number }> = [];
+  for (const re of METRIC_KEYWORDS[spec.key]) {
+    for (const m of pdfAll.matchAll(re)) {
+      const idx = m.index ?? 0;
+      const start = Math.max(0, idx - KEYWORD_WINDOW);
+      const end = Math.min(pdfAll.length, idx + m[0].length + KEYWORD_WINDOW);
+      windows.push({ text: pdfAll.slice(start, end), keyword: m[0], offset: idx });
+    }
+  }
 
-  // USD-kind metrics: scan all $-tokens and check whether each matches
-  // any Y1..Y5 truth value. Keep only the ones that match (signals
-  // a confirmed PDF location for the metric).
-  if (spec.kind === "usd") {
-    for (const m of pdfAll.matchAll(/\$([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]+(?:\.[0-9]+)?)([KMB]?)(?!\d)/g)) {
-      const raw = m[0];
-      if (seenLiterals.has(raw)) continue;
-      seenLiterals.add(raw);
-      let v = Number(m[1].replace(/,/g, ""));
-      const tag = m[2];
-      if (tag === "K") v *= 1_000;
-      else if (tag === "M") v *= 1_000_000;
-      else if (tag === "B") v *= 1_000_000_000;
-      const y = matchYear(v, vals, tol);
-      if (y > 0) occurrences.push({ value: v, matchedYear: y, literal: raw });
-    }
-  } else if (spec.kind === "ratio") {
-    for (const m of pdfAll.matchAll(/(-?[0-9]+(?:\.[0-9]+)?)x/g)) {
-      const raw = m[0];
-      if (seenLiterals.has(raw)) continue;
-      seenLiterals.add(raw);
-      const v = Number(m[1]);
-      const y = matchYear(v, vals, tol);
-      if (y > 0) occurrences.push({ value: v, matchedYear: y, literal: raw });
-    }
-  } else if (spec.kind === "months") {
-    for (const m of pdfAll.matchAll(/([0-9]+(?:\.[0-9]+)?)\s*months?/gi)) {
-      const raw = m[0];
-      if (seenLiterals.has(raw)) continue;
-      seenLiterals.add(raw);
-      const v = Number(m[1]);
-      const y = matchYear(v, vals, tol);
-      if (y > 0) occurrences.push({ value: v, matchedYear: y, literal: raw });
-    }
-  } else if (spec.kind === "days") {
-    for (const m of pdfAll.matchAll(/([0-9]+(?:\.[0-9]+)?)\s*days?/gi)) {
-      const raw = m[0];
-      if (seenLiterals.has(raw)) continue;
-      seenLiterals.add(raw);
-      const v = Number(m[1]);
-      const y = matchYear(v, vals, tol);
-      if (y > 0) occurrences.push({ value: v, matchedYear: y, literal: raw });
-    }
-  } else if (spec.kind === "pct") {
-    for (const m of pdfAll.matchAll(/([0-9]+(?:\.[0-9]+)?)\s*%/g)) {
-      const raw = m[0];
-      if (seenLiterals.has(raw)) continue;
-      seenLiterals.add(raw);
-      const v = Number(m[1]) / 100; // truth is stored as a fraction
-      const y = matchYear(v, vals, tol);
-      if (y > 0) occurrences.push({ value: v, matchedYear: y, literal: raw });
-    }
-  } else if (spec.kind === "count") {
-    // Counts (enrollment, break-even): plain integers. To reduce
-    // false positives, only count values that fall inside the
-    // metric's Y1..Y5 envelope.
-    const lo = Math.min(...vals.filter(v => v > 0));
-    const hi = Math.max(...vals);
-    if (Number.isFinite(lo) && Number.isFinite(hi)) {
-      const lowB = Math.max(1, Math.floor(lo * 0.9));
-      const highB = Math.ceil(hi * 1.1);
-      for (const m of pdfAll.matchAll(/\b([0-9]{2,5})\b/g)) {
-        const raw = m[0];
-        if (seenLiterals.has(raw)) continue;
-        seenLiterals.add(raw);
+  // Step 2: extract kind-appropriate numeric tokens from each window.
+  type Tok = { value: number; literal: string; matchedYear: number };
+  const parseToks = (s: string): Tok[] => {
+    const out: Tok[] = [];
+    if (spec.kind === "usd") {
+      for (const m of s.matchAll(/\$([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]+(?:\.[0-9]+)?)([KMB]?)(?!\d)/g)) {
+        let v = Number(m[1].replace(/,/g, ""));
+        if (m[2] === "K") v *= 1_000;
+        else if (m[2] === "M") v *= 1_000_000;
+        else if (m[2] === "B") v *= 1_000_000_000;
+        out.push({ value: v, literal: m[0], matchedYear: matchYear(v, vals, tol) });
+      }
+    } else if (spec.kind === "ratio") {
+      for (const m of s.matchAll(/(-?[0-9]+(?:\.[0-9]+)?)x/g)) {
         const v = Number(m[1]);
-        if (v < lowB || v > highB) continue;
-        const y = matchYear(v, vals, tol);
-        if (y > 0) occurrences.push({ value: v, matchedYear: y, literal: raw });
+        out.push({ value: v, literal: m[0], matchedYear: matchYear(v, vals, tol) });
+      }
+    } else if (spec.kind === "months") {
+      for (const m of s.matchAll(/([0-9]+(?:\.[0-9]+)?|60\+)\s*months?/gi)) {
+        const v = m[1] === "60+" ? 60 : Number(m[1]);
+        out.push({ value: v, literal: m[0], matchedYear: matchYear(v, vals, tol) });
+      }
+    } else if (spec.kind === "days") {
+      for (const m of s.matchAll(/([0-9]+(?:\.[0-9]+)?)\s*days?/gi)) {
+        const v = Number(m[1]);
+        out.push({ value: v, literal: m[0], matchedYear: matchYear(v, vals, tol) });
+      }
+    } else if (spec.kind === "pct") {
+      for (const m of s.matchAll(/([0-9]+(?:\.[0-9]+)?)\s*%/g)) {
+        const v = Number(m[1]) / 100;
+        out.push({ value: v, literal: m[0], matchedYear: matchYear(v, vals, tol) });
+      }
+    } else if (spec.kind === "count") {
+      const lo = Math.min(...vals.filter(v => v > 0));
+      const hi = Math.max(...vals);
+      if (Number.isFinite(lo) && Number.isFinite(hi)) {
+        const lowB = Math.max(1, Math.floor(lo * 0.5));
+        const highB = Math.ceil(hi * 2);
+        for (const m of s.matchAll(/\b([0-9]{1,5})\b/g)) {
+          const v = Number(m[1]);
+          if (v < lowB || v > highB) continue;
+          out.push({ value: v, literal: m[0], matchedYear: matchYear(v, vals, tol) });
+        }
       }
     }
+    return out;
+  };
+
+  // Step 3: dedupe by literal token (regardless of which window
+  // surfaced it) and split into matched/mismatched.
+  const seen = new Set<string>();
+  const matched: Tok[] = [];
+  const mismatched: Tok[] = [];
+  for (const w of windows) {
+    for (const t of parseToks(w.text)) {
+      const key = `${t.literal}@${t.value}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      if (t.matchedYear > 0) matched.push(t);
+      else mismatched.push(t);
+    }
   }
 
-  // We only record matched occurrences (each is a confirmed PDF
-  // location for this metric × year). For Rule-4 enforcement: each
-  // canonical year should have ≥1 occurrence somewhere in the PDF if
-  // the metric is rendered, AND the PDF should not display a "near-
-  // miss" rounded value that disagrees with the canonical cell. The
-  // current heuristic only reports matched locations; non-matching
-  // disagreements show up via the dedicated B1/B2/B3 probes.
-  const byYear = new Map<number, string[]>();
-  for (const o of occurrences) {
-    const arr = byYear.get(o.matchedYear) ?? [];
-    arr.push(o.literal);
-    byYear.set(o.matchedYear, arr);
-  }
-  const yearsCovered: number[] = [];
-  for (let y = 1; y <= 5; y++) if (byYear.has(y)) yearsCovered.push(y);
+  // Step 4: any keyword-adjacent numeric token that doesn't match a
+  // canonical Y1..Y5 is an inconsistency (Rule 4). If the metric
+  // isn't quoted anywhere in narrative, the probe is INFO.
+  const status: Status =
+    windows.length === 0 ? "INFO"
+    : mismatched.length > 0 ? "FAIL"
+    : matched.length === 0 ? "INFO"
+    : "PASS";
 
-  // INFO-only probe: metric-location enumeration is documentary
-  // (the per-metric values that DISAGREE with truth are captured by
-  // the focused B*/C1 probes above; here we just enumerate matches
-  // so reviewers can see WHERE in the PDF each metric appears).
-  const status: Status = occurrences.length === 0 ? "INFO" : "PASS";
+  const yearsCovered = Array.from(new Set(matched.map(m => m.matchedYear))).sort((a, b) => a - b);
   const detail = [
     `canonical truth (${spec.source}): ${formatTruth(spec, vals)}`,
-    `PDF locations matched (literal token → matched year):`,
-    ...(occurrences.length === 0
-      ? [`  (none detected via numeric scan; metric may render in a sheet/table not text-searchable)`]
-      : occurrences.slice(0, 24).map(o => `  - ${o.literal} → Y${o.matchedYear}`)),
-    occurrences.length > 24 ? `  ... +${occurrences.length - 24} more matches` : "",
-    `years with ≥1 PDF occurrence: ${yearsCovered.length === 0 ? "(none)" : yearsCovered.map(y => "Y" + y).join(", ")}`,
+    `keyword-anchored windows scanned: ${windows.length}`,
+    `matched (literal → canonical year):`,
+    ...(matched.length === 0
+      ? [`  (none)`]
+      : matched.slice(0, 16).map(o => `  - ${o.literal} → Y${o.matchedYear}`)),
+    matched.length > 16 ? `  ... +${matched.length - 16} more` : "",
+    `mismatched (keyword-adjacent but doesn't match any canonical Y1..Y5):`,
+    ...(mismatched.length === 0
+      ? [`  (none)`]
+      : mismatched.slice(0, 16).map(o => `  - ${o.literal} (=${o.value}) — disagrees with canonical ${spec.source}`)),
+    mismatched.length > 16 ? `  ... +${mismatched.length - 16} more` : "",
+    `years with ≥1 matched occurrence: ${yearsCovered.length === 0 ? "(none)" : yearsCovered.map(y => "Y" + y).join(", ")}`,
   ].filter(Boolean).join("\n     ");
   return { id: `M.${spec.key}`, title: `Metric-location map — ${spec.label}`, status, detail };
 }
@@ -803,19 +799,11 @@ function buildReport(label: string, truth: MetricTruth, probes: ProbeResult[]): 
 }
 
 // ── Main ──────────────────────────────────────────────────────────
-let passed = 0;
-let failed = 0;
-const failures: string[] = [];
+let snapshotChecks = 0;
+let snapshotFails = 0;
+const snapshotFailures: string[] = [];
 let totalProbeFails = 0;
-
-function check(label: string, cond: boolean, detail = ""): void {
-  if (cond) {
-    passed++;
-  } else {
-    failed++;
-    failures.push(`  FAIL: ${label}${detail ? `\n${detail}` : ""}`);
-  }
-}
+const probeFailsByPersona: Array<{ label: string; fails: number; probes: ProbeResult[] }> = [];
 
 async function runOne(c: PersonaCase): Promise<void> {
   const tag = `[${c.label}]`;
@@ -840,58 +828,81 @@ async function runOne(c: PersonaCase): Promise<void> {
   ];
   const metricMap: ProbeResult[] = METRIC_SPECS.map(spec => probeMetricMap(spec, truth, pdfAll));
   const probes = [...focused, ...metricMap];
+  const personaFails = probes.filter(p => p.status === "FAIL").length;
+  totalProbeFails += personaFails;
+  probeFailsByPersona.push({ label: c.label, fails: personaFails, probes });
 
   const report = buildReport(c.label, truth, probes);
   const snapPath = path.join(SNAP_DIR, `consistency-report-${c.label}.txt`);
-  const personaFails = probes.filter(p => p.status === "FAIL").length;
-  totalProbeFails += personaFails;
 
   if (UPDATE) {
     fs.mkdirSync(SNAP_DIR, { recursive: true });
     fs.writeFileSync(snapPath, report);
     console.log(`${tag} wrote ${path.relative(process.cwd(), snapPath)} (${probes.length} probes, ${personaFails} FAIL)`);
-    passed++;
     return;
   }
 
-  if (!fs.existsSync(snapPath)) {
-    check(`${tag} snapshot exists at ${path.relative(process.cwd(), snapPath)}`, false,
-      `    Snapshot file is missing. Generate it with:\n      UPDATE_SNAPSHOTS=1 pnpm --filter @workspace/api-server run test:consistency-harness`);
+  if (BASELINE_MODE) {
+    // Diff-against-committed-snapshot mode. Used during dev to see
+    // whether a remediation fix flipped probes (snapshot drift =
+    // intentional progress; refresh with --update-snapshots).
+    snapshotChecks++;
+    if (!fs.existsSync(snapPath)) {
+      snapshotFails++;
+      snapshotFailures.push(`  ${tag} snapshot missing at ${path.relative(process.cwd(), snapPath)}\n    Generate with: pnpm --filter @workspace/api-server run test:consistency-harness:baseline -- --update-snapshots`);
+      return;
+    }
+    const expected = fs.readFileSync(snapPath, "utf8");
+    if (report === expected) {
+      console.log(`${tag} consistency report matches committed baseline (${probes.length} probes, ${personaFails} known-bug FAIL)`);
+      return;
+    }
+    snapshotFails++;
+    const expectedLines = expected.replace(/\n$/, "").split("\n");
+    const actualLines = report.replace(/\n$/, "").split("\n");
+    snapshotFailures.push(`  ${tag} snapshot drift at ${path.relative(process.cwd(), snapPath)} — if intentional, refresh with --update-snapshots:\n${diffLines(actualLines, expectedLines)}`);
     return;
   }
-  const expected = fs.readFileSync(snapPath, "utf8");
-  if (report === expected) {
-    passed++;
-    console.log(`${tag} consistency report matches snapshot (${probes.length} probes, ${personaFails} known-bug FAILs pending remediation)`);
-    return;
-  }
-  const expectedLines = expected.replace(/\n$/, "").split("\n");
-  const actualLines = report.replace(/\n$/, "").split("\n");
-  const detail = [
-    `    Snapshot mismatch for ${path.relative(process.cwd(), snapPath)}.`,
-    `    If this change is intentional (a remediation task #908–#929 fixed a probe),`,
-    `    refresh with:`,
-    `      UPDATE_SNAPSHOTS=1 pnpm --filter @workspace/api-server run test:consistency-harness`,
-    diffLines(actualLines, expectedLines),
-  ].join("\n");
-  check(`${tag} consistency report matches snapshot`, false, detail);
+
+  // STRICT mode (default): report each persona's FAIL count;
+  // exit non-zero at the end if any probe across any persona FAILs.
+  console.log(`${tag} ${probes.length} probes, ${personaFails} FAIL` + (personaFails > 0 ? ` — see ${path.relative(process.cwd(), snapPath)} for the committed baseline report` : ""));
 }
 
 async function main(): Promise<void> {
   for (const c of CASES) {
     await runOne(c);
   }
-  const mode = UPDATE ? " (UPDATE_SNAPSHOTS)" : STRICT ? " (STRICT_HARNESS)" : "";
-  console.log(`consistency-harness: ${passed} passed, ${failed} failed${mode} — ${totalProbeFails} probe FAILs across all personas`);
-  if (failed > 0) {
-    console.error(failures.join("\n"));
+  const mode = UPDATE ? " (UPDATE_SNAPSHOTS)" : BASELINE_MODE ? " (BASELINE — snapshot compare)" : " (STRICT)";
+  console.log(`consistency-harness: ${totalProbeFails} probe FAIL across all personas${mode}`);
+
+  if (UPDATE) return;
+
+  if (BASELINE_MODE) {
+    if (snapshotFails > 0) {
+      console.error(`baseline mode: ${snapshotFails}/${snapshotChecks} personas drifted from committed snapshot`);
+      console.error(snapshotFailures.join("\n"));
+      process.exit(1);
+    }
+    return;
+  }
+
+  // STRICT default mode: fail loudly on any inconsistency, per
+  // Verification Protocol step 5. The api-server `test` chain
+  // will stay red until each of #908–#929 lands and flips a probe.
+  if (totalProbeFails > 0) {
+    console.error(`STRICT mode: ${totalProbeFails} probe(s) FAILed — exiting non-zero.`);
+    for (const p of probeFailsByPersona) {
+      if (p.fails === 0) continue;
+      console.error(`  [${p.label}] ${p.fails} FAIL:`);
+      for (const probe of p.probes) {
+        if (probe.status === "FAIL") console.error(`    - ${probe.id}: ${probe.title}`);
+      }
+    }
+    console.error(`Run \`pnpm --filter @workspace/api-server run test:consistency-harness:baseline\` to compare against the committed snapshot baseline instead.`);
     process.exit(1);
   }
-  if (STRICT && totalProbeFails > 0 && !UPDATE) {
-    console.error(`STRICT_HARNESS=1 set and ${totalProbeFails} probe(s) FAILed → exiting non-zero.`);
-    console.error(`Run without STRICT_HARNESS to gate via committed snapshot baseline instead.`);
-    process.exit(1);
-  }
+  console.log(`consistency-harness: all probes PASS across all personas — remediation #908–#929 complete.`);
 }
 
 main().catch((err) => {
