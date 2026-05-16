@@ -1621,8 +1621,8 @@ un
 $273K
 $472
 ($391)
-$8K
-$281K
+$9K
+$282K
 Y
 ear 2 
 Monthl
@@ -1642,7 +1642,7 @@ w
 Ending
 J
 ul
-$281K
+$282K
 $110K
 ($19K)
 $91K
@@ -1672,16 +1672,16 @@ $489K
 $23K
 ($19K)
 $5K
-$493K
+$494K
 Dec
-$493K
+$494K
 $23K
 ($19K)
 $5K
-$498K
+$499K
 J
 an
-$498K
+$499K
 $125K
 ($19K)
 $107K
@@ -1704,21 +1704,21 @@ $615K
 $125K
 ($19K)
 $107K
-$721K
+$722K
 Ma
 y
-$721K
+$722K
 $23K
 ($19K)
 $5K
-$726K
+$727K
 J
 un
-$726K
+$727K
 $735
 ($19K)
 $-18K
-$708K
+$709K
 Y
 ear 3 
 Monthl
@@ -1744,39 +1744,39 @@ w
 Ending
 J
 ul
-$708K
+$709K
 $134K
 ($19K)
 $115K
-$823K
+$824K
 A
 ug
-$823K
+$824K
 $30K
 ($19K)
 $11K
-$834K
+$835K
 Sep
-$834K
+$835K
 $30K
 ($19K)
 $11K
-$845K
+$846K
 Oct
-$845K
+$846K
 $159K
 ($19K)
 $140K
-$984K
+$986K
 No
 v
-$984K
+$986K
 $30K
 ($19K)
 $11K
-$996K
+$997K
 Dec
-$996K
+$997K
 $30K
 ($19K)
 $11K
@@ -1819,7 +1819,7 @@ un
 $1.3M
 $904
 ($19K)
-$-19K
+$-18K
 $1.3M
 Y
 ear 4 
@@ -1915,7 +1915,7 @@ un
 $2.1M
 $1K
 ($20K)
-$-19K
+$-18K
 $2.0M
 Y
 ear 5 
@@ -2017,7 +2017,7 @@ un
 $2.9M
 $1K
 ($21K)
-$-20K
+$-18K
 $2.9M
 Lo
 west Cash 
@@ -2042,7 +2042,7 @@ Y
 ear 3
 J
 ul
-$823K
+$824K
 Y
 ear 4
 J
@@ -2211,12 +2211,12 @@ ve Months
 Status
 Y
 ear 1 (trough)
-$281K
+$282K
 22.5 months
 Adequate
 Y
 ear 2
-$708K
+$709K
 37.3 months
 Adequate
 Y
@@ -2238,7 +2238,7 @@ Tightest cash y
 ear:
  
 Y
-ear 1 ends at $281K.
+ear 1 ends at $282K.
 Y
 ear
 -end unrestricted cash:

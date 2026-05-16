@@ -1138,22 +1138,23 @@ function buildCashFlow(s: PacketSection, co: ConsultantOutput, md: ModelData, ye
         }
       }
 
-      // (2) Lock ending cumulative to the Operating Reserve formula
-      // (`buildCashRunway` L58-63): `openingBalances.cash +
-      // co.cumulativeFinancials[y].cumulativeNetIncome`. This is the
-      // exact figure printed in the lender packet's Operating
-      // Reserve & Ending Cash table, so locking the Monthly Cash
-      // Flow Summary's M12 ending onto it guarantees the two PDF
-      // surfaces tie to the cent. We intentionally do NOT target
-      // `co.cashPosition[y]` here: that field uses the engine's
-      // own starting-cash basis (which can fold in Sources & Uses
-      // capital infusions) and diverges from the openingBalances
-      // basis the Operating Reserve table uses. Reconciling those
-      // two starting-cash bases is a separate concern.
+      // (2) Lock ending cumulative to the canonical accrual cash
+      // position `co.cashPosition[y]` (Task #931 — derived from
+      // `computeBaseFinancials` with workbook-aligned escalation
+      // and `debtIncluded` filtering). This is the same series the
+      // workbook's DSCR & Covenants "Ending Cash" row prints (via
+      // `canonicalOverrides.cashPosition[y]` in
+      // `underwriting-workbook.ts` L2780 / L3522) AND the same
+      // series `buildCashRunway` now prints in the Operating
+      // Reserve & Ending Cash table (post-#913). Locking onto it
+      // here gives the lender packet's Monthly Cash Flow Summary
+      // M12 ending the same value as Op Reserve and DSCR — a
+      // three-way tie pinned by `demo-math-smoke` section 5b.
+      // Fall back to `openingBalances.cash + cumulativeNetIncome`
+      // when `cashPosition` isn't populated (older engine runs).
       const canonicalCumNI = co.cumulativeFinancials[y]?.cumulativeNetIncome;
-      const targetEnding = typeof canonicalCumNI === "number"
-        ? startingCashPacket + canonicalCumNI
-        : undefined;
+      const targetEnding = co.cashPosition?.[y]
+        ?? (typeof canonicalCumNI === "number" ? startingCashPacket + canonicalCumNI : undefined);
       let running = runningOpening;
       for (let m = 0; m < 12; m++) {
         running += series.net[m];

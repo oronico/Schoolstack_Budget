@@ -3380,8 +3380,24 @@ async function generateWorkbook(
   // the same value. When the UI adds per-category inputs, the math is ready.
   // Per-line overrides are always respected via resolveEsc().
   const sharedRate = data.tuitionEscalation?.rate ?? 3;
-  const salaryEscPct = data.salaryEscalationRate ?? sharedRate;
-  const costInflPct = data.costInflationRate ?? sharedRate;
+  // Task #913 — mirror the consultant engine's escalation-rate fallback
+  // chain (`consultant-engine.ts` L2999-3004). When the model sets
+  // `facilities.annualSalaryIncrease` / `facilities.generalCostInflation`
+  // without a corresponding top-level `salaryEscalationRate` /
+  // `costInflationRate`, the consultant picks up the facility-level
+  // value while the workbook used to fall straight through to
+  // `sharedRate`. Over 5 years that 1-2 pp difference compounds into
+  // hundreds of thousands of dollars of Y5 ending-cash drift between
+  // the workbook's DSCR Ending Cash row and the consultant's
+  // `cashPosition[4]` — exactly what the 3-way parity assertion in
+  // `demo-math-smoke` section 5b catches.
+  const facilitiesAsRec = (data.facilities ?? {}) as Record<string, unknown>;
+  const salaryEscPct = data.salaryEscalationRate
+    ?? (facilitiesAsRec.annualSalaryIncrease as number | undefined)
+    ?? sharedRate;
+  const costInflPct = data.costInflationRate
+    ?? (facilitiesAsRec.generalCostInflation as number | undefined)
+    ?? sharedRate;
   const salaryEsc = salaryEscPct / 100;
   const costInflation = costInflPct / 100;
   const prorationFactor = getProrationFactor(sp);

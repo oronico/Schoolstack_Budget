@@ -1544,8 +1544,8 @@ ear f
 orecast:
  
 Y
-ear 5  J
-un at $-688K.
+ear 4  J
+ul at $-135K.
 [ ] 
 Cash Runw
 a
@@ -1557,8 +1557,8 @@ w
 est Cash Month:
  
 Y
-ear 5  J
-un ($-688K)
+ear 4  J
+ul ($-135K)
 Cum
 ulative Cash P
 osition
@@ -1685,8 +1685,8 @@ un
 $5K
 $326
 ($9K)
-$-126K
-$-121K
+$-329
+$5K
 Y
 ear 2 
 Monthl
@@ -1706,83 +1706,83 @@ w
 Ending
 J
 ul
-$-121K
+$5K
 $7K
 ($28K)
 $-21K
-$-141K
+$-16K
 A
 ug
-$-141K
+$-16K
 $23K
 ($28K)
 $-4K
-$-146K
+$-20K
 Sep
-$-146K
+$-20K
 $23K
 ($28K)
 $-4K
-$-150K
+$-24K
 Oct
-$-150K
+$-24K
 $33K
 ($28K)
 $5K
-$-145K
+$-19K
 No
 v
-$-145K
+$-19K
 $23K
 ($28K)
 $-4K
-$-150K
+$-24K
 Dec
-$-150K
+$-24K
 $23K
 ($28K)
 $-4K
-$-154K
+$-28K
 J
 an
-$-154K
+$-28K
 $23K
 ($28K)
 $-4K
-$-158K
+$-33K
 F
 eb
-$-158K
+$-33K
 $23K
 ($28K)
 $-4K
-$-163K
+$-37K
 Mar
-$-163K
+$-37K
 $23K
 ($28K)
 $-4K
-$-167K
+$-41K
 Apr
-$-167K
+$-41K
 $23K
 ($28K)
 $-4K
-$-171K
+$-46K
 Ma
 y
-$-171K
+$-46K
 $23K
 ($28K)
 $-4K
-$-176K
+$-50K
 J
 un
-$-176K
+$-50K
 $504
 ($28K)
-$-153K
-$-329K
+$-27K
+$-77K
 Y
 ear 3 
 Monthl
@@ -1808,83 +1808,83 @@ w
 Ending
 J
 ul
-$-329K
+$-77K
 $5K
 ($28K)
 $-23K
-$-352K
+$-100K
 A
 ug
-$-352K
+$-100K
 $30K
 ($28K)
 $1K
-$-351K
+$-99K
 Sep
-$-351K
+$-99K
 $30K
 ($28K)
 $1K
-$-349K
+$-98K
 Oct
-$-349K
+$-98K
 $34K
 ($28K)
 $6K
-$-343K
+$-92K
 No
 v
-$-343K
+$-92K
 $30K
 ($28K)
 $1K
-$-342K
+$-91K
 Dec
-$-342K
+$-91K
 $30K
 ($28K)
 $1K
-$-341K
+$-89K
 J
 an
-$-341K
+$-89K
 $30K
 ($28K)
 $1K
-$-340K
+$-88K
 F
 eb
-$-340K
+$-88K
 $30K
 ($28K)
 $1K
-$-338K
+$-87K
 Mar
-$-338K
+$-87K
 $30K
 ($28K)
 $1K
-$-337K
+$-86K
 Apr
-$-337K
+$-86K
 $30K
 ($28K)
 $1K
-$-336K
+$-84K
 Ma
 y
-$-336K
+$-84K
 $30K
 ($28K)
 $1K
-$-335K
+$-83K
 J
 un
-$-335K
+$-83K
 $621
 ($28K)
-$-154K
-$-488K
+$-27K
+$-111K
 Y
 ear 4 
 Monthl
@@ -1904,83 +1904,83 @@ w
 Ending
 J
 ul
-$-488K
+$-111K
 $4K
 ($29K)
 $-25K
-$-513K
+$-135K
 A
 ug
-$-513K
+$-135K
 $36K
 ($29K)
 $6K
-$-507K
+$-129K
 Sep
-$-507K
+$-129K
 $36K
 ($29K)
 $6K
-$-500K
+$-123K
 Oct
-$-500K
+$-123K
 $36K
 ($29K)
 $6K
-$-494K
+$-116K
 No
 v
-$-494K
+$-116K
 $36K
 ($29K)
 $6K
-$-488K
+$-110K
 Dec
-$-488K
+$-110K
 $36K
 ($29K)
 $6K
-$-481K
+$-104K
 J
 an
-$-481K
+$-104K
 $36K
 ($29K)
 $6K
-$-475K
+$-97K
 F
 eb
-$-475K
+$-97K
 $36K
 ($29K)
 $6K
-$-469K
+$-91K
 Mar
-$-469K
+$-91K
 $36K
 ($29K)
 $6K
-$-462K
+$-85K
 Apr
-$-462K
+$-85K
 $36K
 ($29K)
 $6K
-$-456K
+$-78K
 Ma
 y
-$-456K
+$-78K
 $36K
 ($29K)
 $6K
-$-450K
+$-72K
 J
 un
-$-450K
+$-72K
 $721
 ($29K)
-$-154K
-$-604K
+$-28K
+$-100K
 Y
 ear 5 
 Monthl
@@ -2006,83 +2006,83 @@ w
 Ending
 J
 ul
-$-604K
+$-100K
 $4K
 ($30K)
 $-26K
-$-630K
+$-126K
 A
 ug
-$-630K
+$-126K
 $40K
 ($30K)
 $10K
-$-620K
+$-116K
 Sep
-$-620K
+$-116K
 $40K
 ($30K)
 $10K
-$-611K
+$-106K
 Oct
-$-611K
+$-106K
 $40K
 ($30K)
 $10K
-$-601K
+$-97K
 No
 v
-$-601K
+$-97K
 $40K
 ($30K)
 $10K
-$-591K
+$-87K
 Dec
-$-591K
+$-87K
 $40K
 ($30K)
 $10K
-$-582K
+$-77K
 J
 an
-$-582K
+$-77K
 $40K
 ($30K)
 $10K
-$-572K
+$-68K
 F
 eb
-$-572K
+$-68K
 $40K
 ($30K)
 $10K
-$-562K
+$-58K
 Mar
-$-562K
+$-58K
 $40K
 ($30K)
 $10K
-$-553K
+$-48K
 Apr
-$-553K
+$-48K
 $40K
 ($30K)
 $10K
-$-543K
+$-39K
 Ma
 y
-$-543K
+$-39K
 $40K
 ($30K)
 $10K
-$-533K
+$-29K
 J
 un
-$-533K
+$-29K
 $781
 ($30K)
-$-155K
-$-688K
+$-28K
+$-57K
 Lo
 west Cash 
 Month b
@@ -2095,29 +2095,28 @@ Month
 Ending Cash
 Y
 ear 1
-J
-un
-$-121K
+Apr
+$152
 Y
 ear 2
 J
 un
-$-329K
+$-77K
 Y
 ear 3
 J
 un
-$-488K
+$-111K
 Y
 ear 4
 J
-un
-$-604K
+ul
+$-135K
 Y
 ear 5
 J
-un
-$-688K
+ul
+$-126K
 Debt Ser
 vice Co
 vera
@@ -2277,43 +2276,43 @@ ve Months
 Status
 Y
 ear 1
-$-121K
+$5K
 0.0 months
 Insufficient
 Y
 ear 2
-$-329K
+$-77K
 0.0 months
 Insufficient
 Y
-ear 3
-$-488K
+ear 3 (trough)
+$-111K
 0.0 months
 Insufficient
 Y
 ear 4
-$-604K
+$-100K
 0.0 months
 Insufficient
 Y
-ear 5 (trough)
-$-688K
+ear 5
+$-57K
 0.0 months
 Insufficient
 Tightest cash y
 ear:
  
 Y
-ear 5 dips to $-688K  ad
+ear 3 dips to $-111K  ad
 ditional funding or cost cuts needed bef
 ore then.
 Y
 ear
 -end unrestricted cash:
- $-688K
+ $-57K
 vs accr
 ual:
- $-688K (no restr
+ $-57K (no restr
 icted gifts).
  Unrestr
 icted is the headline DSCR + r
@@ -2321,8 +2320,8 @@ unw
 a
 y are computed off;
  restr
-icted gifts can't 
-legally fund oper
+icted gifts can't legally 
+fund oper
 ations or debt ser
 vice
 .

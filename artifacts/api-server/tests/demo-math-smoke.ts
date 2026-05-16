@@ -1021,25 +1021,20 @@ async function runOne(c: DemoCase): Promise<void> {
     }
   }
 
-  // ── 5b. Task #913 — Y1/Y5 ending cash parity between the lender
-  //     PDF's Monthly Cash Flow Summary tables and its Operating
-  //     Reserve & Ending Cash table. Pre-fix, `cash_flow` computed
+  // ── 5b. Task #913 — Y1/Y5 ending cash 3-way parity across the
+  //     lender PDF's Monthly Cash Flow Summary, the Operating
+  //     Reserve & Ending Cash table, AND the workbook's DSCR &
+  //     Covenants "Ending Cash" row. Pre-fix, `cash_flow` computed
   //     monthly cash flow from raw `md.revenueRows` (gross sticker
-  //     × students), while the Operating Reserve table consumed
-  //     canonical `co.cumulativeFinancials` — the two revenue bases
-  //     drifted by the funding-mix correction (Liberty Y1 trough
-  //     printed $2.3M on Op Reserve vs $3.1M on Monthly Cash Flow
-  //     June ending). #913 routes Monthly Cash Flow Summary revenue
-  //     through canonical `yd.totalRevenue` AND locks each year's
-  //     M12 ending cumulative onto the Operating Reserve formula
-  //     (`openingBalances.cash + co.cumulativeFinancials[y].cumulativeNetIncome`),
-  //     so the two PDF surfaces tie within fmt()'s K/M rounding.
-  //
-  //     Scope note: we don't also re-pin DSCR & Covenants here —
-  //     its Y1 cash tie is enforced in section 5 above via
-  //     `cashPosition[0]`. The Op Reserve openingBalances basis vs
-  //     `cashPosition`'s engine-starting-cash basis (which can fold
-  //     in Sources & Uses capital infusions) is a separate concern.
+  //     × students), the Operating Reserve table used
+  //     `openingBalances.cash + cumulativeNetIncome`, and DSCR used
+  //     canonical `cashPosition` — three different bases that
+  //     drifted (Liberty Y1 trough printed $3.1M on Monthly Cash
+  //     Flow June, $2.3M on Op Reserve, $2.42M on DSCR). #913
+  //     unifies all three onto the canonical `co.cashPosition[y]`
+  //     series (Task #931 — `computeBaseFinancials` with workbook-
+  //     aligned escalation/`debtIncluded`), so each Y1/Y5 ending
+  //     prints the same value within fmt()'s K/M rounding tolerance.
   //
   //     Tolerance: ±$50K when target ≥ $1M (one fmt() M-decimal),
   //     ±$1K otherwise (one fmt() K-rounding unit).
@@ -1056,24 +1051,23 @@ async function runOne(c: DemoCase): Promise<void> {
   function cashParityTol(target: number): number {
     return Math.abs(target) >= 1_000_000 ? 50_000 : 1_000;
   }
-  // Parity target: the Operating Reserve formula in `buildCashRunway`
-  // (L58-63) = `openingBalances.cash + cumulativeNetIncome[y]`. Both
-  // Monthly Cash Flow Summary M12 ending and the Operating Reserve
-  // table endingCash must print this same value to within fmt() tol.
-  const opOpeningCash = (md as { openingBalances?: { cash?: number } }).openingBalances?.cash ?? 0;
-  const opReserveTargets = consultant.cumulativeFinancials.map(
-    (cf) => opOpeningCash + cf.cumulativeNetIncome,
-  );
+  // Canonical 3-way parity target: `co.cashPosition[y]` (Task #931).
+  // All three surfaces (Monthly Cash Flow Summary M12, Operating
+  // Reserve table, DSCR & Covenants Ending Cash) must print this
+  // same value to within fmt() rounding.
+  const cashPositions = (consultant as { cashPosition?: number[] }).cashPosition ?? [];
   const cashFlowSection = packet.sections.find((s) => s.id === "cash_flow");
   check(`${tag} packet cash_flow section present`, !!cashFlowSection);
   const yearByYearCash = packet.cashRunway?.yearByYearCash ?? [];
+  // Locate DSCR & Covenants "Ending Cash" row once for the Y1/Y5 pin.
+  const endingCashRow = dscr ? findRowByLabel(dscr, "Ending Cash") : -1;
   for (const yIdx of [0, 4]) {
-    const target = opReserveTargets[yIdx];
+    const target = cashPositions[yIdx];
     if (target === undefined) continue;
     const tol = cashParityTol(target);
-    // (a)(b) Monthly Cash Flow Summary M12 ending ties to the Op
-    // Reserve formula. Ending is the 5th value (index 4) of the
-    // last (M12) row of the "Year N Monthly Cash Flow Summary" table.
+    // (a)(b) Monthly Cash Flow Summary M12 ending. Ending is the
+    // 5th value (index 4) of the last (M12) row of the
+    // "Year N Monthly Cash Flow Summary" table.
     if (cashFlowSection) {
       const table = (cashFlowSection.tables ?? []).find((t) =>
         t.title === `Year ${yIdx + 1} Monthly Cash Flow Summary`);
@@ -1088,16 +1082,15 @@ async function runOne(c: DemoCase): Promise<void> {
           parsed !== null);
         if (parsed !== null) {
           check(
-            `${tag} Y${yIdx + 1} Monthly Cash Flow Summary ending ties to Operating Reserve formula (engine=${target.toFixed(0)}, printed=${endingStr})`,
+            `${tag} Y${yIdx + 1} Monthly Cash Flow Summary ending ties to canonical cashPosition[${yIdx}] (engine=${target.toFixed(0)}, printed=${endingStr})`,
             Math.abs(parsed - target) <= tol,
             `parsed=${parsed}, engine=${target}, drift=${Math.abs(parsed - target)}, tol=${tol}`,
           );
         }
       }
     }
-    // (c)(d) Operating Reserve table itself prints the formula value
-    // — pin it directly so if both halves drift together the parity
-    // assertion above doesn't silently pass.
+    // (c)(d) Operating Reserve table endingCash ties to canonical
+    // cashPosition (#913 routed `buildCashRunway` through cashPosition).
     const entry = yearByYearCash[yIdx];
     check(`${tag} Operating Reserve yearByYearCash[${yIdx}] present`, !!entry);
     if (entry) {
@@ -1106,11 +1099,23 @@ async function runOne(c: DemoCase): Promise<void> {
         parsed !== null);
       if (parsed !== null) {
         check(
-          `${tag} Operating Reserve Y${yIdx + 1} endingCash matches its formula source (engine=${target.toFixed(0)}, printed=${entry.endingCash})`,
+          `${tag} Operating Reserve Y${yIdx + 1} endingCash ties to canonical cashPosition[${yIdx}] (engine=${target.toFixed(0)}, printed=${entry.endingCash})`,
           Math.abs(parsed - target) <= tol,
           `parsed=${parsed}, engine=${target}, drift=${Math.abs(parsed - target)}, tol=${tol}`,
         );
       }
+    }
+    // (e)(f) DSCR & Covenants "Ending Cash" row Y1/Y5 ties to
+    // canonical cashPosition. Workbook writes Math.round(value), so
+    // tolerance is $1. Year columns: Y1=col 2, ..., Y5=col 6.
+    if (dscr && endingCashRow > 0) {
+      const wbVal = cellNumber(dscr, endingCashRow, 2 + yIdx);
+      const engineRounded = Math.round(target);
+      check(
+        `${tag} DSCR Ending Cash Y${yIdx + 1} matches canonical cashPosition[${yIdx}] within $1 (workbook=${wbVal}, engine=${engineRounded})`,
+        Math.abs(wbVal - engineRounded) <= 1,
+        `workbook=${wbVal}, engine cashPosition[${yIdx}]=${target}, drift=${Math.abs(wbVal - engineRounded)}`,
+      );
     }
   }
 

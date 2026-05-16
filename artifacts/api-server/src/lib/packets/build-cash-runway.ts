@@ -52,12 +52,19 @@ export function buildCashRunway(co: ConsultantOutput, md: ModelData): CashRunway
     ? "Cash remains positive through the full 5-year projection"
     : `Cash runway is approximately ${formatRunwayMonths(months)}`;
 
-  // Year-end cash position = opening cash + cumulative net income through the year.
-  // Lenders ask for this directly — it surfaces the runway crunch year at a glance.
+  // Year-end cash position. Task #913 — route this through the
+  // canonical `co.cashPosition[y]` series (Task #931, derived from
+  // `computeBaseFinancials` with workbook-aligned escalation /
+  // `debtIncluded` filtering) so the Operating Reserve table prints
+  // the exact same value as the workbook's DSCR & Covenants "Ending
+  // Cash" row AND the lender packet's Monthly Cash Flow Summary M12
+  // ending. Fall back to `openingBalances.cash + cumulativeNetIncome`
+  // for older engine runs that don't populate `cashPosition`.
   const openingCash = md.openingBalances?.cash ?? 0;
-  const endingCashByYear = co.cumulativeFinancials.map((cf) => ({
+  const canonicalCashPosition = co.cashPosition ?? [];
+  const endingCashByYear = co.cumulativeFinancials.map((cf, i) => ({
     year: cf.year,
-    endingCashRaw: openingCash + cf.cumulativeNetIncome,
+    endingCashRaw: canonicalCashPosition[i] ?? (openingCash + cf.cumulativeNetIncome),
     cumulativeNetIncome: cf.cumulativeNetIncome,
     reserveMonths: cf.reserveMonths,
   }));
