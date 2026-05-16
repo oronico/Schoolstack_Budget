@@ -1,4 +1,4 @@
-import type { ConsultantOutput } from "../consultant-engine";
+import { type ConsultantOutput, computeYearFinancialsFromData } from "../consultant-engine";
 import {
   type ModelData,
   type SchoolProfile,
@@ -153,11 +153,26 @@ function computeYearlyData(
   const costInflPct = (fac?.generalCostInflation as number | undefined);
   const pktRR = (md.enrollment as Record<string, unknown> | undefined)?.retentionRate as number | undefined ?? 85;
 
+  // Task #912 — totalRevenue MUST come from the canonical consultant
+  // engine year-financials series (same number that prints at `5-Year
+  // Operating Stmt!B5:F5`). Pre-fix this used a local re-call of
+  // `computeRevenueForYear` that bypassed the Task #860 funding-mix
+  // correction, producing different totals than the workbook — see
+  // microschool ($199K rendered vs $166K canonical) and charter Y1
+  // ($5.8M rendered vs $4.9M canonical). The other YearData fields
+  // (staffing, opex, capDebt, debtService, netIncome) stay on the
+  // local recompute for now — net income drift is task #913 (2.3)
+  // and expense drift is task #944.
+  const canonicalYf = computeYearFinancialsFromData(md as unknown as Record<string, unknown>);
+
   for (let y = 0; y < yearCount; y++) {
     const students = enrollment[y] || 0;
     const ns = computeNewStudents(enrollment, pktRR, y);
     const rs = computeReturningStudents(enrollment, pktRR, y);
-    const totalRevenue = computeRevenueForYear(md.revenueRows || [], y, students, md.tuitionTiers, costInflPct, sp);
+    const canonicalRev = canonicalYf[y]?.totalRevenue;
+    const totalRevenue = typeof canonicalRev === "number"
+      ? canonicalRev
+      : computeRevenueForYear(md.revenueRows || [], y, students, md.tuitionTiers, costInflPct, sp);
     const totalStaffing = computePersonnelForYear(normalized, salaryEsc, prorationFactor, y, students);
     const fte = computeTotalFTE(normalized, y, students);
     const opex = computeExpenseForYear(md.expenseRows || [], y, students, totalRevenue, costInflPct, ns, rs, fte);

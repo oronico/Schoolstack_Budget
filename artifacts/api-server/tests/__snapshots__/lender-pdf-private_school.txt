@@ -410,12 +410,12 @@ Fla
 g
 g
 ed Assumptions
-[Inf
-o] 
+[P
+ositive] 
 T
 uition co
 v
-ers 39% of 
+ers 160% of 
 Y
 ear 1 total e
 xpenses
@@ -580,10 +580,10 @@ Y
 ear 1 total re
 v
 en
-ue is projected at $2.4M, g
+ue is projected at $4.0M, g
 ro
 wing 
-to $5.3M b
+to $8.8M b
 y 
 Y
 ear 5.
@@ -636,19 +636,19 @@ ven
 ue
 Y
 ear 1
-$2.4M
+$4.0M
 Y
 ear 2
-$3.0M
+$5.0M
 Y
 ear 3
-$3.8M
+$6.3M
 Y
 ear 4
-$4.5M
+$7.5M
 Y
 ear 5
-$5.3M
+$8.8M
 Re
 ven
 ue Quality (Contracted vs.
@@ -787,17 +787,21 @@ ams
 Staffing Plan
 Staffing costs are $1.3M in 
 Y
-ear 1, representing 53.5% of re
+ear 1, representing 32.0% of re
 v
 en
 ue
 .
  
-This is within the typical 50-60% r
-ange
+This lea
+v
+es health
+y room f
+or other oper
+ating 
+costs
 .
- 
-F
+ F
 ounder compensation is nor
 maliz
 ed to mar
@@ -1159,14 +1163,14 @@ Y
 ear 1.
  
 Y
-ear 5 change in net assets is projected at $2.5M (47.3% margin).
+ear 5 change in net assets is projected at $6.0M (68.3% margin).
  Breake
 ven enr
 ollment
 Break
 e
 v
-en enrollment is 135 students (48% abo
+en enrollment is 78 students (156% abo
 v
 e 
 Y
@@ -1183,7 +1187,7 @@ ue w
 as $2.4M;
  
 Y
-ear 1 projections represent a -1.4% change
+ear 1 projections represent a 64.7% change
 .
  Accounting basis
 All projections are prepared on an accr
@@ -1306,38 +1310,38 @@ gin
 Y
 ear 1
 200
-$2.4M
+$4.0M
 $1.7M
-$712K
-30.1%
+$2.3M
+58.1%
 Y
 ear 2
 250
-$3.0M
+$5.0M
 $1.9M
-$1.1M
-36.7%
+$3.1M
+62.2%
 Y
 ear 3
 300
-$3.8M
+$6.3M
 $2.2M
-$1.6M
-41.4%
+$4.1M
+64.8%
 Y
 ear 4
 350
-$4.5M
+$7.5M
 $2.5M
-$2.0M
-44.7%
+$5.0M
+66.7%
 Y
 ear 5
 400
-$5.3M
+$8.8M
 $2.8M
-$2.5M
-47.3%
+$6.0M
+68.3%
 Prior
 -Y
 ear Actuals
@@ -1394,8 +1398,8 @@ v
 en
 ue
 $2.4M
-$2.4M
--1.4%
+$4.0M
++64.7%
 SchoolStac
 k Budget - Gener
 ated <DATE>
@@ -1451,7 +1455,7 @@ ear 1 (Pr
 ojected)
 Net Income
 $200K
-$712K
+$2.3M
 Opening Balance Sheet
 Net position at model star
 t:
@@ -1516,13 +1520,13 @@ s
 Break
 e
 v
-en enrollment is 135 students
+en enrollment is 78 students
 .
  
 Y
 ear 1 projects 200 students
 , pro
-viding a 48.1% cushion.
+viding a 156.4% cushion.
 SchoolStac
 k Budget - Gener
 ated <DATE>
@@ -1534,7 +1538,7 @@ Break
 e
 v
 en Enrollment:
- 135
+ 78
 [ ] 
 F
 acility Cost/Student:
@@ -1559,9 +1563,9 @@ Break
 e
 v
 en Enrollment
-135 students
+78 students
 Enrollment Cushion
-+48.1%
++156.4%
 Cash Flo
 w Anal
 ysis
@@ -2171,28 +2175,37 @@ vice Co
 vera
 g
 e
-DSCR is abo
+Y
+ear-1 debt ser
+vice co
 v
-e 1.25x, and y
-our oper
-ating income comf
-or
-tab
-ly co
-v
-ers debt pa
-yments
+er
+age is 21.01x on the nor
+maliz
+ed (lender-pr
+imar
+y) vie
+w
 .
- Current DSCR is 20.91x.
- 
-Benchmar
-k:
- Health
-y minim
+ Minim
 um:
  1.15x;
  target:
  1.25x.
+ 
+See the "As-Planned vs Nor
+maliz
+ed:
+ Net Income & DSCR" tab
+le f
+or the f
+ounder / board (as-planned) vie
+w 
+alongside this nor
+maliz
+ed ser
+ies
+.
 [+] 
 Debt Ser
 vice Co
@@ -2200,10 +2213,9 @@ v
 er
 age Ratio (Y
 ear 1):
- 20.91x (benchmar
+ 21.01x (benchmar
 k:
- Health
-y minim
+ Minim
 um:
  1.15x;
  target:
@@ -2266,7 +2278,7 @@ arget:
 DSCR Summar
 y
 Current DSCR:
-  20.91x
+  21.01x
 Benchmar
 k:
   Health
@@ -2280,19 +2292,26 @@ et:
 1.25x
 T
 rend:
-  DSCR is abo
-ve 1.25x,
- and y
-our 
-operating income comf
-or
-tab
-l
-y co
-ver
-s debt 
-pa
-yments.
+  Normaliz
+ed (lender
+-primar
+y) 
+Y1 DSCR.
+ 
+See the 
+As-Planned vs Normaliz
+ed:
+ Net 
+Income & DSCR
+ tab
+le f
+or the f
+ounder / boar
+d 
+(as-planned) vie
+w alongside the normaliz
+ed 
+series.
 Operating Reser
 ve & Ending Cash
 Y

@@ -1,0 +1,17 @@
+Three things worth pressing on before kickoff:
+1. The "#860/#862 fixed it at engine level" claim needs hard testing, not deference. When I reviewed the sample packets, revenue appeared in 3+ different totals across sections. If those prior fixes truly resolved everything, that gap should be invisible in re-rendered demos right now. If the agent re-renders and finds revenue still varying, that tells you the prior fixes were partial or applied to a different code path. Either way, verification needs to be rigorous, not a spot-check.
+2. Task #911 surfaced two competing engine functions (computeAllYearsFromRows vs computeYearFinancialsFromData) producing different expense bases for the same year. Task 2.1's verification should check whether similar function-level drift exists on the revenue side. If two engine functions produce different revenue totals for Y1, the canonical-cell designation is incomplete — you need to pick one function and route all consumers through it.
+3. The grep assertion needs more specification before coding. "Every dollar figure labeled 'revenue'" assumes the assertion knows how to identify which dollar figures count as "labeled revenue." Pattern matching on surrounding text? Section context? Proximity to a header? This needs concrete rules before implementation, or the assertion will either miss bugs or false-positive on benign formatting.
+One cross-task dependency to surface:
+Task #911 (now complete) used gross tuition for the coverage flag ($2,650,000 = 200 × ($12,500 + $750)). Task 2.1 designates the Op Stmt total revenue (net of collection rate / scholarship netting) as canonical. These are different numbers for the same school.
+Both choices are defensible in their respective contexts — gross billing answers "is the cost structure covered by what we bill?" while net revenue answers "what hit the books?" — but the labels must differentiate them clearly, or the grep assertion in this task will conflict with the formula in the last task. Either:
+
+Land Task 2.5 first to define the qualifier-label vocabulary (gross tuition billing, net collected, etc.), OR
+Document the placeholder labels Task 2.1 will use, so Task 2.5 inherits consistent vocabulary
+
+Recommendation: Approve as written, but ask the agent to:
+
+Re-render all three demos as the first action. Show current revenue figures from every PDF section before assuming engine fixes hold.
+Check both engine functions for revenue parity, not just the Op Stmt cell.
+Define the grep assertion's identification rules concretely before writing code.
+Reconcile with Task #911's gross-tuition choice — the qualifier labels need to differentiate gross billing from net revenue clearly.

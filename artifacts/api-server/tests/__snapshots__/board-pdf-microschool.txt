@@ -400,14 +400,14 @@ Y
 ear 1.
  
 Y
-ear 5 net income is projected at $171K (40.8% margin).
+ear 5 net income is projected at $151K (37.7% margin).
  Breake
 ven enr
 ollment
 Break
 e
 v
-en enrollment is 15 students (33% abo
+en enrollment is 18 students (11% abo
 v
 e 
 Y
@@ -467,54 +467,49 @@ gin
 Y
 ear 1
 20
-$199K
+$166K
 $152K
-$48K
-23.9%
+$14K
+8.5%
 Y
 ear 2
 26
-$258K
+$251K
 $224K
-$34K
-13.3%
+$27K
+10.9%
 Y
 ear 3
 32
-$322K
+$308K
 $232K
-$89K
-27.8%
+$75K
+24.5%
 Y
 ear 4
 37
-$380K
+$360K
 $241K
-$139K
-36.6%
+$119K
+33.1%
 Y
 ear 5
 40
-$421K
+$400K
 $249K
-$171K
-40.8%
+$151K
+37.7%
 Staffing Plan
 Staffing costs are $86K in 
 Y
-ear 1, representing 43.3% of re
+ear 1, representing 52.0% of re
 v
 en
 ue
 .
  
-This lea
-v
-es health
-y room f
-or other oper
-ating 
-costs
+This is within the typical 50-60% r
+ange
 .
 [+] 
 Staffing % of Re
@@ -535,17 +530,17 @@ T
 eacher
   $38,000,
  1 FTE
+P
+ar
+t-Time Aide
+  $24,000,
+ 0.5 FTE
 SchoolStac
 k Budget - Gener
 ated <DATE>
 P
 age 3 of 7
 --- PAGE 4 ---
-P
-ar
-t-Time Aide
-  $24,000,
- 0.5 FTE
 Financial Health Assessment
 Across 9 health dimensions:
  5 health

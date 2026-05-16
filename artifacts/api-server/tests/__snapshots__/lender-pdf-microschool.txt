@@ -446,6 +446,15 @@ ed Assumptions
 [Inf
 o] 
 20 students (44% of 45 capacity)
+[P
+ositive] 
+T
+uition co
+v
+ers 144% of 
+Y
+ear 1 total e
+xpenses
 Assumptions Confidence
 Overall:
  Needs Suppor
@@ -606,10 +615,10 @@ Y
 ear 1 total re
 v
 en
-ue is projected at $199K, 
+ue is projected at $166K, 
 g
 ro
-wing to $421K b
+wing to $400K b
 y 
 Y
 ear 5.
@@ -656,19 +665,19 @@ ven
 ue
 Y
 ear 1
-$199K
+$166K
 Y
 ear 2
-$258K
+$251K
 Y
 ear 3
-$322K
+$308K
 Y
 ear 4
-$380K
+$360K
 Y
 ear 5
-$421K
+$400K
 Re
 ven
 ue Quality (Contracted vs.
@@ -800,21 +809,17 @@ oundation)
 Staffing Plan
 Staffing costs are $86K in 
 Y
-ear 1, representing 43.3% of re
+ear 1, representing 52.0% of re
 v
 en
 ue
 .
  
-This lea
-v
-es health
-y room f
-or other oper
-ating 
-costs
+This is within the typical 50-60% r
+ange
 .
- F
+ 
+F
 ounder compensation is nor
 maliz
 ed to mar
@@ -1157,14 +1162,14 @@ Y
 ear 1.
  
 Y
-ear 5 net income is projected at $171K (40.8% margin).
+ear 5 net income is projected at $151K (37.7% margin).
  Breake
 ven enr
 ollment
 Break
 e
 v
-en enrollment is 15 students (33% abo
+en enrollment is 18 students (11% abo
 v
 e 
 Y
@@ -1287,38 +1292,38 @@ gin
 Y
 ear 1
 20
-$199K
+$166K
 $152K
-$48K
-23.9%
+$14K
+8.5%
 Y
 ear 2
 26
-$258K
+$251K
 $224K
-$34K
-13.3%
+$27K
+10.9%
 Y
 ear 3
 32
-$322K
+$308K
 $232K
-$89K
-27.8%
+$75K
+24.5%
 Y
 ear 4
 37
-$380K
+$360K
 $241K
-$139K
-36.6%
+$119K
+33.1%
 Y
 ear 5
 40
-$421K
+$400K
 $249K
-$171K
-40.8%
+$151K
+37.7%
 Opening Balance Sheet
 Net position at model star
 t:
@@ -1389,19 +1394,19 @@ s
 Break
 e
 v
-en enrollment is 15 students
+en enrollment is 18 students
 .
  
 Y
 ear 1 projects 20 students
 , pro
-viding a 33.3% cushion.
+viding a 11.1% cushion.
 [ ] 
 Break
 e
 v
 en Enrollment:
- 15
+ 18
 [ ] 
 F
 acility Cost/Student:
@@ -1426,9 +1431,9 @@ Break
 e
 v
 en Enrollment
-15 students
+18 students
 Enrollment Cushion
-+33.3%
++11.1%
 Cash Flo
 w Anal
 ysis
@@ -2034,28 +2039,37 @@ vice Co
 vera
 g
 e
-DSCR is abo
+Y
+ear-1 debt ser
+vice co
 v
-e 1.25x, and y
-our oper
-ating income comf
-or
-tab
-ly co
-v
-ers debt pa
-yments
+er
+age is 3.11x on the nor
+maliz
+ed (lender-pr
+imar
+y) vie
+w
 .
- Current DSCR is 5.77x.
- 
-Benchmar
-k:
- Health
-y minim
+ Minim
 um:
  1.15x;
  target:
  1.25x.
+ 
+See the "As-Planned vs Nor
+maliz
+ed:
+ Net Income & DSCR" tab
+le f
+or the f
+ounder / board (as-planned) vie
+w 
+alongside this nor
+maliz
+ed ser
+ies
+.
 [+] 
 Debt Ser
 vice Co
@@ -2063,10 +2077,9 @@ v
 er
 age Ratio (Y
 ear 1):
- 5.77x (benchmar
+ 3.11x (benchmar
 k:
- Health
-y minim
+ Minim
 um:
  1.15x;
  target:
@@ -2129,7 +2142,7 @@ arget:
 DSCR Summar
 y
 Current DSCR:
-  5.77x
+  3.11x
 Benchmar
 k:
   Health
@@ -2143,19 +2156,26 @@ et:
 1.25x
 T
 rend:
-  DSCR is abo
-ve 1.25x,
- and y
-our 
-operating income comf
-or
-tab
-l
-y co
-ver
-s debt 
-pa
-yments.
+  Normaliz
+ed (lender
+-primar
+y) 
+Y1 DSCR.
+ 
+See the 
+As-Planned vs Normaliz
+ed:
+ Net 
+Income & DSCR
+ tab
+le f
+or the f
+ounder / boar
+d 
+(as-planned) vie
+w alongside the normaliz
+ed 
+series.
 SchoolStac
 k Budget - Gener
 ated <DATE>

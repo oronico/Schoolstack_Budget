@@ -716,6 +716,95 @@ async function runOne(c: DemoCase): Promise<void> {
 
   const pdfText = extractPdfText(pdfBytes);
 
+  // ── Task #912 — Canonical revenue series lock ───────────────────────
+  // Every PDF surface labeled "revenue" must trace back to the same
+  // `computeYearFinancialsFromData(md)[].totalRevenue` series that the
+  // workbook prints at `5-Year Operating Stmt!B5:F5`. Pre-fix, the
+  // packet's `build-packet-data.computeYearlyData` re-derived revenue
+  // independently via `computeRevenueForYear` and drifted ~+20% on
+  // demos that carried scholarship netting (microschool: $199K vs
+  // canonical $166K Y1) or per-pupil public funding (charter: $5.8M
+  // vs canonical $4.9M Y1). The fix routes `yearlyData[].totalRevenue`
+  // through `computeYearFinancialsFromData`. This block is the
+  // regression so the renderer can't silently drift again.
+  //
+  // ID rules (defined before coding so the assertion is defensible):
+  //   - PDFKit emits per-char TJ chunks ("Re v en ue"), so all text
+  //     comparisons run on a normalized copy: collapse intra-word
+  //     spaces and normalize $/comma/decimal/unit spacing.
+  //   - Expected shorthand is `fmt(years[y].totalRevenue)` using the
+  //     exact same formatter the renderer uses
+  //     (build-packet-data.ts:fmt). Match tolerance is ±$1K for K-suffix
+  //     and ±$50K for M-suffix to absorb any downstream re-rounding.
+  //   - Vocabulary reconciliation with Task #911: #911's coverage-flag
+  //     copy ("gross tuition revenue") is an alternative view, not the
+  //     canonical series. It is qualifier-labeled ("gross tuition")
+  //     so the grep here, which targets only the canonical Revenue by
+  //     Year table window, never collides with it. Task #915 (2.5)
+  //     will formalize the gross-vs-net vocabulary.
+  function normalizePdf(s: string): string {
+    let n = s;
+    for (let i = 0; i < 8; i++) {
+      const next = n.replace(/([A-Za-z])\s(?=[A-Za-z]\b|[A-Za-z][a-z])/g, "$1");
+      if (next === n) break;
+      n = next;
+    }
+    n = n.replace(/\$\s+/g, "$");
+    n = n.replace(/(\d)\s*,\s*(\d)/g, "$1,$2");
+    n = n.replace(/(\d)\s*\.\s*(\d)/g, "$1.$2");
+    n = n.replace(/(\d)\s*([KMB])\b/g, "$1$2");
+    return n;
+  }
+  function fmtShortLikeRenderer(n: number): string {
+    if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+    if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+    return `$${n.toFixed(0)}`;
+  }
+  const normText = normalizePdf(pdfText);
+  const tableIdx = normText.search(/Revenueby\s*Year/i);
+  check(`${tag} packet renders "Revenue by Year" table heading`, tableIdx >= 0,
+    `(searched in normalized PDF text length=${normText.length})`);
+  if (tableIdx >= 0) {
+    const tableWindow = normText.slice(tableIdx, tableIdx + 600);
+    const dollarRe = /\$([0-9,]+(?:\.[0-9]+)?)\s*([KMB]?)/g;
+    const figuresInWindow: number[] = [];
+    for (const m of tableWindow.matchAll(dollarRe)) {
+      const base = Number(m[1].replace(/,/g, ""));
+      if (!Number.isFinite(base)) continue;
+      const mult = m[2] === "M" ? 1_000_000
+        : m[2] === "K" ? 1_000
+        : m[2] === "B" ? 1_000_000_000
+        : 1;
+      figuresInWindow.push(base * mult);
+    }
+    for (let y = 0; y < Math.min(5, years.length); y++) {
+      const target = years[y].totalRevenue;
+      const tol = Math.abs(target) >= 1_000_000 ? 50_000 : 1_000;
+      const found = figuresInWindow.some((n) => Math.abs(n - target) <= tol);
+      check(
+        `${tag} Revenue by Year table Y${y + 1} matches canonical ${fmtShortLikeRenderer(target)} (engine=${target})`,
+        found,
+        `window="${tableWindow.slice(0, 300)}..." figures=[${figuresInWindow.slice(0, 12).join(", ")}]`,
+      );
+    }
+  }
+  // Negative assertion — known pre-fix stale Y1 shorthands must be
+  // absent. If any of these reappear in the rendered PDF, the
+  // build-packet-data.computeYearlyData fix has regressed.
+  const STALE_FORBIDDEN: Record<string, string[]> = {
+    microschool: ["$199K"],
+    charter_school: ["$5.8M"],
+    private_school: [],
+  };
+  for (const stale of (STALE_FORBIDDEN[c.label] ?? [])) {
+    check(
+      `${tag} pre-fix stale revenue shorthand "${stale}" absent from rendered PDF`,
+      !normText.includes(stale),
+      `stale="${stale}" was found — packet renderer is drifting from canonical Op Stmt!B5:F5`,
+    );
+  }
+  // ────────────────────────────────────────────────────────────────────
+
   // 4a. School name renders into the printed PDF text. PDFKit may break
   //     glyphs across draw calls, so we tolerate intervening whitespace.
   const nameRe = new RegExp(

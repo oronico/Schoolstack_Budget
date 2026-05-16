@@ -123,7 +123,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 1 of 20
+age 1 of 19
 --- PAGE 2 ---
 Lender Commentar
 y
@@ -483,7 +483,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 2 of 20
+age 2 of 19
 --- PAGE 3 ---
 y
 our mission deser
@@ -519,15 +519,6 @@ arning]
 -54.3% net margin in 
 Y
 ear 1
-[Inf
-o] 
-T
-uition co
-v
-ers 57% of 
-Y
-ear 1 total e
-xpenses
 Assumptions Confidence
 Overall:
  Needs Suppor
@@ -654,15 +645,15 @@ ear 1 Enrollment
 Y
 ear 2 Enrollment
   26
+Y
+ear 3 Enrollment
+  32
 SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 3 of 20
+age 3 of 19
 --- PAGE 4 ---
-Y
-ear 3 Enrollment
-  32
 Y
 ear 4 Enrollment
   37
@@ -688,10 +679,10 @@ Y
 ear 1 total re
 v
 en
-ue is projected at $199K, 
+ue is projected at $166K, 
 g
 ro
-wing to $421K b
+wing to $400K b
 y 
 Y
 ear 5.
@@ -738,19 +729,19 @@ ven
 ue
 Y
 ear 1
-$199K
+$166K
 Y
 ear 2
-$258K
+$251K
 Y
 ear 3
-$322K
+$308K
 Y
 ear 4
-$380K
+$360K
 Y
 ear 5
-$421K
+$400K
 Re
 ven
 ue Quality (Contracted vs.
@@ -848,15 +839,15 @@ uition Collection Method
   A
 utopa
 y
+T
+uition Collection Rate
+  100.0%
 SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 4 of 20
+age 4 of 19
 --- PAGE 5 ---
-T
-uition Collection Rate
-  100.0%
 Pr
 iv
 ate P
@@ -882,21 +873,17 @@ oundation)
 Staffing Plan
 Staffing costs are $86K in 
 Y
-ear 1, representing 43.3% of re
+ear 1, representing 52.0% of re
 v
 en
 ue
 .
  
-This lea
-v
-es health
-y room f
-or other oper
-ating 
-costs
+This is within the typical 50-60% r
+ange
 .
- F
+ 
+F
 ounder compensation is nor
 maliz
 ed to mar
@@ -1063,15 +1050,17 @@ otal adjustment (Y1Y5)
 
 
 $67,895
+As-Planned vs 
+Normaliz
+ed:
+ Net Income 
+& DSCR
 SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 5 of 20
+age 5 of 19
 --- PAGE 6 ---
-As-Planned vs Normaliz
-ed:
- Net Income & DSCR
 Y
 ear
 Net Income 
@@ -1228,12 +1217,6 @@ or 10
 y
 ear
 s
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 6 of 20
---- PAGE 7 ---
 Equipment Financing (kitchen + A
 V)
   $60K at 
@@ -1241,6 +1224,12 @@ V)
 or 5 y
 ear
 s
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 6 of 19
+--- PAGE 7 ---
 SchoolStac
 k Lending Lab Microloan
   $25K at 
@@ -1258,14 +1247,14 @@ Y
 ear 4.
  
 Y
-ear 5 net income is projected at $62K (14.8% margin).
+ear 5 net income is projected at $42K (10.4% margin).
  Breake
 ven enr
 ollment
 Break
 e
 v
-en enrollment is 26 students (23% belo
+en enrollment is 32 students (38% belo
 w 
 Y
 ear 1 enrollment).
@@ -1387,38 +1376,38 @@ gin
 Y
 ear 1
 20
-$199K
+$166K
 $264K
-$-65K
--32.8%
+$-99K
+-59.6%
 Y
 ear 2
 26
-$258K
+$251K
 $333K
-$-76K
--29.3%
+$-82K
+-32.8%
 Y
 ear 3
 32
-$322K
+$308K
 $342K
-$-20K
--6.2%
+$-34K
+-11.0%
 Y
 ear 4
 37
-$380K
+$360K
 $350K
-$30K
-7.9%
+$10K
+2.8%
 Y
 ear 5
 40
-$421K
+$400K
 $358K
-$62K
-14.8%
+$42K
+10.4%
 Opening Balance Sheet
 Net position at model star
 t:
@@ -1450,12 +1439,6 @@ ed Assets
 $880K
 Other Assets
 $0
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 7 of 20
---- PAGE 8 ---
 T
 otal Assets
 $975K
@@ -1463,8 +1446,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 8 of 20
---- PAGE 9 ---
+age 7 of 19
+--- PAGE 8 ---
 Liabilities
 Item
 Amount
@@ -1495,19 +1478,19 @@ s
 Break
 e
 v
-en enrollment is 26 students
+en enrollment is 32 students
 .
  
 Y
 ear 1 projects 20 students
 , pro
-viding a -23.1% cushion.
+viding a -37.5% cushion.
 [ ] 
 Break
 e
 v
 en Enrollment:
- 26
+ 32
 [ ] 
 F
 acility Cost/Student:
@@ -1532,9 +1515,9 @@ Break
 e
 v
 en Enrollment
-26 students
+32 students
 Enrollment Cushion
--23.1%
+-37.5%
 Cash Flo
 w Anal
 ysis
@@ -1614,8 +1597,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 9 of 20
---- PAGE 10 ---
+age 8 of 19
+--- PAGE 9 ---
 Month
 Beginning
 Inflo
@@ -1812,8 +1795,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 10 of 20
---- PAGE 11 ---
+age 9 of 19
+--- PAGE 10 ---
 Month
 Beginning
 Inflo
@@ -2010,8 +1993,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 11 of 20
---- PAGE 12 ---
+age 10 of 19
+--- PAGE 11 ---
 Month
 Beginning
 Inflo
@@ -2139,24 +2122,38 @@ vice Co
 vera
 g
 e
-DSCR is belo
-w 1.15x, meaning debt co
+Y
+ear-1 debt ser
+vice co
 v
 er
-age is cr
-itically thin.
- 
-This needs to be addressed.
- Current DSCR is N/A.
- 
-Benchmar
-k:
- Health
-y minim
+age is 0.09x on the nor
+maliz
+ed (lender-pr
+imar
+y) vie
+w  belo
+w the 1.15x lender 
+minim
+um.
+ Minim
 um:
  1.15x;
  target:
  1.25x.
+ See the "As-Planned vs Nor
+maliz
+ed:
+ Net Income & DSCR" tab
+le f
+or the 
+f
+ounder / board (as-planned) vie
+w alongside this nor
+maliz
+ed ser
+ies
+.
 [!] 
 Debt Ser
 vice Co
@@ -2164,10 +2161,9 @@ v
 er
 age Ratio (Y
 ear 1):
- N/A (benchmar
+ 0.09x (benchmar
 k:
- Health
-y minim
+ Minim
 um:
  1.15x;
  target:
@@ -2230,7 +2226,7 @@ arget:
 DSCR Summar
 y
 Current DSCR:
-  N/A
+  0.09x
 Benchmar
 k:
   Health
@@ -2244,24 +2240,32 @@ et:
 1.25x
 T
 rend:
-  DSCR is belo
-w 1.15x,
- meaning debt 
-co
-vera
-g
-e is criticall
-y thin.
+  Normaliz
+ed (lender
+-primar
+y) 
+Y1 DSCR.
  
-This needs to be 
-ad
-dressed.
+See the 
+As-Planned vs Normaliz
+ed:
+ Net 
+Income & DSCR
+ tab
+le f
+or the f
+ounder / boar
+d 
+(as-planned) vie
+w alongside the normaliz
+ed 
+series.
 SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 12 of 20
---- PAGE 13 ---
+age 11 of 19
+--- PAGE 12 ---
 Operating Reser
 ve & Ending Cash
 Y
@@ -2470,8 +2474,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 13 of 20
---- PAGE 14 ---
+age 12 of 19
+--- PAGE 13 ---
 [~] 
 f
 acility b
@@ -2819,8 +2823,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 14 of 20
---- PAGE 15 ---
+age 13 of 19
+--- PAGE 14 ---
 CRITICAL
 Let's strengthen y
 our debt-co
@@ -3148,8 +3152,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 15 of 20
---- PAGE 16 ---
+age 14 of 19
+--- PAGE 15 ---
 Y
 ear 1 total e
 xpenses
@@ -3461,8 +3465,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 16 of 20
---- PAGE 17 ---
+age 15 of 19
+--- PAGE 16 ---
 Do
 wnside Enr
 ollment Band
@@ -3658,8 +3662,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 17 of 20
---- PAGE 18 ---
+age 16 of 19
+--- PAGE 17 ---
 Enr
 ollment -10%
 All fiv
@@ -4001,8 +4005,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 18 of 20
---- PAGE 19 ---
+age 17 of 19
+--- PAGE 18 ---
 Lender adjustment (market - planned)
 $12,918
 $13,198
@@ -4014,8 +4018,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 19 of 20
---- PAGE 20 ---
+age 18 of 19
+--- PAGE 19 ---
 Note:
  F
 ounder is pa
@@ -4040,4 +4044,4 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 20 of 20
+age 19 of 19

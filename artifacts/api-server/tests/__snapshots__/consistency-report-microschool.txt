@@ -12,7 +12,7 @@
   Days Cash on Hand    (DSCR & Covenants!B17:F17)     Y1=89d  Y2=102d  Y3=217d  Y4=391d  Y5=601d
   Months of Runway     (DSCR & Covenants!B18:F18)     Y1=3.1m  Y2=3.4m  Y3=7.2m  Y4=12.9m  Y5=19.8m
   Capacity Utilization (DSCR & Covenants!B19:F19)     Y1=44%  Y2=58%  Y3=71%  Y4=82%  Y5=89%
-  Break-Even Enroll    (DSCR & Covenants!B25:F25)     Y1=17  Y2=23  Y3=24  Y4=24  Y5=24
+  Break-Even Enroll    (DSCR & Covenants!B25:F25)     Y1=90816  Y2=164362  Y3=169152  Y4=174086  Y5=179168
   Enrollment           (Enrollment Tuition Fcst!B4:F4) Y1=2  Y2=26  Y3=32  Y4=37  Y5=4
   Loans                (Capital Stack!C:E)
     - SchoolStack Lending Lab Microloan: principal=$20,000 rate=6.5% term=5y
@@ -29,17 +29,17 @@
 [FAIL] B2.dscr-figures — Multiple DSCR figures per packet (#910)
      canonical Y1 DSCR (DSCR & Covenants!B12) = 5.86x
      narrative DSCR mentions (distinct rounded): 4
-       values:  5.86x, -0.06x, 5.77x, 2.9x
+       values:  5.86x, -0.06x, 2.9x, 5.77x
        off-truth: -0.06x, 2.9x
      DSCR (Reported) column present: true
      DSCR (Normalized) column present: true
 
-[FAIL] B3.runway-figures — Multiple runway figures per packet (#908)
+[PASS] B3.runway-figures — Multiple runway figures per packet (#908)
      canonical Y1 Runway (DSCR & Covenants!B18) = 3.1 months
      runway narrative occurrences: 4 (distinct: 1)
-       distinct values: 1.9 months
-       diverging:       1.9 months
-       literal hits:    "Cash Runway: 1.876279615817873 months", "Cash Runway: 1.876279615817873 months", "Cash runway: 1.876279615817873 months", "runway extends 1.876279615817873 months"
+       distinct values: 3.1 months
+       diverging:       (none)
+       literal hits:    "Cash Runway: 3.099853717935006 months", "Cash Runway: 3.099853717935006 months", "Cash runway: 3.099853717935006 months", "runway extends 3.099853717935006 months"
 
 [FAIL] B4.loan-rate — Loan-rate narrative ↔ Capital Stack parity (#916)
      Capital Stack loans:
@@ -54,9 +54,9 @@
      nearby header sequence: "Year 2Year 3Year 4Year 5Year 6"
      off-by-one (Year 2..Year 6) detected: true
 
-[INFO] B6.tuition-coverage — Tuition coverage narrative vs engine truth (#911)
-     narrative "Tuition covers N%" occurrences: 0 (distinct: 0)
-       distinct: (none)
+[PASS] B6.tuition-coverage — Tuition coverage narrative vs engine truth (#911)
+     narrative "Tuition covers N%" occurrences: 1 (distinct: 1)
+       distinct: 144%
      engine-truth envelope (TotalRev / (TotalRev − ChangeInNA) × 100):
        Y1 Total Revenue        = $165,642  [5-Year Operating Stmt!B5]
        Y1 Change in Net Assets = $22,397  [5-Year Operating Stmt!B16]
@@ -67,9 +67,9 @@
 
 [FAIL] B7.empty-bullets — Unrendered `[ ]` ASCII bullets in PDF (#923)
      ASCII "[ ]" placeholder bullets:  16
-     ASCII "[+]" passing bullets:      20
-     ASCII "[~]" caution bullets:      7
-     ASCII "[!]" warning bullets:      3
+     ASCII "[+]" passing bullets:      19
+     ASCII "[~]" caution bullets:      9
+     ASCII "[!]" warning bullets:      2
        → empty checkboxes leak into rendered packet (Task #923 scope).
 
 [FAIL] B8.readiness-evidence — "Strong" Lender Readiness with 0% evidence (#929)
@@ -82,25 +82,26 @@
 [FAIL] C1.cross-section-revenue — Cross-section Y1 Total Revenue consistency
      canonical Y1 Total Revenue (5-Year Operating Stmt!B5) = $165,642
      cross-section occurrences: 3 (distinct: 2)
-       values:    $400,145, $199
-       off-truth: $400,145, $199
+       values:    $400,145, $166
+       off-truth: $400,145, $166
 
-[FAIL] M.totalRevenue — Metric-location map — Total Revenue
+[PASS] M.totalRevenue — Metric-location map — Total Revenue
      canonical truth (5-Year Operating Stmt!B5:F5): Y1=$165,642  Y2=$251,091  Y3=$308,259  Y4=$361,289  Y5=$401,320
      keyword-anchored windows scanned: 3
      matched (literal → canonical year):
+       - $166K → Y1
+       - $251K → Y2
+       - $308K → Y3
+       - $360K → Y4
+       - $400K → Y5
        - $400,145 → Y5
      mismatched (keyword-adjacent but doesn't match any canonical Y1..Y5):
-       - $199K (=199000) — disagrees with canonical 5-Year Operating Stmt!B5:F5
-       - $258K (=258000) — disagrees with canonical 5-Year Operating Stmt!B5:F5
-       - $322K (=322000) — disagrees with canonical 5-Year Operating Stmt!B5:F5
-       - $380K (=380000) — disagrees with canonical 5-Year Operating Stmt!B5:F5
-       - $421K (=421000) — disagrees with canonical 5-Year Operating Stmt!B5:F5
-     years with ≥1 matched occurrence: Y5
+       (none)
+     years with ≥1 matched occurrence: Y1, Y2, Y3, Y4, Y5
 
 [FAIL] M.changeInNetAssets — Metric-location map — Change in Net Assets
      canonical truth (5-Year Operating Stmt!B16:F16): Y1=$22,397  Y2=$27,135  Y3=$75,433  Y4=$119,719  Y5=$151,668
-     keyword-anchored windows scanned: 12
+     keyword-anchored windows scanned: 14
      matched (literal → canonical year):
        - $152K → Y5
        - $76K → Y3
@@ -111,14 +112,14 @@
        - $67,895 (=67895) — disagrees with canonical 5-Year Operating Stmt!B16:F16
        - $22,826 (=22826) — disagrees with canonical 5-Year Operating Stmt!B16:F16
        - $9 (=9) — disagrees with canonical 5-Year Operating Stmt!B16:F16
-       - $199K (=199000) — disagrees with canonical 5-Year Operating Stmt!B16:F16
-       - $48 (=48) — disagrees with canonical 5-Year Operating Stmt!B16:F16
-       - $258K (=258000) — disagrees with canonical 5-Year Operating Stmt!B16:F16
+       - $166K (=166000) — disagrees with canonical 5-Year Operating Stmt!B16:F16
+       - $14 (=14) — disagrees with canonical 5-Year Operating Stmt!B16:F16
+       - $251K (=251000) — disagrees with canonical 5-Year Operating Stmt!B16:F16
        - $224K (=224000) — disagrees with canonical 5-Year Operating Stmt!B16:F16
-       - $34 (=34) — disagrees with canonical 5-Year Operating Stmt!B16:F16
-       - $322K (=322000) — disagrees with canonical 5-Year Operating Stmt!B16:F16
+       - $27 (=27) — disagrees with canonical 5-Year Operating Stmt!B16:F16
+       - $308K (=308000) — disagrees with canonical 5-Year Operating Stmt!B16:F16
        - $232K (=232000) — disagrees with canonical 5-Year Operating Stmt!B16:F16
-       - $8 (=8) — disagrees with canonical 5-Year Operating Stmt!B16:F16
+       - $75 (=75) — disagrees with canonical 5-Year Operating Stmt!B16:F16
        - $5K (=5000) — disagrees with canonical 5-Year Operating Stmt!B16:F16
        - $22 (=22) — disagrees with canonical 5-Year Operating Stmt!B16:F16
        ... +5 more
@@ -161,7 +162,7 @@
 
 [FAIL] M.dscrNormalized — Metric-location map — DSCR (Normalized)
      canonical truth (DSCR & Covenants!B12:F12): Y1=5.86x  Y2=6.87x  Y3=17.16x  Y4=26.59x  Y5=33.39x
-     keyword-anchored windows scanned: 41
+     keyword-anchored windows scanned: 42
      matched (literal → canonical year):
        - 5.86x → Y1
        - 5.77x → Y1
@@ -173,8 +174,8 @@
        - 9085.86x (=9085.86) — disagrees with canonical DSCR & Covenants!B12:F12
        - 3656.87x (=3656.87) — disagrees with canonical DSCR & Covenants!B12:F12
        - 4.06x (=4.06) — disagrees with canonical DSCR & Covenants!B12:F12
-       - 1.25x (=1.25) — disagrees with canonical DSCR & Covenants!B12:F12
        - 1.15x (=1.15) — disagrees with canonical DSCR & Covenants!B12:F12
+       - 1.25x (=1.25) — disagrees with canonical DSCR & Covenants!B12:F12
        - 2.90x (=2.9) — disagrees with canonical DSCR & Covenants!B12:F12
        - 1.41x (=1.41) — disagrees with canonical DSCR & Covenants!B12:F12
        - 11.51x (=11.51) — disagrees with canonical DSCR & Covenants!B12:F12
@@ -187,7 +188,7 @@
 
 [FAIL] M.endingCash — Metric-location map — Ending Cash
      canonical truth (DSCR & Covenants!B15:F15): Y1=$34,826  Y2=$62,389  Y3=$138,251  Y4=$258,399  Y5=$410,495
-     keyword-anchored windows scanned: 3
+     keyword-anchored windows scanned: 4
      matched (literal → canonical year):
        (none)
      mismatched (keyword-adjacent but doesn't match any canonical Y1..Y5):
@@ -217,12 +218,11 @@
      canonical truth (DSCR & Covenants!B18:F18): Y1=3.1m  Y2=3.4m  Y3=7.2m  Y4=12.9m  Y5=19.8m
      keyword-anchored windows scanned: 39
      matched (literal → canonical year):
-       (none)
+       - 3.099853717935006 months → Y1
      mismatched (keyword-adjacent but doesn't match any canonical Y1..Y5):
-       - 1.876279615817873 months (=1.876279615817873) — disagrees with canonical DSCR & Covenants!B18:F18
        - 1.8 months (=1.8) — disagrees with canonical DSCR & Covenants!B18:F18
        - 18 months (=18) — disagrees with canonical DSCR & Covenants!B18:F18
-     years with ≥1 matched occurrence: (none)
+     years with ≥1 matched occurrence: Y1
 
 [FAIL] M.capacityUtilization — Metric-location map — Capacity Utilization
      canonical truth (DSCR & Covenants!B19:F19): Y1=44%  Y2=58%  Y3=71%  Y4=82%  Y5=89%
@@ -242,31 +242,14 @@
        - 10% (=0.1) — disagrees with canonical DSCR & Covenants!B19:F19
      years with ≥1 matched occurrence: Y5
 
-[FAIL] M.breakEvenEnrollment — Metric-location map — Break-Even Enrollment
-     canonical truth (DSCR & Covenants!B25:F25): Y1=17  Y2=23  Y3=24  Y4=24  Y5=24
+[INFO] M.breakEvenEnrollment — Metric-location map — Break-Even Enrollment
+     canonical truth (DSCR & Covenants!B25:F25): Y1=90816  Y2=164362  Y3=169152  Y4=174086  Y5=179168
      keyword-anchored windows scanned: 23
      matched (literal → canonical year):
-       - 17 → Y1
-       - 23 → Y2
-       - 25 → Y3
+       (none)
      mismatched (keyword-adjacent but doesn't match any canonical Y1..Y5):
-       - 34 (=34) — disagrees with canonical DSCR & Covenants!B25:F25
-       - 40 (=40) — disagrees with canonical DSCR & Covenants!B25:F25
-       - 8 (=8) — disagrees with canonical DSCR & Covenants!B25:F25
-       - 15 (=15) — disagrees with canonical DSCR & Covenants!B25:F25
-       - 33 (=33) — disagrees with canonical DSCR & Covenants!B25:F25
-       - 20 (=20) — disagrees with canonical DSCR & Covenants!B25:F25
-       - 37 (=37) — disagrees with canonical DSCR & Covenants!B25:F25
-       - 10 (=10) — disagrees with canonical DSCR & Covenants!B25:F25
-       - 21 (=21) — disagrees with canonical DSCR & Covenants!B25:F25
-       - 45 (=45) — disagrees with canonical DSCR & Covenants!B25:F25
-       - 38 (=38) — disagrees with canonical DSCR & Covenants!B25:F25
-       - 26 (=26) — disagrees with canonical DSCR & Covenants!B25:F25
-       - 9 (=9) — disagrees with canonical DSCR & Covenants!B25:F25
-       - 13 (=13) — disagrees with canonical DSCR & Covenants!B25:F25
-       - 27 (=27) — disagrees with canonical DSCR & Covenants!B25:F25
-       - 12 (=12) — disagrees with canonical DSCR & Covenants!B25:F25
-     years with ≥1 matched occurrence: Y1, Y2, Y3
+       (none)
+     years with ≥1 matched occurrence: (none)
 
 [FAIL] M.enrollment — Metric-location map — Enrollment
      canonical truth (Enrollment Tuition Fcst!B4:F4): Y1=2  Y2=26  Y3=32  Y4=37  Y5=4
@@ -275,19 +258,20 @@
        - 20 → Y1
        - 40 → Y5
        - 38 → Y4
-       - 33 → Y3
        - 37 → Y4
        - 25 → Y2
        - 26 → Y2
        - 27 → Y2
        - 21 → Y1
        - 32 → Y3
+       - 33 → Y3
        - 36 → Y4
        - 031 → Y3
      mismatched (keyword-adjacent but doesn't match any canonical Y1..Y5):
        - 12 (=12) — disagrees with canonical Enrollment Tuition Fcst!B4:F4
        - 18 (=18) — disagrees with canonical Enrollment Tuition Fcst!B4:F4
        - 17 (=17) — disagrees with canonical Enrollment Tuition Fcst!B4:F4
+       - 11 (=11) — disagrees with canonical Enrollment Tuition Fcst!B4:F4
        - 15 (=15) — disagrees with canonical Enrollment Tuition Fcst!B4:F4
        - 13 (=13) — disagrees with canonical Enrollment Tuition Fcst!B4:F4
        - 60 (=60) — disagrees with canonical Enrollment Tuition Fcst!B4:F4
@@ -296,15 +280,14 @@
        - 14 (=14) — disagrees with canonical Enrollment Tuition Fcst!B4:F4
        - 53 (=53) — disagrees with canonical Enrollment Tuition Fcst!B4:F4
        - 24 (=24) — disagrees with canonical Enrollment Tuition Fcst!B4:F4
-       - 34 (=34) — disagrees with canonical Enrollment Tuition Fcst!B4:F4
+       - 048 (=48) — disagrees with canonical Enrollment Tuition Fcst!B4:F4
        - 45 (=45) — disagrees with canonical Enrollment Tuition Fcst!B4:F4
        - 44 (=44) — disagrees with canonical Enrollment Tuition Fcst!B4:F4
        - 70 (=70) — disagrees with canonical Enrollment Tuition Fcst!B4:F4
-       - 72 (=72) — disagrees with canonical Enrollment Tuition Fcst!B4:F4
        ... +15 more
      years with ≥1 matched occurrence: Y1, Y2, Y3, Y4, Y5
 
 ## Summary
-  PASS: 0   FAIL: 18   INFO: 2
+  PASS: 3   FAIL: 15   INFO: 2
 
 # End of report.
