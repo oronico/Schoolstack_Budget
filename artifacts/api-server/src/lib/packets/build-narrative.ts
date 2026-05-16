@@ -1,6 +1,7 @@
 import type { ConsultantOutput } from "../consultant-engine";
 import type { HealthSignal } from "../financial-health";
 import type { NarrativeSummary } from "./packet-types";
+import { formatRunwayMonths } from "./format-runway";
 
 export function buildNarrative(co: ConsultantOutput): NarrativeSummary {
   const headline = buildHeadline(co);
@@ -46,7 +47,7 @@ function buildSummary(co: ConsultantOutput): string {
   if (co.cashRunwayMonths >= 60) {
     parts.push("Cash remains positive throughout the 5-year projection.");
   } else {
-    parts.push(`Cash runway extends ${co.cashRunwayMonths} months before additional funding would be needed.`);
+    parts.push(`Cash runway extends ${formatRunwayMonths(co.cashRunwayMonths)} before additional funding would be needed.`);
   }
 
   return parts.join(" ");

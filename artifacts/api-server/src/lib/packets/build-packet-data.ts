@@ -22,6 +22,7 @@ import {
   computeReturningStudents,
 } from "../workbook-helpers";
 import { buildNarrative } from "./build-narrative";
+import { formatRunwayMonths, formatRunwayMonthsShort } from "./format-runway";
 import { buildDecisionHistory, buildDecisionHistoryNarrative } from "./build-decision-history";
 import {
   aggregateRosterCapSavings,
@@ -303,7 +304,7 @@ function buildExecutiveSummary(s: PacketSection, co: ConsultantOutput): PacketSe
       { label: "Lender Readiness", value: co.lenderReadiness, sourceEngine: "consultant" },
       { label: "Biggest Strength", value: co.biggestStrength, sourceEngine: "consultant" },
       { label: "Biggest Risk", value: co.biggestRisk, sourceEngine: "consultant" },
-      { label: "Cash Runway", value: co.cashRunwayMonths >= 60 ? "60+ months" : `${co.cashRunwayMonths} months`, sourceEngine: "consultant" },
+      { label: "Cash Runway", value: formatRunwayMonths(co.cashRunwayMonths), sourceEngine: "consultant" },
     ],
   };
 }
@@ -1166,7 +1167,7 @@ function buildCashFlow(s: PacketSection, co: ConsultantOutput, md: ModelData, ye
     ...s,
     narrative: `${runwayText}${openingNote}${trough ? ` Lowest cash month across the 5-year forecast: ${troughLabel} at ${fmt(trough.amount)}.` : ""}`,
     linkedMetrics: [
-      { label: "Cash Runway", value: co.cashRunwayMonths >= 60 ? "60+ months" : `${co.cashRunwayMonths} months`, sourceEngine: "consultant" },
+      { label: "Cash Runway", value: formatRunwayMonths(co.cashRunwayMonths), sourceEngine: "consultant" },
       ...(trough
         ? [{ label: "Lowest Cash Month", value: `${troughLabel} (${fmt(trough.amount)})`, sourceEngine: "consultant" as const }]
         : []),
@@ -1219,7 +1220,7 @@ function buildStressTests(s: PacketSection, co: ConsultantOutput): PacketSection
       st.breakEvenYear !== null ? `Year ${st.breakEvenYear}` : "Never",
       st.reserveMonths !== undefined ? st.reserveMonths.toFixed(1) : "—",
       st.dscr === null || st.dscr === undefined ? "N/A" : `${st.dscr.toFixed(2)}x`,
-      st.runwayMonths !== undefined ? (st.runwayMonths >= 60 ? "60+" : String(st.runwayMonths)) : "—",
+      st.runwayMonths !== undefined ? formatRunwayMonthsShort(st.runwayMonths) : "—",
     ],
   }));
 

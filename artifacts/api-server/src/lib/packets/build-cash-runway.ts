@@ -1,5 +1,6 @@
 import type { ConsultantOutput } from "../consultant-engine";
 import type { ModelData } from "../workbook-helpers";
+import { formatRunwayMonths } from "./format-runway";
 
 export interface CashRunwayView {
   runwayMonths: number;
@@ -49,7 +50,7 @@ export function buildCashRunway(co: ConsultantOutput, md: ModelData): CashRunway
 
   const runwayLabel = months >= 60
     ? "Cash remains positive through the full 5-year projection"
-    : `Cash runway is approximately ${months} months`;
+    : `Cash runway is approximately ${formatRunwayMonths(months)}`;
 
   // Year-end cash position = opening cash + cumulative net income through the year.
   // Lenders ask for this directly — it surfaces the runway crunch year at a glance.

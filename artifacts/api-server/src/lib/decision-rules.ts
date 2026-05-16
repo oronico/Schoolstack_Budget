@@ -1,4 +1,5 @@
 import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "./benchmark-thresholds.js";
+import { formatRunwayMonths } from "./packets/format-runway.js";
 import { assertEveryNextStep } from "@workspace/finance";
 
 export interface DecisionIssue {
@@ -378,13 +379,13 @@ const shortCashRunwayRule: RuleFn = (input) => {
     id: "short_cash_runway",
     severity: cashRunwayMonths <= 6 ? "critical" : cashRunwayMonths <= 12 ? "high" : "medium",
     title: "Let's extend your cash runway",
-    summary: `Based on your projected revenue and expenses, cash currently lasts ${cashRunwayMonths} month${cashRunwayMonths === 1 ? "" : "s"}. Aiming for 18+ months gives you room to absorb late tuition payments or delayed public funding without scrambling.`,
+    summary: `Based on your projected revenue and expenses, cash currently lasts ${formatRunwayMonths(cashRunwayMonths)}. Aiming for 18+ months gives you room to absorb late tuition payments or delayed public funding without scrambling.`,
     whyItMatters: "An 18-month runway means a single late tuition cycle or delayed state disbursement isn't an emergency. Building the cushion now is far easier than rebuilding it after opening day.",
     recommendedAction: "Build a cash buffer through startup fundraising, a line of credit, or by reducing early expenses. Target at least 18 months of runway before opening.",
     nextStep: "Open Step 2: School Details and raise opening cash, or trim Year 1 expenses in Step 7, until projected cash runway clears 18 months.",
     relatedStep: 6,
     supportingMetrics: [
-      { label: "Cash runway", value: `${cashRunwayMonths} months` },
+      { label: "Cash runway", value: formatRunwayMonths(cashRunwayMonths) },
       { label: "Target", value: "18+ months" },
     ],
   };

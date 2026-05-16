@@ -31,6 +31,7 @@
 import type { ConsultantOutput } from "../consultant-engine";
 import type { ModelData } from "../workbook-helpers";
 import { lenderReadinessCoachingHeadline } from "../lender-readiness-coaching.js";
+import { formatRunwayMonths } from "./format-runway";
 
 // ───────────────────────────────────────────────────────────────────────
 // Types
@@ -380,7 +381,11 @@ class FigureScribe {
   }
 
   monthsCount(months: number): string {
-    return this.push(`${months} months`);
+    // Task #937 — `cashRunwayMonths` is a fractional coverage ratio
+    // (year-end cash / monthly fixed costs). Route every runway render
+    // through the shared formatter so the surface always shows a clean
+    // 1-decimal value, with the 60+ cap applied consistently.
+    return this.push(formatRunwayMonths(months));
   }
 
   /**
@@ -403,7 +408,8 @@ class FigureScribe {
       /\d+(?:\.\d+)?%/g,
       /-?\d+(?:\.\d+)?x\b/gi,
       /Year\s+\d+/g,
-      /\d+\s+months\b/g,
+      /60\+\s+months\b/g,
+      /\d+(?:\.\d+)?\s+months\b/g,
     ];
     let residual = cleaned;
     for (const re of patterns) {

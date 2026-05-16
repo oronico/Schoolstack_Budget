@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { lenderReadinessCoachingHeadline } from "./lender-readiness-coaching.js";
+import { formatRunwayMonths } from "./packets/format-runway.js";
 
 let resendClient: Resend | null = null;
 
@@ -653,7 +654,7 @@ export async function sendReviewFeedback(data: ReviewFeedbackData): Promise<{ su
       </tr>
       <tr>
         <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#475569;font-size:14px;">Cash Runway</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#1E293B;font-weight:600;text-align:right;font-size:14px;">${n(data.metrics.cashRunwayMonths)} months</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#1E293B;font-weight:600;text-align:right;font-size:14px;">${escapeHtml(formatRunwayMonths(data.metrics.cashRunwayMonths))}</td>
       </tr>
       <tr>
         <td style="padding:8px 12px;color:#475569;font-size:14px;">Lending Readiness</td>
@@ -764,7 +765,7 @@ export async function sendReviewFeedback(data: ReviewFeedbackData): Promise<{ su
     `Year 1 Revenue: ${fmtCurrency(data.metrics.y1Revenue)}`,
     `Year 1 Net Margin: ${(data.metrics.y1NetMargin * 100).toFixed(1)}%`,
     `DSCR (Debt Service Coverage): ${data.metrics.dscr.toFixed(2)}x`,
-    `Cash Runway: ${data.metrics.cashRunwayMonths} months`,
+    `Cash Runway: ${formatRunwayMonths(data.metrics.cashRunwayMonths)}`,
     `Lending Readiness: ${lenderReadinessCoachingHeadline(data.metrics.lenderReadiness)}`,
     "",
     "WHAT'S NEXT",

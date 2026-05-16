@@ -38,6 +38,7 @@ import {
   type NarrativeSourceBundle,
 } from "./build-narrative-commentary.js";
 import { lenderReadinessCoachingHeadline } from "../lender-readiness-coaching.js";
+import { formatRunwayMonths } from "./format-runway.js";
 
 // ───────────────────────────────────────────────────────────────────────
 // Public types
@@ -134,6 +135,15 @@ class FigureScribe {
   }
 
   /**
+   * Task #937 — Dedicated formatter for `cashRunwayMonths` (a fractional
+   * coverage ratio). Always renders as a clean 1-decimal value with the
+   * 60+ cap applied, matching every other packet surface.
+   */
+  runwayMonths(months: number): string {
+    return this.push(formatRunwayMonths(months));
+  }
+
+  /**
    * Authorize every numeric token that already appears inside an
    * engine-supplied prose snippet (e.g. a recommendation title) so it can
    * be inlined without tripping the guard test. Returns the dash-stripped
@@ -147,7 +157,8 @@ class FigureScribe {
       /\d+(?:\.\d+)?%/g,
       /-?\d+(?:\.\d+)?x\b/gi,
       /Year\s+\d+/g,
-      /\d+\s+months\b/g,
+      /60\+\s+months\b/g,
+      /\d+(?:\.\d+)?\s+months\b/g,
     ];
     let residual = cleaned;
     for (const re of patterns) {
@@ -204,7 +215,7 @@ function buildWhatYourModelSays(
         (bundle.reserveMonthsLastYear !== null
           ? `, reaching about ${f.monthsCount(bundle.reserveMonthsLastYear)} of operating reserves by ${f.yearLabel(bundle.reserveLastYearNumber)}.`
           : `.`)
-      : `Operating cash carries the school for ${f.monthsCount(bundle.cashRunwayMonths)} from open before another funding event would be needed` +
+      : `Operating cash carries the school for ${f.runwayMonths(bundle.cashRunwayMonths)} from open before another funding event would be needed` +
         (bundle.troughEndingCash !== null && bundle.troughYear !== null
           ? `, with the tightest point at ${f.signedCurrency(bundle.troughEndingCash)} of ending cash in ${f.yearLabel(bundle.troughYear)}.`
           : `.`);
@@ -339,7 +350,7 @@ function buildCashPressure(
   // Headline: trough cash + runway.
   if (bundle.cashRunwayMonths < 60) {
     paragraphs.push(
-      `Operating cash runs for ${f.monthsCount(bundle.cashRunwayMonths)} from open before another funding event would be needed` +
+      `Operating cash runs for ${f.runwayMonths(bundle.cashRunwayMonths)} from open before another funding event would be needed` +
         (bundle.troughEndingCash !== null && bundle.troughYear !== null
           ? `. The tightest point is ${f.signedCurrency(bundle.troughEndingCash)} of ending cash in ${f.yearLabel(bundle.troughYear)}, which is the moment to plan around.`
           : `.`),
@@ -583,7 +594,7 @@ function buildReviewerQuestions(
   }
   if (bundle.cashRunwayMonths < 18) {
     addQuestion(
-      `Operating runway is ${f.monthsCount(bundle.cashRunwayMonths)}. What is your bridge plan if ramp is slower than expected?`,
+      `Operating runway is ${f.runwayMonths(bundle.cashRunwayMonths)}. What is your bridge plan if ramp is slower than expected?`,
     );
   }
   if (bundle.founderCompHasAdjustment) {

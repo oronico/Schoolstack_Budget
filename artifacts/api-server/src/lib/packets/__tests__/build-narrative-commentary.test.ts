@@ -147,9 +147,11 @@ function extractFigures(text: string): string[] {
   // Year labels: Year 1, Year 5
   const yearRe = /Year\s+\d+/g;
   // "N months" labels
-  const monthsRe = /\d+\s+months\b/g;
+  // "N months" / "N.N months" labels and the "60+ months" cap.
+  const monthsRe = /\d+(?:\.\d+)?\s+months\b/g;
+  const monthsCapRe = /60\+\s+months\b/g;
 
-  for (const re of [currencyRe, percentRe, ratioRe, yearRe, monthsRe]) {
+  for (const re of [currencyRe, percentRe, ratioRe, yearRe, monthsCapRe, monthsRe]) {
     let m: RegExpExecArray | null;
     while ((m = re.exec(text)) !== null) out.push(m[0]);
   }

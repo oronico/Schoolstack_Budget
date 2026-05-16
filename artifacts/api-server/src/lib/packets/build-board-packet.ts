@@ -11,6 +11,7 @@ import {
   computeReturningStudents,
   computeTotalFTE,
 } from "../workbook-helpers";
+import { formatRunwayMonths } from "./format-runway";
 import {
   computeForecastAccuracy,
   filterForecastAccuracy,
@@ -647,7 +648,7 @@ function buildFinancialOutlook(co: ConsultantOutput): BoardPacket["financialOutl
 function simplifyExecutiveSummary(section: PacketSection, co: ConsultantOutput): PacketSection {
   const cashText = co.cashRunwayMonths >= 60
     ? "Cash flow remains positive over the full 5-year period."
-    : `The school has approximately ${co.cashRunwayMonths} months of cash runway.`;
+    : `The school has approximately ${formatRunwayMonths(co.cashRunwayMonths)} of cash runway.`;
 
   const narrative = `${co.executiveSummary} ${cashText}`;
 
