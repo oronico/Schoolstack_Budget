@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { Fragment, useState, useEffect, useCallback } from "react";
 import { X, Download, Loader2, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Lightbulb, BarChart3, RefreshCw } from "lucide-react";
 import { trackExport } from "@/hooks/useExportTracker";
 import { InsightCallout } from "@/components/coaching/InsightCallout";
 import { buildForecastFilterQuery } from "@/lib/forecast-accuracy-query";
 import { CashRunwayCard, type CashRunwayView } from "./CashRunwayCard";
-import { CommentaryBlock } from "./LenderPacketPreview";
+import { CommentaryBlock, ProFormaMethodologyNote, scrollToPreviewAnchor } from "./LenderPacketPreview";
 import { PacketAttachmentsPreview } from "./PacketAttachmentsPreview";
 import { ActualVsProjectedBadge } from "@/components/wizard/ActualVsProjectedBadge";
 import { AssumptionConfidenceRollupCard } from "@/components/wizard/AssumptionConfidenceRollupCard";
@@ -259,18 +259,54 @@ export function BoardPacketPreview({
           {packet.focusAreas.length > 0 && <FocusAreaCards areas={packet.focusAreas} />}
           {packet.scenarioSnapshots.length > 0 && <ScenarioCards scenarios={packet.scenarioSnapshots} />}
           <div className="space-y-2 mt-6">
-            {packet.sections
-              .filter((s) => s.included && s.id !== "cover" && s.id !== "key_risks" && s.id !== "board_action_items" && s.id !== "cash_flow")
-              .map((section) => (
-                <SectionCard
-                  key={section.id}
-                  section={section}
-                  expanded={expandedSections.has(section.id)}
-                  onToggle={() => toggleSection(section.id)}
+            {(() => {
+              const visible = packet.sections.filter(
+                (s) =>
+                  s.included &&
+                  s.id !== "cover" &&
+                  s.id !== "key_risks" &&
+                  s.id !== "board_action_items" &&
+                  s.id !== "cash_flow",
+              );
+              const hasStressTests = visible.some((s) => s.id === "stress_tests");
+              const methodologyNote = (
+                <ProFormaMethodologyNote
+                  onJumpToProjection={() =>
+                    scrollToPreviewAnchor(
+                      "board-preview-section-five_year_projection",
+                      () =>
+                        setExpandedSections((p) =>
+                          new Set(p).add("five_year_projection"),
+                        ),
+                    )
+                  }
+                  onJumpToAttachments={() =>
+                    scrollToPreviewAnchor("board-preview-attachments")
+                  }
                 />
-              ))}
+              );
+              return (
+                <>
+                  {visible.map((section) => (
+                    <Fragment key={section.id}>
+                      <div id={`board-preview-section-${section.id}`}>
+                        <SectionCard
+                          section={section}
+                          expanded={expandedSections.has(section.id)}
+                          onToggle={() => toggleSection(section.id)}
+                        />
+                      </div>
+                      {section.id === "stress_tests" && methodologyNote}
+                    </Fragment>
+                  ))}
+                  {!hasStressTests && methodologyNote}
+                </>
+              );
+            })()}
           </div>
-          <PacketAttachmentsPreview />
+          <div id="board-preview-attachments">
+            <PacketAttachmentsPreview />
+          </div>
         </div>
       </div>
     </div>

@@ -549,7 +549,7 @@ function RiskMitigantCards({ risks }: { risks: RiskMitigant[] }) {
 const PRO_FORMA_METHODOLOGY_NOTE_BODY =
   "This packet ships two Excel workbooks. The 5-Year Financial Model (underwriting) is the canonical bottom line and uses the full driver engine; its Operating Statement Net Income subtracts personnel, operating expenses, interest, principal & capital outlays, and depreciation. The Lender Pro-Forma is a simplified comparator built from per-student / per-row averages so a reviewer can re-run sensitivities by editing one assumption; its 5-Year P&L Net Income is GAAP-style (NOI minus interest only — principal and depreciation are not on that P&L). Because the two sheets use different driver models AND different bottom-line definitions, their Y1 Net Income figures will not tie on the same payload, and they are not meant to. The figures cited in this PDF narrative source from the underwriting model.";
 
-function scrollToPreviewAnchor(anchorId: string, beforeScroll?: () => void) {
+export function scrollToPreviewAnchor(anchorId: string, beforeScroll?: () => void) {
   if (beforeScroll) beforeScroll();
   // Defer to next frame so any state-driven expand has rendered before we measure.
   requestAnimationFrame(() => {
