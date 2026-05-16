@@ -1028,9 +1028,17 @@ function buildFacilityKPIs(s: PacketSection, md: ModelData, yearlyData: YearData
 }
 
 function buildCashFlow(s: PacketSection, co: ConsultantOutput, md: ModelData, yearlyData: YearData[]): PacketSection {
-  const runwayText = co.cashRunwayMonths >= 60
-    ? "Cash stays positive throughout the entire 5-year projection."
-    : `Cash goes negative in month ${co.cashRunwayMonths}. The school will need additional funding or cost adjustments.`;
+  // Task #909 — `co.cashRunwayMonths` is the canonical coverage ratio
+  // (#908): months of fixed-cost coverage from year-end cash. It is
+  // *not* a depletion-month index, so prior copy reading it as
+  // "month N" produced nonsense like "Cash goes negative in month 1.9".
+  // Phrase it as runway months instead; depletion claims belong to the
+  // liquidity HealthSignal which now keys off cumulative-cash trough.
+  const runwayText = co.cashRunwayMonths >= 12
+    ? `Year-end cash covers ${co.cashRunwayMonths.toFixed(1)} months of fixed costs.`
+    : co.cashRunwayMonths >= 0
+    ? `Year-end cash covers only ${co.cashRunwayMonths.toFixed(1)} months of fixed costs. The school may need additional funding or cost adjustments.`
+    : `Year-end cash is negative (${co.cashRunwayMonths.toFixed(1)} months of fixed-cost coverage). The school will need outside funding to continue operating.`;
 
   const rows: PacketTableRow[] = co.cumulativeFinancials.map((cf) => ({
     label: yearLabel(cf.year - 1),

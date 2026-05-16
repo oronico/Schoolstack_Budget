@@ -201,20 +201,21 @@ v
 er
 age is 30.65x.
  
-Cash remains positiv
-e across the full 5-y
-ear projection, with reser
-v
-es reaching 78 months of oper
-ating e
-xpense 
-b
-y 
+Oper
+ating cash r
+unw
+a
+y e
+xtends 11.122823375736088 months from the open bef
+ore additional capital w
+ould be 
+required, with the tightest position at $2,258,592 of ending cash in 
 Y
-ear 5.
+ear 1.
  
 The model crosses oper
-ating break-e
+ating break-
+e
 v
 en in 
 Y
@@ -223,8 +224,7 @@ Y
 ear 1 requires 93 students to co
 v
 er fix
-ed 
-costs and debt ser
+ed costs and debt ser
 vice (16% of stated capacity).
 Y
 ear 1 re
@@ -236,52 +236,77 @@ iv
 en, 95% policy-dependent, and 4% donor-
 dependent.
  
-The top 2 r
+The top 3 r
 isks surf
 aced are:
+ Let's e
+xtend y
+our cash r
+unw
+a
+y (high).
+ Mitigant:
+ Build a cash b
+uff
+er 
+through star
+tup fundr
+aising, a line of credit, or b
+y reducing ear
+ly e
+xpenses
+.
+ 
+T
+arget at least 18 months of r
+unw
+a
+y 
+bef
+ore opening.;
  Let's bac
 k the enrollment r
 amp with e
 vidence (medium).
  Mitigant:
  Bac
-k 
-e
+k e
 v
 er
-y enrollment target with documented demand - signed letters of intent, w
+y enrollment target 
+with documented demand - signed letters of intent, w
 aitlist depth, comm
 unity sur
 v
 e
-y 
-results
+y results
 , or recr
-uitment pipeline data.
+uitment 
+pipeline data.
  Gro
 wth o
 v
 er 25% per y
 ear typically requires an e
 xceptional recr
-uitment 
-engine or f
-acility e
+uitment engine or f
+acility 
+e
 xpansion.;
  Let's tie ne
 w hires to enrollment milestones (medium).
  Mitigant:
- Align staffing 
-additions to enrollment milestones
+ Align staffing additions to enrollment 
+milestones
 .
  Hire when students are enrolled, not when y
 ou hope the
 y will be
 .
  Use par
-t-
-time or contr
-act roles to br
+t-time or contr
+act roles to 
+br
 idge gaps
 ..
 F
@@ -404,7 +429,7 @@ or funding gaps
 Cash Runw
 a
 y:
- 60+ months
+ 11.122823375736088 months
 Budg
 et Narrative
 Liber
@@ -842,7 +867,7 @@ unw
 a
 y mo
 v
-es from 60.0 to 60.0 months when nor
+es from 11.1 to 11.0 months when nor
 maliz
 ed.
  DSCR, 
@@ -1070,14 +1095,14 @@ Reser
 ve (months)
 As Planned (Repor
 ted)
-60.0
+11.1
 78.1
 Lender 
 Vie
 w (Nor
 maliz
 ed)
-60.0
+11.0
 75.8
 Suppor
 ting Assumptions
@@ -1490,18 +1515,25 @@ Enrollment Cushion
 Cash Flo
 w Anal
 ysis
-Cash sta
-ys positiv
-e throughout the entire 5-y
-ear projection.
+Y
+ear-end cash co
+v
+ers only 11.1 months of fix
+ed costs
+.
+ 
+The school ma
+y need additional funding or cost 
+adjustments
+.
  Opening balance:
  $300K total assets
-, $0 total 
-liabilities
+, $0 total liabilities
 , $300K net position.
  Lo
 w
-est cash month across the 5-y
+est cash month 
+across the 5-y
 ear f
 orecast:
  
@@ -1512,7 +1544,7 @@ ul at $625K.
 Cash Runw
 a
 y:
- 60+ months
+ 11.122823375736088 months
 [ ] 
 Lo
 w
@@ -2304,7 +2336,8 @@ Y
 ear 1
 60.7
 21.74x
-60+
+7.8738358949
+74987
 Loss of Philanthrop
 y
 $1.9M
@@ -2313,7 +2346,8 @@ Y
 ear 1
 77.3
 27.84x
-60+
+8.8413429144
+54337
 Hard re
 v
 en
@@ -2325,7 +2359,8 @@ v
 er
 0.0
 -38.62x
-1
+-10.92938306
+9462963
 Occupancy +15%, P
 ersonnel +5%
 $1.9M
@@ -2334,7 +2369,8 @@ Y
 ear 1
 71.5
 28.81x
-60+
+8.6913706784
+39473
 Re
 v
 en
@@ -2347,7 +2383,8 @@ Y
 ear 1
 47.9
 13.30x
-60+
+4.5142661535
+33808
 Interest Rate +2%
 $2.1M
 $12.6M
@@ -2355,7 +2392,8 @@ Y
 ear 1
 77.9
 27.78x
-60+
+9.6742659691
+52618
 Lender Readiness
 Lender Readiness:
  Needs 
@@ -2396,8 +2434,8 @@ W
 or
 k
 Financial Health Assessment
-Across 8 health dimensions:
- 7 health
+Across 9 health dimensions:
+ 8 health
 y
 , 1 on w
 atch, 0 at r
@@ -2411,8 +2449,8 @@ liquidity:
  Health
 y
 [+] 
-staffing b
-urden:
+cash flo
+w timing:
  Health
 y
 SchoolStac
@@ -2421,6 +2459,11 @@ ated <DATE>
 P
 age 14 of 19
 --- PAGE 15 ---
+[+] 
+staffing b
+urden:
+ Health
+y
 [+] 
 f
 acility b
@@ -2446,12 +2489,6 @@ da
 ys cash:
  Health
 y
-[+] 
-reser
-v
-e strength:
- Health
-y
 Health Dimensions
 Dimension
 Status
@@ -2475,6 +2512,19 @@ v
 es e
 xceed 3 months of e
 xpenses
+.
+Cash Flo
+w 
+Timing
+Health
+y
+Ev
+er
+y month gener
+ates at least as m
+uch cash 
+as it consumes  no timing gaps to br
+idge
 .
 Staffing Burden
 Health
@@ -2583,7 +2633,7 @@ xpected costs
 K
 e
 y Risks
-2 r
+3 r
 isk f
 actors ha
 v
@@ -2594,6 +2644,14 @@ itical, b
 ut each should ha
 v
 e a documented mitigation plan.
+[~] 
+Let's e
+xtend y
+our cash r
+unw
+a
+y:
+ high
 [+] 
 Let's bac
 k the enrollment r
@@ -2604,6 +2662,68 @@ vidence:
 Let's tie ne
 w hires to enrollment milestones:
  medium
+HIGH
+Let's e
+xtend y
+our cash runwa
+y
+An 18-month r
+unw
+a
+y means a single late tuition cycle or dela
+y
+ed state disb
+ursement isn't an emergency
+.
+ Building the cushion no
+w is f
+ar 
+easier than reb
+uilding it after opening da
+y
+.
+Evidence:
+ Cash r
+unw
+a
+y:
+ 11.122823375736088 months  |  
+T
+arget:
+ 18+ months
+Mitigation:
+ 
+Build a cash b
+uff
+er through star
+tup fundr
+aising, a line of credit, or b
+y reducing ear
+ly e
+xpenses
+.
+ 
+T
+arget at least 18 months of 
+r
+unw
+a
+y bef
+ore opening.
+ Ne
+xt step:
+ Open Step 2:
+ School Details and r
+aise opening cash, or tr
+im 
+Y
+ear 1 e
+xpenses in Step 7, until projected 
+cash r
+unw
+a
+y clears 18 months
+.
 MEDIUM
 Let's bac
 k the enr
@@ -2740,6 +2860,20 @@ t date to a specific enrollment milestone (e
 Y2 enrollment hits 60'), or push the role into a later y
 ear
 .
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 15 of 19
+--- PAGE 16 ---
+[~] 
+Let's e
+xtend y
+our cash r
+unw
+a
+y:
+ high
 [+] 
 Let's bac
 k the enrollment r
@@ -2784,12 +2918,6 @@ y will be summar
 iz
 ed here
 .
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 15 of 19
---- PAGE 16 ---
 Appendix:
  K
 e
@@ -3045,6 +3173,12 @@ v
 en
 ue
 , Staffing, Capital & Financing.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 16 of 19
+--- PAGE 17 ---
 Y
 ear 5 ending cash
   Star
@@ -3117,12 +3251,6 @@ ue
 .
   ...
  and 24 more (see Appendix)
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 16 of 19
---- PAGE 17 ---
 Break-Even & Do
 wnside Sensitivity
 Break-e
@@ -3352,7 +3480,7 @@ kbook.
 Base case:
   Min DSCR 30.84x · Min ending 
 cash $2,272,877 · Runwa
-y 60.0 mo
+y 11.1 mo
 Enr
 ollment -10%
 All fiv
@@ -3367,7 +3495,7 @@ y 10%  the standard lender enrollment-miss sensitivity
  $1,958,775   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 10.2 mo   ·   Break-e
 v
 en:
  
@@ -3394,7 +3522,7 @@ e a soft-launch.
  $1,640,891   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 9.2 mo   ·   Break-e
 v
 en:
  
@@ -3424,7 +3552,7 @@ ursement.
  $1,118,711   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 5.5 mo   ·   Break-e
 v
 en:
  
@@ -3459,7 +3587,7 @@ ise
  $2,217,877   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 10.6 mo   ·   Break-e
 v
 en:
  
@@ -3489,7 +3617,7 @@ ating cost.
  $2,272,877   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 11.1 mo   ·   Break-e
 v
 en:
  

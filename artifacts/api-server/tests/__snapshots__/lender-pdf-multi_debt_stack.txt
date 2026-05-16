@@ -194,20 +194,20 @@ ating cash r
 unw
 a
 y e
-xtends 1 months from the open bef
+xtends 0.24986764106061918 months from the open bef
 ore additional capital w
-ould be required, with the 
-tightest position at ($687,958) of ending cash in 
+ould be 
+required, with the tightest position at ($687,958) of ending cash in 
 Y
 ear 5.
  
 The model does not y
-et reach cum
+et reach 
+cum
 ulativ
 e break-e
 v
-en 
-within the 5-y
+en within the 5-y
 ear windo
 w
 , and 
@@ -216,9 +216,9 @@ ear 1 w
 ould require 30 students to co
 v
 er fix
-ed costs and debt ser
-vice in the 
-opening y
+ed costs and 
+debt ser
+vice in the opening y
 ear
 .
 Y
@@ -442,7 +442,7 @@ th planning around
 Cash Runw
 a
 y:
- 1 months
+ 0.24986764106061918 months
 Budg
 et Narrative
 Three-Loan Stac
@@ -893,7 +893,7 @@ unw
 a
 y mo
 v
-es from 13.0 to 12.0 months when nor
+es from 0.2 to -0.4 months when nor
 maliz
 ed.
  DSCR, r
@@ -1099,14 +1099,14 @@ Reser
 ve (months)
 As Planned (Repor
 ted)
-13.0
+0.2
 0.0
 Lender 
 Vie
 w (Nor
 maliz
 ed)
-12.0
+-0.4
 0.0
 Suppor
 ting Assumptions
@@ -1503,19 +1503,25 @@ Enrollment Cushion
 Cash Flo
 w Anal
 ysis
-Cash goes negativ
-e in month 1.
+Y
+ear-end cash co
+v
+ers only 0.2 months of fix
+ed costs
+.
  
-The school will need additional funding or cost adjustments
+The school ma
+y need additional funding or cost 
+adjustments
 .
  Opening balance:
- 
-$975K total assets
+ $975K total assets
 , $1.1M total liabilities
 , $-135K net position.
  Lo
 w
-est cash month across the 5-y
+est cash month 
+across the 5-y
 ear f
 orecast:
  
@@ -1526,7 +1532,7 @@ ul at $-57K.
 Cash Runw
 a
 y:
- 1 months
+ 0.24986764106061918 months
 [ ] 
 Lo
 w
@@ -2315,7 +2321,8 @@ v
 er
 0.0
 -0.04x
-10
+-1.073246612
+7192728
 Loss of Philanthrop
 y
 $-109K
@@ -2324,7 +2331,8 @@ Y
 ear 4
 0.0
 0.04x
-11
+-0.661813820
+5433532
 Hard re
 v
 en
@@ -2335,7 +2343,8 @@ Y
 ear 4
 0.0
 0.04x
-11
+-0.661813820
+5433532
 Occupancy +15%, P
 ersonnel +5%
 $-99K
@@ -2344,7 +2353,8 @@ Y
 ear 5
 0.0
 0.13x
-12
+-0.191089162
+0735979
 Re
 v
 en
@@ -2358,7 +2368,8 @@ v
 er
 0.0
 -0.14x
-9
+-1.597076253
+3502776
 Interest Rate +2%
 $-106K
 $25K
@@ -2366,7 +2377,8 @@ Y
 ear 5
 0.0
 0.18x
-11
+-0.500225162
+5998444
 Lender Readiness
 Lender Readiness:
  Not 
@@ -2472,11 +2484,16 @@ approaching lenders
 .
 Liquidity
 Needs attention
-Cash goes negativ
-e in month 1.
+Cum
+ulativ
+e cash dips to -$118,100 in J
+ul of 
+Y
+ear 
+4.
  
-The school will 
-need outside funding to contin
+The school will need outside funding to 
+contin
 ue oper
 ating.
 Staffing Burden
@@ -2801,7 +2818,7 @@ Evidence:
 unw
 a
 y:
- 1 months  |  
+ 0.24986764106061918 months  |  
 T
 arget:
  18+ months
@@ -2867,8 +2884,12 @@ m sustainability
 .
 HIGH
 Liquidity
-Cash goes negativ
-e in month 1.
+Cum
+ulativ
+e cash dips to -$118,100 in J
+ul of 
+Y
+ear 4.
  
 The school will need outside funding to contin
 ue oper
@@ -3587,7 +3608,7 @@ kbook.
 Base case:
   Min DSCR 0.21x · Min ending cash 
 -$110,511 · Runwa
-y 15.0 mo
+y 0.2 mo
 SchoolStac
 k Budget - Gener
 ated <DATE>
@@ -3608,7 +3629,7 @@ y 10%  the standard lender enrollment-miss sensitivity
  -$202,324   ·   Runw
 a
 y:
- 13.0 mo   ·   Break-e
+ -0.4 mo   ·   Break-e
 v
 en:
  
@@ -3635,7 +3656,7 @@ e a soft-launch.
  -$306,789   ·   Runw
 a
 y:
- 10.0 mo   ·   Break-e
+ -1.1 mo   ·   Break-e
 v
 en:
  Ne
@@ -3665,7 +3686,7 @@ ursement.
  -$110,511   ·   Runw
 a
 y:
- 15.0 mo   ·   Break-e
+ 0.2 mo   ·   Break-e
 v
 en:
  
@@ -3700,7 +3721,7 @@ ise
  -$134,929   ·   Runw
 a
 y:
- 14.0 mo   ·   Break-e
+ -0.1 mo   ·   Break-e
 v
 en:
  
@@ -3730,7 +3751,7 @@ ating cost.
  -$110,511   ·   Runw
 a
 y:
- 15.0 mo   ·   Break-e
+ 0.2 mo   ·   Break-e
 v
 en:
  

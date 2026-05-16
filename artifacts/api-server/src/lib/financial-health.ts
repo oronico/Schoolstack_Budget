@@ -43,6 +43,50 @@ interface HealthInput {
   tuitionPct: number;
   entityType: string;
   daysCashOnHand?: number;
+  /**
+   * Task #909 — lowest cumulative-cash position across every month of
+   * every modeled year, in dollars. Negative means the school's bank
+   * balance dips below zero at some point. This is the canonical
+   * trigger for the liquidity "cash goes negative" signal (prior
+   * versions misread `cashRunwayMonths` as a depletion-month index
+   * after #908 re-defined it as a coverage ratio). Optional so older
+   * callers (workbook signals sheet) keep working with the legacy
+   * runway-only heuristic.
+   */
+  lowestCumulativeCash?: number;
+  /** Calendar month label (e.g. "Jul") of the cumulative-cash trough. */
+  lowestCumulativeCashMonthLabel?: string;
+  /** 0-based year index the cumulative trough falls in. */
+  lowestCumulativeCashYearIndex?: number;
+  /**
+   * Approximate average monthly operating burn (used to decide whether
+   * a positive-but-thin cumulative trough counts as "buffer thin").
+   */
+  avgMonthlyBurn?: number;
+  /**
+   * Task #909 — count of months across all modeled years where the
+   * monthly net cash flow (inflow − outflow) is negative. Distinct
+   * from {@link lowestCumulativeCash}: a model can burn more cash than
+   * it generates in some months while the cumulative balance stays
+   * positive thanks to opening cash + earlier surpluses. When this is
+   * > 0 and the cumulative trough stays >= 0, surface a separate
+   * `cash_flow_timing` signal instead of the at-risk "goes negative"
+   * copy.
+   */
+  negativeNetCashFlowMonths?: number;
+}
+
+function fmtMoney(n: number): string {
+  const abs = Math.abs(n);
+  const rounded = abs >= 1000 ? Math.round(abs / 100) * 100 : Math.round(abs);
+  const s = `$${rounded.toLocaleString()}`;
+  return n < 0 ? `-${s}` : s;
+}
+
+function troughLocation(label?: string, yearIndex?: number): string {
+  if (!label) return "at the cash trough";
+  if (yearIndex === undefined || yearIndex === null) return label;
+  return `${label} of Year ${yearIndex + 1}`;
 }
 
 function profitTerm(entityType: string): string {
@@ -105,11 +149,67 @@ const DIMENSIONS: {
     id: "liquidity",
     label: "Liquidity",
     compute: (input) => {
-      const { cashRunwayMonths, yearCount, reserveMonths } = input;
-      const totalMonths = yearCount * 12;
-      const neverDepleted = cashRunwayMonths >= totalMonths;
+      const {
+        cashRunwayMonths,
+        reserveMonths,
+        lowestCumulativeCash,
+        lowestCumulativeCashMonthLabel,
+        lowestCumulativeCashYearIndex,
+        avgMonthlyBurn,
+      } = input;
 
-      if (neverDepleted && reserveMonths >= 3) {
+      // Task #909 — prefer the cumulative-cash trough as the
+      // "goes negative" trigger. `cashRunwayMonths` is the canonical
+      // coverage ratio (#908) — months of fixed-cost coverage from
+      // year-end cash — *not* a depletion-month index. Reading it as a
+      // month number produces nonsense copy like "Cash goes negative in
+      // month 1.9". The cumulative-cash series exposes the actual
+      // trough (e.g. Oakwood: lowest = $4,932 in July, stays positive).
+      const cumulativeAvailable = typeof lowestCumulativeCash === "number";
+
+      if (cumulativeAvailable && lowestCumulativeCash! < 0) {
+        const where = troughLocation(
+          lowestCumulativeCashMonthLabel,
+          lowestCumulativeCashYearIndex,
+        );
+        return {
+          dimension: "liquidity",
+          status: "at_risk",
+          label: "Needs attention",
+          explanation: `Cumulative cash dips to ${fmtMoney(lowestCumulativeCash!)} in ${where}. The school will need outside funding to continue operating.`,
+          watchItem: "Secure a line of credit or bridge funding before the trough month.",
+          nextStep: "Open Step 2: School Details to raise opening cash, or trim Step 7: Expenses to push the cash trough above zero.",
+        };
+      }
+
+      // Buffer-thin: cumulative stays positive but dips below one
+      // month of average burn. Replaces the old "goes negative" copy
+      // for the Oakwood-style case (positive trough, slim buffer).
+      const bufferThreshold = avgMonthlyBurn && avgMonthlyBurn > 0 ? avgMonthlyBurn : Infinity;
+      if (cumulativeAvailable && lowestCumulativeCash! >= 0 && lowestCumulativeCash! < bufferThreshold) {
+        const where = troughLocation(
+          lowestCumulativeCashMonthLabel,
+          lowestCumulativeCashYearIndex,
+        );
+        return {
+          dimension: "liquidity",
+          status: "watch",
+          label: "Watch closely",
+          explanation: `Cash stays positive, but the buffer thins to ${fmtMoney(lowestCumulativeCash!)} in ${where} — less than one month of operating burn. A small revenue miss could push it below zero.`,
+          watchItem: "Watch the trough month closely and line up a credit facility before it hits.",
+          nextStep: "Open Step 2: School Details and raise opening cash, or trim Step 7: Expenses, until the trough holds at least one month of burn.",
+        };
+      }
+
+      // Cumulative healthy: branch on reserveMonths for the remaining
+      // healthy / reserve-thin verdicts. When cumulative data isn't
+      // available (legacy workbook caller), fall back to a runway
+      // proxy: canonical `cashRunwayMonths` >= 3 = comfortable.
+      const cumulativeHealthy = cumulativeAvailable
+        ? lowestCumulativeCash! >= bufferThreshold
+        : cashRunwayMonths >= 3;
+
+      if (cumulativeHealthy && reserveMonths >= 3) {
         return {
           dimension: "liquidity",
           status: "healthy",
@@ -119,7 +219,7 @@ const DIMENSIONS: {
           nextStep: "Keep cash and reserves where they are; revisit Step 2: School Details after any large capital plan change.",
         };
       }
-      if (neverDepleted && reserveMonths >= 1) {
+      if (cumulativeHealthy && reserveMonths >= 1) {
         return {
           dimension: "liquidity",
           status: "watch",
@@ -129,7 +229,7 @@ const DIMENSIONS: {
           nextStep: "Open Step 2: School Details and raise opening cash, or trim Step 7: Expenses, until reserves cover at least 3 months of expenses.",
         };
       }
-      if (neverDepleted) {
+      if (cumulativeHealthy) {
         return {
           dimension: "liquidity",
           status: "watch",
@@ -139,13 +239,58 @@ const DIMENSIONS: {
           nextStep: "Open Step 2: School Details and raise opening cash, or trim Step 7: Expenses, until reserves cover at least 3 months of expenses.",
         };
       }
+
+      // Legacy fallback (no cumulative data): canonical runway < 3
+      // months. Phrase as "thin coverage" rather than the old broken
+      // "goes negative in month N" copy.
       return {
         dimension: "liquidity",
         status: "at_risk",
         label: "Needs attention",
-        explanation: `Cash goes negative in month ${cashRunwayMonths}. The school will need outside funding to continue operating.`,
+        explanation: `Year-end cash covers only ${cashRunwayMonths.toFixed(1)} months of fixed costs. The school will need outside funding to continue operating.`,
         watchItem: "Secure a line of credit or bridge funding before operations begin.",
-        nextStep: "Open Step 2: School Details to raise opening cash, or trim Step 7: Expenses to push the cash-out month past Year 5.",
+        nextStep: "Open Step 2: School Details to raise opening cash, or trim Step 7: Expenses to widen the runway past 3 months.",
+      };
+    },
+  },
+  {
+    // Task #909 — parallel signal for the "burns more cash than it
+    // generates in some months" case. Triggers when there is at least
+    // one month with negative monthly net cash flow but the cumulative
+    // balance never dips below zero (otherwise the at-risk liquidity
+    // signal above carries the message). Distinct copy so the founder
+    // sees timing risk separately from outright depletion risk.
+    id: "cash_flow_timing",
+    label: "Cash flow timing",
+    compute: (input) => {
+      const { negativeNetCashFlowMonths, lowestCumulativeCash } = input;
+      if (negativeNetCashFlowMonths === undefined || negativeNetCashFlowMonths === null) {
+        return null;
+      }
+      const cumulativeBelowZero =
+        typeof lowestCumulativeCash === "number" && lowestCumulativeCash < 0;
+      if (cumulativeBelowZero) {
+        // Liquidity signal already covers the at-risk depletion case;
+        // emitting a second signal would double-count the same risk.
+        return null;
+      }
+      if (negativeNetCashFlowMonths <= 0) {
+        return {
+          dimension: "cash_flow_timing",
+          status: "healthy",
+          label: "Healthy",
+          explanation: "Every month generates at least as much cash as it consumes — no timing gaps to bridge.",
+          watchItem: "Re-check after any change to billing cadence or payroll timing in Step 6.",
+          nextStep: "Re-check this dimension after every billing-cadence or payroll-timing change in Steps 5-6.",
+        };
+      }
+      return {
+        dimension: "cash_flow_timing",
+        status: "watch",
+        label: "Watch closely",
+        explanation: `The school burns more cash than it generates in ${negativeNetCashFlowMonths} ${negativeNetCashFlowMonths === 1 ? "month" : "months"}. Opening cash absorbs the gap today, but tight timing leaves no margin for late tuition or a delayed disbursement.`,
+        watchItem: "Track receivables and payroll dates against the trough month so a single late payment doesn't tip the cumulative balance negative.",
+        nextStep: "Open Step 5: Revenue and tighten billing cadence (or grow an enrollment-driven line), or trim Step 7: Expenses, until monthly net stays positive.",
       };
     },
   },

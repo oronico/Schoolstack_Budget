@@ -196,30 +196,30 @@ v
 er
 age is 55.64x.
  
-Cash remains positiv
-e across the full 5-y
-ear projection, with reser
-v
-es reaching 137 months of oper
-ating e
-xpense 
-b
-y 
+Oper
+ating cash r
+unw
+a
+y e
+xtends 25.058061439607545 months from the open bef
+ore additional capital w
+ould be 
+required, with the tightest position at $281,090 of ending cash in 
 Y
-ear 5.
+ear 1.
  
 The model crosses oper
 ating break-e
 v
-en in 
+en 
+in 
 Y
 ear 1, and 
 Y
 ear 1 requires 7 students to co
 v
 er fix
-ed costs 
-and debt ser
+ed costs and debt ser
 vice (16% of stated capacity).
 Y
 ear 1 re
@@ -391,7 +391,7 @@ ou gather real data.
 Cash Runw
 a
 y:
- 60+ months
+ 25.058061439607545 months
 Budg
 et Narrative
 V
@@ -871,7 +871,7 @@ unw
 a
 y mo
 v
-es from 60.0 to 60.0 months when nor
+es from 25.1 to 21.8 months when nor
 maliz
 ed.
  DSCR, r
@@ -1081,14 +1081,14 @@ Reser
 ve (months)
 As Planned (Repor
 ted)
-60.0
+25.1
 137.9
 Lender 
 Vie
 w (Nor
 maliz
 ed)
-60.0
+21.8
 127.1
 Suppor
 ting Assumptions
@@ -1465,15 +1465,17 @@ Enrollment Cushion
 Cash Flo
 w Anal
 ysis
-Cash sta
-ys positiv
-e throughout the entire 5-y
-ear projection.
+Y
+ear-end cash co
+v
+ers 25.1 months of fix
+ed costs
+.
  Opening balance:
  $15K total assets
-, $0 total 
-liabilities
-, $15K net position.
+, $0 total liabilities
+, $15K net 
+position.
  Lo
 w
 est cash month across the 5-y
@@ -1487,7 +1489,7 @@ ul at $86K.
 Cash Runw
 a
 y:
- 60+ months
+ 25.058061439607545 months
 [ ] 
 Lo
 w
@@ -2277,7 +2279,8 @@ Y
 ear 1
 104.2
 41.44x
-60+
+17.143307383
+65811
 Loss of Philanthrop
 y
 $263K
@@ -2286,7 +2289,8 @@ Y
 ear 1
 136.5
 56.98x
-60+
+23.094242708
+72357
 Hard re
 v
 en
@@ -2297,7 +2301,8 @@ Y
 ear 3
 14.8
 0.19x
-60+
+0.6877701287
+501619
 Occupancy +15%, P
 ersonnel +5%
 $260K
@@ -2306,7 +2311,8 @@ Y
 ear 1
 126.3
 56.42x
-60+
+21.476927165
+279285
 Re
 v
 en
@@ -2319,7 +2325,8 @@ Y
 ear 1
 118.1
 38.13x
-60+
+15.657797035
+280938
 Interest Rate +2%
 $269K
 $837K
@@ -2327,7 +2334,8 @@ Y
 ear 1
 137.6
 55.69x
-60+
+23.597551496
+477614
 Lender Readiness
 Lender Readiness:
  Strong.
@@ -2360,10 +2368,10 @@ v
 el:
  Strong
 Financial Health Assessment
-Across 8 health dimensions:
+Across 9 health dimensions:
  8 health
 y
-, 0 on w
+, 1 on w
 atch, 0 at r
 isk.
 [+] 
@@ -2374,14 +2382,14 @@ y
 liquidity:
  Health
 y
+[~] 
+cash flo
+w timing:
+ 
+W
+atch closely
 [+] 
 staffing b
-urden:
- Health
-y
-[+] 
-f
-acility b
 urden:
  Health
 y
@@ -2391,6 +2399,12 @@ ated <DATE>
 P
 age 13 of 18
 --- PAGE 14 ---
+[+] 
+f
+acility b
+urden:
+ Health
+y
 [+] 
 debt aff
 ordability:
@@ -2407,12 +2421,6 @@ y
 [+] 
 da
 ys cash:
- Health
-y
-[+] 
-reser
-v
-e strength:
  Health
 y
 Health Dimensions
@@ -2439,6 +2447,29 @@ es e
 xceed 3 months of e
 xpenses
 .
+Cash Flo
+w 
+Timing
+W
+atch closely
+The school b
+ur
+ns more cash than it gener
+ates 
+in 4 months
+.
+ Opening cash absorbs the gap 
+toda
+y
+, b
+ut tight timing lea
+v
+es no margin f
+or late 
+tuition or a dela
+y
+ed disb
+ursement.
 Staffing Burden
 Health
 y
@@ -2739,6 +2770,12 @@ e notes) will appear here so re
 vie
 w
 ers can see what actually 
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 14 of 18
+--- PAGE 15 ---
 happened v
 ersus what w
 as modeled.
@@ -2750,12 +2787,6 @@ y will be summar
 iz
 ed here
 .
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 14 of 18
---- PAGE 15 ---
 Appendix:
  K
 e
@@ -3314,7 +3345,7 @@ kbook.
 Base case:
   Min DSCR 58.39x · Min ending 
 cash $281,519 · Runwa
-y 60.0 mo
+y 25.1 mo
 Enr
 ollment -10%
 All fiv
@@ -3329,7 +3360,7 @@ y 10%  the standard lender enrollment-miss sensitivity
  $241,702   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 21.6 mo   ·   Break-e
 v
 en:
  
@@ -3356,7 +3387,7 @@ e a soft-launch.
  $201,885   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 18.2 mo   ·   Break-e
 v
 en:
  
@@ -3386,7 +3417,7 @@ ursement.
  $214,852   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 19.1 mo   ·   Break-e
 v
 en:
  
@@ -3421,7 +3452,7 @@ ise
  $274,560   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 23.2 mo   ·   Break-e
 v
 en:
  
@@ -3451,7 +3482,7 @@ ating cost.
  $281,519   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 25.1 mo   ·   Break-e
 v
 en:
  

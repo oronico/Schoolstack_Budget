@@ -3056,6 +3056,45 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
   const tuitionPct = y1.totalRevenue > 0 ? y1.tuitionRevenue / y1.totalRevenue : 0;
   const lastReserveEntry = cumulativeFinancials[cumulativeFinancials.length - 1];
 
+  // Task #909 — re-point liquidity "goes negative" flag from monthly
+  // net cash flow < 0 to min(cumulative cash) < 0, and add a parallel
+  // `cash_flow_timing` flag for the "burns more cash than it generates
+  // in some months" case (cumulative stays positive). Pull both from
+  // canonicalMetrics.monthlyCashFlowByYear (per-stream monthly series
+  // already chained off prior-year ending cash) when available.
+  let lowestCumulativeCash: number | undefined;
+  let lowestCumulativeCashMonthLabel: string | undefined;
+  let lowestCumulativeCashYearIndex: number | undefined;
+  let negativeNetCashFlowMonths: number | undefined;
+  let avgMonthlyBurn: number | undefined;
+  {
+    const beData = {
+      ...rawData,
+      ...((rawData as { schoolProfile?: unknown }).schoolProfile ? {} : { schoolProfile: {} }),
+    } as Parameters<typeof computeBaseFinancials>[0];
+    const cmForTiming = computeBaseFinancials(beData);
+    const byYear = cmForTiming.monthlyCashFlowByYear;
+    const trough = cmForTiming.lowestCashMonth;
+    if (byYear && byYear.length > 0) {
+      let negCount = 0;
+      for (const yr of byYear) {
+        for (const n of yr.net) if (n < 0) negCount++;
+      }
+      negativeNetCashFlowMonths = negCount;
+    }
+    if (trough) {
+      lowestCumulativeCash = trough.amount;
+      lowestCumulativeCashMonthLabel = trough.monthLabel;
+      lowestCumulativeCashYearIndex = trough.yearIndex ?? 0;
+    }
+    const y1TotalExp =
+      (cmForTiming.staffingCost[0] ?? 0) +
+      (cmForTiming.facilityCost?.[0] ?? 0) +
+      (cmForTiming.opex[0] ?? 0) +
+      (cmForTiming.loanDebtService?.[0] ?? 0);
+    if (y1TotalExp > 0) avgMonthlyBurn = y1TotalExp / 12;
+  }
+
   const healthSignals = generateHealthSignals({
     y1NetMargin,
     lastYearNetMargin,
@@ -3072,6 +3111,11 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     tuitionPct,
     entityType: sp.entityType || "",
     daysCashOnHand: y1Dcoh,
+    lowestCumulativeCash,
+    lowestCumulativeCashMonthLabel,
+    lowestCumulativeCashYearIndex,
+    avgMonthlyBurn,
+    negativeNetCashFlowMonths,
   });
 
   const topIssues = generateTopIssues({

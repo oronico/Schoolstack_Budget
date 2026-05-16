@@ -23,7 +23,7 @@ Financial Outlook:
 The sc
 hool's financial outlook is str
 ong.
-8 health dimensions are in good standing.
+8 health dimensions are in good standing, 1 should be monitored.
 In 
 This Repor
 t
@@ -113,23 +113,22 @@ ames ho
 w the financial picture 
 suppor
 ts it.
-The model k
-eeps cash positiv
-e across all fiv
-e y
-ears
-, and oper
-ating reser
-v
-es reach roughly 82 months b
-y 
-Y
-ear 5.
- 
 Oper
+ating cash carr
+ies the school f
+or 17.540002915931296 months from open bef
+ore another funding e
+v
+ent is 
+needed, with the tightest y
+ear landing at $2,296,259 of cash on hand in 
+Y
+ear 1.
+ Oper
 ating break-e
 v
-en is reached in 
+en is reached 
+in 
 Y
 ear 1.
 On the same basis a lender will use
@@ -174,22 +173,35 @@ v
 ab
 le
 .
-No cr
-itical or high-se
-v
-er
-ity issues are flagged this per
+Three matters mer
+it board attention this per
 iod.
- 
-The r
-isk section belo
-w documents the w
-atch items the 
-team is tr
-ac
-king proactiv
-ely
+ Let's e
+xtend y
+our cash r
+unw
+a
+y
 .
+ Suggested response:
+ Build a cash 
+b
+uff
+er through star
+tup fundr
+aising, a line of credit, or b
+y reducing ear
+ly e
+xpenses
+.
+ 
+T
+arget at least 18 months of 
+r
+unw
+a
+y bef
+ore opening..
 Strong 
 Y
 ear 5 net income 
@@ -218,13 +230,14 @@ ong.
 A
 CTU
 AL
-8 health dimensions are in good standing.
+8 health dimensions are in good standing, 1 should be monitored.
 Cash P
 osition:
- Cash remains positive thr
-ough the full 5-y
-ear pr
-ojection
+ Cash runwa
+y is appr
+o
+ximatel
+y 17.540002915931296 months
 Assumptions Confidence
 Overall:
  Needs Suppor
@@ -296,14 +309,20 @@ reat f
 oundation f
 or y
 our mission.
- Cash flo
-w 
-remains positiv
-e o
-v
-er the full 5-y
-ear per
-iod.
+ 
+The school 
+has appro
+ximately 17.540002915931296 months of cash r
+unw
+a
+y
+.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 2 of 7
+--- PAGE 3 ---
 [~] 
 Lender Readiness:
  Strong
@@ -317,17 +336,11 @@ Biggest Risk:
  No major red flags detected, so contin
 ue refining assumptions as y
 ou gather real data.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 2 of 7
---- PAGE 3 ---
 [~] 
 Cash Runw
 a
 y:
- 60+ months
+ 17.540002915931296 months
 Sc
 hool Over
 vie
@@ -627,10 +640,10 @@ Counselor
   $55,000,
  1 FTE
 Financial Health Assessment
-Across 8 health dimensions:
+Across 9 health dimensions:
  8 health
 y
-, 0 on w
+, 1 on w
 atch, 0 at r
 isk.
 [+] 
@@ -641,6 +654,12 @@ y
 liquidity:
  Health
 y
+[~] 
+cash flo
+w timing:
+ 
+W
+atch closely
 [+] 
 staffing b
 urden:
@@ -655,14 +674,6 @@ y
 [+] 
 debt aff
 ordability:
- Health
-y
-[+] 
-re
-v
-en
-ue concentr
-ation:
  Health
 y
 SchoolStac
@@ -695,6 +706,29 @@ es e
 xceed 3 months of e
 xpenses
 .
+Cash Flo
+w 
+Timing
+W
+atch closely
+The school b
+ur
+ns more cash than it gener
+ates 
+in 5 months
+.
+ Opening cash absorbs the gap 
+toda
+y
+, b
+ut tight timing lea
+v
+es no margin f
+or late 
+tuition or a dela
+y
+ed disb
+ursement.
 Staffing Burden
 Health
 y
@@ -845,10 +879,63 @@ What to
 W
 atc
 h
-No significant financial r
-isks ha
-v
-e been identified at this time
+The board should be a
+w
+are of 1 k
+e
+y area:
+1.
+ Let's e
+xtend y
+our cash runwa
+y
+An 18-month r
+unw
+a
+y means a single late tuition cycle or dela
+y
+ed state disb
+ursement isn't an emergency
+.
+ Building the 
+cushion no
+w is f
+ar easier than reb
+uilding it after opening da
+y
+.
+Action:
+ 
+Build a cash b
+uff
+er through star
+tup fundr
+aising, a line of credit, or b
+y reducing ear
+ly e
+xpenses
+.
+ 
+T
+arget at least 18 months of r
+unw
+a
+y 
+bef
+ore opening.
+ Ne
+xt step:
+ Open Step 2:
+ School Details and r
+aise opening cash, or tr
+im 
+Y
+ear 1 e
+xpenses in Step 7, until projected cash 
+r
+unw
+a
+y clears 18 months
 .
 Recommended Ne
 xt Steps
@@ -883,6 +970,12 @@ k
 et.
 This strengthens the model and reduces future r
 isk.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 5 of 7
+--- PAGE 6 ---
 2.
  Re
 ven
@@ -961,12 +1054,6 @@ e notes) will appear here so re
 vie
 w
 ers can see what actually 
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 5 of 7
---- PAGE 6 ---
 happened v
 ersus what w
 as modeled.
@@ -1108,46 +1195,67 @@ v
 er y
 ear
 .
-The model holds positiv
-e oper
-ating cash across all fiv
-e y
-ears
-, with oper
-ating reser
-v
-es reaching roughly 82 
-months b
-y 
+Oper
+ating cash carr
+ies the school f
+or 17.540002915931296 months from open bef
+ore the ne
+xt funding milestone 
+is needed, with the tightest y
+ear landing at $2,296,259 of cash on hand in 
 Y
-ear 5.
+ear 1.
  Oper
 ating break-e
 v
-en is reached in 
+en is 
+reached in 
 Y
 ear 1, which is the point at which ear
 ned re
 v
 en
-ue alone 
-w
+ue alone w
 ould co
 v
 er oper
 ating e
 xpenses
 .
-No cr
-itical or high-se
-v
-er
-ity issues are flagged at this time;
- the w
-atch items the team is tr
-ac
-king are documented in 
-the body of the model.
+T
+w
+o ste
+w
+ardship matters w
+e w
+ant to surf
+ace up front f
+or our funders
+.
+ Let's e
+xtend y
+our cash r
+unw
+a
+y
+.
+ Our planned 
+response is to Build a cash b
+uff
+er through star
+tup fundr
+aising, a line of credit, or b
+y reducing ear
+ly e
+xpenses
+.
+ 
+T
+arget at least 18 months of r
+unw
+a
+y bef
+ore opening..
 Strong 
 Y
 ear 5 net income 
@@ -1178,6 +1286,12 @@ w
 ers the rest of this pac
 k
 et.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 6 of 7
+--- PAGE 7 ---
 Standar
 d Lender Stress 
 T
@@ -1207,7 +1321,7 @@ kbook.
 Base case:
   Min DSCR 22.02x · Min ending 
 cash $2,417,688 · Runwa
-y 60.0 mo
+y 17.5 mo
 Enr
 ollment -10%
 All fiv
@@ -1222,7 +1336,7 @@ y 10%  the standard lender enrollment-miss sensitivity
  $2,145,921   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 16.7 mo   ·   Break-e
 v
 en:
  
@@ -1232,12 +1346,6 @@ ear 1
 Y
 ear-1 net income vs base:
  -$271,767
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 6 of 7
---- PAGE 7 ---
 Enr
 ollment -20%
 All fiv
@@ -1255,7 +1363,7 @@ e a soft-launch.
  $1,843,518   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 15.1 mo   ·   Break-e
 v
 en:
  
@@ -1285,7 +1393,7 @@ ursement.
  $2,017,688   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 14.6 mo   ·   Break-e
 v
 en:
  
@@ -1320,7 +1428,7 @@ ise
  $2,408,688   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 17.4 mo   ·   Break-e
 v
 en:
  
@@ -1350,7 +1458,7 @@ ating cost.
  $2,417,688   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 17.5 mo   ·   Break-e
 v
 en:
  

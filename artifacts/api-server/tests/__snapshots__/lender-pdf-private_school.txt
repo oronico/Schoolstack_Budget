@@ -127,7 +127,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 1 of 19
+age 1 of 21
 --- PAGE 2 ---
 Lender Commentar
 y
@@ -200,20 +200,21 @@ v
 er
 age is 21.01x.
  
-Cash remains positiv
-e across the full 5-y
-ear projection, with reser
-v
-es reaching 82 months of oper
-ating e
-xpense 
-b
-y 
+Oper
+ating cash r
+unw
+a
+y e
+xtends 17.540002915931296 months from the open bef
+ore additional capital w
+ould be 
+required, with the tightest position at $2,296,259 of ending cash in 
 Y
-ear 5.
+ear 1.
  
 The model crosses oper
-ating break-e
+ating break-
+e
 v
 en in 
 Y
@@ -222,8 +223,7 @@ Y
 ear 1 requires 78 students to co
 v
 er fix
-ed 
-costs and debt ser
+ed costs and debt ser
 vice (20% of stated capacity).
 Y
 ear 1 re
@@ -235,16 +235,34 @@ iv
 en, 68% policy-dependent, and 5% donor-
 dependent.
  
-The canonical engine flagged no cr
-itical or high-se
-v
-er
-ity r
-isks;
- No major red flags detected, so 
-contin
-ue refining assumptions as y
-ou gather real data.
+The top r
+isk surf
+aced is:
+ Let's e
+xtend y
+our cash r
+unw
+a
+y (medium).
+ Mitigant:
+ Build a cash b
+uff
+er 
+through star
+tup fundr
+aising, a line of credit, or b
+y reducing ear
+ly e
+xpenses
+.
+ 
+T
+arget at least 18 months of r
+unw
+a
+y 
+bef
+ore opening..
 F
 ounder compensation has been nor
 maliz
@@ -362,7 +380,7 @@ ou gather real data.
 Cash Runw
 a
 y:
- 60+ months
+ 17.540002915931296 months
 Budg
 et Narrative
 Riv
@@ -405,7 +423,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 2 of 19
+age 2 of 21
 --- PAGE 3 ---
 Assumptions Confidence
 Overall:
@@ -573,7 +591,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 3 of 19
+age 3 of 21
 --- PAGE 4 ---
 [ ] 
 T
@@ -760,7 +778,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 4 of 19
+age 4 of 21
 --- PAGE 5 ---
 After-School Prog
 r
@@ -807,7 +825,7 @@ unw
 a
 y mo
 v
-es from 60.0 to 60.0 months when nor
+es from 17.5 to 15.7 months when nor
 maliz
 ed.
  DSCR, 
@@ -962,7 +980,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 5 of 19
+age 5 of 21
 --- PAGE 6 ---
 Y
 ear
@@ -1020,14 +1038,14 @@ Reser
 ve (months)
 As Planned (Repor
 ted)
-60.0
+17.5
 88.6
 Lender 
 Vie
 w (Nor
 maliz
 ed)
-60.0
+15.7
 79.6
 Suppor
 ting Assumptions
@@ -1129,7 +1147,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 6 of 19
+age 6 of 21
 --- PAGE 7 ---
 5-Y
 ear Financial Pr
@@ -1382,7 +1400,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 7 of 19
+age 7 of 21
 --- PAGE 8 ---
 Prior
 -Y
@@ -1509,7 +1527,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 8 of 19
+age 8 of 21
 --- PAGE 9 ---
 [ ] 
 Break
@@ -1547,15 +1565,17 @@ Enrollment Cushion
 Cash Flo
 w Anal
 ysis
-Cash sta
-ys positiv
-e throughout the entire 5-y
-ear projection.
+Y
+ear-end cash co
+v
+ers 17.5 months of fix
+ed costs
+.
  Opening balance:
  $970K total assets
-, $1.2M total 
-liabilities
-, $-230K net position.
+, $1.2M total liabilities
+, 
+$-230K net position.
  Lo
 w
 est cash month across the 5-y
@@ -1569,7 +1589,7 @@ ul at $515K.
 Cash Runw
 a
 y:
- 60+ months
+ 17.540002915931296 months
 [ ] 
 Lo
 w
@@ -1690,7 +1710,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 9 of 19
+age 9 of 21
 --- PAGE 10 ---
 Ma
 y
@@ -1703,7 +1723,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 10 of 19
+age 10 of 21
 --- PAGE 11 ---
 J
 un
@@ -1716,7 +1736,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 11 of 19
+age 11 of 21
 --- PAGE 12 ---
 Y
 ear 2 Monthl
@@ -1919,7 +1939,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 12 of 19
+age 12 of 21
 --- PAGE 13 ---
 Month
 Beginning
@@ -2115,7 +2135,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 13 of 19
+age 13 of 21
 --- PAGE 14 ---
 Y
 ear
@@ -2344,7 +2364,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 14 of 19
+age 14 of 21
 --- PAGE 15 ---
 Stress 
 T
@@ -2368,7 +2388,8 @@ Y
 ear 1
 77.5
 16.76x
-60+
+15.122349311
+629637
 Loss of Philanthrop
 y
 $2.2M
@@ -2377,7 +2398,8 @@ Y
 ear 1
 85.5
 20.87x
-60+
+16.633144595
+923582
 Hard re
 v
 en
@@ -2388,7 +2410,8 @@ Y
 ear 1
 30.8
 6.24x
-60+
+5.0253580998
+24835
 Occupancy +15%, P
 ersonnel +5%
 $2.2M
@@ -2397,7 +2420,8 @@ Y
 ear 1
 81.8
 21.28x
-60+
+16.163601987
+473285
 Re
 v
 en
@@ -2410,7 +2434,8 @@ Y
 ear 1
 67.7
 13.45x
-60+
+10.741966234
+573468
 Interest Rate +2%
 $2.3M
 $6.0M
@@ -2418,7 +2443,8 @@ Y
 ear 1
 87.1
 18.63x
-60+
+17.189037446
+046655
 Lender Readiness
 Lender Readiness:
  Strong.
@@ -2452,10 +2478,10 @@ v
 el:
  Strong
 Financial Health Assessment
-Across 8 health dimensions:
+Across 9 health dimensions:
  8 health
 y
-, 0 on w
+, 1 on w
 atch, 0 at r
 isk.
 [+] 
@@ -2466,6 +2492,12 @@ y
 liquidity:
  Health
 y
+[~] 
+cash flo
+w timing:
+ 
+W
+atch closely
 [+] 
 staffing b
 urden:
@@ -2495,12 +2527,6 @@ da
 ys cash:
  Health
 y
-[+] 
-reser
-v
-e strength:
- Health
-y
 Health Dimensions
 Dimension
 Status
@@ -2525,6 +2551,29 @@ es e
 xceed 3 months of e
 xpenses
 .
+Cash Flo
+w 
+Timing
+W
+atch closely
+The school b
+ur
+ns more cash than it gener
+ates 
+in 5 months
+.
+ Opening cash absorbs the gap 
+toda
+y
+, b
+ut tight timing lea
+v
+es no margin f
+or late 
+tuition or a dela
+y
+ed disb
+ursement.
 Staffing Burden
 Health
 y
@@ -2604,6 +2653,12 @@ k
 ed b
 y dependab
 le demand.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 15 of 21
+--- PAGE 16 ---
 Da
 ys Cash
 Health
@@ -2615,6 +2670,12 @@ y
 benchmar
 k, pro
 viding a strong liquidity cushion.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 16 of 21
+--- PAGE 17 ---
 Reser
 v
 e Strength
@@ -2636,13 +2697,101 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 15 of 19
---- PAGE 16 ---
+age 17 of 21
+--- PAGE 18 ---
 K
 e
 y Risks
-The model has 1 identified r
-isk that should be addressed.
+1 r
+isk f
+actor has been identified.
+ None are r
+ated cr
+itical, b
+ut each should ha
+v
+e a documented mitigation plan.
+[+] 
+Let's e
+xtend y
+our cash r
+unw
+a
+y:
+ medium
+MEDIUM
+Let's e
+xtend y
+our cash runwa
+y
+An 18-month r
+unw
+a
+y means a single late tuition cycle or dela
+y
+ed state disb
+ursement isn't an emergency
+.
+ Building the cushion no
+w is f
+ar 
+easier than reb
+uilding it after opening da
+y
+.
+Evidence:
+ Cash r
+unw
+a
+y:
+ 17.540002915931296 months  |  
+T
+arget:
+ 18+ months
+Mitigation:
+ 
+Build a cash b
+uff
+er through star
+tup fundr
+aising, a line of credit, or b
+y reducing ear
+ly e
+xpenses
+.
+ 
+T
+arget at least 18 months of 
+r
+unw
+a
+y bef
+ore opening.
+ Ne
+xt step:
+ Open Step 2:
+ School Details and r
+aise opening cash, or tr
+im 
+Y
+ear 1 e
+xpenses in Step 7, until projected 
+cash r
+unw
+a
+y clears 18 months
+.
+[+] 
+Let's e
+xtend y
+our cash r
+unw
+a
+y:
+ medium
+See Appendix f
+or complete assumption details
+.
 Decision Histor
 y
 No decisions ha
@@ -2860,6 +3009,12 @@ iv
 en b
 y inputs in:
  Capital & Financing, Staffing.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 18 of 21
+--- PAGE 19 ---
 Cash reser
 v
 e (months)
@@ -2927,12 +3082,6 @@ v
 en
 ue
 , Staffing, Capital & Financing.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 16 of 19
---- PAGE 17 ---
 Y
 ear 5 ending cash
   Star
@@ -3092,6 +3241,12 @@ Y
 ear 3 (240 students):
   DSCR 29.61x · Ending 
 cash $7,336,025
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 19 of 21
+--- PAGE 20 ---
   
 Y
 ear 4 (280 students):
@@ -3102,12 +3257,6 @@ Y
 ear 5 (320 students):
   DSCR 43.64x · Ending 
 cash $15,852,122
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 17 of 19
---- PAGE 18 ---
 Enr
 ollment × 
 T
@@ -3233,7 +3382,7 @@ kbook.
 Base case:
   Min DSCR 22.02x · Min ending 
 cash $2,417,688 · Runwa
-y 60.0 mo
+y 17.5 mo
 Enr
 ollment -10%
 All fiv
@@ -3248,7 +3397,7 @@ y 10%  the standard lender enrollment-miss sensitivity
  $2,145,921   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 16.7 mo   ·   Break-e
 v
 en:
  
@@ -3275,7 +3424,7 @@ e a soft-launch.
  $1,843,518   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 15.1 mo   ·   Break-e
 v
 en:
  
@@ -3305,7 +3454,7 @@ ursement.
  $2,017,688   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 14.6 mo   ·   Break-e
 v
 en:
  
@@ -3340,7 +3489,7 @@ ise
  $2,408,688   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 17.4 mo   ·   Break-e
 v
 en:
  
@@ -3350,6 +3499,12 @@ ear 1
 Y
 ear-1 net income vs base:
  -$9,000
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 20 of 21
+--- PAGE 21 ---
 Founder Comp Normaliz
 ed to Market
 F
@@ -3370,7 +3525,7 @@ ating cost.
  $2,417,688   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 17.5 mo   ·   Break-e
 v
 en:
  
@@ -3380,12 +3535,6 @@ ear 1
 Y
 ear-1 net income vs base:
  -$110,203
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 18 of 19
---- PAGE 19 ---
 Reading the 
 T
 w
@@ -3558,4 +3707,4 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 19 of 19
+age 21 of 21

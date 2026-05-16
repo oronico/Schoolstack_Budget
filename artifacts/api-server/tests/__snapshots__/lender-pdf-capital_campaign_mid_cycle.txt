@@ -191,10 +191,10 @@ ating cash r
 unw
 a
 y e
-xtends 1 months from the open bef
+xtends 0.19479597861761436 months from the open bef
 ore additional capital w
-ould be required, with the 
-tightest position at $2,281 of ending cash in 
+ould be 
+required, with the tightest position at $2,281 of ending cash in 
 Y
 ear 1.
  
@@ -205,8 +205,7 @@ en in
 Y
 ear 2, and 
 Y
-ear 
-1 requires 21 students to co
+ear 1 requires 21 students to co
 v
 er fix
 ed costs and debt ser
@@ -429,7 +428,7 @@ th planning around
 Cash Runw
 a
 y:
- 1 months
+ 0.19479597861761436 months
 Budg
 et Narrative
 Campaign-Cycle Microschool projects $425,145 in 
@@ -878,7 +877,7 @@ unw
 a
 y mo
 v
-es from 3.0 to 7.0 months when nor
+es from 0.2 to -0.7 months when nor
 maliz
 ed.
  DSCR, r
@@ -1088,14 +1087,14 @@ Reser
 ve (months)
 As Planned (Repor
 ted)
-3.0
+0.2
 32.5
 Lender 
 Vie
 w (Nor
 maliz
 ed)
-7.0
+-0.7
 28.1
 Suppor
 ting Assumptions
@@ -1473,30 +1472,35 @@ Enrollment Cushion
 Cash Flo
 w Anal
 ysis
-Cash goes negativ
-e in month 1.
+Y
+ear-end cash co
+v
+ers only 0.2 months of fix
+ed costs
+.
  
-The school will need additional funding or cost adjustments
+The school ma
+y need additional funding or cost 
+adjustments
 .
  Opening balance:
- 
-$15K total assets
+ $15K total assets
 , $0 total liabilities
 , $15K net position.
  Lo
 w
-est cash month across the 5-y
+est cash month across 
+the 5-y
 ear f
 orecast:
  
 Y
-ear 2  
-Sep at $-51K.
+ear 2  Sep at $-51K.
 [ ] 
 Cash Runw
 a
 y:
- 1 months
+ 0.19479597861761436 months
 [ ] 
 Lo
 w
@@ -2279,7 +2283,8 @@ Y
 ear 2
 22.1
 -0.01x
-4
+-1.735680751
+023431
 Loss of Philanthrop
 y
 $-28K
@@ -2288,7 +2293,8 @@ Y
 ear 3
 0.0
 0.23x
-6
+-1.128910092
+5271902
 Hard re
 v
 en
@@ -2299,7 +2305,8 @@ Y
 ear 3
 0.0
 0.23x
-6
+-1.128910092
+5271902
 Occupancy +15%, P
 ersonnel +5%
 $-19K
@@ -2308,7 +2315,8 @@ Y
 ear 2
 27.8
 0.50x
-8
+-0.428584476
+4321373
 Re
 v
 en
@@ -2321,7 +2329,8 @@ Y
 ear 2
 17.0
 -0.31x
-3
+-2.495299252
+2967063
 Interest Rate +2%
 $-12K
 $140K
@@ -2329,7 +2338,8 @@ Y
 ear 2
 31.6
 0.70x
-60+
+0.0200361805
+39520873
 Lender Readiness
 Lender Readiness:
  Not 
@@ -2432,12 +2442,16 @@ Y
 ear 5.
 Liquidity
 Needs attention
-Cash goes negativ
-e in month 1.
+Cum
+ulativ
+e cash dips to -$3,100 in J
+ul of 
+Y
+ear 2.
  
-The school will 
-need outside funding to contin
-ue oper
+The school will need outside funding to contin
+ue 
+oper
 ating.
 Staffing Burden
 Health
@@ -2689,7 +2703,7 @@ Evidence:
 unw
 a
 y:
- 1 months  |  
+ 0.19479597861761436 months  |  
 T
 arget:
  18+ months
@@ -2726,6 +2740,12 @@ unw
 a
 y clears 18 months
 .
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 14 of 18
+--- PAGE 15 ---
 HIGH
 Let's c
 lose a cash gap in y
@@ -2795,16 +2815,14 @@ v
 er
 ing the gap
 .
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 14 of 18
---- PAGE 15 ---
 HIGH
 Liquidity
-Cash goes negativ
-e in month 1.
+Cum
+ulativ
+e cash dips to -$3,100 in J
+ul of 
+Y
+ear 2.
  
 The school will need outside funding to contin
 ue oper
@@ -3059,6 +3077,12 @@ en
 ue
 , Staffing, Expenses
 .
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 15 of 18
+--- PAGE 16 ---
 Y
 ear 1 oper
 ating sur
@@ -3096,12 +3120,6 @@ en
 ue
 , Staffing, Expenses
 .
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 15 of 18
---- PAGE 16 ---
 Debt ser
 vice co
 v
@@ -3332,6 +3350,12 @@ Y
 ear 4 (33 students):
   DSCR 6.02x · Ending 
 cash $529,229
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 16 of 18
+--- PAGE 17 ---
   
 Y
 ear 5 (36 students):
@@ -3346,12 +3370,6 @@ Y
 ear 1 (16 students):
   DSCR N/A · Ending cash 
 -$25,085
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 16 of 18
---- PAGE 17 ---
   
 Y
 ear 2 (21 students):
@@ -3497,7 +3515,7 @@ kbook.
 Base case:
   Min DSCR 0.75x · Min ending cash 
 $2,710 · Runwa
-y 3.0 mo
+y 0.2 mo
 Enr
 ollment -10%
 All fiv
@@ -3512,7 +3530,7 @@ y 10%  the standard lender enrollment-miss sensitivity
  -$11,188   ·   Runw
 a
 y:
- 2.0 mo   ·   Break-e
+ -0.8 mo   ·   Break-e
 v
 en:
  
@@ -3539,7 +3557,7 @@ e a soft-launch.
  -$25,085   ·   Runw
 a
 y:
- 2.0 mo   ·   Break-e
+ -1.8 mo   ·   Break-e
 v
 en:
  
@@ -3549,6 +3567,12 @@ ear 2
 Y
 ear-1 net income vs base:
  -$27,795
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 17 of 18
+--- PAGE 18 ---
 ESA / Pub
 lic Funding Dela
 y
@@ -3569,7 +3593,7 @@ ursement.
  $2,710   ·   Runw
 a
 y:
- 3.0 mo   ·   Break-e
+ 0.2 mo   ·   Break-e
 v
 en:
  
@@ -3604,7 +3628,7 @@ ise
  -$4,249   ·   Runw
 a
 y:
- 2.0 mo   ·   Break-e
+ -0.3 mo   ·   Break-e
 v
 en:
  
@@ -3614,12 +3638,6 @@ ear 2
 Y
 ear-1 net income vs base:
  -$6,958
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 17 of 18
---- PAGE 18 ---
 Founder Comp Normaliz
 ed to Market
 F
@@ -3640,7 +3658,7 @@ ating cost.
  $2,710   ·   Runw
 a
 y:
- 3.0 mo   ·   Break-e
+ 0.2 mo   ·   Break-e
 v
 en:
  

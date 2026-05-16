@@ -194,22 +194,22 @@ ating cash r
 unw
 a
 y e
-xtends 1 months from the open bef
+xtends 3.099853717935006 months from the open bef
 ore additional capital w
-ould be required, with the 
-tightest position at $34,397 of ending cash in 
+ould be 
+required, with the tightest position at $34,397 of ending cash in 
 Y
 ear 1.
  
 The model crosses oper
 ating break-e
 v
-en in 
+en 
+in 
 Y
 ear 1, and 
 Y
-ear 
-1 requires 17 students to co
+ear 1 requires 17 students to co
 v
 er fix
 ed costs and debt ser
@@ -408,7 +408,7 @@ ou gather real data.
 Cash Runw
 a
 y:
- 1 months
+ 3.099853717935006 months
 Budg
 et Narrative
 Oakw
@@ -842,7 +842,7 @@ unw
 a
 y mo
 v
-es from 60.0 to 60.0 months when nor
+es from 3.1 to 1.8 months when nor
 maliz
 ed.
  DSCR, r
@@ -1048,14 +1048,14 @@ Reser
 ve (months)
 As Planned (Repor
 ted)
-60.0
+3.1
 19.2
 Lender 
 Vie
 w (Nor
 maliz
 ed)
-60.0
+1.8
 15.0
 Suppor
 ting Assumptions
@@ -1432,31 +1432,36 @@ Enrollment Cushion
 Cash Flo
 w Anal
 ysis
-Cash goes negativ
-e in month 1.
+Y
+ear-end cash co
+v
+ers only 3.1 months of fix
+ed costs
+.
  
-The school will need additional funding or cost adjustments
+The school ma
+y need additional funding or cost 
+adjustments
 .
  Opening balance:
- 
-$15K total assets
+ $15K total assets
 , $0 total liabilities
 , $15K net position.
  Lo
 w
-est cash month across the 5-y
+est cash month across 
+the 5-y
 ear f
 orecast:
  
 Y
-ear 1  
-J
+ear 1  J
 ul at $5K.
 [ ] 
 Cash Runw
 a
 y:
- 1 months
+ 3.099853717935006 months
 [ ] 
 Lo
 w
@@ -2252,7 +2257,8 @@ Y
 ear 3
 7.2
 -0.06x
-60+
+0.5970277068
+182642
 Loss of Philanthrop
 y
 $4K
@@ -2261,7 +2267,8 @@ Y
 ear 1
 16.5
 1.78x
-60+
+1.3157465329
+173204
 Hard re
 v
 en
@@ -2272,7 +2279,8 @@ Y
 ear 1
 16.5
 1.78x
-60+
+1.3157465329
+173204
 Occupancy +15%, P
 ersonnel +5%
 $14K
@@ -2281,7 +2289,8 @@ Y
 ear 1
 14.8
 3.88x
-60+
+2.0146416768
+65805
 Re
 v
 en
@@ -2294,7 +2303,8 @@ Y
 ear 3
 1.7
 -2.46x
-9
+-0.357911938
+46647446
 Interest Rate +2%
 $23K
 $151K
@@ -2302,7 +2312,8 @@ Y
 ear 1
 19.0
 5.59x
-60+
+2.9024110347
+36015
 Lender Readiness
 Lender Readiness:
  Strong.
@@ -2335,24 +2346,38 @@ v
 el:
  Strong
 Financial Health Assessment
-Across 8 health dimensions:
+Across 9 health dimensions:
  5 health
 y
-, 2 on w
-atch, 1 at r
+, 4 on w
+atch, 0 at r
 isk.
 [+] 
 viability:
  Health
 y
-[!] 
+[~] 
 liquidity:
- Needs attention
+ 
+W
+atch closely
+[~] 
+cash flo
+w timing:
+ 
+W
+atch closely
 [+] 
 staffing b
 urden:
  Health
 y
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 12 of 17
+--- PAGE 13 ---
 [~] 
 f
 acility b
@@ -2360,12 +2385,6 @@ urden:
  
 W
 atch closely
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 12 of 17
---- PAGE 13 ---
 [+] 
 debt aff
 ordability:
@@ -2385,12 +2404,6 @@ ys cash:
  
 W
 atch closely
-[+] 
-reser
-v
-e strength:
- Health
-y
 Health Dimensions
 Dimension
 Status
@@ -2404,14 +2417,54 @@ strong margins through
 Y
 ear 5.
 Liquidity
-Needs attention
-Cash goes negativ
-e in month 1.
- 
-The school will 
-need outside funding to contin
-ue oper
-ating.
+W
+atch closely
+Cash sta
+ys positiv
+e
+, b
+ut the b
+uff
+er thins to 
+$5,200 in J
+ul of 
+Y
+ear 1  less than one month 
+of oper
+ating b
+ur
+n.
+ A small re
+v
+en
+ue miss could 
+push it belo
+w z
+ero
+.
+Cash Flo
+w 
+Timing
+W
+atch closely
+The school b
+ur
+ns more cash than it gener
+ates 
+in 10 months
+.
+ Opening cash absorbs the gap 
+toda
+y
+, b
+ut tight timing lea
+v
+es no margin f
+or late 
+tuition or a dela
+y
+ed disb
+ursement.
 Staffing Burden
 Health
 y
@@ -2527,7 +2580,7 @@ xpected costs
 K
 e
 y Risks
-4 r
+3 r
 isk f
 actors ha
 v
@@ -2582,7 +2635,7 @@ Evidence:
 unw
 a
 y:
- 1 months  |  
+ 3.099853717935006 months  |  
 T
 arget:
  18+ months
@@ -2619,26 +2672,6 @@ unw
 a
 y clears 18 months
 .
-HIGH
-Liquidity
-Cash goes negativ
-e in month 1.
- 
-The school will need outside funding to contin
-ue oper
-ating.
-Evidence:
- liquidity:
- Needs attention
-Mitigation:
- 
-Build oper
-ating reser
-v
-es through fundr
-aising, lines of credit, or phased e
-xpense deplo
-yment to maintain adequate cash position.
 MEDIUM
 Let's bac
 k the enr
@@ -3392,7 +3425,7 @@ kbook.
 Base case:
   Min DSCR 5.86x · Min ending cash 
 $34,826 · Runwa
-y 60.0 mo
+y 3.1 mo
 Enr
 ollment -10%
 All fiv
@@ -3407,7 +3440,7 @@ y 10%  the standard lender enrollment-miss sensitivity
  $20,928   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 1.9 mo   ·   Break-e
 v
 en:
  
@@ -3434,7 +3467,7 @@ e a soft-launch.
  $5,200   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 0.6 mo   ·   Break-e
 v
 en:
  
@@ -3464,7 +3497,7 @@ ursement.
  $34,826   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 3.1 mo   ·   Break-e
 v
 en:
  
@@ -3499,7 +3532,7 @@ ise
  $27,867   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 2.4 mo   ·   Break-e
 v
 en:
  
@@ -3529,7 +3562,7 @@ ating cost.
  $34,826   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 3.1 mo   ·   Break-e
 v
 en:
  

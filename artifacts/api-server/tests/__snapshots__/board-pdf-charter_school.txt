@@ -24,7 +24,7 @@ Financial Outlook:
 The sc
 hool's financial outlook is str
 ong.
-7 health dimensions are in good standing, 1 should be monitored.
+8 health dimensions are in good standing, 1 should be monitored.
 In 
 This Repor
 t
@@ -113,23 +113,22 @@ ames ho
 w the financial picture 
 suppor
 ts it.
-The model k
-eeps cash positiv
-e across all fiv
-e y
-ears
-, and oper
-ating reser
-v
-es reach roughly 78 months b
-y 
-Y
-ear 5.
- 
 Oper
+ating cash carr
+ies the school f
+or 11.122823375736088 months from open bef
+ore another funding e
+v
+ent is 
+needed, with the tightest y
+ear landing at $2,258,592 of cash on hand in 
+Y
+ear 1.
+ Oper
 ating break-e
 v
-en is reached in 
+en is reached 
+in 
 Y
 ear 1.
 On the same basis a lender will use
@@ -178,51 +177,77 @@ le
 Three matters mer
 it board attention this per
 iod.
+ Let's e
+xtend y
+our cash r
+unw
+a
+y
+.
+ Suggested response:
+ Build a cash 
+b
+uff
+er through star
+tup fundr
+aising, a line of credit, or b
+y reducing ear
+ly e
+xpenses
+.
+ 
+T
+arget at least 18 months of 
+r
+unw
+a
+y bef
+ore opening..
  Let's bac
 k the enrollment r
 amp with e
 vidence
 .
- Suggested 
-response:
+ Suggested response:
  Bac
 k e
 v
 er
-y enrollment target with documented demand - signed letters of intent, w
-aitlist depth, 
-comm
+y 
+enrollment target with documented demand - signed letters of intent, w
+aitlist depth, comm
 unity sur
 v
 e
 y results
-, or recr
+, or 
+recr
 uitment pipeline data.
  Gro
 wth o
 v
 er 25% per y
-ear typically requires an 
-e
+ear typically requires an e
 xceptional recr
-uitment engine or f
+uitment engine or 
+f
 acility e
 xpansion..
  Let's tie ne
 w hires to enrollment milestones
 .
- Suggested 
-response:
- Align staffing additions to enrollment milestones
+ Suggested response:
+ Align staffing additions to 
+enrollment milestones
 .
  Hire when students are enrolled, not when y
-ou hope 
-the
+ou hope the
 y will be
 .
  Use par
 t-time or contr
-act roles to br
+act 
+roles to br
 idge gaps
 ..
 Strong 
@@ -249,13 +274,14 @@ hool's financial outlook is str
 ong.
 PR
 OJECTED
-7 health dimensions are in good standing, 1 should be monitored.
+8 health dimensions are in good standing, 1 should be monitored.
 Cash P
 osition:
- Cash remains positive thr
-ough the full 5-y
-ear pr
-ojection
+ Cash runwa
+y is appr
+o
+ximatel
+y 11.122823375736088 months
 Founder's Narrative
 Fla
 g
@@ -298,6 +324,12 @@ vidence than research
 benchmar
 ks or estimates
 .
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 2 of 7
+--- PAGE 3 ---
 0 of 22 assumptions tagged y
 et  the f
 ounder has not anchored an
@@ -311,12 +343,6 @@ t"
 until at least some k
 e
 ys are tagged.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 2 of 7
---- PAGE 3 ---
 Financial Over
 vie
 w
@@ -336,14 +362,14 @@ ou b
 uild a more compelling financial stor
 y
 .
- Cash flo
-w 
-remains positiv
-e o
-v
-er the full 5-y
-ear per
-iod.
+ 
+The school has 
+appro
+ximately 11.122823375736088 months of cash r
+unw
+a
+y
+.
 [~] 
 Lender Readiness:
  Needs 
@@ -373,7 +399,7 @@ or funding gaps
 Cash Runw
 a
 y:
- 60+ months
+ 11.122823375736088 months
 Sc
 hool Over
 vie
@@ -500,6 +526,12 @@ $18.5M
 $5.5M
 $12.9M
 70.0%
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 3 of 7
+--- PAGE 4 ---
 Staffing Plan
 Staffing costs are $1.7M in 
 Y
@@ -517,12 +549,6 @@ or other oper
 ating 
 costs
 .
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 3 of 7
---- PAGE 4 ---
 [+] 
 Staffing % of Re
 v
@@ -564,8 +590,8 @@ Custodial / Maintenance
   $35,000,
  2 FTE
 Financial Health Assessment
-Across 8 health dimensions:
- 7 health
+Across 9 health dimensions:
+ 8 health
 y
 , 1 on w
 atch, 0 at r
@@ -576,6 +602,11 @@ viability:
 y
 [+] 
 liquidity:
+ Health
+y
+[+] 
+cash flo
+w timing:
  Health
 y
 [+] 
@@ -594,15 +625,6 @@ debt aff
 ordability:
  Health
 y
-[~] 
-re
-v
-en
-ue concentr
-ation:
- 
-W
-atch closely
 Health Dimensions
 Dimension
 Status
@@ -626,6 +648,19 @@ v
 es e
 xceed 3 months of e
 xpenses
+.
+Cash Flo
+w 
+Timing
+Health
+y
+Ev
+er
+y month gener
+ates at least as m
+uch cash 
+as it consumes  no timing gaps to br
+idge
 .
 Staffing Burden
 Health
@@ -738,6 +773,12 @@ The model demonstr
 ates 5 notab
 le strengths
 .
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 4 of 7
+--- PAGE 5 ---
 [+] 
 Re
 v
@@ -776,16 +817,63 @@ atc
 h
 The board should be a
 w
-are of 2 k
+are of 3 k
 e
 y areas:
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 4 of 7
---- PAGE 5 ---
 1.
+ Let's e
+xtend y
+our cash runwa
+y
+An 18-month r
+unw
+a
+y means a single late tuition cycle or dela
+y
+ed state disb
+ursement isn't an emergency
+.
+ Building the 
+cushion no
+w is f
+ar easier than reb
+uilding it after opening da
+y
+.
+Action:
+ 
+Build a cash b
+uff
+er through star
+tup fundr
+aising, a line of credit, or b
+y reducing ear
+ly e
+xpenses
+.
+ 
+T
+arget at least 18 months of r
+unw
+a
+y 
+bef
+ore opening.
+ Ne
+xt step:
+ Open Step 2:
+ School Details and r
+aise opening cash, or tr
+im 
+Y
+ear 1 e
+xpenses in Step 7, until projected cash 
+r
+unw
+a
+y clears 18 months
+.
+2.
  Let's bac
 k the enr
 ollment ramp with e
@@ -848,7 +936,7 @@ w
 ers see the e
 vidence
 .
-2.
+3.
  Let's tie ne
 w hires to enr
 ollment milestones
@@ -1007,6 +1095,12 @@ y will be summar
 iz
 ed here f
 or the board.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 5 of 7
+--- PAGE 6 ---
 Scenario Comparison
 The model includes 3 scenar
 ios sho
@@ -1047,12 +1141,6 @@ Grant
 V
 er
 sion
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 5 of 7
---- PAGE 6 ---
 Thank y
 ou f
 or consider
@@ -1073,10 +1161,10 @@ umbers that f
 ollo
 w tie bac
 k line f
-or line to our b
+or line to our 
+b
 udget.
- 
-Ov
+ Ov
 er the g
 r
 ant hor
@@ -1090,8 +1178,8 @@ ro
 wing to 600 b
 y 
 Y
-ear 5 while holding a 88% 
-y
+ear 5 while holding 
+a 88% y
 ear-o
 v
 er-y
@@ -1100,8 +1188,8 @@ ear retention assumption.
 y this g
 r
 ant tr
-anslates directly into students 
-ser
+anslates directly into 
+students ser
 v
 ed against that mission.
 Philanthropic and other donor-dependent suppor
@@ -1147,31 +1235,28 @@ v
 er y
 ear
 .
-The model holds positiv
-e oper
-ating cash across all fiv
-e y
-ears
-, with oper
-ating reser
-v
-es reaching roughly 78 months 
-b
-y 
+Oper
+ating cash carr
+ies the school f
+or 11.122823375736088 months from open bef
+ore the ne
+xt funding milestone 
+is needed, with the tightest y
+ear landing at $2,258,592 of cash on hand in 
 Y
-ear 5.
+ear 1.
  Oper
 ating break-e
 v
-en is reached in 
+en is 
+reached in 
 Y
 ear 1, which is the point at which ear
 ned re
 v
 en
 ue alone w
-ould 
-co
+ould co
 v
 er oper
 ating e
@@ -1187,19 +1272,43 @@ ant to surf
 ace up front f
 or our funders
 .
+ Let's e
+xtend y
+our cash r
+unw
+a
+y
+.
+ Our planned 
+response is to Build a cash b
+uff
+er through star
+tup fundr
+aising, a line of credit, or b
+y reducing ear
+ly e
+xpenses
+.
+ 
+T
+arget at least 18 months of r
+unw
+a
+y bef
+ore opening..
  Let's bac
 k the enrollment r
 amp with e
 vidence
 .
- 
-Our planned response is to Bac
+ Our planned 
+response is to Bac
 k e
 v
 er
 y enrollment target with documented demand - signed letters of intent, w
-aitlist 
-depth, comm
+aitlist depth, 
+comm
 unity sur
 v
 e
@@ -1216,22 +1325,6 @@ xceptional recr
 uitment engine or f
 acility e
 xpansion..
- Let's tie ne
-w hires to enrollment milestones
-.
- Our planned 
-response is to Align staffing additions to enrollment milestones
-.
- Hire when students are enrolled, not when y
-ou 
-hope the
-y will be
-.
- Use par
-t-time or contr
-act roles to br
-idge gaps
-..
 Strong 
 Y
 ear 5 net income Gr
@@ -1285,7 +1378,13 @@ kbook.
 Base case:
   Min DSCR 30.84x · Min ending 
 cash $2,272,877 · Runwa
-y 60.0 mo
+y 11.1 mo
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 6 of 7
+--- PAGE 7 ---
 Enr
 ollment -10%
 All fiv
@@ -1300,7 +1399,7 @@ y 10%  the standard lender enrollment-miss sensitivity
  $1,958,775   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 10.2 mo   ·   Break-e
 v
 en:
  
@@ -1327,7 +1426,7 @@ e a soft-launch.
  $1,640,891   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 9.2 mo   ·   Break-e
 v
 en:
  
@@ -1357,7 +1456,7 @@ ursement.
  $1,118,711   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 5.5 mo   ·   Break-e
 v
 en:
  
@@ -1392,7 +1491,7 @@ ise
  $2,217,877   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 10.6 mo   ·   Break-e
 v
 en:
  
@@ -1402,12 +1501,6 @@ ear 1
 Y
 ear-1 net income vs base:
  -$55,000
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 6 of 7
---- PAGE 7 ---
 Founder Comp Normaliz
 ed to Market
 F
@@ -1428,7 +1521,7 @@ ating cost.
  $2,272,877   ·   Runw
 a
 y:
- 60.0 mo   ·   Break-e
+ 11.1 mo   ·   Break-e
 v
 en:
  
