@@ -1,0 +1,1852 @@
+--- PAGE 1 ---
+Sc
+hoolStac
+k Budg
+et
+Board and Funder Summar
+y
+River
+side Christian Academ
+y
+5-Y
+ear Financial Ov
+er
+vie
+w f
+or Board Re
+vie
+w
+Prepared <DATE>
+Built from actuals
+Financial Outlook:
+ 
+The sc
+hool's financial outlook is str
+ong.
+8 health dimensions are in good standing.
+In 
+This Repor
+t
+1.
+  Financial Ov
+er
+vie
+w & K
+e
+y Metr
+ics
+2.
+  5-Y
+ear Projection
+3.
+  
+What to 
+W
+atch (T
+op Risks)
+4.
+  Cash & Runw
+a
+y P
+osition
+5.
+  Scenar
+io Compar
+ison
+6.
+  Recommended Ne
+xt Steps
+This summar
+y is gener
+ated from the school's financial model f
+or board discussion pur
+poses
+.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 1 of 8
+--- PAGE 2 ---
+Plain-English Summar
+y
+A plain-language read of y
+our model.
+ Same six sections y
+ou see in the in-app summar
+y vie
+w
+, sourced from the canonical engine
+.
+What y
+our model sa
+ys
+Y
+our plan opens with 200 students in 
+Y
+ear 1 and g
+ro
+ws to 400 b
+y 
+Y
+ear 5, against a stated capacity of 400 seats
+.
+ 
+This model 
+demonstr
+ates strong financial fundamentals:
+ a clear path to net income
+, controlled costs
+, a sustainab
+le re
+v
+en
+ue mix, and 
+adequate debt co
+v
+er
+age
+.
+ 
+Y
+our projections are g
+rounded and achie
+v
+ab
+le
+.
+ On the canonical engine
+, the model reads as:
+ Ready to 
+share - k
+eep polishing the narr
+ativ
+e
+.
+On the same n
+umbers a lender will pull, 
+Y
+ear 1 debt ser
+vice co
+v
+er
+age lands at 21.01x.
+ Cash sta
+ys positiv
+e across the full 
+Y
+ear 5 
+windo
+w
+, reaching about 82 months of oper
+ating reser
+v
+es b
+y 
+Y
+ear 5.
+What looks str
+ong
+Here is what is w
+or
+king in y
+our f
+a
+v
+or r
+ight no
+w
+.
+ Strong 
+Y
+ear 5 net income
+ Health
+y:
+ 
+The model reaches net income ear
+ly and sustains strong margins through 
+Y
+ear 5.
+ Health
+y:
+ Cash sta
+ys positiv
+e throughout the projection and reser
+v
+es e
+xceed 3 months of e
+xpenses
+.
+ Health
+y:
+ Staffing at 32% of re
+v
+en
+ue lea
+v
+es room f
+or f
+acilities
+, prog
+r
+ams
+, and reser
+v
+es
+.
+ Health
+y:
+ F
+acility costs at 1% of re
+v
+en
+ue are w
+ell-managed and lea
+v
+e b
+udget f
+or prog
+r
+ams
+.
+ 
+The plan crosses oper
+ating break-e
+v
+en in 
+Y
+ear 1, inside the 
+Y
+ear 5 windo
+w
+.
+ 
+Y
+ear 1 debt ser
+vice co
+v
+er
+age of 21.01x clears the 1.25x lender benchmar
+k from the star
+t.
+What needs more c
+larity
+These are the inputs a re
+vie
+w
+er will probe first.
+ P
+air each with the source y
+ou used (signed letters of intent, compar
+ab
+le schools
+, 
+v
+endor quotes) so the con
+v
+ersation mo
+v
+es quic
+kly
+.
+ y
+ear1.tuitionCo
+v
+er
+age (T
+uition co
+v
+ers 39% of 
+Y
+ear 1 total e
+xpenses vs "e 70%):
+ Open Step 5:
+ Re
+v
+en
+ue and g
+ro
+w tuition lines
+, or tr
+im 
+Step 7:
+ Expenses
+, until tuition co
+v
+ers at least 70% of 
+Y
+ear 1 e
+xpenses
+.
+What could create cash pressure
+Cash sta
+ys positiv
+e across the modeled 
+Y
+ear 5 windo
+w
+, so the pressure points belo
+w are about preser
+ving that cushion under 
+stress
+, not sur
+viving the base case
+.
+ 
+T
+oughest stress test (Enrollment -20%):
+ minim
+um debt ser
+vice co
+v
+er
+age holds at 16.76x and minim
+um ending cash dips to 
+$1,843,518.
+ F
+ounder compensation is r
+unning $796,870 belo
+w mar
+k
+et across the modeled per
+iod.
+ If y
+ou e
+v
+er pa
+y y
+ourself a mar
+k
+et r
+ate
+, the 
+cushion shr
+inks
+.
+What to fix fir
+st
+W
+or
+k this list top-do
+wn.
+ Cash-impact items come first because the
+y protect the school's ability to oper
+ate;
+ sustainability items 
+come ne
+xt;
+ polish items can w
+ait until y
+ou ha
+v
+e a w
+or
+king dr
+aft.
+ y
+ear1.tuitionCo
+v
+er
+age:
+ Open Step 5:
+ Re
+v
+en
+ue and g
+ro
+w tuition lines
+, or tr
+im Step 7:
+ Expenses
+, until tuition co
+v
+ers at least 70% of 
+Y
+ear 1 e
+xpenses
+.
+What someone re
+vie
+wing this ma
+y ask
+These are the questions someone re
+vie
+wing this pac
+k
+et will most lik
+ely ask.
+ Ha
+v
+e a sourced one-line ans
+w
+er ready f
+or each.
+ On y
+ear1.tuitionCo
+v
+er
+age:
+ 
+T
+uition accounts f
+or only 39% of 
+Y
+ear 1 e
+xpenses
+, meaning y
+ou depend on g
+r
+ants or donations to co
+v
+er 
+costs
+.
+ 
+What's y
+our plan if that e
+xter
+nal funding doesn't mater
+ializ
+e?
+ 
+What is y
+our e
+vidence base f
+or 200 students in 
+Y
+ear 1?
+ 
+What bac
+ks the 92% retention assumption (w
+aitlist, compar
+ab
+le schools
+, pr
+ior cohor
+ts)?
+ 68% of 
+Y
+ear 1 re
+v
+en
+ue is policy-dependent.
+ 
+What changes if the funding r
+ules shift?
+ F
+ounder compensation is nor
+maliz
+ed to a mar
+k
+et r
+ate f
+or the lender vie
+w
+.
+ Ho
+w long will y
+ou actually r
+un on the planned dr
+a
+w?
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 2 of 8
+--- PAGE 3 ---
+Boar
+d Commentar
+y
+T
+r
+ustees
+, this update is a snapshot of where Riv
+erside Chr
+istian Academ
+y stands financially as of toda
+y
+, dr
+a
+wn 
+directly from the canonical model that the dashboard and lender pac
+k
+et share
+.
+ 
+W
+e are planning f
+or 200 students 
+in 
+Y
+ear 1, g
+ro
+wing to 400 b
+y 
+Y
+ear 5 within a b
+uilding capacity of 400 seats
+, holding a 92% y
+ear-o
+v
+er-y
+ear 
+retention assumption.
+ Gro
+wth funds the mission;
+ the rest of this commentar
+y fr
+ames ho
+w the financial picture 
+suppor
+ts it.
+The model k
+eeps cash positiv
+e across all fiv
+e y
+ears
+, and oper
+ating reser
+v
+es reach roughly 82 months b
+y 
+Y
+ear 5.
+ 
+Oper
+ating break-e
+v
+en is reached in 
+Y
+ear 1.
+On the same basis a lender will use
+, 
+Y
+ear 1 debt ser
+vice co
+v
+er
+age is 21.01x.
+ 
+The pac
+k
+et currently reads as:
+ 
+Ready to share - k
+eep polishing the narr
+ativ
+e
+.
+ 
+This model demonstr
+ates strong financial fundamentals:
+ a clear 
+path to net income
+, controlled costs
+, a sustainab
+le re
+v
+en
+ue mix, and adequate debt co
+v
+er
+age
+.
+ 
+Y
+our projections 
+are g
+rounded and achie
+v
+ab
+le
+.
+No cr
+itical or high-se
+v
+er
+ity issues are flagged this per
+iod.
+ 
+The r
+isk section belo
+w documents the w
+atch items the 
+team is tr
+ac
+king proactiv
+ely
+.
+Strong 
+Y
+ear 5 net income 
+Where the board can help:
+ Address Cash Reser
+v
+e Deficit from Pr
+ior 
+Y
+ear
+.
+Ev
+er
+y figure in this commentar
+y is sourced from the same canonical engine that po
+w
+ers the rest of this pac
+k
+et.
+Financial Outlook at a Glance
+Financial Outlook:
+ 
+The sc
+hool's financial outlook is str
+ong.
+A
+CTU
+AL
+8 health dimensions are in good standing.
+Cash P
+osition:
+ Cash remains positive thr
+ough the full 5-y
+ear pr
+ojection
+Assumptions Confidence
+Overall:
+ Needs Suppor
+t
+   0% w
+eighted e
+vidence  ·  0 of 22 tagged   
+A
+CTU
+AL
+This does not mean y
+our plan is w
+eak.
+ It means this par
+t needs more clar
+ity
+.
+Each major assumption belo
+w is tagged b
+y the f
+ounder with the source the
+y leaned on.
+ Higher-confidence 
+sources (actuals
+, signed ag
+reements
+, wr
+itten quotes) are stronger e
+vidence than research benchmar
+ks or 
+estimates
+.
+0 of 22 assumptions tagged y
+et  the f
+ounder has not anchored an
+y inputs to e
+vidence
+.
+ P
+osture def
+aults to "Needs Suppor
+t" 
+until at least some k
+e
+ys are tagged.
+Financial Over
+vie
+w
+Riv
+erside Chr
+istian Academ
+y projects $8,779,877 in 
+Y
+ear 5 re
+v
+en
+ue with a 66.9% net margin.
+ 
+The model tells a 
+strong financial stor
+y with 13 of 13 k
+e
+y metr
+ics in health
+y r
+ange
+, a g
+reat f
+oundation f
+or y
+our mission.
+ Cash flo
+w 
+remains positiv
+e o
+v
+er the full 5-y
+ear per
+iod.
+[~] 
+Lender Readiness:
+ Strong
+[~] 
+Biggest Strength:
+ Strong 
+Y
+ear 5 net income
+[~] 
+Biggest Risk:
+ No major red flags detected, so contin
+ue refining assumptions as y
+ou gather real data.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 3 of 8
+--- PAGE 4 ---
+[~] 
+Cash Runw
+a
+y:
+ 60+ months
+Sc
+hool Over
+vie
+w
+Riv
+erside Chr
+istian Academ
+y is a Oper
+ating Pr
+iv
+ate School organiz
+ed as a 501(c)(3) Nonprofit with a 
+T
+uition-
+Based funding profile
+.
+5-Y
+ear Financial Pr
+ojection
+The model reaches break-e
+v
+en in 
+Y
+ear 1.
+ 
+Y
+ear 5 change in net assets is projected at $2.5M (47.3% margin).
+ Breake
+ven enr
+ollment
+Break
+e
+v
+en enrollment is 135 students (48% abo
+v
+e 
+Y
+ear 1 enrollment).
+ Prior
+-y
+ear comparison
+Pr
+ior-y
+ear re
+v
+en
+ue w
+as $2.4M;
+ 
+Y
+ear 1 projections represent a -1.4% change
+.
+ Accounting basis
+All projections are prepared on an accr
+ual basis;
+ the school currently k
+eeps books on a undeter
+mined basis
+.
+[+] 
+Re
+v
+en
+ue per Student (Y
+ear 1):
+ $19,759
+[+] 
+Cost per Student (Y
+ear 1):
+ $8,877
+[+] 
+Staffing Cost (% of Re
+v
+en
+ue):
+ 32.0%
+[+] 
+Oper
+ating Cost (% of Re
+v
+en
+ue):
+ 9.8%
+[+] 
+Net margin (Y
+ear 1):
+ 55.1%
+[+] 
+Net margin (Y
+ear 5):
+ 66.9%
+5-Y
+ear Chang
+e in Net Assets Pr
+ojection
+Y
+ear
+Students
+Re
+ven
+ue
+Expenses
+Chang
+e in Net 
+Assets
+Mar
+gin
+Y
+ear 1
+200
+$2.4M
+$1.7M
+$712K
+30.1%
+Y
+ear 2
+250
+$3.0M
+$1.9M
+$1.1M
+36.7%
+Y
+ear 3
+300
+$3.8M
+$2.2M
+$1.6M
+41.4%
+Y
+ear 4
+350
+$4.5M
+$2.5M
+$2.0M
+44.7%
+Y
+ear 5
+400
+$5.3M
+$2.8M
+$2.5M
+47.3%
+Prior
+-Y
+ear Actuals
+Pr
+ior-y
+ear net income w
+as $200K on re
+v
+en
+ue of $2.4M.
+Prior
+-Y
+ear Re
+ven
+ue vs 
+Y
+ear 1
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 4 of 8
+--- PAGE 5 ---
+Categor
+y
+Prior 
+Y
+ear (Actual)
+Y
+ear 1 (Pr
+ojected)
+V
+ariance
+T
+uition & F
+ees
+$0
+$2.4M
+
+Pub
+lic Funding
+$0
+$1.6M
+
+Philanthrop
+y
+$0
+$125K
+
+Other Re
+v
+en
+ue
+$0
+$100K
+
+T
+otal Re
+v
+en
+ue
+$2.4M
+$2.4M
+-1.4%
+Prior
+-Y
+ear Expenses vs 
+Y
+ear 1
+Categor
+y
+Prior 
+Y
+ear (Actual)
+Y
+ear 1 (Pr
+ojected)
+V
+ariance
+P
+ersonnel & Benefits
+$0
+$1.3M
+
+F
+acilities & Occupancy
+$0
+$36K
+
+Instr
+uctional Supplies
+$0
+$128K
+
+Admin & Oper
+ations
+$0
+$115K
+
+T
+otal Expenses
+$2.2M
+$1.7M
+-24.8%
+Net Income Comparison
+Prior 
+Y
+ear (Actual)
+Y
+ear 1 (Pr
+ojected)
+Net Income
+$200K
+$712K
+Staffing Plan
+Staffing costs are $1.3M in 
+Y
+ear 1, representing 53.5% of re
+v
+en
+ue
+.
+ 
+This is within the typical 50-60% r
+ange
+.
+[+] 
+Staffing % of Re
+v
+en
+ue:
+ 32.0%
+Suppor
+ting Assumptions
+Head of School
+  $95,000,
+ 1 FTE
+Assistant Pr
+incipal
+  $72,000,
+ 1 FTE
+Lead 
+T
+eachers (K-8)
+  $48,000,
+ 12 FTE
+T
+eaching Assistants
+  $30,000,
+ 6 FTE
+Office Manager
+  $42,000,
+ 1 FTE
+Counselor
+  $55,000,
+ 1 FTE
+Financial Health Assessment
+Across 8 health dimensions:
+ 8 health
+y
+, 0 on w
+atch, 0 at r
+isk.
+[+] 
+viability:
+ Health
+y
+[+] 
+liquidity:
+ Health
+y
+[+] 
+staffing b
+urden:
+ Health
+y
+[+] 
+f
+acility b
+urden:
+ Health
+y
+[+] 
+debt aff
+ordability:
+ Health
+y
+[+] 
+re
+v
+en
+ue concentr
+ation:
+ Health
+y
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 5 of 8
+--- PAGE 6 ---
+Health Dimensions
+Dimension
+Status
+Details
+Viability
+Health
+y
+The model reaches net income ear
+ly and 
+sustains strong margins through 
+Y
+ear 5.
+Liquidity
+Health
+y
+Cash sta
+ys positiv
+e throughout the projection 
+and reser
+v
+es e
+xceed 3 months of e
+xpenses
+.
+Staffing Burden
+Health
+y
+Staffing at 32% of re
+v
+en
+ue lea
+v
+es room f
+or 
+f
+acilities
+, prog
+r
+ams
+, and reser
+v
+es
+.
+F
+acility Burden
+Health
+y
+F
+acility costs at 1% of re
+v
+en
+ue are w
+ell-
+managed and lea
+v
+e b
+udget f
+or prog
+r
+ams
+.
+Debt Aff
+ordability
+Health
+y
+DSCR of 20.91x pro
+vides comf
+or
+tab
+le co
+v
+er
+age 
+of debt pa
+yments with room to spare
+.
+Re
+v
+en
+ue Concentr
+ation
+Health
+y
+Re
+v
+en
+ue is anchored to enrollment-dr
+iv
+en 
+income  the strongest f
+oundation f
+or a school 
+model.
+ A f
+ocused re
+v
+en
+ue stream is a strength 
+when bac
+k
+ed b
+y dependab
+le demand.
+Da
+ys Cash
+Health
+y
+472 da
+ys of cash on hand e
+xceeds the 90-da
+y 
+benchmar
+k, pro
+viding a strong liquidity cushion.
+Reser
+v
+e Strength
+Health
+y
+82.0 months of reser
+v
+es b
+y 
+Y
+ear 5  a strong 
+b
+uff
+er f
+or une
+xpected costs
+.
+K
+e
+y Strengths
+The model demonstr
+ates 5 notab
+le strengths
+.
+[+] 
+Re
+v
+en
+ue per Student (Y
+ear 1):
+ $19,759
+[+] 
+Cost per Student (Y
+ear 1):
+ $8,877
+[+] 
+Staffing Cost (% of Re
+v
+en
+ue):
+ 32.0%
+[+] 
+Oper
+ating Cost (% of Re
+v
+en
+ue):
+ 9.8%
+[+] 
+Net margin (Y
+ear 1):
+ 55.1%
+[+] 
+Net margin (Y
+ear 5):
+ 66.9%
+What to 
+W
+atc
+h
+No significant financial r
+isks ha
+v
+e been identified at this time
+.
+Recommended Ne
+xt Steps
+1.
+ Strengthen 
+T
+uition Re
+ven
+ue Base
+Pr
+iv
+ate schools typically der
+iv
+e 6085% of re
+v
+en
+ue from tuition.
+ At 16.2%, y
+our tuition re
+v
+en
+ue share is lo
+w
+er than typical, 
+so ensure y
+our pr
+icing reflects the full cost of education and is competitiv
+e f
+or y
+our mar
+k
+et.
+This strengthens the model and reduces future r
+isk.
+2.
+ Re
+ven
+ue Pr
+ojection J
+ump fr
+om Prior 
+Y
+ear
+Y
+ear 1 projects 64.7% re
+v
+en
+ue g
+ro
+wth o
+v
+er last y
+ear's actual $2,400,000.
+ Gro
+wth o
+v
+er 30% in a single y
+ear requires clear 
+justification:
+ enrollment surge
+, ne
+w funding stream, or tuition increase
+.
+This strengthens the model and reduces future r
+isk.
+3.
+ Ad
+dress Cash Reser
+ve Deficit fr
+om Prior 
+Y
+ear
+Last y
+ear ended with $120,000 in cash, only 0.7 months of e
+xpenses
+.
+ Building reser
+v
+es to 3+ months should be a pr
+ior
+ity
+.
+ 
+Consider a br
+idge line of credit while g
+ro
+wing into net income
+.
+Addressing this will mater
+ially impro
+v
+e financial position.
+Decision Histor
+y
+No decisions ha
+v
+e been tr
+ac
+k
+ed with an outcome y
+et.
+ As the team mar
+ks sa
+v
+ed scenar
+ios as Pursued, Declined, 
+or On hold, those outcomes (and an
+y retrospectiv
+e notes) will appear here so re
+vie
+w
+ers can see what actually 
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 6 of 8
+--- PAGE 7 ---
+happened v
+ersus what w
+as modeled.
+Once decisions are sa
+v
+ed with a Pursued / Declined / On hold outcome inside the planner
+, the
+y will be summar
+iz
+ed here f
+or the board.
+Scenario Comparison
+The model includes 2 scenar
+ios sho
+wing ho
+w changes in k
+e
+y assumptions aff
+ect 
+Y
+ear 5 outcomes
+.
+Scenario
+Y5 Re
+ven
+ue
+Y5 Net Income
+Y5 Mar
+gin
+Slo
+w Gro
+wth (flat enrollment 
+Y2-3)
+$4.5M
+$2.0M
+44.2%
+Strong Gro
+wth (+10% enrollment)
+$5.8M
+$2.9M
+49.3%
+Grant 
+V
+er
+sion
+Thank y
+ou f
+or consider
+ing Riv
+erside Chr
+istian Academ
+y
+.
+ 
+This narr
+ativ
+e is dr
+a
+wn directly from the same canonical 
+financial model the board and an
+y lender w
+ould see
+, so the n
+umbers that f
+ollo
+w tie bac
+k line f
+or line to our 
+b
+udget.
+ Ov
+er the g
+r
+ant hor
+iz
+on w
+e are planning f
+or 200 students in 
+Y
+ear 1, g
+ro
+wing to 400 b
+y 
+Y
+ear 5 while holding 
+a 92% y
+ear-o
+v
+er-y
+ear retention assumption.
+ Each additional seat funded b
+y this g
+r
+ant tr
+anslates directly into 
+students ser
+v
+ed against that mission.
+Philanthropic and other donor-dependent suppor
+t currently represents about 5% of our 
+Y
+ear 1 re
+v
+en
+ue mix.
+ Gr
+ant 
+funding is what br
+idges the gap betw
+een our enrollment r
+amp and oper
+ating sustainability - without it the model 
+w
+ould not reach the tr
+ajector
+y descr
+ibed abo
+v
+e
+.
+ 
+The plan does not assume an
+y single funder closes that gap on 
+their o
+wn;
+ instead, it relies on a por
+tf
+olio of g
+r
+ants and ear
+ned re
+v
+en
+ue that g
+ro
+ws y
+ear o
+v
+er y
+ear
+.
+The model holds positiv
+e oper
+ating cash across all fiv
+e y
+ears
+, with oper
+ating reser
+v
+es reaching roughly 82 
+months b
+y 
+Y
+ear 5.
+ Oper
+ating break-e
+v
+en is reached in 
+Y
+ear 1, which is the point at which ear
+ned re
+v
+en
+ue alone 
+w
+ould co
+v
+er oper
+ating e
+xpenses
+.
+No cr
+itical or high-se
+v
+er
+ity issues are flagged at this time;
+ the w
+atch items the team is tr
+ac
+king are documented in 
+the body of the model.
+Strong 
+Y
+ear 5 net income 
+The most immediate use of g
+r
+ant funding w
+ould suppor
+t Address Cash Reser
+v
+e Deficit 
+from Pr
+ior 
+Y
+ear
+.
+ 
+W
+e are happ
+y to w
+alk through an
+y line of the model in detail with the funder
+.
+Ev
+er
+y figure in this commentar
+y is sourced from the same canonical engine that po
+w
+ers the rest of this pac
+k
+et.
+Standar
+d Lender Stress 
+T
+ests
+Fiv
+e fix
+ed do
+wnside scenar
+ios re-r
+un against the canonical model.
+ Each ro
+w sho
+ws the w
+orst-y
+ear DSCR, ending-
+cash trough, and 
+Y
+ear-1 net-income delta vs base
+.
+ Identical figures appear on the f
+ounder dashboard and in the 
+lender pro-f
+or
+ma w
+or
+kbook.
+Base case:
+  Min DSCR 22.02x · Min ending 
+cash $2,417,688 · Runwa
+y 60.0 mo
+Enr
+ollment -10%
+All fiv
+e enrollment y
+ears scaled do
+wn b
+y 10%  the standard lender enrollment-miss sensitivity
+.
+  Min DSCR:
+ 19.53x
+   ·   Min ending cash:
+ $2,145,921   ·   Runw
+a
+y:
+ 60.0 mo   ·   Break-e
+v
+en:
+ 
+Y
+ear 1
+  
+Y
+ear-1 net income vs base:
+ -$271,767
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 7 of 8
+--- PAGE 8 ---
+Enr
+ollment -20%
+All fiv
+e enrollment y
+ears scaled do
+wn b
+y 20%  the stretch do
+wnside lenders use to confir
+m the school can sur
+viv
+e a soft-launch.
+  Min DSCR:
+ 16.76x
+   ·   Min ending cash:
+ $1,843,518   ·   Runw
+a
+y:
+ 60.0 mo   ·   Break-e
+v
+en:
+ 
+Y
+ear 1
+  
+Y
+ear-1 net income vs base:
+ -$574,170
+ESA / Pub
+lic Funding Dela
+y
+ed 3 Months
+Y
+ear-1 ESA, school-choice
+, and pub
+lic-funding receipts reduced b
+y 25% ("H 3 months dela
+y
+ed) to sim
+ulate a slo
+w first disb
+ursement.
+  Min DSCR:
+ 18.36x
+   ·   Min ending cash:
+ $2,017,688   ·   Runw
+a
+y:
+ 60.0 mo   ·   Break-e
+v
+en:
+ 
+Y
+ear 1
+  
+Y
+ear-1 net income vs base:
+ -$400,000
+Rent Shoc
+k +25%
+Occupancy & f
+acility e
+xpense ro
+ws escalated b
+y 25%  co
+v
+ers a lease rene
+w
+al, mar
+k
+et-r
+ate reset, or unb
+udgeted CAM/utilities 
+sur
+pr
+ise
+.
+  Min DSCR:
+ 21.93x
+   ·   Min ending cash:
+ $2,408,688   ·   Runw
+a
+y:
+ 60.0 mo   ·   Break-e
+v
+en:
+ 
+Y
+ear 1
+  
+Y
+ear-1 net income vs base:
+ -$9,000
+Founder Comp Normaliz
+ed to Market
+F
+ounder compensation re-cast at the mar
+k
+et-r
+ate benchmar
+k (with benefits + pa
+yroll tax).
+ 
+The lender / board vie
+w of tr
+ue oper
+ating cost.
+  Min DSCR:
+ 21.01x
+   ·   Min ending cash:
+ $2,417,688   ·   Runw
+a
+y:
+ 60.0 mo   ·   Break-e
+v
+en:
+ 
+Y
+ear 1
+  
+Y
+ear-1 net income vs base:
+ -$110,203
+Founder Compensation
+P
+er-y
+ear f
+ounder pa
+y sho
+wn tw
+o w
+a
+ys:
+ as planned (what the f
+ounder dr
+a
+ws) and at mar
+k
+et r
+ate (what a 
+compar
+ab
+le hire w
+ould cost).
+ 
+The lender adjustment is the gap underwr
+iters apply to staffing cost and DSCR.
+Line
+Y1
+Y2
+Y3
+Y4
+Y5
+5-Yr 
+T
+otal
+As planned (repor
+ted)
+$95,000
+$97,850
+$100,786
+$103,809
+$106,923
+$504,368
+  Fully-loaded (incl.
+ benefits + pa
+yroll tax)
+$123,168
+$126,863
+$130,669
+$134,588
+$138,626
+$653,913
+Mar
+k
+et r
+ate (nor
+maliz
+ed)
+$180,000
+$185,000
+$244,000
+$251,000
+$259,000
+$1,119,000
+  Fully-loaded (incl.
+ benefits + pa
+yroll tax)
+$233,370
+$239,853
+$316,346
+$325,422
+$335,794
+$1,450,784
+Lender adjustment (market - planned)
+$110,203
+$112,990
+$185,677
+$190,833
+$197,168
+$796,870
+Note:
+ F
+ounder is pa
+ying themselv
+es belo
+w mar
+k
+et r
+ate (s
+w
+eat equity).
+ Lenders and boards underwr
+ite to the mar
+k
+et-r
+ate line;
+ the adjustment 
+sho
+ws the gap
+.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 8 of 8
