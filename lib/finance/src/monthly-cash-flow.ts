@@ -403,6 +403,50 @@ export function findLowestCashMonth(
 }
 
 /**
+ * Find the FIRST month in chronological order where cumulative cash dips
+ * below zero. Distinct from {@link findLowestCashMonth}: lenders want to
+ * know *when* cash first crosses zero (a single concrete date you must
+ * survive past), not necessarily the deepest trough — those can be
+ * different months when the curve dips, partially recovers, then dips
+ * deeper. Returns `null` when the series never goes negative. Task #932.
+ */
+export function findFirstNegativeCashMonth(
+  cumulative: readonly number[],
+  fyStart: number = 7,
+): LowestCashMonth | null {
+  for (let i = 0; i < cumulative.length; i++) {
+    if (cumulative[i] < 0) {
+      const calendarIdx = ((fyStart - 1 + i) % 12 + 12) % 12;
+      return {
+        monthIndex: i,
+        monthLabel: MONTH_LABELS[calendarIdx],
+        amount: cumulative[i],
+        isNegative: true,
+        yearIndex: 0,
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Find the FIRST negative-cash month across multiple fiscal years'
+ * cumulative series, scanning years in order. Returns the earliest month
+ * with negative cash and the year it falls in, or `null` if cash stays
+ * positive across the entire forecast. Task #932.
+ */
+export function findFirstNegativeCashMonthAcrossYears(
+  cumulativeByYear: readonly (readonly number[])[],
+  fyStart: number = 7,
+): LowestCashMonth | null {
+  for (let y = 0; y < cumulativeByYear.length; y++) {
+    const hit = findFirstNegativeCashMonth(cumulativeByYear[y], fyStart);
+    if (hit) return { ...hit, yearIndex: y };
+  }
+  return null;
+}
+
+/**
  * Find the lowest-cash month across multiple fiscal years' cumulative
  * series. Each entry in `cumulativeByYear` is a 12-element cumulative
  * series for that year (already chained off prior-year ending cash).

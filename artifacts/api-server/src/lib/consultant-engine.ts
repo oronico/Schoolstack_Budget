@@ -3118,6 +3118,22 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     negativeNetCashFlowMonths,
   });
 
+  // Task #932 — Reuse the canonical lender stress battery's base
+  // metrics for the monthly cash signals so the
+  // `cumulative_cash_negative` issue, the exec summary callout, the
+  // DSCR & Covenants tab, and the lender packet PDF all read from a
+  // single number. `computeLenderStressTests` runs `computeBaseFinancials`
+  // under the hood and exposes both:
+  //   - `firstNegativeCashMonth` — the *first* month cash crosses zero
+  //     (the concrete date a bridge must clear). Drives the exec summary,
+  //     issue copy, DSCR & Covenants callout, and lender packet base line.
+  //   - `lowestCashMonth` — the deepest trough. Used to size the bridge
+  //     and to power the per-scenario "worst monthly cash low" surfaces
+  //     in the stress tests section.
+  const lenderStressTests = computeLenderStressTests(data as unknown as DecisionEngineModelData);
+  const lowestCashMonth = lenderStressTests.base.lowestCashMonth ?? null;
+  const firstNegativeCashMonth = lenderStressTests.base.firstNegativeCashMonth ?? null;
+
   const topIssues = generateTopIssues({
     yearFinancials,
     cumulativeFinancials,
@@ -3130,7 +3146,33 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     hasDebt,
     dscr,
     retentionRate: en.retentionRate,
+    lowestCashMonth: lowestCashMonth
+      ? {
+          yearIndex: lowestCashMonth.yearIndex ?? 0,
+          monthLabel: lowestCashMonth.monthLabel,
+          amount: lowestCashMonth.amount,
+          isNegative: lowestCashMonth.isNegative,
+        }
+      : null,
+    firstNegativeCashMonth: firstNegativeCashMonth
+      ? {
+          yearIndex: firstNegativeCashMonth.yearIndex ?? 0,
+          monthLabel: firstNegativeCashMonth.monthLabel,
+          amount: firstNegativeCashMonth.amount,
+          isNegative: firstNegativeCashMonth.isNegative,
+        }
+      : null,
   });
+
+  // Task #932 — append a one-line callout to the exec summary when
+  // cash first crosses zero. Use the *first* negative month (the
+  // concrete date you must survive past), not the deepest trough.
+  // Year-end runway can still look healthy here — that's exactly why
+  // this needs to surface separately.
+  if (firstNegativeCashMonth) {
+    const yearLabel = `Year ${(firstNegativeCashMonth.yearIndex ?? 0) + 1}`;
+    executiveSummary += ` Watch out: projected cash first goes negative in ${yearLabel} (${firstNegativeCashMonth.monthLabel}) at ${fmt(firstNegativeCashMonth.amount)}, even though year-end runway can still look healthy.`;
+  }
 
   const lendingLabAssessment = assessLendingLabReadiness(data, yearFinancials, enrollmentByYear);
 
@@ -3142,10 +3184,10 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
   // FullModelData, matching the convention used elsewhere in this file.
   const normalizedView = computeNormalizedFinancials(data as unknown as DecisionEngineModelData);
 
-  // Task #616 — canonical lender stress-test battery. Surfaced on founder
-  // dashboard, consultant view, lender packet PDF, and lender pro-forma
-  // workbook. Same cast convention as `normalizedView` above.
-  const lenderStressTests = computeLenderStressTests(data as unknown as DecisionEngineModelData);
+  // Task #616 — canonical lender stress-test battery. `lenderStressTests`
+  // is already computed above (Task #932) so this surface, the monthly
+  // cash trough used by the exec summary, and the issue rule all share
+  // one invocation.
 
   return {
     executiveSummary,

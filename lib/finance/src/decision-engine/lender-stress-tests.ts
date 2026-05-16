@@ -23,6 +23,7 @@ import {
   computeNormalizedFinancials,
   type ScenarioMetrics,
 } from "./scenario-engine.js";
+import type { LowestCashMonth } from "../monthly-cash-flow.js";
 
 export type LenderStressScenarioId =
   | "enrollment_minus_10"
@@ -111,6 +112,21 @@ export interface LenderStressScenarioResult extends LenderStressScenarioMeta {
   netIncome: number[];
   /** First year net income is non-negative; null if never. */
   breakEvenYear: number | null;
+  /**
+   * Task #932 — worst monthly cumulative-cash trough across the 5-year
+   * forecast (not just year-end). Surfaces the in-year cash dip lenders
+   * scrutinize separately from runway: a school can show 6 months of
+   * Y1 runway and still go cash-negative mid-Y2. `null` only when the
+   * scenario engine omitted monthly cash flow data (legacy fixtures).
+   */
+  lowestCashMonth: LowestCashMonth | null;
+  /**
+   * Task #932 — FIRST chronological month where cumulative cash dips
+   * below zero under the scenario (distinct from `lowestCashMonth`, the
+   * deepest trough — can be different months when the curve dips,
+   * recovers, then dips deeper). `null` when cash never crosses zero.
+   */
+  firstNegativeCashMonth: LowestCashMonth | null;
   /** Deltas vs base — a single-glance summary lenders skim first. */
   deltaVsBase: {
     /** Year-1 net income delta (scenario − base). Negative = worse. */
@@ -138,6 +154,17 @@ export interface LenderStressTestBaseline {
   breakEvenStudents: Array<number | null>;
   netIncome: number[];
   breakEvenYear: number | null;
+  /** Task #932 — worst monthly cumulative-cash trough across the 5-year
+   *  forecast under base assumptions (paired with the per-scenario field
+   *  on {@link LenderStressScenarioResult}). */
+  lowestCashMonth: LowestCashMonth | null;
+  /**
+   * Task #932 — first chronological month where cumulative cash dips
+   * below zero under base assumptions. Drives the lender packet base
+   * callout, exec summary, and DSCR & Covenants "Cash first goes
+   * negative" row. `null` when cash never crosses zero.
+   */
+  firstNegativeCashMonth: LowestCashMonth | null;
 }
 
 export interface LenderStressTestResults {
@@ -168,6 +195,8 @@ function metricsToBaseline(m: ScenarioMetrics): LenderStressTestBaseline {
     breakEvenStudents: m.breakEvenStudents,
     netIncome: m.netIncome,
     breakEvenYear: m.breakEvenYear,
+    lowestCashMonth: m.lowestCashMonth ?? null,
+    firstNegativeCashMonth: m.firstNegativeCashMonth ?? null,
   };
 }
 
@@ -221,6 +250,8 @@ function buildResult(
     breakEvenStudents: scenario.breakEvenStudents,
     netIncome: scenario.netIncome,
     breakEvenYear: scenario.breakEvenYear,
+    lowestCashMonth: scenario.lowestCashMonth ?? null,
+    firstNegativeCashMonth: scenario.firstNegativeCashMonth ?? null,
     deltaVsBase: deltaVsBase(scenario, base),
   };
 }

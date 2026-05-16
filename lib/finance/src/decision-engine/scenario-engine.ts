@@ -5,6 +5,7 @@ import {
   distributePersonnelMonthly,
   distributeOpexMonthly,
   distributeDebtMonthly,
+  findFirstNegativeCashMonthAcrossYears,
   findLowestCashMonth,
   findLowestCashMonthAcrossYears,
   computeCashRunwayMonths,
@@ -76,6 +77,15 @@ export interface ScenarioMetrics {
    * trajectory, not just Year 1 (Task #609 → multi-year in #636).
    */
   lowestCashMonth?: LowestCashMonth | null;
+  /**
+   * Task #932 — first month (chronologically) where cumulative cash dips
+   * below zero. Distinct from {@link ScenarioMetrics.lowestCashMonth}: the
+   * trough can be a different month from the first crossing when the
+   * curve dips, partially recovers, and dips deeper later. Lenders +
+   * founders need the *first* date to plan a bridge against. `null` when
+   * cash stays positive across the entire forecast (the common case).
+   */
+  firstNegativeCashMonth?: LowestCashMonth | null;
   /**
    * Per-year opex split into fixed (annual_fixed, monthly, per_fte,
    * percent_of_base) and variable (per_student, per_new_student,
@@ -820,8 +830,13 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
     loanDS[0],
   );
 
-  const lowestCashMonth = findLowestCashMonthAcrossYears(
-    monthlyCashFlowByYear.map((s) => s.cumulative),
+  const cumulativeByYear = monthlyCashFlowByYear.map((s) => s.cumulative);
+  const lowestCashMonth = findLowestCashMonthAcrossYears(cumulativeByYear, 7);
+  // Task #932 — first chronological dip below zero (separate from the
+  // trough). Lender packet / exec summary / DSCR & Covenants callouts
+  // need "first happens" semantics; stress tests still use the trough.
+  const firstNegativeCashMonth = findFirstNegativeCashMonthAcrossYears(
+    cumulativeByYear,
     7,
   );
 
@@ -890,6 +905,7 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
     monthlyCashFlowY1,
     monthlyCashFlowByYear,
     lowestCashMonth,
+    firstNegativeCashMonth,
     fixedOpex,
     variableOpex,
     contractedRevenue,
@@ -1089,11 +1105,15 @@ function applyAdjustments(
     cashPosition.push(cumCash);
   }
 
-  const lowestCashMonth = monthlyCashFlowByYear
-    ? findLowestCashMonthAcrossYears(
-        monthlyCashFlowByYear.map((s) => s.cumulative),
-        7,
-      )
+  const cumulativeByYearAdj = monthlyCashFlowByYear
+    ? monthlyCashFlowByYear.map((s) => s.cumulative)
+    : null;
+  const lowestCashMonth = cumulativeByYearAdj
+    ? findLowestCashMonthAcrossYears(cumulativeByYearAdj, 7)
+    : null;
+  // Task #932 — first chronological dip below zero on the adjusted view.
+  const firstNegativeCashMonth = cumulativeByYearAdj
+    ? findFirstNegativeCashMonthAcrossYears(cumulativeByYearAdj, 7)
     : null;
 
   // Task #610: scale cash-reality fields by the same lever ratios used for
@@ -1158,6 +1178,7 @@ function applyAdjustments(
     monthlyCashFlowY1,
     monthlyCashFlowByYear,
     lowestCashMonth,
+    firstNegativeCashMonth,
     fixedOpex,
     variableOpex,
     contractedRevenue,

@@ -1339,10 +1339,23 @@ export function renderLenderStressTestsSection(doc: PDFDoc, stress: LenderStress
   // worst case and MUST be surfaced to the lender, not hidden.
   const baseStructural = stress.base.dscr.filter((d) => d !== 0);
   const baseMinDscr: number | null = baseStructural.length ? Math.min(...baseStructural) : null;
+  // Task #932 — render the in-year monthly cash signals next to
+  // year-end "Min ending cash" so the *monthly* cash story is visible,
+  // not just the year-end snapshot. Lead with `firstNegativeCashMonth`
+  // (the concrete date a bridge must clear past); fall back to the
+  // trough when cash stays positive (use it as the "worst monthly low"
+  // benchmark for context).
+  const baseFirstNeg = stress.base.firstNegativeCashMonth;
+  const baseTrough = stress.base.lowestCashMonth;
+  const baseFirstNegStr = baseFirstNeg
+    ? ` · ⚠ Cash first goes negative Y${(baseFirstNeg.yearIndex ?? 0) + 1} ${baseFirstNeg.monthLabel} ${fmtCurrency(baseFirstNeg.amount)}`
+    : baseTrough
+      ? ` · Lowest monthly cash Y${(baseTrough.yearIndex ?? 0) + 1} ${baseTrough.monthLabel} ${fmtCurrency(baseTrough.amount)}`
+      : "";
   labelValue(
     doc,
     "Base case:",
-    `Min DSCR ${baseMinDscr === null ? "N/A" : baseMinDscr.toFixed(2) + "x"} · Min ending cash ${fmtCurrency(Math.min(...stress.base.endingCash))} · Runway ${stress.base.cashRunwayMonths.toFixed(1)} mo`,
+    `Min DSCR ${baseMinDscr === null ? "N/A" : baseMinDscr.toFixed(2) + "x"} · Min ending cash ${fmtCurrency(Math.min(...stress.base.endingCash))} · Runway ${stress.base.cashRunwayMonths.toFixed(1)} mo${baseFirstNegStr}`,
   );
   doc.moveDown(0.4);
 
@@ -1375,6 +1388,20 @@ export function renderLenderStressTestsSection(doc: PDFDoc, stress: LenderStress
     doc.text(`  Min DSCR: ${minDscrStr}`, doc.page.margins.left, doc.y, { continued: true });
     doc.fillColor(BRAND.black);
     doc.text(`   ·   Min ending cash: ${fmtCurrency(Math.min(...sc.endingCash))}   ·   Runway: ${sc.cashRunwayMonths.toFixed(1)} mo   ·   Break-even: ${beStr}`);
+    // Task #932 — surface the worst monthly cumulative-cash trough under
+    // the scenario so lenders see the in-year low (when tuition has not
+    // yet arrived but payroll has), not just the year-end minimum that
+    // `Min ending cash` reports.
+    const scTrough = sc.lowestCashMonth;
+    if (scTrough) {
+      doc.fillColor(scTrough.isNegative ? "#b91c1c" : BRAND.gray);
+      doc.text(
+        `  Lowest monthly cash: Year ${(scTrough.yearIndex ?? 0) + 1} (${scTrough.monthLabel}) ${fmtCurrency(scTrough.amount)}${scTrough.isNegative ? " — dips below zero mid-year" : ""}`,
+        doc.page.margins.left,
+        doc.y,
+      );
+      doc.fillColor(BRAND.black);
+    }
     const y1 = sc.deltaVsBase.y1NetIncome;
     doc.fillColor(y1 < 0 ? "#b91c1c" : "#15803d");
     doc.text(`  Year-1 net income vs base: ${y1 >= 0 ? "+" : ""}${fmtCurrency(y1)}`, doc.page.margins.left, doc.y);

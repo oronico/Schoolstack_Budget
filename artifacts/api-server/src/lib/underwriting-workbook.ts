@@ -2624,6 +2624,31 @@ interface DSCRCovenantsCanonicalOverrides {
   dscr: number[];
   cashPosition: number[];
   breakEvenStudents: Array<number | null>;
+  /**
+   * Task #932 — worst monthly cumulative-cash trough across the 5-year
+   * forecast (in-year, not just year-end). Surfaced as a "Lowest Monthly
+   * Cash" callout row so the workbook flags the in-year crunch lenders
+   * scrutinize separately from runway. `null` when the engine omitted
+   * monthly cash flow data.
+   */
+  lowestCashMonth?: {
+    yearIndex: number;
+    monthLabel: string;
+    amount: number;
+    isNegative: boolean;
+  } | null;
+  /**
+   * Task #932 — first chronological month where cumulative cash dips
+   * below zero. Surfaced as a "Cash first goes negative" callout row
+   * (separate from the deepest trough) so lenders see the concrete
+   * date a bridge must clear past. `null` when cash stays positive.
+   */
+  firstNegativeCashMonth?: {
+    yearIndex: number;
+    monthLabel: string;
+    amount: number;
+    isNegative: boolean;
+  } | null;
 }
 
 function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], revByYear: number[], persByYear: number[], opexByYear: number[], cdByYear: number[], niByYear: number[], cashByYear: number[], depreciationByYear?: number[], projectedARByYear?: number[], canonicalOverrides?: DSCRCovenantsCanonicalOverrides) {
@@ -2820,6 +2845,55 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
   for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = cap > 0 ? enrollment[y] / cap : 0;
     ws.getCell(r, y + 2).numFmt = PCT; dc(ws.getCell(r, y + 2));
+  }
+
+  // Task #932 — in-year cash trough callout. The Months of Runway row
+  // above is computed off *year-end* cash and misses the mid-year dips
+  // lenders zero in on (a school can show 6 months of runway and still
+  // go cash-negative in October because tuition arrives in chunks while
+  // payroll runs every month). Surface the trough month + amount here so
+  // the DSCR & Covenants tab calls it out alongside runway. The value
+  // comes from the canonical scenario engine via
+  // `canonicalOverrides.lowestCashMonth` so this row ties to the
+  // `cumulative_cash_negative` decision issue, the exec summary
+  // callout, and the lender packet PDF.
+  const trough = canonicalOverrides?.lowestCashMonth;
+  const firstNeg = canonicalOverrides?.firstNegativeCashMonth;
+  if (trough || firstNeg) {
+    // Headline metric: the *first* month cash crosses zero (concrete
+    // date a bridge must clear past). Falls back to the trough only
+    // when the engine didn't expose a first-crossing (legacy data).
+    const headline = firstNeg ?? trough;
+    if (headline) {
+      r++;
+      const headlineLabel = firstNeg ? "Cash First Goes Negative" : "Lowest Monthly Cash";
+      ws.getCell(r, 1).value = `${headlineLabel} (across 5-yr forecast)`; bc(ws.getCell(r, 1));
+      const headlineYear = (headline.yearIndex ?? 0) + 1;
+      const headlineCol = Math.min(yc, Math.max(1, headlineYear)) + 1;
+      ws.getCell(r, headlineCol).value = Math.round(headline.amount);
+      ws.getCell(r, headlineCol).numFmt = CUR; bc(ws.getCell(r, headlineCol));
+      r++;
+      const troughDistinct =
+        firstNeg &&
+        trough &&
+        trough.isNegative &&
+        (trough.yearIndex !== firstNeg.yearIndex || trough.monthLabel !== firstNeg.monthLabel);
+      const troughClause = troughDistinct && trough
+        ? ` Deepest trough hits Year ${(trough.yearIndex ?? 0) + 1} (${trough.monthLabel}) at $${Math.round(trough.amount).toLocaleString("en-US")} — size your bridge to cover that low.`
+        : "";
+      ws.getCell(r, 1).value = firstNeg
+        ? `  ⚠ Cash first goes negative in Year ${headlineYear} (${headline.monthLabel}). Year-end runway alone misses this in-year crunch; line up a bridge before opening.${troughClause}`
+        : trough && trough.isNegative
+          ? `  ⚠ Lowest monthly cash dips below zero in Year ${headlineYear} (${headline.monthLabel}). Year-end runway alone misses this in-year crunch; line up a bridge before opening.`
+          : `  Lowest monthly cash: Year ${headlineYear} (${headline.monthLabel}). Stays positive across the forecast.`;
+      ws.mergeCells(r, 1, r, yc + 1);
+      ws.getCell(r, 1).font = {
+        italic: true,
+        size: 9,
+        name: "Calibri",
+        color: { argb: firstNeg || (trough && trough.isNegative) ? "FFB91C1C" : NAVY },
+      };
+    }
   }
 
   r += 2;
@@ -3447,6 +3521,28 @@ async function generateWorkbook(
     dscr: [...beMetrics.dscr],
     cashPosition: [...beMetrics.cashPosition],
     breakEvenStudents: [...beMetrics.breakEvenStudents],
+    // Task #932 — surface the in-year monthly cash trough in the
+    // DSCR & Covenants tab. Pulled from the same canonical
+    // `computeBaseFinancials` run that backs every other override.
+    lowestCashMonth: beMetrics.lowestCashMonth
+      ? {
+          yearIndex: beMetrics.lowestCashMonth.yearIndex ?? 0,
+          monthLabel: beMetrics.lowestCashMonth.monthLabel,
+          amount: beMetrics.lowestCashMonth.amount,
+          isNegative: beMetrics.lowestCashMonth.isNegative,
+        }
+      : null,
+    // Task #932 — first chronological dip below zero. Surfaces the
+    // headline "Cash first goes negative" date in the DSCR & Covenants
+    // callout (paired with the trough above for sizing context).
+    firstNegativeCashMonth: beMetrics.firstNegativeCashMonth
+      ? {
+          yearIndex: beMetrics.firstNegativeCashMonth.yearIndex ?? 0,
+          monthLabel: beMetrics.firstNegativeCashMonth.monthLabel,
+          amount: beMetrics.firstNegativeCashMonth.amount,
+          isNegative: beMetrics.firstNegativeCashMonth.isNegative,
+        }
+      : null,
   };
   buildDSCRCovenants(wb, data, enrollment, revByYear, persByYear, opexByYear, debtServiceByYear, niByYear, cashByYear, depreciationByYear, projectedARByYear, canonicalOverrides);
   buildSourcesAndUses(wb, data, startingCash);

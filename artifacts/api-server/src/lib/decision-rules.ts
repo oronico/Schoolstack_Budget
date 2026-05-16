@@ -52,6 +52,33 @@ interface IssueInput {
   hasDebt: boolean;
   dscr: number;
   retentionRate?: number;
+  /**
+   * Task #932 — worst monthly cumulative-cash trough across the 5-year
+   * forecast (in-year, not just year-end). Powers the
+   * `cumulative_cash_negative` issue so a school that shows positive
+   * year-end cash but dips below zero mid-year still gets a red flag.
+   * Omitted when monthly cash flow data isn't available.
+   */
+  lowestCashMonth?: {
+    yearIndex: number;
+    monthLabel: string;
+    amount: number;
+    isNegative: boolean;
+  } | null;
+  /**
+   * Task #932 — first chronological month where cumulative cash dips
+   * below zero. Drives the `cumulative_cash_negative` issue copy so the
+   * callout reflects *when cash first crosses zero* (the date you must
+   * survive past with a bridge), not the deepest trough — those can be
+   * different months when the cash curve dips, partially recovers, then
+   * dips deeper. `null` when cash stays positive throughout.
+   */
+  firstNegativeCashMonth?: {
+    yearIndex: number;
+    monthLabel: string;
+    amount: number;
+    isNegative: boolean;
+  } | null;
 }
 
 function fmt(n: number): string {
@@ -363,8 +390,64 @@ const shortCashRunwayRule: RuleFn = (input) => {
   };
 };
 
+// Task #932 — Cumulative cash dips below zero mid-year, even when the
+// canonical runway (year-end cash / monthly burn) reads as healthy. A
+// school can show 6 months of runway off Y1 ending cash and still go
+// cash-negative in October because tuition arrives in chunks but
+// payroll runs every month. This rule fires on the *monthly* trough so
+// founders + lenders see the in-year crunch separately from the
+// `short_cash_runway` issue (which only catches a depleted year-end
+// balance).
+const cumulativeCashNegativeRule: RuleFn = (input) => {
+  // Prefer "first month cash crosses zero" — that's the concrete date a
+  // bridge must clear. Fall back to the trough only when the canonical
+  // engine didn't expose firstNegativeCashMonth (legacy / partial data).
+  const first = input.firstNegativeCashMonth;
+  const trough = input.lowestCashMonth;
+  const flagged = first ?? (trough && trough.isNegative ? trough : null);
+  if (!flagged) return null;
+  const yearLabel = `Year ${flagged.yearIndex + 1}`;
+  // Use the trough amount (deepest hole) for sizing the bridge, since
+  // the bridge must cover the worst monthly low, not just the first
+  // crossing. Falls back to the first-crossing amount when no trough
+  // is supplied.
+  const sizingAmount = trough && trough.isNegative ? trough.amount : flagged.amount;
+  const deficit = Math.abs(sizingAmount);
+  const troughDistinct =
+    trough &&
+    trough.isNegative &&
+    first &&
+    (trough.yearIndex !== first.yearIndex || trough.monthLabel !== first.monthLabel);
+  const troughTail = troughDistinct && trough
+    ? ` The deepest trough is Year ${trough.yearIndex + 1} (${trough.monthLabel}) at ${fmt(trough.amount)}, so size your bridge to cover that low.`
+    : "";
+  return {
+    id: "cumulative_cash_negative",
+    severity: "critical",
+    title: "Your cash dips below zero mid-year",
+    summary: `Projected cash first goes negative in ${yearLabel} (${flagged.monthLabel}) at ${fmt(flagged.amount)}. Year-end cash can still look fine, but you'd be unable to make payroll that month without a bridge.${troughTail}`,
+    whyItMatters: "Runway is measured off year-end cash, so it misses the in-year troughs lenders zero in on. A negative mid-year balance means a single late tuition cycle or delayed grant turns into an immediate cash crisis.",
+    recommendedAction: `Line up a ${fmt(Math.ceil(deficit / 1000) * 1000)}+ bridge (line of credit, founder loan, or staged grant draw), shift expenses out of ${flagged.monthLabel}, or pull tuition payments forward so the trough clears.`,
+    nextStep: `Open Step 2: School Details and raise opening cash by ${fmt(Math.ceil(deficit / 1000) * 1000)}, or push a payable out of ${flagged.monthLabel} in Step 7: Expenses, until the monthly low clears zero.`,
+    relatedStep: 2,
+    supportingMetrics: [
+      { label: "Cash first goes negative", value: `${yearLabel} — ${flagged.monthLabel}` },
+      { label: "Cash at that month", value: fmt(flagged.amount) },
+      ...(troughDistinct && trough
+        ? [
+            {
+              label: "Deepest trough",
+              value: `Year ${trough.yearIndex + 1} — ${trough.monthLabel} (${fmt(trough.amount)})`,
+            },
+          ]
+        : []),
+    ],
+  };
+};
+
 const ALL_RULES: RuleFn[] = [
   negativeCashRule,
+  cumulativeCashNegativeRule,
   weakDscrRule,
   shortCashRunwayRule,
   highStaffingCostRule,
