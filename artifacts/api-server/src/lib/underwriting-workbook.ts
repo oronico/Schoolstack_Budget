@@ -921,6 +921,14 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
 
   const isPerStudent = (dt: string) => dt === "per_student" || dt === "percent_of_base";
   const categorySubtotalRows: number[] = [];
+  // Task #898 — track the cached numeric value we write into each
+  // category subtotal cell, so the cached GRAND TOTAL REVENUE below is
+  // built as the literal sum of those same numbers. That guarantees
+  // cached GTR == SUM(category subtotals) formula result and removes
+  // the previous divergence vs `computeRevenueForYear` (which applies
+  // funding-mix correction & percent_of_base handling across rows that
+  // the per-category SUM does not).
+  const categorySubtotalCachedByYear: number[][] = [];
 
   for (const cat of orderedCats) {
     const rows = catMap.get(cat);
@@ -1026,6 +1034,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
     r++;
     const catTotalLabel = `Total ${catLabel(cat)}`;
     ws.getCell(r, 1).value = catTotalLabel; bc(ws.getCell(r, 1));
+    const catCachedByYear: number[] = [];
     for (let y = 0; y < yc; y++) {
       const col = y + 2;
       const cell = ws.getCell(r, col);
@@ -1038,10 +1047,13 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
         catTotal += Math.abs(v) * s;
       }
       const sumParts = lineSubtotalRows.map(sr => cn(sr, col)).join(",");
-      setFormula(cell, `SUM(${sumParts})`, Math.round(catTotal));
+      const catCached = Math.round(catTotal);
+      setFormula(cell, `SUM(${sumParts})`, catCached);
       cell.numFmt = CUR; gc(cell);
+      catCachedByYear.push(catCached);
     }
     categorySubtotalRows.push(r);
+    categorySubtotalCachedByYear.push(catCachedByYear);
   }
 
   r += 2;
@@ -1049,9 +1061,16 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
   for (let y = 0; y < yc; y++) {
     const col = y + 2;
     const cell = ws.getCell(r, col);
-    const val = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, tfRR, y), computeReturningStudents(enrollment, tfRR, y));
+    // Task #898 — cached GTR must equal the SUM formula's result. We
+    // previously used `computeRevenueForYear` here, which applies
+    // funding-mix correction & percent_of_base handling across rows
+    // and therefore diverged from the per-category SUM (microschool
+    // ~$15K, private ~$1.9M). Summing the cached category subtotals
+    // we just wrote makes cached == formula by construction.
+    let cachedSum = 0;
+    for (const cyVals of categorySubtotalCachedByYear) cachedSum += cyVals[y] ?? 0;
     const sumParts = categorySubtotalRows.map(sr => cn(sr, col)).join(",");
-    setFormula(cell, `SUM(${sumParts})`, Math.round(val));
+    setFormula(cell, `SUM(${sumParts})`, cachedSum);
     cell.numFmt = CUR; gc(cell); outputCell(cell);
   }
 

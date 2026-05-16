@@ -23,7 +23,7 @@
 import ExcelJS from "exceljs";
 import { generateUnderwritingWorkbook } from "../src/lib/underwriting-workbook.js";
 import { generateLenderProFormaWorkbook } from "../src/lib/lender-proforma-export.js";
-import { microschoolStartup } from "./sample-payloads.js";
+import { microschoolStartup, privateSchoolWithESA, charterPublicFunding } from "./sample-payloads.js";
 
 let passed = 0;
 let failed = 0;
@@ -556,6 +556,68 @@ async function caseLenderProForma(): Promise<void> {
   }
 }
 
+// ---------- Case: Tuition & Funding cached GTR == SUM formula (#898) ------
+async function caseTuitionFundingCachedEqualsFormula(): Promise<void> {
+  // Task #898 — when Excel recomputes the SUM formula on
+  // "Tuition & Funding!GRAND TOTAL REVENUE", the displayed value must
+  // match the cached number we shipped in the file. Previously we
+  // cached `computeRevenueForYear` (which applies funding-mix
+  // correction & percent_of_base handling) while the formula is
+  // SUM over per-category subtotals — they diverged by ~$15K on the
+  // microschool fixture and ~$1.9M on the private-school fixture.
+  const personas: Array<[string, Record<string, unknown>]> = [
+    ["microschool", microschoolStartup as unknown as Record<string, unknown>],
+    ["private", privateSchoolWithESA as unknown as Record<string, unknown>],
+    ["charter", charterPublicFunding as unknown as Record<string, unknown>],
+  ];
+  for (const [tag, payload] of personas) {
+    const wb = await loadV2(payload);
+    const tf = wb.getWorksheet("Tuition & Funding");
+    if (!tf) { check(`${tag}: Tuition & Funding sheet exists`, false); continue; }
+
+    // Find the GTR row. The label cell is the section header row; the
+    // numeric row that carries the SUM formula and cached value is the
+    // same row (label is in col 1, values start in col 2).
+    const gtrRow = findRowByLabel(tf, "GRAND TOTAL REVENUE");
+    if (gtrRow <= 0) { check(`${tag}: GRAND TOTAL REVENUE row found`, false); continue; }
+
+    // Collect the cached value of every "Total <Category>" subtotal row
+    // and assert that GTR cached equals their sum, year-by-year.
+    const subtotalRows: number[] = [];
+    tf.eachRow((_row, n) => {
+      const lbl = cellString(tf, n, 1);
+      if (lbl.startsWith("Total ") && n < gtrRow) subtotalRows.push(n);
+    });
+    check(
+      `${tag}: T&F exposes at least one category subtotal row`,
+      subtotalRows.length > 0,
+    );
+
+    // Probe Y1..Y5 (columns 2..6). Not every fixture uses all 5 years,
+    // so we skip columns where the cached GTR is 0 AND the sum is 0.
+    for (let col = 2; col <= 6; col++) {
+      const cached = cellNumber(tf, gtrRow, col);
+      let summed = 0;
+      for (const sr of subtotalRows) summed += cellNumber(tf, sr, col);
+      if (cached === 0 && summed === 0) continue;
+      check(
+        `${tag} Y${col - 1}: cached GTR == SUM(category subtotals)`,
+        Math.abs(cached - summed) <= 1,
+        `cached=${cached}, summed=${summed}, delta=${cached - summed}`,
+      );
+      // Also confirm the cell carries the SUM formula (so Excel's
+      // recompute path is the path we're matching against, not a
+      // plain number).
+      const f = cellFormula(tf, gtrRow, col);
+      check(
+        `${tag} Y${col - 1}: GTR cell is a SUM formula`,
+        f.startsWith("SUM("),
+        `formula="${f}"`,
+      );
+    }
+  }
+}
+
 async function main(): Promise<void> {
   await caseScholarshipSign();
   await caseScholarshipFlowsToGrandTotal();
@@ -564,6 +626,7 @@ async function main(): Promise<void> {
   await caseCapacityCovenant();
   await caseProfitableNetMargin();
   await caseLenderProForma();
+  await caseTuitionFundingCachedEqualsFormula();
 
   console.log(`workbook-accuracy-task-862: ${passed} passed, ${failed} failed`);
   if (failed > 0) {
