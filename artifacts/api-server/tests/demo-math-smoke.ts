@@ -803,6 +803,61 @@ async function runOne(c: DemoCase): Promise<void> {
       `stale="${stale}" was found — packet renderer is drifting from canonical Op Stmt!B5:F5`,
     );
   }
+
+  // Task #914 (2.2) — Executive Summary headline ↔ canonical parity.
+  // The consultant engine builds the rendered Executive Summary as
+  //   "{schoolName} projects {fmt(yLast.totalRevenue)} in Year {N} revenue …"
+  // (consultant-engine.ts L2886-L2893). The consultant engine's local
+  // `fmt` uses `Intl.NumberFormat` (full integer with commas, e.g.
+  // "$400,145"), distinct from build-packet-data.ts's short-form
+  // `$400K`/`$8.8M` formatter used by the Revenue by Year table.
+  //
+  // Per the task review, we anchor each consumer INDEPENDENTLY to the
+  // canonical series (not against each other), so a regression in
+  // either consumer surfaces on its own and pre-fix Riverside's
+  // "$5.3M in Year 5 revenue" (net-tuition-only) vs canonical "$8.8M"
+  // would fail this assertion regardless of the table state. Combined
+  // with the table block above (which pins Table == canonical for all
+  // 5 years across all 3 demos), this closes the loop the task asks
+  // for: Table cell == canonical; Exec Summary headline == canonical.
+  const y5Target = years[Math.min(4, years.length - 1)].totalRevenue;
+  // Match either the full integer form ($400,145 — the consultant
+  // engine's Intl.NumberFormat output) or the short form ($400K — what
+  // build-packet-data.fmt emits) so the assertion isn't coupled to
+  // either formatter's choice. Both must round to the same canonical
+  // engine figure (yLast.totalRevenue from computeYearFinancialsFromData,
+  // the same series the Op Stmt sheet renders at B5:F5).
+  const y5Rounded = Math.round(y5Target);
+  const y5Full = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(y5Rounded);
+  const y5Short = fmtShortLikeRenderer(y5Target);
+  const escapeForRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const execHeadlineRe = new RegExp(
+    `(?:${escapeForRegex(y5Full)}|${escapeForRegex(y5Short)})\\s*in\\s*Year\\s*\\d+\\s*revenue`,
+    "i",
+  );
+  check(
+    `${tag} Executive Summary headline Y5 revenue matches canonical (engine=${y5Target}, full=${y5Full}, short=${y5Short})`,
+    execHeadlineRe.test(normText),
+    `expected "${y5Full}" or "${y5Short}" followed by "in Year N revenue" in normalized PDF text`,
+  );
+
+  // Task #914 (2.2) — Label/data-source guard. The original Riverside
+  // bug was the table being LABELED "Total Revenue" while only showing
+  // net-tuition figures. The fix (build-packet-data.ts L173-176 pulls
+  // canonical Op Stmt totalRevenue) makes the label accurate by
+  // construction, but pin the label here so a future refactor that
+  // changes the data source without updating the header (or vice
+  // versa) breaks loudly. The table header is rendered as
+  // `["Year", "Total Revenue"]` in build-packet-data.ts L451.
+  check(
+    `${tag} Revenue by Year table header includes "Total Revenue" label`,
+    /Total\s*Revenue/i.test(normText.slice(tableIdx >= 0 ? tableIdx : 0, (tableIdx >= 0 ? tableIdx : 0) + 600)),
+    `header label missing — guards against silent data-source/label drift`,
+  );
   // ────────────────────────────────────────────────────────────────────
 
   // 4a. School name renders into the printed PDF text. PDFKit may break

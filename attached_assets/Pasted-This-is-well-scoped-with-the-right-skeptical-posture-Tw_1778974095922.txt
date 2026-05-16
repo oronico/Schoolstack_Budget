@@ -1,0 +1,29 @@
+This is well-scoped with the right skeptical posture. Two things to firm up before kickoff.
+
+What’s good:
+
+	•	Skeptical of subagent claim — “Output verification required” is the right posture after the recent pattern of “fixed” items needing actual verification
+	•	Concrete regression test — Table cell == Executive Summary headline == canonical series is exactly the cross-section consistency check the protocol calls for
+	•	Tight scope boundary with 2.1
+	•	Conditional execution — “if broken: switch source” prevents unnecessary refactor
+
+Sequencing dependency with #912: Task 2.1 LOCKS the canonical revenue series. Task 2.2 ROUTES the Revenue by Year table to it. If #912 isn’t complete and verified, this task fixes the table to read from a source that #912 may then change. Confirm #912 status before kickoff — if it’s still open, this should wait or be done in concert.
+
+Cross-persona verification: The task focuses on Riverside’s bug, but my original review found similar gaps in Liberty (PDF Y1 “$5.8M” vs Op Stmt $4.875M) and likely Oakwood. The regression test should explicitly verify all three demos, not just Riverside. Pattern: if one packet’s Revenue by Year table was wrong, the same code path probably affects all three.
+
+One subtle issue with the three-way equality assertion: “Table cell == Executive Summary headline == canonical series” assumes Executive Summary already pulls from canonical. If Exec Summary is also broken, the assertion fails for the wrong reason. Cleaner framing: anchor each consumer independently to the canonical series:
+
+	•	Table cell == canonical series (Op Stmt B5:F5)
+	•	Exec Summary headline == canonical series (Op Stmt B5:F5)
+
+Same outcome, but tests each consumer against ground truth instead of against each other. Easier to debug when something breaks.
+
+Label verification: The original bug was the table being labeled “Total Revenue” while showing net tuition only. The fix implicitly addresses this (if the table reads total, the label becomes accurate), but a one-line check that the label matches what’s displayed wouldn’t hurt — guards against future regressions where someone changes the data source without updating the label, or vice versa.
+
+Recommendation: Approve as written with these adjustments:
+
+	1.	Confirm #912 (Task 2.1) is complete or sequence #914 to follow it
+	2.	Make the regression test explicit about all three demos
+	3.	Anchor the equality assertion on canonical series directly, not on Exec Summary
+
+Quick task if #912 has fully landed. The fix itself is mechanical — point the table at the right cell. Most of the work is verification, which is the correct way to spend time on these source-of-truth tasks.
