@@ -66,395 +66,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 1 of 8
+age 1 of 7
 --- PAGE 2 ---
-Plain-English Summar
-y
-A plain-language read of y
-our model.
- Same six sections y
-ou see in the in-app summar
-y vie
-w
-, sourced from the canonical engine
-.
-What y
-our model sa
-ys
-Y
-our plan opens with 200 students in 
-Y
-ear 1 and g
-ro
-ws to 400 b
-y 
-Y
-ear 5, against a stated capacity of 400 seats
-.
- 
-This model 
-demonstr
-ates strong financial fundamentals:
- a clear path to net income
-, controlled costs
-, a sustainab
-le re
-v
-en
-ue mix, and 
-adequate debt co
-v
-er
-age
-.
- 
-Y
-our projections are g
-rounded and achie
-v
-ab
-le
-.
- On the canonical engine
-, the model reads as:
- Ready to 
-share - k
-eep polishing the narr
-ativ
-e
-.
-On the same n
-umbers a lender will pull, 
-Y
-ear 1 debt ser
-vice co
-v
-er
-age lands at 21.01x.
- Cash sta
-ys positiv
-e across the full 
-Y
-ear 5 
-windo
-w
-, reaching about 82 months of oper
-ating reser
-v
-es b
-y 
-Y
-ear 5.
-What looks str
-ong
-Here is what is w
-or
-king in y
-our f
-a
-v
-or r
-ight no
-w
-.
- Strong 
-Y
-ear 5 net income
- Health
-y:
- 
-The model reaches net income ear
-ly and sustains strong margins through 
-Y
-ear 5.
- Health
-y:
- Cash sta
-ys positiv
-e throughout the projection and reser
-v
-es e
-xceed 3 months of e
-xpenses
-.
- Health
-y:
- Staffing at 32% of re
-v
-en
-ue lea
-v
-es room f
-or f
-acilities
-, prog
-r
-ams
-, and reser
-v
-es
-.
- Health
-y:
- F
-acility costs at 1% of re
-v
-en
-ue are w
-ell-managed and lea
-v
-e b
-udget f
-or prog
-r
-ams
-.
- 
-The plan crosses oper
-ating break-e
-v
-en in 
-Y
-ear 1, inside the 
-Y
-ear 5 windo
-w
-.
- 
-Y
-ear 1 debt ser
-vice co
-v
-er
-age of 21.01x clears the 1.25x lender benchmar
-k from the star
-t.
-What needs more c
-larity
-These are the inputs a re
-vie
-w
-er will probe first.
- P
-air each with the source y
-ou used (signed letters of intent, compar
-ab
-le schools
-, 
-v
-endor quotes) so the con
-v
-ersation mo
-v
-es quic
-kly
-.
- y
-ear1.tuitionCo
-v
-er
-age (T
-uition co
-v
-ers 39% of 
-Y
-ear 1 total e
-xpenses vs "e 70%):
- Open Step 5:
- Re
-v
-en
-ue and g
-ro
-w tuition lines
-, or tr
-im 
-Step 7:
- Expenses
-, until tuition co
-v
-ers at least 70% of 
-Y
-ear 1 e
-xpenses
-.
-What could create cash pressure
-Cash sta
-ys positiv
-e across the modeled 
-Y
-ear 5 windo
-w
-, so the pressure points belo
-w are about preser
-ving that cushion under 
-stress
-, not sur
-viving the base case
-.
- 
-T
-oughest stress test (Enrollment -20%):
- minim
-um debt ser
-vice co
-v
-er
-age holds at 16.76x and minim
-um ending cash dips to 
-$1,843,518.
- F
-ounder compensation is r
-unning $796,870 belo
-w mar
-k
-et across the modeled per
-iod.
- If y
-ou e
-v
-er pa
-y y
-ourself a mar
-k
-et r
-ate
-, the 
-cushion shr
-inks
-.
-What to fix fir
-st
-W
-or
-k this list top-do
-wn.
- Cash-impact items come first because the
-y protect the school's ability to oper
-ate;
- sustainability items 
-come ne
-xt;
- polish items can w
-ait until y
-ou ha
-v
-e a w
-or
-king dr
-aft.
- y
-ear1.tuitionCo
-v
-er
-age:
- Open Step 5:
- Re
-v
-en
-ue and g
-ro
-w tuition lines
-, or tr
-im Step 7:
- Expenses
-, until tuition co
-v
-ers at least 70% of 
-Y
-ear 1 e
-xpenses
-.
-What someone re
-vie
-wing this ma
-y ask
-These are the questions someone re
-vie
-wing this pac
-k
-et will most lik
-ely ask.
- Ha
-v
-e a sourced one-line ans
-w
-er ready f
-or each.
- On y
-ear1.tuitionCo
-v
-er
-age:
- 
-T
-uition accounts f
-or only 39% of 
-Y
-ear 1 e
-xpenses
-, meaning y
-ou depend on g
-r
-ants or donations to co
-v
-er 
-costs
-.
- 
-What's y
-our plan if that e
-xter
-nal funding doesn't mater
-ializ
-e?
- 
-What is y
-our e
-vidence base f
-or 200 students in 
-Y
-ear 1?
- 
-What bac
-ks the 92% retention assumption (w
-aitlist, compar
-ab
-le schools
-, pr
-ior cohor
-ts)?
- 68% of 
-Y
-ear 1 re
-v
-en
-ue is policy-dependent.
- 
-What changes if the funding r
-ules shift?
- F
-ounder compensation is nor
-maliz
-ed to a mar
-k
-et r
-ate f
-or the lender vie
-w
-.
- Ho
-w long will y
-ou actually r
-un on the planned dr
-a
-w?
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 2 of 8
---- PAGE 3 ---
 Boar
 d Commentar
 y
@@ -708,8 +321,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 3 of 8
---- PAGE 4 ---
+age 2 of 7
+--- PAGE 3 ---
 [~] 
 Cash Runw
 a
@@ -878,8 +491,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 4 of 8
---- PAGE 5 ---
+age 3 of 7
+--- PAGE 4 ---
 Categor
 y
 Prior 
@@ -1056,8 +669,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 5 of 8
---- PAGE 6 ---
+age 4 of 7
+--- PAGE 5 ---
 Health Dimensions
 Dimension
 Status
@@ -1352,8 +965,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 6 of 8
---- PAGE 7 ---
+age 5 of 7
+--- PAGE 6 ---
 happened v
 ersus what w
 as modeled.
@@ -1623,8 +1236,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 7 of 8
---- PAGE 8 ---
+age 6 of 7
+--- PAGE 7 ---
 Enr
 ollment -20%
 All fiv
@@ -1849,4 +1462,4 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 8 of 8
+age 7 of 7

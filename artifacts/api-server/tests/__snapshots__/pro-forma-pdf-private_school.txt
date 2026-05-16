@@ -1,0 +1,960 @@
+--- PAGE 1 ---
+Sc
+hoolStac
+k Budg
+et
+b
+y SchoolStac
+k.ai
+River
+side Christian Academ
+y - Pr
+o Forma Financial 
+Model
+Multi-Y
+ear Financial Projections  Accr
+ual basis (school currently on undeter
+mined basis)
+Sc
+hool Pr
+ofile
+School Name
+  River
+side Christian Academ
+y
+School 
+T
+ype
+  Priv
+ate Sc
+hool
+Entity 
+T
+ype
+  501(c)(3) Nonpr
+ofit
+State
+  FL
+Opening 
+Y
+ear
+  2023
+Max Capacity
+  400
+Fiscal 
+Y
+ear Star
+t
+  J
+ul
+y
+Enr
+ollment Pr
+ojections
+Y
+ear 1
+Y
+ear 2
+Y
+ear 3
+Y
+ear 4
+Y
+ear 5
+Students
+200
+250
+300
+350
+400
+Max Capacity
+400
+400
+400
+400
+400
+Utilization
+50.0%
+62.5%
+75.0%
+87.5%
+100.0%
+Ann
+ual 
+T
+uition (K-8)  Collection
+  A
+utopa
+y / 
+A
+CH @ 100%
+Registr
+ation & Activity F
+ees  Collection
+  
+A
+utopa
+y / A
+CH @ 100%
+Scholarships / Financial Aid  Collection
+  
+A
+utopa
+y / A
+CH @ 100%
+Re
+ven
+ue Sc
+hedule
+Categor
+y
+Y
+ear 1
+Y
+ear 2
+Y
+ear 3
+Y
+ear 4
+Y
+ear 5
+T
+uition & Student F
+ees
+$812,500
+$1,062,500
+$1,409,480
+$1,723,898
+$2,073,526
+T
+uition Offsets
+-$271,500
+-$351,000
+-$444,538
+-$536,568
+-$635,223
+School Choice / Choice Funding
+$1,600,000
+$2,050,000
+$2,520,000
+$3,010,000
+$3,520,000
+Philanthrop
+y
+$125,000
+$125,000
+$125,000
+$125,000
+$130,000
+Other Re
+v
+en
+ue
+$100,000
+$125,000
+$150,000
+$175,000
+$200,000
+T
+O
+T
+AL REVENUE
+$2,366,000
+$3,011,500
+$3,759,942
+$4,497,330
+$5,288,303
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 1 of 6
+--- PAGE 2 ---
+Staffing & P
+er
+sonnel
+Function
+P
+ositions
+FTE
+Y
+ear 1 Cost
+School Leadership
+2
+2.0
+$216,516
+Instr
+uctional
+2
+18.0
+$956,034
+Administr
+ativ
+e
+1
+1.0
+$53,613
+Student Suppor
+t
+1
+1.0
+$70,208
+T
+O
+T
+AL
+6
+22.0
+$1,296,370
+Operating Expenses
+Categor
+y
+Y
+ear 1
+Y
+ear 2
+Y
+ear 3
+Y
+ear 4
+Y
+ear 5
+Instr
+uctional / Prog
+r
+am
+$128,000
+$160,000
+$192,000
+$224,000
+$255,000
+T
+echnology
+$70,000
+$87,500
+$105,000
+$122,500
+$140,000
+Occupancy / F
+acility
+$36,000
+$38,000
+$40,000
+$42,000
+$44,000
+Administr
+ativ
+e / Gener
+al
+$45,000
+$43,500
+$43,000
+$42,500
+$44,000
+T
+O
+T
+AL OPERA
+TING EXPENSES
+$279,000
+$329,000
+$380,000
+$431,000
+$483,000
+5-Y
+ear Net Income & Loss Statement
+Y
+ear 1
+Y
+ear 2
+Y
+ear 3
+Y
+ear 4
+Y
+ear 5
+T
+otal Re
+v
+en
+ue
+$2,366,000
+$3,011,500
+$3,759,942
+$4,497,330
+$5,288,303
+T
+otal Staffing
+($1,296,370)
+($1,335,261)
+($1,375,319)
+($1,416,579)
+($1,459,076)
+T
+otal Oper
+ating Expenses
+($279,000)
+($329,000)
+($380,000)
+($431,000)
+($483,000)
+Interest Expense
+($75,586)
+($73,512)
+($71,309)
+($68,968)
+($66,481)
+Pr
+incipal & Capital Outla
+ys
+($33,742)
+($35,816)
+($38,020)
+($40,360)
+($42,847)
+Net Income
+$681,302
+$1,237,911
+$1,895,295
+$2,540,424
+$3,236,899
+Net Margin %
+28.8%
+41.1%
+50.4%
+56.5%
+61.2%
+Cum
+ulativ
+e Net Income
+$681,302
+$1,919,213
+$3,814,508
+$6,354,932
+$9,591,831
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 2 of 6
+--- PAGE 3 ---
+Prior
+-Y
+ear Actuals vs.
+ 
+Y
+ear 1 Pr
+ojections
+Prior 
+Y
+ear
+Y
+ear 1 Pr
+ojected
+V
+ariance
+T
+otal Re
+v
+en
+ue
+$2,400,000
+$2,366,000
+-1.4%
+T
+otal Expenses
+$2,200,000
+$1,684,698
+-23.4%
+Ending Enrollment
+185
+200
+
+Ending Cash
+$120,000
+
+
+Opening Balance Sheet
+Amount
+ASSETS
+  Cash & Cash Equiv
+alents
+$120,000
+  Fix
+ed Assets (Net)
+$850,000
+T
+otal Assets
+$970,000
+LIABILITIES
+  Long-T
+er
+m Debt
+$1,200,000
+T
+otal Liabilities
+$1,200,000
+Net P
+osition
+-$230,000
+K
+e
+y Financial Indicator
+s
+Re
+v
+en
+ue per Student
+  $11,830
+V
+ar
+iab
+le Cost per Student
+  $950
+Fix
+ed Costs
+  $1,494,698
+Break
+e
+v
+en Enrollment
+  138 students
+Enrollment Cushion
+  45% abo
+ve breake
+ven
+F
+acility Cost / Student
+  $180
+Rene
+w
+al Option
+  No
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 3 of 6
+--- PAGE 4 ---
+Y
+ear 1 Monthl
+y Cash Flo
+w
+Month
+Beginning
+Inflo
+ws
+Outflo
+ws
+Net Cash Flo
+w
+Ending
+J
+ul
+$120,000
+$533,333
+($140,392)
+$392,942
+$512,942
+A
+ug
+$512,942
+$243,333
+($140,392)
+$102,942
+$615,884
+Sep
+$615,884
+$243,333
+($140,392)
+$102,942
+$718,825
+Oct
+$718,825
+$643,333
+($140,392)
+$502,942
+$1,221,767
+No
+v
+$1,221,767
+$243,333
+($140,392)
+$102,942
+$1,324,709
+Dec
+$1,324,709
+$243,333
+($140,392)
+$102,942
+$1,427,651
+J
+an
+$1,427,651
+$643,333
+($140,392)
+$502,942
+$1,930,593
+F
+eb
+$1,930,593
+$243,333
+($140,392)
+$102,942
+$2,033,535
+Mar
+$2,033,535
+$243,333
+($140,392)
+$102,942
+$2,136,476
+Apr
+$2,136,476
+$643,333
+($140,392)
+$502,942
+$2,639,418
+Ma
+y
+$2,639,418
+$243,333
+($140,392)
+$102,942
+$2,742,360
+J
+un
+$2,742,360
+$8,333
+($140,392)
+-$132,058
+$2,610,302
+Y
+ear 2 Monthl
+y Cash Flo
+w
+Month
+Beginning
+Inflo
+ws
+Outflo
+ws
+Net Cash Flo
+w
+Ending
+J
+ul
+$2,610,302
+$647,917
+($147,799)
+$500,118
+$3,110,419
+A
+ug
+$3,110,419
+$315,167
+($147,799)
+$167,368
+$3,277,787
+Sep
+$3,277,787
+$315,167
+($147,799)
+$167,368
+$3,445,155
+Oct
+$3,445,155
+$827,667
+($147,799)
+$679,868
+$4,125,022
+No
+v
+$4,125,022
+$315,167
+($147,799)
+$167,368
+$4,292,390
+Dec
+$4,292,390
+$315,167
+($147,799)
+$167,368
+$4,459,757
+J
+an
+$4,459,757
+$827,667
+($147,799)
+$679,868
+$5,139,625
+F
+eb
+$5,139,625
+$315,167
+($147,799)
+$167,368
+$5,306,992
+Mar
+$5,306,992
+$315,167
+($147,799)
+$167,368
+$5,474,360
+Apr
+$5,474,360
+$827,667
+($147,799)
+$679,868
+$6,154,228
+Ma
+y
+$6,154,228
+$315,167
+($147,799)
+$167,368
+$6,321,595
+J
+un
+$6,321,595
+$10,417
+($147,799)
+-$137,382
+$6,184,213
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 4 of 6
+--- PAGE 5 ---
+Y
+ear 3 Monthl
+y Cash Flo
+w
+Month
+Beginning
+Inflo
+ws
+Outflo
+ws
+Net Cash Flo
+w
+Ending
+J
+ul
+$6,184,213
+$767,500
+($155,387)
+$612,113
+$6,796,325
+A
+ug
+$6,796,325
+$391,928
+($155,387)
+$236,541
+$7,032,866
+Sep
+$7,032,866
+$391,928
+($155,387)
+$236,541
+$7,269,407
+Oct
+$7,269,407
+$1,021,928
+($155,387)
+$866,541
+$8,135,948
+No
+v
+$8,135,948
+$391,928
+($155,387)
+$236,541
+$8,372,488
+Dec
+$8,372,488
+$391,928
+($155,387)
+$236,541
+$8,609,029
+J
+an
+$8,609,029
+$1,021,928
+($155,387)
+$866,541
+$9,475,570
+F
+eb
+$9,475,570
+$391,928
+($155,387)
+$236,541
+$9,712,111
+Mar
+$9,712,111
+$391,928
+($155,387)
+$236,541
+$9,948,651
+Apr
+$9,948,651
+$1,021,928
+($155,387)
+$866,541
+$10,815,192
+Ma
+y
+$10,815,192
+$391,928
+($155,387)
+$236,541
+$11,051,733
+J
+un
+$11,051,733
+$12,500
+($155,387)
+-$142,887
+$10,908,846
+Y
+ear 4 Monthl
+y Cash Flo
+w
+Month
+Beginning
+Inflo
+ws
+Outflo
+ws
+Net Cash Flo
+w
+Ending
+J
+ul
+$10,908,846
+$892,083
+($163,076)
+$729,008
+$11,637,853
+A
+ug
+$11,637,853
+$473,912
+($163,076)
+$310,837
+$11,948,690
+Sep
+$11,948,690
+$473,912
+($163,076)
+$310,837
+$12,259,527
+Oct
+$12,259,527
+$1,226,412
+($163,076)
+$1,063,337
+$13,322,863
+No
+v
+$13,322,863
+$473,912
+($163,076)
+$310,837
+$13,633,700
+Dec
+$13,633,700
+$473,912
+($163,076)
+$310,837
+$13,944,536
+J
+an
+$13,944,536
+$1,226,412
+($163,076)
+$1,063,337
+$15,007,873
+F
+eb
+$15,007,873
+$473,912
+($163,076)
+$310,837
+$15,318,709
+Mar
+$15,318,709
+$473,912
+($163,076)
+$310,837
+$15,629,546
+Apr
+$15,629,546
+$1,226,412
+($163,076)
+$1,063,337
+$16,692,883
+Ma
+y
+$16,692,883
+$473,912
+($163,076)
+$310,837
+$17,003,719
+J
+un
+$17,003,719
+$14,583
+($163,076)
+-$148,492
+$16,855,227
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 5 of 6
+--- PAGE 6 ---
+Y
+ear 5 Monthl
+y Cash Flo
+w
+Month
+Beginning
+Inflo
+ws
+Outflo
+ws
+Net Cash Flo
+w
+Ending
+J
+ul
+$16,855,227
+$1,026,667
+($170,950)
+$855,716
+$17,710,943
+A
+ug
+$17,710,943
+$561,396
+($170,950)
+$390,446
+$18,101,389
+Sep
+$18,101,389
+$561,396
+($170,950)
+$390,446
+$18,491,835
+Oct
+$18,491,835
+$1,441,396
+($170,950)
+$1,270,446
+$19,762,281
+No
+v
+$19,762,281
+$561,396
+($170,950)
+$390,446
+$20,152,727
+Dec
+$20,152,727
+$561,396
+($170,950)
+$390,446
+$20,543,173
+J
+an
+$20,543,173
+$1,441,396
+($170,950)
+$1,270,446
+$21,813,619
+F
+eb
+$21,813,619
+$561,396
+($170,950)
+$390,446
+$22,204,065
+Mar
+$22,204,065
+$561,396
+($170,950)
+$390,446
+$22,594,511
+Apr
+$22,594,511
+$1,441,396
+($170,950)
+$1,270,446
+$23,864,957
+Ma
+y
+$23,864,957
+$561,396
+($170,950)
+$390,446
+$24,255,403
+J
+un
+$24,255,403
+$16,667
+($170,950)
+-$154,284
+$24,101,119
+Lo
+w
+est cash month across the 5-
+y
+ear f
+orecast:
+ 
+Y
+ear 1  J
+ul at 
+$512,942.
+Lo
+west Cash Month b
+y 
+Y
+ear
+Y
+ear
+Month
+Ending Cash
+Y
+ear 1
+J
+ul
+$512,942
+Y
+ear 2
+J
+ul
+$3,110,419
+Y
+ear 3
+J
+ul
+$6,796,325
+Y
+ear 4
+J
+ul
+$11,637,853
+Y
+ear 5
+J
+ul
+$17,710,943
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 6 of 6
