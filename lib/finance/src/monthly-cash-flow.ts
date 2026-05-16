@@ -450,3 +450,35 @@ export function computeCashRunwayMonths(
   }
   return cap;
 }
+
+/**
+ * Task #908 — Canonical cash-runway formula. Single source of truth used
+ * across the Lender Commentary, Exec Summary, Cumulative Cash Position,
+ * Health Dimensions block, and the underwriting workbook's
+ * `DSCR & Covenants!B18` cell. Defined as:
+ *
+ *   months_of_runway = ending_unrestricted_cash
+ *                      / ((personnel + opex + debt_service) / 12)
+ *
+ * This is the simple average-burn formula lenders read off the DSCR tab,
+ * not the month-by-month depletion `computeCashRunwayMonths` produces.
+ * The two formulas disagreed in the field (Oakwood: 1mo / 1.9mo / 2.93mo
+ * across surfaces); routing every consumer through this helper makes them
+ * converge. `endingUnrestrictedCash` is the unrestricted balance at the
+ * end of the period whose runway is being measured (typically Y1 ending
+ * cash position, minus cumulative restricted gifts through Y1).
+ *
+ * Returns 0 when annual obligations are <= 0 (no expenses, no debt). The
+ * caller is expected to clamp / cap for display.
+ */
+export function computeCanonicalCashRunwayMonths(
+  endingUnrestrictedCash: number,
+  annualPersonnel: number,
+  annualOpex: number,
+  annualDebtService: number,
+): number {
+  const annualObligations =
+    (annualPersonnel || 0) + (annualOpex || 0) + (annualDebtService || 0);
+  if (annualObligations <= 0) return 0;
+  return endingUnrestrictedCash / (annualObligations / 12);
+}

@@ -10,7 +10,7 @@
   DSCR (Normalized)    (DSCR & Covenants!B12:F12)     Y1=30.84x  Y2=70.23x  Y3=101.32x  Y4=140.15x  Y5=182.09x
   Ending Cash          (DSCR & Covenants!B15:F15)     Y1=$2,272,877  Y2=$7,081,343  Y3=$14,049,486  Y4=$23,714,359  Y5=$36,292,199
   Days Cash on Hand    (DSCR & Covenants!B17:F17)     Y1=296d  Y2=662d  Y3=1099d  Y4=1679d  Y5=2388d
-  Months of Runway     (DSCR & Covenants!B18:F18)     Y1=9.7m  Y2=21.8m  Y3=36.1m  Y4=55.2m  Y5=78.5m
+  Months of Runway     (DSCR & Covenants!B18:F18)     Y1=11.1m  Y2=21.8m  Y3=36.1m  Y4=55.2m  Y5=78.5m
   Capacity Utilization (DSCR & Covenants!B19:F19)     Y1=33%  Y2=5%  Y3=67%  Y4=83%  Y5=1%
   Break-Even Enroll    (DSCR & Covenants!B25:F25)     Y1=93  Y2=121  Y3=14  Y4=146  Y5=147
   Enrollment           (Enrollment Tuition Fcst!B4:F4) Y1=2  Y2=3  Y3=4  Y4=5  Y5=6
@@ -36,11 +36,11 @@
      DSCR (Normalized) column present: true
 
 [FAIL] B3.runway-figures — Multiple runway figures per packet (#908)
-     canonical Y1 Runway (DSCR & Covenants!B18) = 9.7 months
-     runway narrative occurrences: 2 (distinct: 1)
-       distinct values: 60 months
-       diverging:       60 months
-       literal hits:    "Cash Runway: 60+ months", "Cash Runway: 60+ months"
+     canonical Y1 Runway (DSCR & Covenants!B18) = 11.1 months
+     runway narrative occurrences: 4 (distinct: 1)
+       distinct values: 8.8 months
+       diverging:       8.8 months
+       literal hits:    "Cash Runway: 8.77113524518666 months", "Cash Runway: 8.77113524518666 months", "Cash runway: 8.77113524518666 months", "runway extends 8.77113524518666 months"
 
 [FAIL] B4.loan-rate — Loan-rate narrative ↔ Capital Stack parity (#916)
      Capital Stack loans:
@@ -71,9 +71,9 @@
 
 [FAIL] B7.empty-bullets — Unrendered `[ ]` ASCII bullets in PDF (#923)
      ASCII "[ ]" placeholder bullets:  16
-     ASCII "[+]" passing bullets:      26
-     ASCII "[~]" caution bullets:      2
-     ASCII "[!]" warning bullets:      0
+     ASCII "[+]" passing bullets:      25
+     ASCII "[~]" caution bullets:      4
+     ASCII "[!]" warning bullets:      1
        → empty checkboxes leak into rendered packet (Task #923 scope).
 
 [PASS] B8.readiness-evidence — "Strong" Lender Readiness with 0% evidence (#929)
@@ -136,7 +136,7 @@
        - $1.9M (=1900000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $12.3M (=12300000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $854K (=854000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
-       - $8.2M (=8199999.999999999) — disagrees with canonical 5-Year Operating Stmt!B8:F8
+       - $8 (=8) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $250K (=250000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $60K (=60000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $1.7M (=1700000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
@@ -217,14 +217,14 @@
      years with ≥1 matched occurrence: (none)
 
 [FAIL] M.runwayMonths — Metric-location map — Months of Runway
-     canonical truth (DSCR & Covenants!B18:F18): Y1=9.7m  Y2=21.8m  Y3=36.1m  Y4=55.2m  Y5=78.5m
-     keyword-anchored windows scanned: 19
+     canonical truth (DSCR & Covenants!B18:F18): Y1=11.1m  Y2=21.8m  Y3=36.1m  Y4=55.2m  Y5=78.5m
+     keyword-anchored windows scanned: 39
      matched (literal → canonical year):
-       (none)
+       - 11.0 months → Y1
      mismatched (keyword-adjacent but doesn't match any canonical Y1..Y5):
-       - 60+ months (=60) — disagrees with canonical DSCR & Covenants!B18:F18
-       - 60.0 months (=60) — disagrees with canonical DSCR & Covenants!B18:F18
-     years with ≥1 matched occurrence: (none)
+       - 8.77113524518666 months (=8.77113524518666) — disagrees with canonical DSCR & Covenants!B18:F18
+       - 18 months (=18) — disagrees with canonical DSCR & Covenants!B18:F18
+     years with ≥1 matched occurrence: Y1
 
 [FAIL] M.capacityUtilization — Metric-location map — Capacity Utilization
      canonical truth (DSCR & Covenants!B19:F19): Y1=33%  Y2=5%  Y3=67%  Y4=83%  Y5=1%
@@ -252,14 +252,13 @@
        - 93 → Y1
        - 121 → Y2
      mismatched (keyword-adjacent but doesn't match any canonical Y1..Y5):
-       - 78 (=78) — disagrees with canonical DSCR & Covenants!B25:F25
+       - 258 (=258) — disagrees with canonical DSCR & Covenants!B25:F25
        - 70 (=70) — disagrees with canonical DSCR & Covenants!B25:F25
        - 80 (=80) — disagrees with canonical DSCR & Covenants!B25:F25
        - 150 (=150) — disagrees with canonical DSCR & Covenants!B25:F25
        - 200 (=200) — disagrees with canonical DSCR & Covenants!B25:F25
        - 160 (=160) — disagrees with canonical DSCR & Covenants!B25:F25
        - 74 (=74) — disagrees with canonical DSCR & Covenants!B25:F25
-       - 60 (=60) — disagrees with canonical DSCR & Covenants!B25:F25
        - 118 (=118) — disagrees with canonical DSCR & Covenants!B25:F25
        - 154 (=154) — disagrees with canonical DSCR & Covenants!B25:F25
        - 217 (=217) — disagrees with canonical DSCR & Covenants!B25:F25

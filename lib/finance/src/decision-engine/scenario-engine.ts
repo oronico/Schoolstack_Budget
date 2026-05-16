@@ -8,6 +8,7 @@ import {
   findLowestCashMonth,
   findLowestCashMonthAcrossYears,
   computeCashRunwayMonths,
+  computeCanonicalCashRunwayMonths,
   distributeRevenueMonthly,
   type MonthlyCashFlowSeries,
   type LowestCashMonth,
@@ -802,18 +803,22 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
   }
   const monthlyCashFlowY1 = monthlyCashFlowByYear[0];
 
-  const cashRunwayMonths = computeCashRunwayMonths(
-    startingCash,
-    monthlyCashFlowByYear.map((s) => s.net),
-    60,
-  );
-
   const cashPosition: number[] = [];
   let cumCash = startingCash;
   for (let y = 0; y < 5; y++) {
     cumCash += netIncome[y];
     cashPosition.push(cumCash);
   }
+  // Task #908 — canonical Y1 runway: Y1 ending cash / ((Personnel + OpEx
+  // + Debt Service) / 12). Matches Excel `DSCR & Covenants!B18` and the
+  // Lender Commentary narrative. Note `opex` already excludes facility
+  // cost; canonical "OpEx" denominator includes facility, so we add it.
+  const cashRunwayMonths = computeCanonicalCashRunwayMonths(
+    cashPosition[0],
+    staffingCost[0],
+    facilityCost[0] + opex[0],
+    loanDS[0],
+  );
 
   const lowestCashMonth = findLowestCashMonthAcrossYears(
     monthlyCashFlowByYear.map((s) => s.cumulative),
@@ -854,11 +859,17 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
     const niMonth = (netIncome[y] - restrictedRevenue[y]) / 12;
     unrestrictedNetByYear.push(new Array(12).fill(niMonth));
   }
-  const unrestrictedCashRunwayMonths = computeCashRunwayMonths(
-    startingCash,
-    unrestrictedNetByYear,
-    60,
+  // Task #908 — canonical Y1 unrestricted runway: same formula as
+  // `cashRunwayMonths` above, with the Y1 cumulative restricted balance
+  // stripped from the numerator so the headline reflects only cash that
+  // can legally service debt / payroll.
+  const unrestrictedCashRunwayMonths = computeCanonicalCashRunwayMonths(
+    cashPosition[0] - restrictedCash[0],
+    staffingCost[0],
+    facilityCost[0] + opex[0],
+    loanDS[0],
   );
+  void unrestrictedNetByYear;
 
   const baseShape = {
     enrollment,
@@ -925,28 +936,25 @@ function applyFounderCompDelta(
   const monthlyExp = totalExpenses[yearCount - 1] / 12;
   const reserveMonths = monthlyExp > 0 && cumNI > 0 ? cumNI / monthlyExp : 0;
 
-  let cashRunwayMonths = yearCount * 12;
-  let runningCash = startingCash;
-  for (let y = 0; y < yearCount; y++) {
-    const monthlyNI = netIncome[y] / 12;
-    let broke = false;
-    for (let m = 0; m < 12; m++) {
-      runningCash += monthlyNI;
-      if (runningCash <= 0) {
-        cashRunwayMonths = y * 12 + m + 1;
-        broke = true;
-        break;
-      }
-    }
-    if (broke) break;
-  }
-
   const cashPosition: number[] = [];
   let cumCash = startingCash;
   for (let y = 0; y < yearCount; y++) {
     cumCash += netIncome[y];
     cashPosition.push(cumCash);
   }
+  // Task #908 — canonical Y1 runway after founder-comp delta has been
+  // folded into staffing cost. Same formula as the base path so the
+  // normalized view reads against the same denominator a lender would
+  // compute from the workbook.
+  const baseLoanDSFc = base.loanDebtService || base.netIncome.map(() => 0);
+  const baseFacilityFc = base.facilityCost || base.netIncome.map(() => 0);
+  const baseOpexFc = base.opex || base.netIncome.map(() => 0);
+  const cashRunwayMonths = computeCanonicalCashRunwayMonths(
+    cashPosition[0],
+    staffingCost[0],
+    (baseFacilityFc[0] || 0) + (baseOpexFc[0] || 0),
+    baseLoanDSFc[0] || 0,
+  );
 
   return {
     ...base,
@@ -1061,10 +1069,17 @@ function applyAdjustments(
         : new Array(12).fill(netIncome[y] / 12),
     );
   }
-  const cashRunwayMonths = computeCashRunwayMonths(
-    startingCash,
-    monthlyNetByYear,
-    60,
+  void monthlyNetByYear;
+  // Task #908 — canonical Y1 runway for the adjusted (lever-applied)
+  // scenario. Numerator = Y1 ending cash after the lever; denominator =
+  // Y1 Personnel + (Facility + OpEx) + Debt Service from the adjusted
+  // shape. Matches the base-path formula so DSCR-tab and PDF figures tie.
+  const adjustedY1EndingCash = startingCash + netIncome[0];
+  const cashRunwayMonths = computeCanonicalCashRunwayMonths(
+    adjustedY1EndingCash,
+    staffingCost[0],
+    (facilityCost[0] || 0) + (opex[0] || 0),
+    baseLoanDS[0] || 0,
   );
 
   const cashPosition: number[] = [];
@@ -1115,10 +1130,13 @@ function applyAdjustments(
   for (let y = 1; y < 5; y++) {
     unrestrictedNetByYear.push(new Array(12).fill((netIncome[y] - restrictedRevenue[y]) / 12));
   }
-  const unrestrictedCashRunwayMonths = computeCashRunwayMonths(
-    startingCash,
-    unrestrictedNetByYear,
-    60,
+  // Task #908 — canonical Y1 unrestricted runway for the adjusted view.
+  void unrestrictedNetByYear;
+  const unrestrictedCashRunwayMonths = computeCanonicalCashRunwayMonths(
+    (startingCash + netIncome[0]) - (restrictedCash[0] || 0),
+    staffingCost[0],
+    (facilityCost[0] || 0) + (opex[0] || 0),
+    baseLoanDS[0] || 0,
   );
 
   const adjShape = {

@@ -37,10 +37,10 @@
 
 [FAIL] B3.runway-figures — Multiple runway figures per packet (#908)
      canonical Y1 Runway (DSCR & Covenants!B18) = 17.5 months
-     runway narrative occurrences: 2 (distinct: 1)
-       distinct values: 60 months
-       diverging:       60 months
-       literal hits:    "Cash Runway: 60+ months", "Cash Runway: 60+ months"
+     runway narrative occurrences: 4 (distinct: 1)
+       distinct values: 15.5 months
+       diverging:       15.5 months
+       literal hits:    "Cash Runway: 15.519716151830583 months", "Cash Runway: 15.519716151830583 months", "Cash runway: 15.519716151830583 months", "runway extends 15.519716151830583 months"
 
 [FAIL] B4.loan-rate — Loan-rate narrative ↔ Capital Stack parity (#916)
      Capital Stack loans:
@@ -70,9 +70,9 @@
 
 [FAIL] B7.empty-bullets — Unrendered `[ ]` ASCII bullets in PDF (#923)
      ASCII "[ ]" placeholder bullets:  16
-     ASCII "[+]" passing bullets:      24
+     ASCII "[+]" passing bullets:      25
      ASCII "[~]" caution bullets:      0
-     ASCII "[!]" warning bullets:      0
+     ASCII "[!]" warning bullets:      1
        → empty checkboxes leak into rendered packet (Task #923 scope).
 
 [FAIL] B8.readiness-evidence — "Strong" Lender Readiness with 0% evidence (#929)
@@ -145,7 +145,7 @@
        - $2.2M (=2200000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $5.9M (=5900000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $1.4M (=1400000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
-       - $4.8M (=4800000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
+       - $4 (=4) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $100K (=100000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $796,870 (=796870) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $8,877 (=8877) — disagrees with canonical 5-Year Operating Stmt!B8:F8
@@ -217,13 +217,13 @@
 
 [FAIL] M.runwayMonths — Metric-location map — Months of Runway
      canonical truth (DSCR & Covenants!B18:F18): Y1=17.5m  Y2=34.6m  Y3=51.1m  Y4=68.1m  Y5=84.9m
-     keyword-anchored windows scanned: 19
+     keyword-anchored windows scanned: 39
      matched (literal → canonical year):
-       (none)
+       - 18 months → Y1
      mismatched (keyword-adjacent but doesn't match any canonical Y1..Y5):
-       - 60+ months (=60) — disagrees with canonical DSCR & Covenants!B18:F18
-       - 60.0 months (=60) — disagrees with canonical DSCR & Covenants!B18:F18
-     years with ≥1 matched occurrence: (none)
+       - 15.519716151830583 months (=15.519716151830583) — disagrees with canonical DSCR & Covenants!B18:F18
+       - 15.7 months (=15.7) — disagrees with canonical DSCR & Covenants!B18:F18
+     years with ≥1 matched occurrence: Y1
 
 [FAIL] M.capacityUtilization — Metric-location map — Capacity Utilization
      canonical truth (DSCR & Covenants!B19:F19): Y1=5%  Y2=63%  Y3=75%  Y4=88%  Y5=1%
@@ -252,7 +252,6 @@
        - 78 → Y1
        - 87 → Y2
      mismatched (keyword-adjacent but doesn't match any canonical Y1..Y5):
-       - 82 (=82) — disagrees with canonical DSCR & Covenants!B25:F25
        - 47 (=47) — disagrees with canonical DSCR & Covenants!B25:F25
        - 135 (=135) — disagrees with canonical DSCR & Covenants!B25:F25
        - 48 (=48) — disagrees with canonical DSCR & Covenants!B25:F25
@@ -260,13 +259,12 @@
        - 177 (=177) — disagrees with canonical DSCR & Covenants!B25:F25
        - 76 (=76) — disagrees with canonical DSCR & Covenants!B25:F25
        - 145 (=145) — disagrees with canonical DSCR & Covenants!B25:F25
-       - 60 (=60) — disagrees with canonical DSCR & Covenants!B25:F25
        - 110 (=110) — disagrees with canonical DSCR & Covenants!B25:F25
      years with ≥1 matched occurrence: Y1, Y2
 
 [FAIL] M.enrollment — Metric-location map — Enrollment
      canonical truth (Enrollment Tuition Fcst!B4:F4): Y1=2  Y2=25  Y3=3  Y4=35  Y5=4
-     keyword-anchored windows scanned: 95
+     keyword-anchored windows scanned: 94
      matched (literal → canonical year):
        - 200 → Y1
        - 400 → Y5

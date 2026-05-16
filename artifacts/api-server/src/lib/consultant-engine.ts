@@ -13,6 +13,7 @@ import {
   computeRevenueRowAmountsForYear,
   computeYear1MonthlyCashFlow,
   computeCashRunwayMonths,
+  computeCanonicalCashRunwayMonths,
   computeNormalizedFinancials,
   inferRevenueQuality,
   computeLenderStressTests,
@@ -943,11 +944,20 @@ function runStressScenarioFromRows(
   const dscrRaw = y1Fin ? computeAnnualDscr(y1Fin) : null;
   const dscr: number | null = dscrRaw === null ? null : Math.round(dscrRaw * 100) / 100;
 
-  const monthlyNetByYear: number[][] = financials.map(yf => {
-    const m = (yf.totalRevenue - yf.totalExpenses) / 12;
-    return new Array(12).fill(m);
-  });
-  const runwayMonths = computeCashRunwayMonths(startingCash, monthlyNetByYear, 60);
+  // Task #908 — canonical Y1 runway for stress scenarios so the stress
+  // table headline ties to the Lender Commentary / DSCR-tab figure.
+  void computeCashRunwayMonths;
+  const y1FinStress = financials[0];
+  const runwayMonths = y1FinStress
+    ? computeCanonicalCashRunwayMonths(
+        startingCash + (y1FinStress.netIncome || 0),
+        y1FinStress.totalStaffingCost || 0,
+        ((y1FinStress.totalExpenses || 0)
+          - (y1FinStress.totalStaffingCost || 0)
+          - (y1FinStress.debtService || 0)),
+        y1FinStress.debtService || 0,
+      )
+    : 0;
 
   return {
     scenario: label,
@@ -2945,34 +2955,29 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
   // we don't yet model month-by-month revenue. Without this, schools that
   // bill tuition only 10 months/year and pay staff 12 months/year always
   // looked solvent in months 1-2 even when reality showed they trough.
+  // Task #908 — canonical Y1 runway. Single formula across Exec Summary,
+  // Cumulative Cash Position table, Health Dimensions, Lender Commentary,
+  // and the workbook `DSCR & Covenants!B18` cell:
+  //   ending_cash / ((Personnel + OpEx + Debt Service) / 12)
+  // where `ending_cash` is Y1 opening cash + Y1 net income.
   let cashRunwayMonths = 0;
   {
     const startingCash = (data as Record<string, unknown>).priorYearSnapshot
       ? ((data as Record<string, unknown>).priorYearSnapshot as Record<string, number>)?.endingCash || 0
       : 0;
-    const opMonths = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 10) : 12;
-    const monthlyNetByYear: number[][] = [];
-    for (let y = 0; y < yearCount; y++) {
-      const yFin = yearFinancials[Math.min(y, yearFinancials.length - 1)];
-      if (y === 0) {
-        const series = computeYear1MonthlyCashFlow({
-          revenueRows: (data.revenueRows || []) as unknown as MonthlyRevenueRowLike[],
-          yearIndex: 0,
-          students: enrollmentByYear[0] || 0,
-          annualPersonnel: yFin?.totalStaffingCost || 0,
-          annualOpex: ((yFin?.totalExpenses || 0) - (yFin?.totalStaffingCost || 0) - (yFin?.debtService || 0)) || 0,
-          annualDebt: yFin?.debtService || 0,
-          openingCash: 0,
-          opMonths,
-        });
-        monthlyNetByYear.push(series.net);
-      } else {
-        const monthlyRev = (yFin?.totalRevenue || 0) / 12;
-        const monthlyExp = (yFin?.totalExpenses || 0) / 12;
-        monthlyNetByYear.push(new Array(12).fill(monthlyRev - monthlyExp));
-      }
+    const y1Fin = yearFinancials[0];
+    if (y1Fin) {
+      const personnel = y1Fin.totalStaffingCost || 0;
+      const debtSvc = y1Fin.debtService || 0;
+      const opEx = (y1Fin.totalExpenses || 0) - personnel - debtSvc;
+      const y1EndingCash = startingCash + (y1Fin.netIncome || 0);
+      cashRunwayMonths = computeCanonicalCashRunwayMonths(
+        y1EndingCash,
+        personnel,
+        opEx,
+        debtSvc,
+      );
     }
-    cashRunwayMonths = computeCashRunwayMonths(startingCash, monthlyNetByYear, yearCount * 12);
   }
 
   const facilityCostPct = y1.totalRevenue > 0 ? y1.facilityCost / y1.totalRevenue : 0;

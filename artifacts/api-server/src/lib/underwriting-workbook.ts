@@ -2784,14 +2784,36 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
   }
 
   r++;
+  // Task #908 — canonical "Months of Runway" formula:
+  //   Working-Capital Cash / ((Personnel + OpEx + Debt Service) / 12)
+  // Previously used (Revenue − Net Income) / 12 as the denominator,
+  // which silently includes depreciation and disagreed with the
+  // Lender Commentary / Exec Summary figure. Routing this cell through
+  // the same Personnel + OpEx + Debt Service inputs the canonical
+  // helper uses converges every surface on one number.
   ws.getCell(r, 1).value = "Months of Runway"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
-    const months = totalExp[y] > 0 ? cashByYear[y] / (totalExp[y] / 12) : 0;
+    // Numerator is the canonical accrual cash position from the engine
+    // (`canonicalOverrides.cashPosition[y]`, which is starting cash +
+    // cumulative net income — the same figure consultant-engine uses
+    // for its `cashRunwayMonths` field and the Lender Commentary
+    // narrative). Falling back to `cashByYear[y]` (working-capital
+    // basis) only when the canonical override isn't provided. The live
+    // formula references the canonical Ending Cash row (`cashRow`) so
+    // workbook recalculation reproduces the cached value exactly.
+    const numerator = canonicalOverrides?.cashPosition[y] ?? cashByYear[y];
+    const annualObligations = persByYear[y] + opexByYear[y] + cdByYear[y];
+    const months = annualObligations > 0 ? numerator / (annualObligations / 12) : 0;
     const col = y + 2;
-    const totalExpFormula = `${cn(dscrRevRow, col)}-${cn(niRow, col)}`;
-    setFormula(ws.getCell(r, col), `IF((${totalExpFormula})=0,0,${cn(wcCashRow, col)}/((${totalExpFormula})/12))`, Math.round(months * 10) / 10);
+    const denomFormula = `${cn(dscrPersRow, col)}+${cn(dscrOpexRow, col)}+${cn(dsRow, col)}`;
+    setFormula(
+      ws.getCell(r, col),
+      `IF((${denomFormula})=0,0,${cn(cashRow, col)}/((${denomFormula})/12))`,
+      Math.round(months * 10) / 10,
+    );
     ws.getCell(r, col).numFmt = "0.0"; dc(ws.getCell(r, col));
   }
+  void wcCashRow;
 
   r++;
   ws.getCell(r, 1).value = "Capacity Utilization"; dc(ws.getCell(r, 1));

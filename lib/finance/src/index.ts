@@ -259,6 +259,7 @@ export {
   findLowestCashMonth,
   findLowestCashMonthAcrossYears,
   computeCashRunwayMonths,
+  computeCanonicalCashRunwayMonths,
   type MonthlyRevenueRowLike,
   type PayrollCadence,
   type DebtCadence,

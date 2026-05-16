@@ -697,6 +697,68 @@ async function runOne(c: DemoCase): Promise<void> {
       `closest=${hit ?? "none"}, tol=${tol}, target=${target}, window="${window}"`);
   }
 
+  // ── 5. Task #908 — canonical cash-runway formula ────────────────────
+  //     Every runway-printing surface (workbook DSCR & Covenants!B18,
+  //     consultant `cashRunwayMonths`, lender PDF "X.Y months" headline)
+  //     must use the same formula:
+  //         months = ending_cash / ((Personnel + OpEx + DS) / 12)
+  //     Prior to #908 each surface used a different formula (cash
+  //     depletion, (Revenue − NI) / 12 denominator, etc.) and Oakwood
+  //     printed 1mo / 1.9mo / 2.93mo across the three. After #908 the
+  //     formula is canonical everywhere; the only remaining drift is
+  //     the *numerator* (consultant uses `startingCash + Y1 NI`; the
+  //     workbook uses `buildMonthlyCashFlowY1`'s `endingCashY1` which
+  //     applies collection-rate timing). Numerator unification is
+  //     tracked separately as task #913 (ending-cash unification) and
+  //     intentionally out of scope here.
+  if (dscr) {
+    const runwayRow = findRowByLabel(dscr, "Months of Runway");
+    check(`${tag} DSCR Months of Runway row found`, runwayRow > 0);
+    if (runwayRow > 0) {
+      // Formula check: B18 live formula must reference Personnel +
+      // OpEx + Debt Service as the denominator (the canonical inputs),
+      // not (Revenue − NI) which silently includes depreciation. The
+      // canonical shape emitted by underwriting-workbook.ts is:
+      //   IF((P+O+D)=0,0,Cash/((P+O+D)/12))
+      // where P/O/D/Cash are the Personnel, OpEx, Debt Service and
+      // Ending Cash row cell references for that year column. We
+      // assert exactly that 3-term sum-over-12 shape with a numerator
+      // cell reference — not a generic "contains +" check.
+      const b18Formula = cellFormula(dscr, runwayRow, 2);
+      const canonicalShape = /^IF\(\(([A-Z]+\d+)\+([A-Z]+\d+)\+([A-Z]+\d+)\)=0,0,([A-Z]+\d+)\/\(\(\1\+\2\+\3\)\/12\)\)$/;
+      const canonicalMatch = canonicalShape.exec(b18Formula);
+      check(`${tag} DSCR Months of Runway formula matches canonical shape IF((P+O+D)=0,0,Cash/((P+O+D)/12))`,
+        canonicalMatch !== null,
+        `formula="${b18Formula}"`);
+      // And explicitly must NOT use the pre-#908 (Revenue − NI) shape.
+      check(`${tag} DSCR Months of Runway formula does NOT use the pre-#908 (Revenue − NI) denominator`,
+        !/-[A-Z]+\d+\)\s*\/\s*12/.test(b18Formula),
+        `formula="${b18Formula}"`);
+      if (canonicalMatch) {
+        // Numerator cell ref must differ from all three denominator
+        // cell refs — guards against accidentally pointing the
+        // numerator at one of the obligation rows.
+        const [, p, o, d, cash] = canonicalMatch;
+        check(`${tag} DSCR Months of Runway numerator cell ref distinct from Personnel/OpEx/DS`,
+          cash !== p && cash !== o && cash !== d,
+          `cash=${cash} P=${p} O=${o} D=${d}`);
+      }
+
+      // Engine ↔ PDF parity: the lender PDF prints the consultant
+      // engine's `cashRunwayMonths` field. Both should agree within
+      // PDF-rounding tolerance (the workbook numerator drift is #913).
+      const engineRunwayY1 = consultant.cashRunwayMonths ?? 0;
+      const enR = Math.round(engineRunwayY1 * 10) / 10;
+      const monthsHits = Array.from(
+        pdfText.matchAll(/(\d+(?:\.\d+)?)\s*month/gi),
+      ).map((m) => Number(m[1])).filter((n) => Number.isFinite(n));
+      const printedMatch = monthsHits.find((n) => Math.abs(n - enR) <= 0.2);
+      check(`${tag} lender PDF prints a runway figure within 0.2mo of consultant engine (${enR} months)`,
+        printedMatch !== undefined,
+        `printed months figures: [${monthsHits.join(", ")}], engine=${enR}`);
+    }
+  }
+
   console.log(`${tag} wrote ${path.relative(process.cwd(), xlsxPath)} (${bytes.length} bytes) + ${path.relative(process.cwd(), pdfPath)} (${pdfBytes.length} bytes)`);
 }
 
