@@ -7,6 +7,8 @@
 // distinct copy.
 
 import { generateHealthSignals } from "../src/lib/financial-health.js";
+import { runConsultantEngine } from "../src/lib/consultant-engine.js";
+import { OAKWOOD_CEO_SEED } from "./fixtures/oakwood-ceo-seed.js";
 
 let passed = 0;
 let failed = 0;
@@ -131,6 +133,47 @@ function baseInput() {
   const timing = signals.find((s) => s.dimension === "cash_flow_timing");
   if (!timing) ok("cash_flow_timing dropped when negativeNetCashFlowMonths undefined");
   else bad("cash_flow_timing should be omitted for legacy callers");
+}
+
+// Case 5 — real Oakwood CEO demo seed end-to-end through the consultant
+// engine. Oakwood's Y1 cumulative cash trough is positive but thin
+// (~$5K in July). Before the #909 fix, the engine raised an at_risk
+// liquidity signal claiming "Cash goes negative in month 1" because it
+// was reading `cashRunwayMonths` as a 0-indexed month number. After
+// the fix, liquidity must be "watch" with buffer-thin copy and the
+// parallel cash_flow_timing signal must carry the burns-more phrase.
+{
+  const consultant = await runConsultantEngine(OAKWOOD_CEO_SEED);
+  const signals = consultant.healthSignals || [];
+  const liq = signals.find((s) => s.dimension === "liquidity");
+  if (!liq) { bad("Oakwood real seed → liquidity signal emitted"); }
+  else {
+    if (liq.status === "watch") ok("Oakwood real seed → liquidity watch");
+    else bad(`Oakwood real seed liquidity should be watch, got ${liq.status} — ${liq.explanation}`);
+    if (!/goes negative/i.test(liq.explanation)) ok("Oakwood real seed liquidity copy does NOT say 'goes negative'");
+    else bad(`Oakwood real seed liquidity should not say 'goes negative': ${liq.explanation}`);
+    if (!/in month \d/i.test(liq.explanation)) ok("Oakwood real seed liquidity copy does NOT say 'in month N'");
+    else bad(`Oakwood real seed liquidity should not say 'in month N': ${liq.explanation}`);
+    if (/buffer thins/i.test(liq.explanation)) ok("Oakwood real seed liquidity copy says 'buffer thins'");
+    else bad(`Oakwood real seed liquidity should say 'buffer thins': ${liq.explanation}`);
+    // Lock in the actual computed trough — Oakwood's Y1 (Jul-start fiscal,
+    // 10-month partial) burns harder in the first quarter while the
+    // startup grant doesn't land until Q2, so cumulative cash bottoms
+    // in Sep of Y1 at ~$703. Asserting the exact month + year keeps
+    // future engine regressions from silently shifting the trough.
+    if (/\bSep\b/.test(liq.explanation)) ok("Oakwood real seed liquidity copy pins trough to Sep");
+    else bad(`Oakwood real seed liquidity should reference 'Sep' trough month: ${liq.explanation}`);
+    if (/of Year 1/i.test(liq.explanation)) ok("Oakwood real seed liquidity copy pins trough to Year 1");
+    else bad(`Oakwood real seed liquidity should reference 'of Year 1': ${liq.explanation}`);
+  }
+  const timing = signals.find((s) => s.dimension === "cash_flow_timing");
+  if (!timing) { bad("Oakwood real seed → cash_flow_timing signal emitted"); }
+  else {
+    if (timing.status === "watch") ok("Oakwood real seed → cash_flow_timing watch");
+    else bad(`Oakwood real seed cash_flow_timing should be watch, got ${timing.status} — ${timing.explanation}`);
+    if (/burns more cash than it generates/.test(timing.explanation)) ok("Oakwood real seed cash_flow_timing copy uses burns-more phrase");
+    else bad(`Oakwood real seed cash_flow_timing should say 'burns more cash than it generates': ${timing.explanation}`);
+  }
 }
 
 console.log(`cash-goes-negative-flag: ${passed} passed, ${failed} failed`);

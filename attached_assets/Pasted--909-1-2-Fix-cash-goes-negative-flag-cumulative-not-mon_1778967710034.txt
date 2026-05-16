@@ -1,0 +1,46 @@
+#909 - 1.2 — Fix cash_goes_negative flag (cumulative, not monthly)
+What & Why
+Oakwood Health Dimensions claims "Cash goes negative in month 1" even though cumulative cash stays positive every month of Y1 (lowest = $4,932 in July). The liquidity flag was triggering on monthly net cash flow < 0 and misreading the canonical cashRunwayMonths coverage ratio as a depletion-month index. It should trigger on min(cumulative_cash_by_month) < 0 and use buffer-thin copy when the trough is positive-but-slim.
+
+The engine-side fix and the synthetic guardrail test are already landed (see "Already done" below). What's left is the real-seed verification on Oakwood, which the previous attempt got stuck on by trying to hand-roll a PDF text extractor in tests/dbg-board.ts. That path is a dead end — the packet builder feeds generateHealthSignals directly, so the liquidity signal's explanation is available as a plain string from buildPacketData / buildLenderPacket / buildBoardPacket output. No PDF rendering or text extraction is required to assert the copy on the real Oakwood seed.
+
+Done looks like
+Running the api-server test chain, a real-seed Oakwood test passes asserting:
+The liquidity HealthSignal status is watch (not at_risk).
+explanation does NOT match /goes negative/i.
+explanation matches /buffer thins/i and includes Jul (the cumulative-cash trough month).
+A parallel cash_flow_timing signal is present with status watch and copy that mentions "burns more cash than it generates".
+The throwaway debug script tests/dbg-board.ts is removed (or replaced with a one-line note pointing at the new test). It is not part of the test chain and its inline PDF extractor is wrong on multiple axes (no nested-paren handling, treats Latin-1 hex as UTF-16BE, naive substring search ignores PDFKit kerning that splits tokens across (...) literals).
+The api-server test workflow stays green (no regressions in the existing 11 board-pdf-text-snapshot tests or any of the existing 61 passing tests).
+Already done — do not redo
+lib/finance/src/decision-engine/scenario-engine.ts exposes lowestCashMonth / findLowestCashMonthAcrossYears (see comments tagged Task #909 around line 818).
+artifacts/api-server/src/lib/financial-health.ts keys the liquidity signal off lowestCumulativeCash and adds the parallel cash_flow_timing dimension (Task #909 markers).
+artifacts/api-server/src/lib/packets/build-packet-data.ts already wires lowestCumulativeCash, lowestCumulativeCashMonthLabel, lowestCumulativeCashYearIndex, avgMonthlyBurn, and negativeNetCashFlowMonths through to generateHealthSignals (Task #909 markers near line 1034).
+artifacts/api-server/tests/cash-goes-negative-flag.ts covers all four synthetic cases (cumulative < 0, Oakwood-shaped, healthy, legacy fallback). Keep it as-is.
+Out of scope
+Canonical runway formula (task 1.1 / #908).
+Unifying ending cash across tables (task 1.5).
+Any change to the board / lender / pro-forma / loan-readiness PDF text snapshots beyond what naturally falls out of the engine fix.
+Fixing or improving tests/dbg-board.ts's inline PDF extractor (it should be deleted, not repaired).
+Adding a new persona to the snapshot harness for Oakwood; the assertion runs against the packet-data structure directly.
+Steps
+Add the real-seed Oakwood assertion. Add a new test (or extend cash-goes-negative-flag.ts with a fifth case) that loads the Oakwood CEO demo seed, runs the consultant engine, calls buildLenderPacket (or buildPacketData) and buildBoardPacket, then locates the liquidity and cash_flow_timing entries in consultant.healthSignals and asserts on status + explanation per the bullets in "Done looks like". The Oakwood seed currently lives inline in src/scripts/generate-ceo-demos.ts as CEO_MICROSCHOOL — either export it from a test-importable location (preferred: move the literal into src/lib/seed-preview-data.ts or a small new src/lib/ceo-demo-seeds.ts and re-export from the script) or copy the minimal seed shape into the test. Whichever path is taken, document the choice in the test header so the next agent doesn't duplicate it.
+
+Delete tests/dbg-board.ts. It's a throwaway debug script with a broken inline PDF extractor and is not invoked by any workflow. If a similar one-off probe is needed in the future, the shared tests/_pdf-text-snapshot-util.ts already gives the correct extraction primitive.
+
+Wire the new test into the api-server test chain in artifacts/api-server/package.json (alongside the existing cash-goes-negative-flag script entry). Run the full chain locally; expected outcome is the prior 61 passing tests still pass, the 11 board-pdf-text-snapshot tests still pass, and the new Oakwood real-seed test passes.
+
+Sanity-check the existing snapshots for the forbidden phrase. Grep artifacts/api-server/tests/__snapshots__/ for /goes negative in month/i — if any snapshot still contains it, that snapshot needs an UPDATE_SNAPSHOTS=1 refresh under this task (the copy change is intentional). Do not refresh snapshots blindly; only the lines containing the old liquidity copy should change.
+
+Relevant files
+lib/finance/src/decision-engine/scenario-engine.ts:780-880
+artifacts/api-server/src/lib/financial-health.ts:46-260
+artifacts/api-server/src/lib/packets/build-packet-data.ts:1020-1050
+artifacts/api-server/src/lib/packets/build-board-packet.ts
+artifacts/api-server/src/lib/packets/build-lender-packet.ts
+artifacts/api-server/src/scripts/generate-ceo-demos.ts:37-80
+artifacts/api-server/tests/cash-goes-negative-flag.ts
+artifacts/api-server/tests/_pdf-text-snapshot-util.ts
+artifacts/api-server/tests/dbg-board.ts
+artifacts/api-server/package.json
+artifacts/api-server/tests/__snapshots__/
