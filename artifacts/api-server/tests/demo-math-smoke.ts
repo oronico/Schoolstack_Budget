@@ -337,6 +337,144 @@ async function runOne(c: DemoCase): Promise<void> {
       `share=${(y1.publicRevenue / Math.max(1, y1.totalRevenue)).toFixed(2)}`);
   }
 
+  // ── 1b. Task #911 — tuition coverage guardrail ──────────────────────
+  //
+  // The lender packet emits one of:
+  //   • `low_tuition_coverage`     (info,     ratio < 70%)
+  //   • `strong_tuition_coverage`  (positive, ratio > 100%)
+  //   • no flag                    (70% ≤ ratio ≤ 100%, healthy band)
+  //
+  // Numerator trace: sum of revenueRows where `category ===
+  // "tuition_and_fees"` and `driverType !== "percent_of_base"`,
+  // computed at sticker × Y1 enrollment (no Task #860 funding-mix
+  // correction, no scholarship offset). These are the same rows that
+  // populate the Tuition & Funding sheet's "Tuition & Fees" category
+  // block in the underwriting workbook.
+  //
+  // Denominator trace: `yearFinancials[0].totalExpenses`, which is the
+  // canonical Operating Statement total — the same number that prints
+  // at `5-Year Operating Stmt!B<Total Expenses row>` (asserted in
+  // section 2a above where `truthRev` ties OpStmt to all downstream
+  // tabs; the analogous Total Expenses row is the denominator here).
+  //
+  // Pre-fix, Riverside (PRIVATE_SCHOOL_MODEL) reported 39% because the
+  // formula divided post-funding-mix-corrected `y1.tuitionRevenue`
+  // (~$0.65M, voucher revenue silently reducing the tuition figure)
+  // by total expenses; hand-calc yields ~137%. Microschool and charter
+  // were also exposed: the microschool's sticker capacity is well above
+  // 70% but pre-fix the scholarship offset pushed it under, and charter
+  // has zero `tuition_and_fees` rows so the flag should never fire on
+  // the public-funding persona.
+  type RevRowLike = {
+    enabled?: boolean;
+    category?: string;
+    driverType?: string;
+    amounts?: number[];
+  };
+  const revenueRows = ((data as { revenueRows?: RevRowLike[] }).revenueRows ?? []);
+  const y1Students = ((data as { enrollment?: { year1?: number } }).enrollment?.year1) ?? 0;
+  let tuitionCapacity = 0;
+  for (const r of revenueRows) {
+    if (!r.enabled) continue;
+    if (r.category !== "tuition_and_fees") continue;
+    if (r.driverType === "percent_of_base") continue;
+    const amt = r.amounts?.[0] ?? 0;
+    if (r.driverType === "per_student") tuitionCapacity += amt * y1Students;
+    else if (r.driverType === "monthly") tuitionCapacity += amt * 12;
+    else tuitionCapacity += amt;
+  }
+  const opStmtTotalExpenses = y1.totalExpenses;
+  const expectedRatio = opStmtTotalExpenses > 0
+    ? tuitionCapacity / opStmtTotalExpenses
+    : 0;
+  const expectedPct = Math.round(expectedRatio * 100);
+  const flags = consultant.assumptionFlags ?? [];
+  const lowFlag = flags.find((f) => f.flagType === "low_tuition_coverage");
+  const strongFlag = flags.find((f) => f.flagType === "strong_tuition_coverage");
+
+  if (tuitionCapacity === 0) {
+    // Charter: no tuition_and_fees rows → neither flag may fire.
+    check(`${tag} no tuition_and_fees rows → no low_tuition_coverage flag`, !lowFlag,
+      `unexpectedly present: ${lowFlag?.currentValue}`);
+    check(`${tag} no tuition_and_fees rows → no strong_tuition_coverage flag`, !strongFlag,
+      `unexpectedly present: ${strongFlag?.currentValue}`);
+  } else if (expectedRatio < 0.70) {
+    check(`${tag} tuition coverage ratio < 70% (${expectedPct}%) → low_tuition_coverage emitted`,
+      !!lowFlag, `expectedPct=${expectedPct}%, capacity=${fmtUSD(tuitionCapacity)}, expenses=${fmtUSD(opStmtTotalExpenses)}`);
+    check(`${tag} low_tuition_coverage NOT also reported as strong (mutually exclusive)`, !strongFlag);
+    if (lowFlag) {
+      // Production's denominator is `computeAllYearsFromRows`
+      // (assumption-flags.ts L298) while this test recomputes from
+      // `computeYearFinancialsFromData`. Both paths agree to within a
+      // few percentage points in normal models, so we parse production's
+      // emitted percentage and assert it (a) is in the same low-band,
+      // (b) is within 15pp of our independent hand-calc.
+      const m = lowFlag.currentValue.match(/covers (\d+)% of Year 1 total expenses/);
+      check(`${tag} low_tuition_coverage currentValue matches expected text shape`,
+        !!m, `got "${lowFlag.currentValue}"`);
+      if (m) {
+        const prodPct = Number(m[1]);
+        check(`${tag} low_tuition_coverage prodPct (${prodPct}%) still in low band (<70%)`,
+          prodPct < 70, `prodPct=${prodPct}%`);
+        check(`${tag} low_tuition_coverage prodPct (${prodPct}%) within 15pp of hand-calc (${expectedPct}%)`,
+          Math.abs(prodPct - expectedPct) <= 15,
+          `prodPct=${prodPct}%, handPct=${expectedPct}%`);
+      }
+      check(`${tag} low_tuition_coverage severity is info`, lowFlag.severity === "info",
+        `severity="${lowFlag.severity}"`);
+    }
+  } else if (expectedRatio > 1.0) {
+    check(`${tag} tuition coverage ratio > 100% (${expectedPct}%) → strong_tuition_coverage emitted`,
+      !!strongFlag, `expectedPct=${expectedPct}%, capacity=${fmtUSD(tuitionCapacity)}, expenses=${fmtUSD(opStmtTotalExpenses)}`);
+    check(`${tag} strong_tuition_coverage NOT also reported as low (mutually exclusive)`, !lowFlag);
+    if (strongFlag) {
+      // Same denominator-path tolerance as the low_tuition_coverage
+      // branch — see comment above. The key invariants are that the
+      // production pct is still in the strong band (>100%) and is
+      // within 15pp of the hand-calc.
+      const m = strongFlag.currentValue.match(/covers (\d+)% of Year 1 total expenses/);
+      check(`${tag} strong_tuition_coverage currentValue matches expected text shape`,
+        !!m, `got "${strongFlag.currentValue}"`);
+      if (m) {
+        const prodPct = Number(m[1]);
+        check(`${tag} strong_tuition_coverage prodPct (${prodPct}%) still in strong band (>100%)`,
+          prodPct > 100, `prodPct=${prodPct}%`);
+        check(`${tag} strong_tuition_coverage prodPct (${prodPct}%) within 15pp of hand-calc (${expectedPct}%)`,
+          Math.abs(prodPct - expectedPct) <= 15,
+          `prodPct=${prodPct}%, handPct=${expectedPct}%`);
+      }
+      check(`${tag} strong_tuition_coverage severity is positive`, strongFlag.severity === "positive",
+        `severity="${strongFlag.severity}"`);
+    }
+  } else {
+    // Healthy band: 70-100%. Neither flag fires.
+    check(`${tag} tuition coverage in 70-100% band (${expectedPct}%) → no low_tuition_coverage flag`, !lowFlag,
+      `unexpectedly present: ${lowFlag?.currentValue}`);
+    check(`${tag} tuition coverage in 70-100% band (${expectedPct}%) → no strong_tuition_coverage flag`, !strongFlag,
+      `unexpectedly present: ${strongFlag?.currentValue}`);
+  }
+
+  // Persona-specific anchors: the per-persona expected behavior the
+  // user spec explicitly called out. Riverside MUST land in the >100%
+  // positive band (137% hand-calc); charter MUST emit no flag (zero
+  // tuition rows by design); microschool MUST have a non-zero capacity
+  // (Oakwood's $10k sticker × 16 students = $160k floor).
+  if (c.label === "private_school") {
+    check(`${tag} private_school: tuition coverage > 100% (positive signal)`,
+      expectedRatio > 1.0,
+      `ratio=${(expectedRatio * 100).toFixed(0)}%, capacity=${fmtUSD(tuitionCapacity)}, expenses=${fmtUSD(opStmtTotalExpenses)}`);
+    check(`${tag} private_school: tuition coverage near 137% hand-calc (±15pp)`,
+      Math.abs(expectedPct - 137) <= 15,
+      `expectedPct=${expectedPct}%`);
+  } else if (c.label === "charter_school") {
+    check(`${tag} charter_school: zero tuition_and_fees rows (public-funding persona)`,
+      tuitionCapacity === 0,
+      `capacity=${fmtUSD(tuitionCapacity)}`);
+  } else if (c.label === "microschool") {
+    check(`${tag} microschool: tuition capacity > $0`,
+      tuitionCapacity > 0, `capacity=${fmtUSD(tuitionCapacity)}`);
+  }
+
   // ── 2. V2 underwriting workbook ─────────────────────────────────────
   const { wb, bytes } = await loadV2Bytes(data);
 

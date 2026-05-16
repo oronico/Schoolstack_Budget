@@ -41,7 +41,15 @@ type YearFinancials = {
   projectedAR?: number;
 };
 
-export type FlagSeverity = "info" | "warning" | "critical";
+// Task #911 — added "positive" so the tuition-coverage signal can flip
+// from an Info warning ("only 39% of expenses") to an affirmative
+// callout ("tuition covers 137% of expenses") when sticker tuition +
+// fees more than fund the Year-1 cost base. Existing consumers branch
+// only on "critical" | "warning" (sometimes "info") and treat
+// everything else as advisory, so adding a fourth value is safe —
+// the lender PDF renderer prints the capitalized severity label
+// ("Positive") next to the value with the default teal tone.
+export type FlagSeverity = "info" | "warning" | "critical" | "positive";
 
 export interface AssumptionFlag {
   field: string;
@@ -329,17 +337,89 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
 
     if (yearFinancials.length > 0) {
       const y1 = yearFinancials[0];
-      if (y1.totalExpenses > 0 && y1.tuitionRevenue / y1.totalExpenses < 0.70) {
-        const tuitionPct = (y1.tuitionRevenue / y1.totalExpenses * 100).toFixed(0);
-        flags.push({
-          field: "year1.tuitionCoverage",
-          flagType: "low_tuition_coverage",
-          currentValue: `Tuition covers ${tuitionPct}% of Year 1 total expenses`,
-          benchmark: "≥ 70%",
-          severity: "info",
-          defaultPrompt: `Tuition accounts for only ${tuitionPct}% of Year 1 expenses, meaning you depend on grants or donations to cover costs. What's your plan if that external funding doesn't materialize?`,
-          nextStep: "Open Step 5: Revenue and grow tuition lines, or trim Step 7: Expenses, until tuition covers at least 70% of Year 1 expenses.",
-        });
+      // Task #911 — Tuition coverage signal:
+      //
+      //   ratio = tuition_capacity / total_expenses
+      //
+      // ⚠️  GROSS BILLING BASIS, NOT NET COLLECTED  ⚠️
+      // This ratio is intentionally computed at SCHEDULED / STICKER
+      // billings — gross tuition × enrollment + fee schedule. It does
+      // NOT apply collection rate, scholarship discounts, voucher
+      // offsets, billing-month proration, or the Task #860 funding-mix
+      // correction. The question this signal answers is "does the
+      // school's posted price sheet cover the cost base?" — a
+      // pricing-defense / business-model question — not "what cash
+      // will the school actually collect?" The realized-cash
+      // reconciliation (gross → discounts → collected) is the job of
+      // Task #911 sub-bullet 2.5 ("Net-collected tuition coverage and
+      // reconciliation to gross"); when that lands, this flag will
+      // gain a sibling that reports the NET coverage so a lender can
+      // see both numbers side-by-side.
+      //
+      // where
+      //   tuition_capacity = sum of enabled revenueRows whose
+      //                      `category === "tuition_and_fees"` and whose
+      //                      `driverType !== "percent_of_base"` (the
+      //                      `percent_of_base` rows model scholarship
+      //                      offsets, not collected tuition). Computed
+      //                      as sticker (amounts[0]) × Y1 enrollment for
+      //                      `per_student` rows and as the raw amount
+      //                      for `annual_fixed` rows, with NO Task #860
+      //                      funding-mix correction (voucher revenue
+      //                      lives in `school_choice` rows, not here)
+      //                      and NO scholarship offset deduction —
+      //                      the signal answers "does sticker tuition
+      //                      + registration / activity fees cover the
+      //                      cost base?" not "what's the realized net
+      //                      tuition after discounts and funder offsets?"
+      //   total_expenses   = `yearFinancials[0].totalExpenses`, which
+      //                      is the same number that prints on the
+      //                      5-Year Operating Stmt sheet (column B
+      //                      Total Expenses row) and on the lender
+      //                      Pro-Forma workbook's Operating Statement.
+      //
+      // Before the fix this divided `y1.tuitionRevenue` (post-funding-
+      // mix correction AND scholarship-net) by `y1.totalExpenses`, so
+      // Riverside's voucher revenue (FL FES-EO) silently knocked the
+      // tuition numerator from $2.26M down to ~$0.65M and the flag
+      // misreported 39% coverage on a model that actually covers
+      // ~137%. See demo-math-smoke.ts `[persona] tuition coverage
+      // matches gross-sticker hand-calc` for the per-persona guardrail.
+      const y1Students = enrollmentByYear[0] ?? 0;
+      let tuitionCapacity = 0;
+      for (const r of revenueRows) {
+        if (!r.enabled) continue;
+        if (r.category !== "tuition_and_fees") continue;
+        if (r.driverType === "percent_of_base") continue;
+        const amt = r.amounts?.[0] ?? 0;
+        if (r.driverType === "per_student") tuitionCapacity += amt * y1Students;
+        else if (r.driverType === "monthly") tuitionCapacity += amt * 12;
+        else tuitionCapacity += amt; // annual_fixed / annual / etc.
+      }
+      if (y1.totalExpenses > 0 && tuitionCapacity > 0) {
+        const ratio = tuitionCapacity / y1.totalExpenses;
+        const tuitionPct = (ratio * 100).toFixed(0);
+        if (ratio < 0.70) {
+          flags.push({
+            field: "year1.tuitionCoverage",
+            flagType: "low_tuition_coverage",
+            currentValue: `Tuition covers ${tuitionPct}% of Year 1 total expenses`,
+            benchmark: "≥ 70%",
+            severity: "info",
+            defaultPrompt: `Tuition accounts for only ${tuitionPct}% of Year 1 expenses, meaning you depend on grants or donations to cover costs. What's your plan if that external funding doesn't materialize?`,
+            nextStep: "Open Step 5: Revenue and grow tuition lines, or trim Step 7: Expenses, until tuition covers at least 70% of Year 1 expenses.",
+          });
+        } else if (ratio > 1.0) {
+          flags.push({
+            field: "year1.tuitionCoverage",
+            flagType: "strong_tuition_coverage",
+            currentValue: `Tuition covers ${tuitionPct}% of Year 1 total expenses`,
+            benchmark: "≥ 100%",
+            severity: "positive",
+            defaultPrompt: `Sticker tuition plus registration and activity fees fund ${tuitionPct}% of your Year 1 operating cost base — a strong signal that the school can stand on tuition alone before philanthropy, vouchers, or grants. Tell the lender how you'll defend pricing and convert that capacity into collected revenue.`,
+            nextStep: "Open Step 5: Revenue to confirm your collection rate and any scholarship discount, then capture your pricing-defense story in Step 1: Story so the lender packet leads with this strength.",
+          });
+        }
       }
     }
 
