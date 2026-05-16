@@ -160,28 +160,56 @@ function computeYearlyData(
   // `computeRevenueForYear` that bypassed the Task #860 funding-mix
   // correction, producing different totals than the workbook — see
   // microschool ($199K rendered vs $166K canonical) and charter Y1
-  // ($5.8M rendered vs $4.9M canonical). The other YearData fields
-  // (staffing, opex, capDebt, debtService, netIncome) stay on the
-  // local recompute for now — net income drift is task #913 (2.3)
-  // and expense drift is task #944.
+  // ($5.8M rendered vs $4.9M canonical).
+  //
+  // Task #915 — same fix extended to `totalExpenses`, `netIncome`, and
+  // `netMargin`. The "5-Year Change in Net Assets Projection" table
+  // (buildFiveYearProjection L716+) is labeled to match the canonical
+  // Op Stmt change-in-net-assets row (`5-Year Operating Stmt!B16:F16`),
+  // so its values MUST equal that row per year. Pre-fix Riverside
+  // showed Y1 $712K / Y5 $2.5M (cascading from the truncated tuition-
+  // only revenue base) vs canonical Y1 $2,176,259 / Y5 $5,813,207.
+  // Routing all four numbers through the canonical engine keeps the
+  // table reconciled to the workbook by construction (revenue,
+  // expenses, NI all from the same source). Local recomputes for the
+  // diagnostic-only fields (totalStaffing, debtService) stay because
+  // some downstream insight builders need the staffing-only or
+  // debt-service-only slice that the canonical aggregate doesn't
+  // expose, and those are NOT printed in the Change-in-Net-Assets
+  // table itself.
   const canonicalYf = computeYearFinancialsFromData(md as unknown as Record<string, unknown>);
 
   for (let y = 0; y < yearCount; y++) {
     const students = enrollment[y] || 0;
     const ns = computeNewStudents(enrollment, pktRR, y);
     const rs = computeReturningStudents(enrollment, pktRR, y);
-    const canonicalRev = canonicalYf[y]?.totalRevenue;
+    const canonicalYfY = canonicalYf[y];
+    const canonicalRev = canonicalYfY?.totalRevenue;
     const totalRevenue = typeof canonicalRev === "number"
       ? canonicalRev
       : computeRevenueForYear(md.revenueRows || [], y, students, md.tuitionTiers, costInflPct, sp);
     const totalStaffing = computePersonnelForYear(normalized, salaryEsc, prorationFactor, y, students);
     const fte = computeTotalFTE(normalized, y, students);
+    // Local opex/capDebt are computed for fallback only — used when the
+    // canonical engine returned no row for this year, AND retained as
+    // the breakeven-callout inputs in buildFiveYearProjection that need
+    // a fixed-vs-variable decomposition the canonical aggregate
+    // doesn't expose.
     const opex = computeExpenseForYear(md.expenseRows || [], y, students, totalRevenue, costInflPct, ns, rs, fte);
     const capDebt = computeCapDebtForYear(md.capitalAndDebtRows || [], y, students);
     const debtService = computeDebtServiceForYear(md.capitalAndDebtRows || [], y);
-    const totalExpenses = totalStaffing + opex + capDebt;
-    const netIncome = totalRevenue - totalExpenses;
-    const netMargin = totalRevenue > 0 ? netIncome / totalRevenue : 0;
+    const canonicalExp = canonicalYfY?.totalExpenses;
+    const totalExpenses = typeof canonicalExp === "number"
+      ? canonicalExp
+      : totalStaffing + opex + capDebt;
+    const canonicalNi = canonicalYfY?.netIncome;
+    const netIncome = typeof canonicalNi === "number"
+      ? canonicalNi
+      : totalRevenue - totalExpenses;
+    const canonicalMargin = canonicalYfY?.netMargin;
+    const netMargin = typeof canonicalMargin === "number"
+      ? canonicalMargin
+      : (totalRevenue > 0 ? netIncome / totalRevenue : 0);
 
     result.push({
       year: y,

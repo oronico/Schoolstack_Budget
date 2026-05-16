@@ -858,6 +858,67 @@ async function runOne(c: DemoCase): Promise<void> {
     /Total\s*Revenue/i.test(normText.slice(tableIdx >= 0 ? tableIdx : 0, (tableIdx >= 0 ? tableIdx : 0) + 600)),
     `header label missing — guards against silent data-source/label drift`,
   );
+
+  // Task #915 (2.3) — "5-Year Change in Net Assets/Net Income
+  // Projection" table values must equal canonical Op Stmt!B16:F16
+  // (`netIncome` from `computeYearFinancialsFromData`) per year. The
+  // table is titled "5-Year <Net Income | Change in Net Assets>
+  // Projection" depending on entity type (build-packet-data.ts L808:
+  // `${niLabel} Projection`); search for either form. Pre-fix
+  // Riverside printed Y1 $712K / Y5 $2.5M (cascading from the
+  // truncated tuition-only revenue base — netIncome was locally
+  // recomputed as totalRevenue - localExpenses on top of the bad
+  // revenue) vs canonical Y1 $2,176,259 / Y5 $5,813,207.
+  const projHeadingIdx = normText.search(/5.?Year\s*(?:NetIncome|ChangeinNetAssets|Net\s*Income|Change\s*in\s*Net\s*Assets)\s*Projection/i);
+  check(`${tag} packet renders "5-Year ... Projection" table heading`, projHeadingIdx >= 0,
+    `(searched in normalized PDF text length=${normText.length})`);
+  if (projHeadingIdx >= 0) {
+    // 600-char window covers the 5 data rows + header. The table cells
+    // are formatted with the same short-form `fmt()` as the Revenue
+    // table, so we re-parse $ figures and assert each year's canonical
+    // netIncome value is present.
+    const projWindow = normText.slice(projHeadingIdx, projHeadingIdx + 700);
+    const dollarRe2 = /-?\$([0-9,]+(?:\.[0-9]+)?)\s*([KMB]?)/g;
+    const projFigures: number[] = [];
+    for (const m of projWindow.matchAll(dollarRe2)) {
+      const base = Number(m[1].replace(/,/g, ""));
+      if (!Number.isFinite(base)) continue;
+      const mult = m[2] === "M" ? 1_000_000
+        : m[2] === "K" ? 1_000
+        : m[2] === "B" ? 1_000_000_000
+        : 1;
+      const sign = m[0].startsWith("-") ? -1 : 1;
+      projFigures.push(sign * base * mult);
+    }
+    for (let y = 0; y < Math.min(5, years.length); y++) {
+      const target = years[y].netIncome;
+      // Tolerance must accommodate the renderer's short-form rounding:
+      // $X.XM has ±$50K of bucket noise, $XK has ±$1K, $X has ±$1.
+      const tol = Math.abs(target) >= 1_000_000 ? 50_000
+        : Math.abs(target) >= 1_000 ? 1_000
+        : 5;
+      const found = projFigures.some((n) => Math.abs(n - target) <= tol);
+      check(
+        `${tag} 5-Year Projection Y${y + 1} net income matches canonical ${fmtShortLikeRenderer(target)} (engine=${target})`,
+        found,
+        `window="${projWindow.slice(0, 300)}..." figures=[${projFigures.slice(0, 20).join(", ")}]`,
+      );
+    }
+    // Pre-fix Riverside stale figures must be absent — they were the
+    // specific shorthand the broken locally-recomputed path emitted.
+    if (c.label === "private_school") {
+      check(
+        `${tag} pre-fix stale NI shorthand "$712K" absent from 5-Year Projection window`,
+        !projWindow.includes("$712K"),
+        `stale found — netIncome routing has regressed to pre-#915 local recompute`,
+      );
+      check(
+        `${tag} pre-fix stale NI shorthand "$2.5M" absent from 5-Year Projection window`,
+        !projWindow.includes("$2.5M"),
+        `stale found — netIncome routing has regressed to pre-#915 local recompute`,
+      );
+    }
+  }
   // ────────────────────────────────────────────────────────────────────
 
   // 4a. School name renders into the printed PDF text. PDFKit may break
