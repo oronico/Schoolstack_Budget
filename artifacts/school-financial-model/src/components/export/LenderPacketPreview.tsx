@@ -6,6 +6,10 @@ import { buildForecastFilterQuery } from "@/lib/forecast-accuracy-query";
 import { CashRunwayCard, type CashRunwayView } from "./CashRunwayCard";
 import { PacketAttachmentsPreview } from "./PacketAttachmentsPreview";
 import { lenderReadinessCoachingHeadline } from "@/lib/coaching/lender-readiness-coaching";
+import {
+  PRO_FORMA_METHODOLOGY_NOTE_BODY,
+  PRO_FORMA_METHODOLOGY_NOTE_TITLE,
+} from "@workspace/finance";
 
 interface LinkedMetric {
   label: string;
@@ -546,8 +550,6 @@ function RiskMitigantCards({ risks }: { risks: RiskMitigant[] }) {
  * collapsed we expand it first so the founder lands on actual content
  * instead of a closed header.
  */
-const PRO_FORMA_METHODOLOGY_NOTE_BODY =
-  "This packet ships two Excel workbooks. The 5-Year Financial Model (underwriting) is the canonical bottom line and uses the full driver engine; its Operating Statement Net Income subtracts personnel, operating expenses, interest, principal & capital outlays, and depreciation. The Lender Pro-Forma is a simplified comparator built from per-student / per-row averages so a reviewer can re-run sensitivities by editing one assumption; its 5-Year P&L Net Income is GAAP-style (NOI minus interest only — principal and depreciation are not on that P&L). Because the two sheets use different driver models AND different bottom-line definitions, their Y1 Net Income figures will not tie on the same payload, and they are not meant to. The figures cited in this PDF narrative source from the underwriting model.";
 
 export function scrollToPreviewAnchor(anchorId: string, beforeScroll?: () => void) {
   if (beforeScroll) beforeScroll();
@@ -573,7 +575,7 @@ export function ProFormaMethodologyNote({
       <div className="flex items-center gap-2 mb-2">
         <BookOpen className="h-4 w-4 text-[#1E293B]" />
         <span className="font-bold text-sm text-[#1E293B]">
-          Reading the Two Workbooks
+          {PRO_FORMA_METHODOLOGY_NOTE_TITLE}
         </span>
       </div>
       <p className="text-sm leading-relaxed text-[#1E293B]/90">

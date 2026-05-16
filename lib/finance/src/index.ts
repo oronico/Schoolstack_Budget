@@ -429,6 +429,11 @@ export {
   type GrowthReasonableness,
 } from "./wizard-ratios.js";
 
+export {
+  PRO_FORMA_METHODOLOGY_NOTE_TITLE,
+  PRO_FORMA_METHODOLOGY_NOTE_BODY,
+} from "./lender-packet-copy.js";
+
 export function computeProjectedAR(
   annualTuitionRevenue: number,
   collectionDelayDays: number,
