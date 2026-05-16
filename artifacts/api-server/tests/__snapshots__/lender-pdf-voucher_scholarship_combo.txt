@@ -3345,7 +3345,12 @@ kbook.
 Base case:
   Min DSCR 58.39x · Min ending 
 cash $281,519 · Runwa
-y 25.1 mo
+y 25.1 mo · Lo
+west 
+monthl
+y cash 
+Y1 J
+ul $70,244
 Enr
 ollment -10%
 All fiv
@@ -3366,6 +3371,12 @@ en:
  
 Y
 ear 1
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 1 (Sep) $63,448
   
 Y
 ear-1 net income vs base:
@@ -3393,6 +3404,12 @@ en:
  
 Y
 ear 1
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 1 (Sep) $54,238
   
 Y
 ear-1 net income vs base:
@@ -3423,6 +3440,13 @@ en:
  
 Y
 ear 1
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 1 (J
+ul) $53,755
   
 Y
 ear-1 net income vs base:
@@ -3458,10 +3482,23 @@ en:
  
 Y
 ear 1
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 1 (J
+ul) $69,548
   
 Y
 ear-1 net income vs base:
  -$6,958
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 17 of 18
+--- PAGE 18 ---
 Founder Comp Normaliz
 ed to Market
 F
@@ -3488,16 +3525,17 @@ en:
  
 Y
 ear 1
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 1 (J
+ul) $70,244
   
 Y
 ear-1 net income vs base:
  -$12,918
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 17 of 18
---- PAGE 18 ---
 Reading the 
 T
 w

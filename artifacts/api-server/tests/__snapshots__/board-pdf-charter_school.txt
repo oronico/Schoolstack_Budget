@@ -1378,7 +1378,12 @@ kbook.
 Base case:
   Min DSCR 30.84x · Min ending 
 cash $2,272,877 · Runwa
-y 11.1 mo
+y 11.1 mo · Lo
+west 
+monthl
+y cash 
+Y1 J
+ul $554,001
 SchoolStac
 k Budget - Gener
 ated <DATE>
@@ -1405,6 +1410,13 @@ en:
  
 Y
 ear 1
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 1 (J
+ul) $530,285
   
 Y
 ear-1 net income vs base:
@@ -1432,6 +1444,13 @@ en:
  
 Y
 ear 1
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 1 (J
+ul) $506,191
   
 Y
 ear-1 net income vs base:
@@ -1462,6 +1481,13 @@ en:
  
 Y
 ear 1
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 1 (J
+ul) $457,820
   
 Y
 ear-1 net income vs base:
@@ -1497,6 +1523,13 @@ en:
  
 Y
 ear 1
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 1 (J
+ul) $548,501
   
 Y
 ear-1 net income vs base:
@@ -1527,6 +1560,13 @@ en:
  
 Y
 ear 1
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 1 (J
+ul) $554,001
   
 Y
 ear-1 net income vs base:

@@ -1378,7 +1378,12 @@ kbook.
 Base case:
   Min DSCR 5.86x · Min ending cash 
 $34,826 · Runwa
-y 3.1 mo
+y 3.1 mo · Lo
+west monthl
+y 
+cash 
+Y1 J
+ul $5,173
 Enr
 ollment -10%
 All fiv
@@ -1399,6 +1404,12 @@ en:
  
 Y
 ear 1
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 1 (Sep) $5,048
   
 Y
 ear-1 net income vs base:
@@ -1426,10 +1437,23 @@ en:
  
 Y
 ear 3 (+2y vs base)
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 3 (J
+ul) $1,371
   
 Y
 ear-1 net income vs base:
  -$27,795
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 6 of 7
+--- PAGE 7 ---
 ESA / Pub
 lic Funding Dela
 y
@@ -1456,16 +1480,17 @@ en:
  
 Y
 ear 1
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 1 (J
+ul) $5,173
   
 Y
 ear-1 net income vs base:
  +$0
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 6 of 7
---- PAGE 7 ---
 Rent Shoc
 k +25%
 Occupancy & f
@@ -1497,6 +1522,13 @@ en:
  
 Y
 ear 1
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 1 (J
+ul) $4,477
   
 Y
 ear-1 net income vs base:
@@ -1527,6 +1559,13 @@ en:
  
 Y
 ear 1
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 1 (J
+ul) $5,173
   
 Y
 ear-1 net income vs base:

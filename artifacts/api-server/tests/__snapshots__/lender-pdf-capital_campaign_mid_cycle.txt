@@ -223,6 +223,29 @@ dependent.
 The top 3 r
 isks surf
 aced are:
+ 
+Y
+our cash dips belo
+w z
+ero mid-y
+ear (cr
+itical).
+ Mitigant:
+ Line up a 
+$4,000+ br
+idge (line of credit, f
+ounder loan, or staged g
+r
+ant dr
+a
+w), shift e
+xpenses out of Sep
+, or pull tuition 
+pa
+yments f
+orw
+ard so the trough clears
+.;
  Let's strengthen y
 our debt-co
 v
@@ -274,32 +297,7 @@ unw
 a
 y 
 bef
-ore opening.;
- Let's close a cash gap in y
-our ear
-ly y
-ears (high).
- Mitigant:
- Identify ho
-w y
-ou'll br
-idge the $9,719 
-gap - star
-tup g
-r
-ants
-, a line of credit, or phased e
-xpense reductions
-.
- 
-Then adjust y
-our re
-v
-en
-ue or cost 
-assumptions to close it f
-aster
-..
+ore opening..
 F
 ounder compensation has been nor
 maliz
@@ -401,6 +399,22 @@ our mission deser
 v
 es
 .
+ 
+W
+atch out:
+ projected cash first goes negativ
+e in 
+Y
+ear 1 (Sep) at -$259, e
+v
+en though y
+ear-
+end r
+unw
+a
+y can still look health
+y
+.
 [ ] 
 Lender Readiness:
  Not 
@@ -455,12 +469,28 @@ our mission deser
 v
 es
 .
+ 
+W
+atch out:
+ projected cash first goes negativ
+e in 
+Y
+ear 1 (Sep) at -$259, e
+v
+en though y
+ear-
 SchoolStac
 k Budget - Gener
 ated <DATE>
 P
 age 2 of 18
 --- PAGE 3 ---
+end r
+unw
+a
+y can still look health
+y
+.
 Fla
 g
 g
@@ -2575,11 +2605,20 @@ actors ha
 v
 e been identified.
  Of these
-, 2 are r
+, 3 are r
 ated cr
 itical and should be addressed pr
 ior to lender 
 submission.
+[!] 
+Y
+our cash dips belo
+w z
+ero mid-y
+ear
+:
+ cr
+itical
 [!] 
 Let's strengthen y
 our debt-co
@@ -2597,12 +2636,72 @@ a
 y:
  cr
 itical
-[~] 
-Let's close a cash gap in y
-our ear
-ly y
-ears:
- high
+CRITICAL
+Y
+our cash dips belo
+w z
+er
+o mid-y
+ear
+Runw
+a
+y is measured off y
+ear-end cash, so it misses the in-y
+ear troughs lenders z
+ero in on.
+ A negativ
+e mid-y
+ear balance means a single late 
+tuition cycle or dela
+y
+ed g
+r
+ant tur
+ns into an immediate cash cr
+isis
+.
+Evidence:
+ Cash first goes negativ
+e:
+ 
+Y
+ear 1  Sep  |  Cash at that month:
+ -$259  |  Deepest trough:
+ 
+Y
+ear 2  J
+ul (-$3,089)
+Mitigation:
+ 
+Line up a $4,000+ br
+idge (line of credit, f
+ounder loan, or staged g
+r
+ant dr
+a
+w), shift e
+xpenses out of Sep
+, or pull tuition pa
+yments 
+f
+orw
+ard so the trough clears
+.
+ Ne
+xt step:
+ Open Step 2:
+ School Details and r
+aise opening cash b
+y $4,000, or push a pa
+y
+ab
+le out of Sep in Step 
+7:
+ Expenses
+, until the monthly lo
+w clears z
+ero
+.
 CRITICAL
 Let's strengthen y
 our debt-co
@@ -2678,6 +2777,12 @@ x into smaller tr
 anches
 , then re-r
 un the model.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 14 of 18
+--- PAGE 15 ---
 CRITICAL
 Let's e
 xtend y
@@ -2739,81 +2844,6 @@ cash r
 unw
 a
 y clears 18 months
-.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 14 of 18
---- PAGE 15 ---
-HIGH
-Let's c
-lose a cash gap in y
-our earl
-y y
-ear
-s
-When the model dips belo
-w z
-ero cash, y
-ou'd need outside funding to mak
-e pa
-yroll that month.
- Surf
-acing it no
-w lets y
-ou plan the br
-idge 
-bef
-ore re
-vie
-w
-ers notice it.
-Evidence:
- Deepest shor
-tf
-all:
- -$9,719  |  
-Y
-ears negativ
-e:
- 1
-Mitigation:
- 
-Identify ho
-w y
-ou'll br
-idge the $9,719 gap  star
-tup g
-r
-ants
-, a line of credit, or phased e
-xpense reductions
-.
- 
-Then adjust y
-our 
-re
-v
-en
-ue or cost assumptions to close it f
-aster
-.
- Ne
-xt step:
- Open Step 7:
- Expenses and tr
-im $1,944 of ann
-ual cost, or re
-visit Step 5:
- Re
-v
-en
-ue 
-to add a funding source co
-v
-er
-ing the gap
 .
 HIGH
 Liquidity
@@ -2901,6 +2931,15 @@ ic and de
 v
 elop a remediation plan if trends persist.
 [!] 
+Y
+our cash dips belo
+w z
+ero mid-y
+ear
+:
+ cr
+itical
+[!] 
 Let's strengthen y
 our debt-co
 v
@@ -2917,12 +2956,6 @@ a
 y:
  cr
 itical
-[~] 
-Let's close a cash gap in y
-our ear
-ly y
-ears:
- high
 See Appendix f
 or complete assumption details
 .
@@ -3515,7 +3548,10 @@ kbook.
 Base case:
   Min DSCR 0.75x · Min ending cash 
 $2,710 · Runwa
-y 0.2 mo
+y 0.2 mo · &  Cash fir
+st goes 
+negative 
+Y1 Sep -$259
 Enr
 ollment -10%
 All fiv
@@ -3536,6 +3572,16 @@ en:
  
 Y
 ear 2
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 2 (J
+ul) -$16,916  dips belo
+w z
+ero mid-y
+ear
   
 Y
 ear-1 net income vs base:
@@ -3563,6 +3609,16 @@ en:
  
 Y
 ear 2
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 2 (J
+ul) -$29,657  dips belo
+w z
+ero mid-y
+ear
   
 Y
 ear-1 net income vs base:
@@ -3599,6 +3655,16 @@ en:
  
 Y
 ear 2
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 2 (J
+ul) -$3,089  dips belo
+w z
+ero mid-y
+ear
   
 Y
 ear-1 net income vs base:
@@ -3634,6 +3700,16 @@ en:
  
 Y
 ear 2
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 2 (J
+ul) -$10,764  dips belo
+w z
+ero mid-y
+ear
   
 Y
 ear-1 net income vs base:
@@ -3664,6 +3740,16 @@ en:
  
 Y
 ear 2
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 2 (J
+ul) -$3,089  dips belo
+w z
+ero mid-y
+ear
   
 Y
 ear-1 net income vs base:

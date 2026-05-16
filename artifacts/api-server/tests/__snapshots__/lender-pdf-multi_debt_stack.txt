@@ -123,7 +123,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 1 of 17
+age 1 of 20
 --- PAGE 2 ---
 Lender Commentar
 y
@@ -260,6 +260,29 @@ en
 ue or cost assumptions to close it f
 aster
 .;
+ 
+Y
+our cash dips belo
+w z
+ero mid-y
+ear (cr
+itical).
+ Mitigant:
+ Line up a 
+$119,000+ br
+idge (line of credit, f
+ounder loan, or staged g
+r
+ant dr
+a
+w), shift e
+xpenses out of J
+ul, or pull tuition 
+pa
+yments f
+orw
+ard so the trough clears
+.;
  Let's strengthen y
 our debt-co
 v
@@ -267,8 +290,8 @@ er
 age cushion (cr
 itical).
  Mitigant:
- 
-Look at lo
+ Look at 
+lo
 w
 er
 ing loan amounts
@@ -285,33 +308,7 @@ tab
 ly inside y
 our oper
 ating income
-.;
- Let's e
-xtend y
-our cash r
-unw
-a
-y (cr
-itical).
- Mitigant:
- Build a cash b
-uff
-er 
-through star
-tup fundr
-aising, a line of credit, or b
-y reducing ear
-ly e
-xpenses
-.
- 
-T
-arget at least 18 months of r
-unw
-a
-y 
-bef
-ore opening..
+..
 F
 ounder compensation has been nor
 maliz
@@ -415,6 +412,23 @@ our mission deser
 v
 es
 .
+ 
+W
+atch out:
+ projected cash first goes negativ
+e in 
+Y
+ear 2 (J
+ul) at -$3,435, e
+v
+en though y
+ear-
+end r
+unw
+a
+y can still look health
+y
+.
 [ ] 
 Lender Readiness:
  Not 
@@ -465,17 +479,34 @@ w will help y
 ou b
 uild the financial stor
 y 
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 2 of 20
+--- PAGE 3 ---
 y
 our mission deser
 v
 es
 .
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 2 of 17
---- PAGE 3 ---
+ 
+W
+atch out:
+ projected cash first goes negativ
+e in 
+Y
+ear 2 (J
+ul) at -$3,435, e
+v
+en though y
+ear-
+end r
+unw
+a
+y can still look health
+y
+.
 Fla
 g
 g
@@ -623,6 +654,12 @@ ear 1 Enrollment
 Y
 ear 2 Enrollment
   26
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 3 of 20
+--- PAGE 4 ---
 Y
 ear 3 Enrollment
   32
@@ -632,12 +669,6 @@ ear 4 Enrollment
 Y
 ear 5 Enrollment
   40
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 3 of 17
---- PAGE 4 ---
 Re
 ven
 ue Model
@@ -817,6 +848,12 @@ uition Collection Method
   A
 utopa
 y
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 4 of 20
+--- PAGE 5 ---
 T
 uition Collection Rate
   100.0%
@@ -832,12 +869,6 @@ Registr
 ation / Enrollment F
 ees
   $5K
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 4 of 17
---- PAGE 5 ---
 Scholarships / Financial Aid / Discount Rate
   $8
 Donations / Fundr
@@ -1032,17 +1063,15 @@ otal adjustment (Y1Y5)
 
 
 $67,895
-As-Planned vs 
-Normaliz
-ed:
- Net Income 
-& DSCR
 SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 5 of 17
+age 5 of 20
 --- PAGE 6 ---
+As-Planned vs Normaliz
+ed:
+ Net Income & DSCR
 Y
 ear
 Net Income 
@@ -1199,6 +1228,12 @@ or 10
 y
 ear
 s
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 6 of 20
+--- PAGE 7 ---
 Equipment Financing (kitchen + A
 V)
   $60K at 
@@ -1206,12 +1241,6 @@ V)
 or 5 y
 ear
 s
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 6 of 17
---- PAGE 7 ---
 SchoolStac
 k Lending Lab Microloan
   $25K at 
@@ -1421,6 +1450,12 @@ ed Assets
 $880K
 Other Assets
 $0
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 7 of 20
+--- PAGE 8 ---
 T
 otal Assets
 $975K
@@ -1428,8 +1463,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 7 of 17
---- PAGE 8 ---
+age 8 of 20
+--- PAGE 9 ---
 Liabilities
 Item
 Amount
@@ -1579,8 +1614,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 8 of 17
---- PAGE 9 ---
+age 9 of 20
+--- PAGE 10 ---
 Month
 Beginning
 Inflo
@@ -1777,8 +1812,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 9 of 17
---- PAGE 10 ---
+age 10 of 20
+--- PAGE 11 ---
 Month
 Beginning
 Inflo
@@ -1975,8 +2010,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 10 of 17
---- PAGE 11 ---
+age 11 of 20
+--- PAGE 12 ---
 Month
 Beginning
 Inflo
@@ -2225,8 +2260,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 11 of 17
---- PAGE 12 ---
+age 12 of 20
+--- PAGE 13 ---
 Operating Reser
 ve & Ending Cash
 Y
@@ -2435,8 +2470,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 12 of 17
---- PAGE 13 ---
+age 13 of 20
+--- PAGE 14 ---
 [~] 
 f
 acility b
@@ -2627,20 +2662,20 @@ ears:
  cr
 itical
 [!] 
+Y
+our cash dips belo
+w z
+ero mid-y
+ear
+:
+ cr
+itical
+[!] 
 Let's strengthen y
 our debt-co
 v
 er
 age cushion:
- cr
-itical
-[!] 
-Let's e
-xtend y
-our cash r
-unw
-a
-y:
  cr
 itical
 CRITICAL
@@ -2712,6 +2747,80 @@ v
 er
 ing the gap
 .
+CRITICAL
+Y
+our cash dips belo
+w z
+er
+o mid-y
+ear
+Runw
+a
+y is measured off y
+ear-end cash, so it misses the in-y
+ear troughs lenders z
+ero in on.
+ A negativ
+e mid-y
+ear balance means a single late 
+tuition cycle or dela
+y
+ed g
+r
+ant tur
+ns into an immediate cash cr
+isis
+.
+Evidence:
+ Cash first goes negativ
+e:
+ 
+Y
+ear 2  J
+ul  |  Cash at that month:
+ -$3,435  |  Deepest trough:
+ 
+Y
+ear 4  J
+ul (-$118,111)
+Mitigation:
+ 
+Line up a $119,000+ br
+idge (line of credit, f
+ounder loan, or staged g
+r
+ant dr
+a
+w), shift e
+xpenses out of J
+ul, or pull tuition pa
+yments 
+f
+orw
+ard so the trough clears
+.
+ Ne
+xt step:
+ Open Step 2:
+ School Details and r
+aise opening cash b
+y $119,000, or push a pa
+y
+ab
+le out of J
+ul in 
+Step 7:
+ Expenses
+, until the monthly lo
+w clears z
+ero
+.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 14 of 20
+--- PAGE 15 ---
 CRITICAL
 Let's strengthen y
 our debt-co
@@ -2787,74 +2896,6 @@ x into smaller tr
 anches
 , then re-r
 un the model.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 13 of 17
---- PAGE 14 ---
-CRITICAL
-Let's e
-xtend y
-our cash runwa
-y
-An 18-month r
-unw
-a
-y means a single late tuition cycle or dela
-y
-ed state disb
-ursement isn't an emergency
-.
- Building the cushion no
-w is f
-ar 
-easier than reb
-uilding it after opening da
-y
-.
-Evidence:
- Cash r
-unw
-a
-y:
- 0.24986764106061918 months  |  
-T
-arget:
- 18+ months
-Mitigation:
- 
-Build a cash b
-uff
-er through star
-tup fundr
-aising, a line of credit, or b
-y reducing ear
-ly e
-xpenses
-.
- 
-T
-arget at least 18 months of 
-r
-unw
-a
-y bef
-ore opening.
- Ne
-xt step:
- Open Step 2:
- School Details and r
-aise opening cash, or tr
-im 
-Y
-ear 1 e
-xpenses in Step 7, until projected 
-cash r
-unw
-a
-y clears 18 months
-.
 HIGH
 Viability
 The model does not reach break-e
@@ -3000,20 +3041,20 @@ ears:
  cr
 itical
 [!] 
+Y
+our cash dips belo
+w z
+ero mid-y
+ear
+:
+ cr
+itical
+[!] 
 Let's strengthen y
 our debt-co
 v
 er
 age cushion:
- cr
-itical
-[!] 
-Let's e
-xtend y
-our cash r
-unw
-a
-y:
  cr
 itical
 See Appendix f
@@ -3107,8 +3148,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 14 of 17
---- PAGE 15 ---
+age 15 of 20
+--- PAGE 16 ---
 Y
 ear 1 total e
 xpenses
@@ -3420,8 +3461,8 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 15 of 17
---- PAGE 16 ---
+age 16 of 20
+--- PAGE 17 ---
 Do
 wnside Enr
 ollment Band
@@ -3608,13 +3649,17 @@ kbook.
 Base case:
   Min DSCR 0.21x · Min ending cash 
 -$110,511 · Runwa
-y 0.2 mo
+y 0.2 mo · &  Cash fir
+st goes 
+negative 
+Y2 J
+ul -$3,435
 SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 16 of 17
---- PAGE 17 ---
+age 17 of 20
+--- PAGE 18 ---
 Enr
 ollment -10%
 All fiv
@@ -3635,6 +3680,16 @@ en:
  
 Y
 ear 5 (+1y vs base)
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 5 (J
+ul) -$209,922  dips belo
+w z
+ero mid-y
+ear
   
 Y
 ear-1 net income vs base:
@@ -3662,6 +3717,16 @@ en:
  Ne
 v
 er
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 5 (J
+un) -$287,289  dips belo
+w z
+ero mid-y
+ear
   
 Y
 ear-1 net income vs base:
@@ -3692,6 +3757,16 @@ en:
  
 Y
 ear 4
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 4 (J
+ul) -$118,111  dips belo
+w z
+ero mid-y
+ear
   
 Y
 ear-1 net income vs base:
@@ -3727,6 +3802,16 @@ en:
  
 Y
 ear 4
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 4 (J
+ul) -$143,289  dips belo
+w z
+ero mid-y
+ear
   
 Y
 ear-1 net income vs base:
@@ -3757,6 +3842,16 @@ en:
  
 Y
 ear 5 (+1y vs base)
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 4 (J
+ul) -$118,111  dips belo
+w z
+ero mid-y
+ear
   
 Y
 ear-1 net income vs base:
@@ -3902,6 +3997,12 @@ $79,661
 $81,814
 $85,044
 $399,382
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 18 of 20
+--- PAGE 19 ---
 Lender adjustment (market - planned)
 $12,918
 $13,198
@@ -3909,6 +4010,12 @@ $13,422
 $13,588
 $14,770
 $67,895
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 19 of 20
+--- PAGE 20 ---
 Note:
  F
 ounder is pa
@@ -3933,4 +4040,4 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 17 of 17
+age 20 of 20

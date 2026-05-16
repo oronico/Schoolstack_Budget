@@ -1321,7 +1321,12 @@ kbook.
 Base case:
   Min DSCR 22.02x · Min ending 
 cash $2,417,688 · Runwa
-y 17.5 mo
+y 17.5 mo · Lo
+west 
+monthl
+y cash 
+Y1 J
+ul $486,976
 Enr
 ollment -10%
 All fiv
@@ -1342,6 +1347,13 @@ en:
  
 Y
 ear 1
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 1 (J
+ul) $457,656
   
 Y
 ear-1 net income vs base:
@@ -1369,6 +1381,13 @@ en:
  
 Y
 ear 1
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 1 (J
+ul) $425,787
   
 Y
 ear-1 net income vs base:
@@ -1399,6 +1418,13 @@ en:
  
 Y
 ear 1
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 1 (J
+ul) $389,868
   
 Y
 ear-1 net income vs base:
@@ -1434,6 +1460,13 @@ en:
  
 Y
 ear 1
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 1 (J
+ul) $486,226
   
 Y
 ear-1 net income vs base:
@@ -1464,6 +1497,13 @@ en:
  
 Y
 ear 1
+  Lo
+w
+est monthly cash:
+ 
+Y
+ear 1 (J
+ul) $486,976
   
 Y
 ear-1 net income vs base:
