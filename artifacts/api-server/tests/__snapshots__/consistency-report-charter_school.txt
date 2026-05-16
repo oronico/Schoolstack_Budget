@@ -1,0 +1,87 @@
+# Consistency report — charter_school
+# Harness: tests/consistency-harness.ts (Task #930)
+
+## Canonical truth values (extracted from underwriting workbook)
+
+  Total Revenue        (5-Year Operating Stmt!B5:F5)  Y1=$4,875,000  Y2=$8,710,800  Y3=$11,633,088  Y4=$14,820,187  Y5=$18,125,509
+  Change in Net Assets (5-Year Operating Stmt!B16:F16) Y1=$2,058,592  Y2=$4,794,180  Y3=$6,953,857  Y4=$9,650,588  Y5=$12,563,554
+  Personnel            (5-Year Operating Stmt!B8:F8)  Y1=$1,720,999  Y2=$2,787,507  Y3=$3,287,208  Y4=$3,502,704  Y5=$3,607,785
+  Operating Expenses   (5-Year Operating Stmt!B9:F9)  Y1=$661,667  Y2=$1,045,370  Y3=$1,308,280  Y4=$1,583,153  Y5=$1,870,428
+  DSCR (Normalized)    (DSCR & Covenants!B12:F12)     Y1=30.84x  Y2=70.23x  Y3=101.32x  Y4=140.15x  Y5=182.09x
+  Ending Cash          (DSCR & Covenants!B15:F15)     Y1=$2,272,877  Y2=$7,081,343  Y3=$14,049,486  Y4=$23,714,359  Y5=$36,292,199
+  Days Cash on Hand    (DSCR & Covenants!B17:F17)     Y1=296d  Y2=662d  Y3=1099d  Y4=1679d  Y5=2388d
+  Months of Runway     (DSCR & Covenants!B18:F18)     Y1=9.7m  Y2=21.8m  Y3=36.1m  Y4=55.2m  Y5=78.5m
+  Capacity Utilization (DSCR & Covenants!B19:F19)     Y1=33%  Y2=5%  Y3=67%  Y4=83%  Y5=1%
+  Break-Even Enroll    (DSCR & Covenants!B25:F25)     Y1=93  Y2=121  Y3=14  Y4=146  Y5=147
+  Enrollment           (Enrollment Tuition Fcst!B4:F4) Y1=2  Y2=3  Y3=4  Y4=5  Y5=6
+  Loans                (Capital Stack!C:E)
+    - Facility Expansion Loan: principal=$500,000 rate=6.5% term=15y
+    - Equipment Financing (STEM lab): principal=$75,000 rate=5.5% term=5y
+
+## Probes
+
+[FAIL] B1.revenue-totals — Multiple revenue totals per packet
+     canonical Y1 Total Revenue (5-Year Operating Stmt!B5) = $4,875,000
+     "projects $N" narrative occurrences: 2 (distinct values: 1)
+       distinct values: $18,125,509
+       matching truth:  (none)
+       diverging:       $18,125,509
+     revenue-context $ tokens found (loose scan): 7 distinct
+
+[FAIL] B2.dscr-figures — Multiple DSCR figures per packet
+     canonical Y1 DSCR (DSCR & Covenants!B12) = 30.84x
+     narrative DSCR mentions (distinct rounded): 5
+       values:  30.84x, 14.23x, 30.64x, 26.32x, 21.74x
+       off-truth: 14.23x, 26.32x, 21.74x
+     DSCR (Reported) column present: true
+     DSCR (Normalized) column present: true
+
+[FAIL] B3.runway-figures — Multiple runway figures per packet
+     canonical Y1 Runway (DSCR & Covenants!B18) = 9.7 months
+     runway narrative occurrences: 2 (distinct: 1)
+       distinct values: 60 months
+       diverging:       60 months
+       literal hits:    "Cash Runway: 60+ months", "Cash Runway: 60+ months"
+
+[PASS] B4.loan-rate — Loan-rate narrative ↔ Capital Stack parity
+     Capital Stack loans: Facility Expansion Loan (6.5%, $500,000, 15y); Equipment Financing (STEM lab) (5.5%, $75,000, 5y)
+     narrative "Loan interest rate: N%" occurrences: 1
+       values: 6.5%
+       all match a Capital Stack loan: true
+
+[PASS] B5.rev-quality-headers — Revenue Quality column-header off-by-one
+     Revenue Quality section found: true
+     nearby header sequence: ""
+     off-by-one (Year 2..Year 6) detected anywhere: false
+
+[PASS] B6.tuition-coverage — Tuition coverage % narrative vs source
+     narrative "Tuition covers N%" occurrences: 1 (distinct: 1)
+       distinct: 2%
+     for-context: total Y1 Revenue ÷ Y1 OpEx = 737% (not the same metric, but a sanity envelope)
+     persona: charter_school — spec calls out 39% vs 137% on private (Riverside)
+
+[FAIL] B7.empty-bullets — Unrendered `[ ]` ASCII bullets in PDF
+     ASCII "[ ]" placeholder bullets:  16
+     ASCII "[+]" passing bullets:      26
+     ASCII "[~]" caution bullets:      2
+     ASCII "[!]" warning bullets:      0
+       → empty checkboxes leak into rendered packet (Task #908 / #909 scope).
+
+[PASS] B8.readiness-evidence — "Strong" Lender Readiness with 0% evidence
+     Lender Readiness verdict occurrences: 2 (distinct: Needs Work)
+     evidence-tagged % mentioned: (not found)
+     zero-evidence wording present: true
+     verdict says Strong: false
+       → bug pattern: verdict=Strong with 0% / no-evidence claim leaks confidence the data doesn't support
+       (raw "Strong" fragments seen: 2)
+
+[FAIL] C1.cross-section-revenue — Cross-section Y1 Total Revenue consistency
+     canonical Y1 Total Revenue (5-Year Operating Stmt!B5) = $4,875,000
+     cross-section occurrences: 3 (distinct: 2)
+       values:    $18,125,509, $5
+       off-truth: $18,125,509, $5
+
+## Summary
+  PASS: 4   FAIL: 5   INFO: 0
+
+# End of report.

@@ -104,6 +104,28 @@ The PDF, the Excel, and the on-screen review must reconcile. Enforced by:
 - `test:export-reconciliation`
 - `test:cross-engine`
 - `test:single-year-workbook-shape`
+- `test:consistency-harness` — Task #930 verification & regression harness for the 22-task remediation queue (#908–#929). Renders all three demo personas through the production codepath, extracts canonical metrics from the underwriting workbook per the registry below, and probes the rendered Lender Packet PDF for the catalogued bug patterns (multiple revenue totals, three DSCR figures, runway mismatches, loan-rate divergence, off-by-one Revenue Quality headers, "Tuition covers N%" disagreement, `[ ]` ASCII placeholder bullets, "Strong" verdict with zero-evidence claims). Emits a per-persona `tests/__snapshots__/consistency-report-<persona>.txt`. The committed baseline pins the CURRENT (failing) production state — every probe currently in FAIL is a bug one of #908–#929 will close. When a fix lands, refresh the snapshot intentionally:
+
+  ```bash
+  UPDATE_SNAPSHOTS=1 pnpm --filter @workspace/api-server run test:consistency-harness
+  ```
+
+  **Canonical metric registry** (every truth value the harness reads):
+
+  | Metric | Source |
+  | --- | --- |
+  | Total Revenue Y1–Y5 | `5-Year Operating Stmt!B5:F5` |
+  | Change in Net Assets Y1–Y5 | `5-Year Operating Stmt!B16:F16` |
+  | Personnel Y1–Y5 | `5-Year Operating Stmt!B8:F8` |
+  | Operating Expenses Y1–Y5 | `5-Year Operating Stmt!B9:F9` |
+  | DSCR (Normalized) Y1–Y5 | `DSCR & Covenants!B12:F12` |
+  | Ending Cash Y1–Y5 | `DSCR & Covenants!B15:F15` |
+  | Days Cash on Hand Y1–Y5 | `DSCR & Covenants!B17:F17` |
+  | Months of Runway Y1–Y5 | `DSCR & Covenants!B18:F18` |
+  | Capacity Utilization Y1–Y5 | `DSCR & Covenants!B19:F19` |
+  | Break-Even Enrollment Y1–Y5 | `DSCR & Covenants!B25:F25` |
+  | Enrollment Y1–Y5 | `Enrollment Tuition Fcst!B4:F4` |
+  | Loan rate / principal / term | `Capital Stack!C:E` |
 
 (All defined as scripts in `artifacts/api-server/package.json`.)
 
