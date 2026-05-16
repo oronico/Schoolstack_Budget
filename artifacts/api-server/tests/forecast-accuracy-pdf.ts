@@ -141,10 +141,16 @@ function extractStringLiterals(content: string): string {
         i++;
       }
       if (content[i] === ">") i++;
-      if (hex.length % 2 === 1) hex += "0";
       let str = "";
-      for (let h = 0; h < hex.length; h += 2) {
-        str += String.fromCharCode(parseInt(hex.substr(h, 2), 16));
+      if (hex.length % 4 === 0) {
+        for (let h = 0; h < hex.length; h += 4) {
+          str += String.fromCharCode(parseInt(hex.substr(h, 4), 16));
+        }
+      } else {
+        if (hex.length % 2 === 1) hex += "0";
+        for (let h = 0; h < hex.length; h += 2) {
+          str += String.fromCharCode(parseInt(hex.substr(h, 2), 16));
+        }
       }
       result += str;
       continue;
