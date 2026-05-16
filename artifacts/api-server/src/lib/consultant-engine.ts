@@ -412,6 +412,13 @@ export interface ConsultantOutput {
   sensitivityMatrix: SensitivityCell[];
   expenseSensitivityMatrix: ExpenseSensitivityCell[];
   cashRunwayMonths: number;
+  /**
+   * Task #931 — canonical accrual cash position (startingCash +
+   * cumulative net income, per year) shared with the workbook DSCR &
+   * Covenants "Ending Cash" row. Exposed so downstream consumers can
+   * use the same numerator the workbook + lender packet print.
+   */
+  cashPosition: number[];
   enrollmentGuidance: string[];
   topIssues: import("./decision-rules").DecisionIssue[];
   healthSignals: HealthSignal[];
@@ -2960,24 +2967,89 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
   // and the workbook `DSCR & Covenants!B18` cell:
   //   ending_cash / ((Personnel + OpEx + Debt Service) / 12)
   // where `ending_cash` is Y1 opening cash + Y1 net income.
+  //
+  // Task #931 — numerator unification. Pre-#931 this used
+  // `priorYearSnapshot.endingCash + yearFinancials[0].netIncome`, while
+  // the workbook DSCR & Covenants tab used `beMetrics.cashPosition[0]`
+  // (computeBaseFinancials = openingBalances.cash + scenario-engine
+  // NI[0]). Those two sources can diverge — for the Oakwood seed the
+  // PDF printed 1.9 months vs the workbook's 3.1 months. Routing the
+  // numerator here through the same `computeBaseFinancials` call the
+  // workbook uses guarantees the two surfaces show the same ending-
+  // cash number (and therefore the same runway). Locked down by the
+  // workbook ↔ engine B18 parity assertion in `demo-math-smoke`.
   let cashRunwayMonths = 0;
+  let canonicalCashPosition: number[] = [];
   {
-    const startingCash = (data as Record<string, unknown>).priorYearSnapshot
-      ? ((data as Record<string, unknown>).priorYearSnapshot as Record<string, number>)?.endingCash || 0
-      : 0;
-    const y1Fin = yearFinancials[0];
-    if (y1Fin) {
-      const personnel = y1Fin.totalStaffingCost || 0;
-      const debtSvc = y1Fin.debtService || 0;
-      const opEx = (y1Fin.totalExpenses || 0) - personnel - debtSvc;
-      const y1EndingCash = startingCash + (y1Fin.netIncome || 0);
-      cashRunwayMonths = computeCanonicalCashRunwayMonths(
-        y1EndingCash,
-        personnel,
-        opEx,
-        debtSvc,
-      );
-    }
+    // Mirror the field-resolution rules the workbook uses when it
+    // builds `beModelData` for its own `computeBaseFinancials` call
+    // (`underwriting-workbook.ts` ~L3308-3373): if facility-level
+    // escalation/inflation are unset, fall back to the shared
+    // `tuitionEscalation.rate`. Without this fallback the consultant
+    // sees 0% inflation while the workbook applies 3% (or whatever
+    // the shared rate is), and the two `cashPosition[0]` values
+    // diverge — the exact drift task #931 is closing.
+    const sharedRate = (data as { tuitionEscalation?: { rate?: number } })
+      .tuitionEscalation?.rate ?? 3;
+    const dataAsRec = data as Record<string, unknown> & {
+      facilities?: Record<string, unknown>;
+      salaryEscalationRate?: number;
+      costInflationRate?: number;
+    };
+    const salaryEscPct = dataAsRec.salaryEscalationRate
+      ?? (dataAsRec.facilities?.annualSalaryIncrease as number | undefined)
+      ?? sharedRate;
+    const costInflPct = dataAsRec.costInflationRate
+      ?? (dataAsRec.facilities?.generalCostInflation as number | undefined)
+      ?? sharedRate;
+    // Mirror the workbook's `effectiveData` (~L3324-3333 of
+    // `underwriting-workbook.ts`): when `schoolProfile.debtIncluded ===
+    // false` every downstream surface filters out loan rows before
+    // computing canonical metrics. Without the same filter here a
+    // debt-excluded scenario would re-introduce loan P+I into the
+    // accrual cash position / runway denominator and the workbook ↔
+    // consultant parity assertion would silently regress on the
+    // exact axis task #931 closes.
+    const debtIncludedForRunway =
+      (dataAsRec.schoolProfile as { debtIncluded?: boolean } | undefined)
+        ?.debtIncluded !== false;
+    const effectiveCapDebtForRunway = debtIncludedForRunway
+      ? (dataAsRec.capitalAndDebtRows as Array<{ isLoan?: boolean }> | undefined)
+      : ((dataAsRec.capitalAndDebtRows as Array<{ isLoan?: boolean }> | undefined) || [])
+          .filter(r => !r.isLoan);
+    const beData = {
+      ...dataAsRec,
+      capitalAndDebtRows: effectiveCapDebtForRunway,
+      facilities: {
+        ...(dataAsRec.facilities || {}),
+        annualSalaryIncrease: salaryEscPct,
+        generalCostInflation: costInflPct,
+      },
+    } as Parameters<typeof computeBaseFinancials>[0];
+    const canonicalMetrics = computeBaseFinancials(beData);
+    canonicalCashPosition = [...canonicalMetrics.cashPosition];
+    // Pull BOTH numerator and denominator from `canonicalMetrics` so
+    // we agree with the workbook to the cent. The pre-#931 path read
+    // `personnel/opex/debtSvc` from `yearFinancials[0]` (legacy per-
+    // year helper), which can produce a different total than
+    // `beMetrics.totalExpenses[0]` even when the inputs are identical.
+    // Mirror DSCR & Covenants!B18 exactly: workbook obligations =
+    // persByYear + opexByYear + **debtServiceByYear** (loan P+I only,
+    // NOT the broader `cdByYear` total which also includes non-debt
+    // capital expenditure rows). See `buildDSCRCovenants` call site at
+    // `artifacts/api-server/src/lib/underwriting-workbook.ts` ~L3451.
+    const personnel = canonicalMetrics.staffingCost[0] ?? 0;
+    const facility = canonicalMetrics.facilityCost[0] ?? 0;
+    const otherOpex = canonicalMetrics.opex[0] ?? 0;
+    const opEx = facility + otherOpex;
+    const debtSvc = canonicalMetrics.loanDebtService?.[0] ?? 0;
+    const y1EndingCash = canonicalMetrics.cashPosition[0] ?? 0;
+    cashRunwayMonths = computeCanonicalCashRunwayMonths(
+      y1EndingCash,
+      personnel,
+      opEx,
+      debtSvc,
+    );
   }
 
   const facilityCostPct = y1.totalRevenue > 0 ? y1.facilityCost / y1.totalRevenue : 0;
@@ -3047,6 +3119,11 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     sensitivityMatrix,
     expenseSensitivityMatrix,
     cashRunwayMonths,
+    // Task #931 — canonical accrual cash position the workbook and
+    // lender packet share. Exposing it so downstream consumers
+    // (workbook DSCR & Covenants Ending Cash row, parity tests) can
+    // tie back to the same source instead of recomputing it.
+    cashPosition: canonicalCashPosition,
     enrollmentGuidance,
     topIssues,
     healthSignals,

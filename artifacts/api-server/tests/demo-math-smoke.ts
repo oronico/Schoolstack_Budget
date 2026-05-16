@@ -697,20 +697,21 @@ async function runOne(c: DemoCase): Promise<void> {
       `closest=${hit ?? "none"}, tol=${tol}, target=${target}, window="${window}"`);
   }
 
-  // ── 5. Task #908 — canonical cash-runway formula ────────────────────
+  // ── 5. Task #908 / #931 — canonical cash-runway formula + numerator ──
   //     Every runway-printing surface (workbook DSCR & Covenants!B18,
   //     consultant `cashRunwayMonths`, lender PDF "X.Y months" headline)
-  //     must use the same formula:
+  //     must use the same formula AND the same numerator:
   //         months = ending_cash / ((Personnel + OpEx + DS) / 12)
-  //     Prior to #908 each surface used a different formula (cash
-  //     depletion, (Revenue − NI) / 12 denominator, etc.) and Oakwood
-  //     printed 1mo / 1.9mo / 2.93mo across the three. After #908 the
-  //     formula is canonical everywhere; the only remaining drift is
-  //     the *numerator* (consultant uses `startingCash + Y1 NI`; the
-  //     workbook uses `buildMonthlyCashFlowY1`'s `endingCashY1` which
-  //     applies collection-rate timing). Numerator unification is
-  //     tracked separately as task #913 (ending-cash unification) and
-  //     intentionally out of scope here.
+  //     where ending_cash = startingCash + cumulative Y1 net income
+  //     (accrual basis). Pre-#908 each surface used a different
+  //     formula; pre-#931 the workbook still used
+  //     `buildMonthlyCashFlowY1`'s `endingCashY1` (collection-rate
+  //     timing) as the numerator while the lender packet/consultant
+  //     used accrual, so Oakwood printed 1.9mo on the PDF vs 3.1mo on
+  //     the workbook. Task #931 routes the workbook numerator through
+  //     the same canonical accrual `cashPosition[0]` the consultant
+  //     engine emits, and this section asserts the cached B18 value
+  //     matches consultant `cashRunwayMonths` within rounding.
   if (dscr) {
     const runwayRow = findRowByLabel(dscr, "Months of Runway");
     check(`${tag} DSCR Months of Runway row found`, runwayRow > 0);
@@ -746,7 +747,7 @@ async function runOne(c: DemoCase): Promise<void> {
 
       // Engine ↔ PDF parity: the lender PDF prints the consultant
       // engine's `cashRunwayMonths` field. Both should agree within
-      // PDF-rounding tolerance (the workbook numerator drift is #913).
+      // PDF-rounding tolerance.
       const engineRunwayY1 = consultant.cashRunwayMonths ?? 0;
       const enR = Math.round(engineRunwayY1 * 10) / 10;
       const monthsHits = Array.from(
@@ -756,16 +757,115 @@ async function runOne(c: DemoCase): Promise<void> {
       check(`${tag} lender PDF prints a runway figure within 0.2mo of consultant engine (${enR} months)`,
         printedMatch !== undefined,
         `printed months figures: [${monthsHits.join(", ")}], engine=${enR}`);
+
+      // Task #931 — workbook ↔ engine numerator parity. The cached
+      // value at DSCR & Covenants!B18 (and therefore the figure that
+      // shows when the file is opened without recalculation) must
+      // agree with the consultant engine's `cashRunwayMonths` field
+      // within rounding. Pre-#931 the workbook used a different
+      // numerator (collection-rate-timed Y1 ending cash from
+      // buildMonthlyCashFlowY1) and Oakwood drifted by >1mo. Both
+      // surfaces now derive from the canonical accrual cash position
+      // (startingCash + Y1 net income), so any drift here means one
+      // of the two surfaces fell off the canonical path again.
+      const b18CachedRunway = cellNumber(dscr, runwayRow, 2);
+      check(`${tag} DSCR Months of Runway (B18) cached value matches consultant engine within 0.1mo (workbook=${b18CachedRunway}, engine=${enR})`,
+        Math.abs(b18CachedRunway - enR) <= 0.1,
+        `workbook B18=${b18CachedRunway}, engine=${enR}, drift=${Math.abs(b18CachedRunway - enR).toFixed(3)}mo`);
+
+      // Numerator parity at the Ending Cash row (DSCR & Covenants
+      // row above B18). The workbook's Ending Cash cell that B18's
+      // live formula divides by must equal `startingCash + Y1 NI`
+      // (the consultant engine's `cashPosition[0]`). Without this
+      // tie the formula and the cached B18 value can recalculate to
+      // different numbers when a lender opens the file in Excel.
+      const endingCashRow = findRowByLabel(dscr, "Ending Cash");
+      if (endingCashRow > 0) {
+        const workbookEndingCashY1 = cellNumber(dscr, endingCashRow, 2);
+        const enginePosition = (consultant as { cashPosition?: number[] }).cashPosition?.[0] ?? 0;
+        const expectedEndingCash = Math.round(enginePosition);
+        // Round-trip tolerance: workbook stores Math.round(...) of
+        // the canonical accrual figure, so the drift should be 0 or
+        // 1 (off-by-one rounding only).
+        check(`${tag} DSCR Ending Cash Y1 matches consultant cashPosition[0] within $1 (workbook=${workbookEndingCashY1}, engine=${expectedEndingCash})`,
+          Math.abs(workbookEndingCashY1 - expectedEndingCash) <= 1,
+          `workbook=${workbookEndingCashY1}, engine cashPosition[0]=${enginePosition}, drift=${Math.abs(workbookEndingCashY1 - expectedEndingCash)}`);
+      }
     }
   }
 
   console.log(`${tag} wrote ${path.relative(process.cwd(), xlsxPath)} (${bytes.length} bytes) + ${path.relative(process.cwd(), pdfPath)} (${pdfBytes.length} bytes)`);
 }
 
+// Task #931 (post-review) — debt-excluded regression. The workbook
+// filters loan rows out of `effectiveData` before computing canonical
+// metrics whenever `schoolProfile.debtIncluded === false`. The
+// consultant engine's runway block must apply the same filter; without
+// it, loan P+I leaks into the accrual cash position and the runway
+// denominator, drifting workbook B18 away from the engine's
+// `cashRunwayMonths` field. We synthesize a debt-excluded clone of
+// the microschool demo (which carries a real loan row) and assert
+// parity end-to-end.
+async function runDebtExcludedRegression(): Promise<void> {
+  const tag = "[debt_excluded_regression]";
+  type CapDebtRow = { isLoan?: boolean };
+  const baseData = MICROSCHOOL_MODEL.data as unknown as {
+    schoolProfile: { debtIncluded?: boolean };
+    capitalAndDebtRows?: CapDebtRow[];
+  };
+  const hasLoanRow = (baseData.capitalAndDebtRows ?? []).some(r => r.isLoan);
+  check(`${tag} base microschool demo carries a loan row (precondition)`, hasLoanRow);
+  if (!hasLoanRow) return;
+
+  const debtExcludedData = {
+    ...baseData,
+    schoolProfile: { ...baseData.schoolProfile, debtIncluded: false },
+  };
+  const consultant = await runConsultantEngine(debtExcludedData as unknown as Parameters<typeof runConsultantEngine>[0]);
+  const wb = await generateUnderwritingWorkbook(debtExcludedData as unknown as ModelData);
+  const wbBytes = Buffer.from(await wb.xlsx.writeBuffer());
+  const xlsxPath = path.join(TMP_DIR, "_DebtExcluded_Regression.xlsx");
+  fs.mkdirSync(TMP_DIR, { recursive: true });
+  fs.writeFileSync(xlsxPath, wbBytes);
+  const dscr = wb.getWorksheet("DSCR & Covenants");
+  check(`${tag} DSCR & Covenants tab present`, !!dscr);
+  if (!dscr) return;
+
+  // Locate the Months of Runway and Ending Cash rows the same way the
+  // per-demo loop above does, then assert workbook ↔ engine parity.
+  let runwayRow = 0;
+  let endingCashRow = 0;
+  for (let r = 1; r <= dscr.rowCount; r++) {
+    const label = String(dscr.getCell(r, 1).value ?? "").trim();
+    if (label === "Months of Runway") runwayRow = r;
+    if (label === "Ending Cash") endingCashRow = r;
+  }
+  check(`${tag} Months of Runway row found`, runwayRow > 0);
+  check(`${tag} Ending Cash row found`, endingCashRow > 0);
+  if (runwayRow === 0 || endingCashRow === 0) return;
+
+  const b18 = cellNumber(dscr, runwayRow, 2);
+  const engineRunway = Math.round((consultant.cashRunwayMonths ?? 0) * 10) / 10;
+  check(
+    `${tag} workbook B18 matches engine cashRunwayMonths within 0.1mo (workbook=${b18}, engine=${engineRunway})`,
+    Math.abs(b18 - engineRunway) <= 0.1,
+    `workbook=${b18}, engine=${engineRunway}, drift=${Math.abs(b18 - engineRunway).toFixed(3)}mo`,
+  );
+
+  const workbookEndingCash = cellNumber(dscr, endingCashRow, 2);
+  const engineCashPos = Math.round(consultant.cashPosition?.[0] ?? 0);
+  check(
+    `${tag} workbook Ending Cash Y1 matches engine cashPosition[0] within $1 (workbook=${workbookEndingCash}, engine=${engineCashPos})`,
+    Math.abs(workbookEndingCash - engineCashPos) <= 1,
+    `workbook=${workbookEndingCash}, engine=${engineCashPos}, drift=${Math.abs(workbookEndingCash - engineCashPos)}`,
+  );
+}
+
 async function main(): Promise<void> {
   for (const c of CASES) {
     await runOne(c);
   }
+  await runDebtExcludedRegression();
   console.log(`demo-math-smoke: ${passed} passed, ${failed} failed`);
   if (failed > 0) {
     console.error(failures.join("\n"));
