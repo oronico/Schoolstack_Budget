@@ -1,0 +1,498 @@
+# Task #928 Addendum — Required-Input Validation Subsystem
+
+**Apply to:** Task #928 — Require Tuition Collection Rate input
+**Base task spec:** Use the existing #928 spec as-is, with the additions below
+**Effective:** Before kickoff
+
+**Framing reminder:** This task improves the required-input validation subsystem. Liberty's `Tuition collection rate: Not entered` is evidence the subsystem accepts silent defaults on critical inputs — not the deliverable. The deliverable is a validation subsystem that prevents any critical input from being silently defaulted, for any persona, present or future.
+
+The three persona fixtures are tests of the subsystem. They are not the targets of the fix.
+
+---
+
+## Architectural lessons from #925, #926, and #927
+
+Before starting:
+
+1. **From #925 (unit-bearing fields):** Check whether the schema already encodes the relevant signal. For #928, the question is: does `assumption-registry.ts` already carry a `required` flag, a conditional-requirement mechanism, or a per-school-type validation rule? If something analogous exists, extend it. Surface the question if you find a conflict.
+
+2. **From #926 (benchmark validation):** Validation rules with conditions belong in their own structured location with metadata explaining the rule. A required-field rule needs to document why the field is required, under what conditions, and what the consequences of bypass are.
+
+3. **From #927 (taxonomy):** When introducing typed validation states, prefer typed enums over magic strings. A field-state taxonomy (required / required-conditional / optional / deprecated) parallels the revenue-classification work.
+
+Apply all three lessons. The required-input pattern delivered here should be reusable for the other critical inputs surfaced by the sibling search.
+
+---
+
+## Pinned decisions
+
+### Conditional requirement, not blanket
+
+Tuition Collection Rate is required for **tuition-based or hybrid funding profiles**. For pure public-funded charters (no tuition revenue), the field is not applicable. The validation rule:
+
+```
+required = (fundingProfile in ['tuition_based', 'hybrid']) 
+        OR (any revenue row has classification 'projected_enrollment_driven' 
+            AND source contains 'tuition')
+```
+
+The second clause catches schools that label themselves "public_funded" but have a residual tuition revenue stream (private-pay students at a charter, summer programs, etc.). Don't rely on `fundingProfile` alone — the row-level signal is more reliable.
+
+For Liberty STEM (pure charter, no tuition rows): field is not applicable. The wizard should skip it gracefully, not show a required-field error.
+
+### Validation taxonomy
+
+Introduce a typed validation state for assumption fields:
+
+```typescript
+type AssumptionRequirement =
+  | { state: 'required'; reason: string }
+  | { state: 'required_conditional'; condition: ConditionDescriptor; reason: string }
+  | { state: 'optional' }
+  | { state: 'deprecated'; replacedBy?: string };
+
+type ConditionDescriptor = {
+  predicate: (model: ModelState) => boolean;
+  description: string;  // human-readable, surfaced in wizard tooltips
+};
+```
+
+Each assumption in `assumption-registry.ts` carries an `AssumptionRequirement`. Tuition Collection Rate becomes:
+
+```typescript
+{
+  state: 'required_conditional',
+  condition: {
+    predicate: (m) => isTuitionBearingModel(m),
+    description: 'Required for tuition-based or hybrid funding profiles, 
+      or any model with tuition-derived revenue rows'
+  },
+  reason: 'Drives collection-rate-adjusted revenue calculation; missing 
+    value produces overstated revenue and understated cash risk'
+}
+```
+
+The `reason` field surfaces in the wizard tooltip AND in the server error response when packet generation is rejected — so founders see WHY the field is required, not just THAT it is.
+
+### Three-layer enforcement
+
+Enforcement runs at three layers, in order of strictness:
+
+1. **Wizard UI (soft):** inline validation error on the field; required-step indicator on the step navigator; CTA on the wizard summary screen pointing at the missing field. Founders can navigate away from the step but cannot mark it complete.
+
+2. **Schema validation (strict):** Zod refinement on the wizard submission payload. Submitting a payload without the required field returns a structured validation error pointing at the specific field.
+
+3. **Server route (strict):** packet generation endpoint validates against the same Zod schema. Even if a client bypasses the wizard UI, the server returns a 422 with the field-level error. The wizard maps this back to a "complete this step" CTA.
+
+All three layers reference the SAME source-of-truth — the `AssumptionRequirement` on `assumption-registry.ts`. No layer hand-codes its own required-field list.
+
+### Server error shape
+
+The server response when required fields are missing:
+
+```typescript
+{
+  error: 'incomplete_model',
+  missingRequiredFields: [
+    {
+      fieldId: 'tuitionCollectionRate',
+      reason: 'Drives collection-rate-adjusted revenue calculation...',
+      conditionDescription: 'Required for tuition-based or hybrid 
+        funding profiles...',
+      wizardStep: 'revenue',
+      wizardFieldPath: 'tuition.collectionRate'
+    }
+  ]
+}
+```
+
+The wizard consumes this shape to render the CTA accurately. The `wizardStep` and `wizardFieldPath` mean the CTA can deep-link to the missing field, not just suggest a step.
+
+### Backward compatibility
+
+Existing founder models may have null tuition collection rates that were silently defaulted. Two paths:
+
+1. **Surface the gap on next open:** When a founder opens an existing model with a missing required field, the wizard shows the required-step indicator and routes them to the missing field on next interaction. Generation continues to work for models that already generated successfully (grandfathered), but re-generation requires completion.
+
+2. **Block all generation:** Existing models with missing fields cannot generate at all, requiring backfill before next packet.
+
+Option 1 is the right call for early-stage product — don't punish founders for the system's prior permissiveness. Document the grandfathering rule in code comments at the validation enforcement point.
+
+---
+
+## Required protocol addendum fields
+
+### Canonical source reference
+
+```
+Canonical source:
+  - Validation taxonomy: AssumptionRequirement type in 
+    lib/finance/src/assumption-registry.ts (or a dedicated 
+    validation module if the registry file is getting crowded)
+  - Per-field requirement: requirement field on each AssumptionDefinition 
+    in assumption-registry.ts — single source of truth for what is 
+    required and under what conditions
+  - Condition evaluator: evaluateRequirement(field, model) function 
+    that returns 'required' | 'satisfied' | 'not_applicable'
+  - Wizard validation: Zod schema in wizard step files derives from 
+    assumption-registry, does not hand-code field lists
+  - Server validation: same Zod schema referenced from the packet 
+    generation endpoint
+  - Error display: AssumptionRequirement.reason and 
+    condition.description flow into both wizard tooltips AND server 
+    error responses
+
+No layer hand-codes its own required-field list.
+```
+
+### Sibling bug search step
+
+```
+Step: Identify other critical inputs that may be silently defaulted 
+  or skippable.
+
+Pattern (1): Assumption fields that materially affect a financial 
+  output where the system substitutes a default if the founder 
+  doesn't enter a value.
+
+Pattern (2): Wizard fields with no required indicator that drive 
+  downstream computations.
+
+Pattern (3): Existing required-field flags or validation logic that 
+  the new AssumptionRequirement type duplicates.
+
+Search scope:
+  lib/finance/src/
+  artifacts/school-financial-model/src/pages/model-wizard/
+
+Discovery commands:
+  # Find existing required flags or validation logic
+  grep -rnP "required|isRequired|validate|refinement" --include="*.ts" \
+    lib/finance/src/
+
+  # Find Zod refinements in wizard
+  grep -rnP "z\\.|refine|superRefine" --include="*.ts" --include="*.tsx" \
+    artifacts/school-financial-model/src/pages/model-wizard/
+
+  # Find default-fallback patterns in the engine
+  grep -rnP "\\|\\|\\s*[0-9]|\\?\\?\\s*[0-9]|fallback|default(Value)?" \
+    --include="*.ts" lib/finance/src/
+
+Action:
+  1. List every assumption field in the registry.
+  2. For each, decide:
+     a. Optional — explicitly document and leave alone
+     b. Required (always) — apply AssumptionRequirement with state: 'required'
+     c. Required (conditional) — apply with state: 'required_conditional' 
+        and a predicate
+     d. Currently silently defaulted but should be required — flag 
+        for follow-up task per field
+  3. For category (d), file individual follow-up tasks rather than 
+     expanding #928's scope.
+  4. If existing required/validation logic conflicts with the new type, 
+     STOP and surface the question (apply the #925 lesson).
+
+Expected candidates for category (d) based on prior packet review:
+  - Tuition Collection Rate (this task)
+  - Tuition escalation rate
+  - Annual salary increase
+  - Retention rate
+  - Starting cash
+  - Loan principal / rate / term (for models with debt)
+  - Y1 enrollment (the entire downstream cascade depends on this)
+```
+
+### Explicit regression assertion (Patterns A + C + E + new pattern for missing-field)
+
+```
+Assertion target: Required-input validation subsystem coherence
+
+Subsystem-level assertions:
+
+  For every assumption field with state 'required' or 
+    'required_conditional':
+    Assert: the field is referenced by the wizard's Zod schema
+    Assert: the field is referenced by the server route's Zod schema
+    Assert: both schemas derive from assumption-registry, do not 
+      hand-code field IDs
+    Assert: the requirement's reason field is non-empty
+    Assert: conditional requirements include a non-empty predicate 
+      AND a non-empty description
+
+For Tuition Collection Rate specifically:
+
+  Given a model with fundingProfile='tuition_based' and 
+    tuitionCollectionRate=null:
+    Assert: wizard step shows inline validation error
+    Assert: server packet endpoint returns 422 with 
+      missingRequiredFields including 'tuitionCollectionRate'
+    Assert: error response includes reason and conditionDescription
+    Assert: error response includes wizardStep and wizardFieldPath 
+      that resolve to a valid wizard location
+
+  Given a model with fundingProfile='public_funded' and no tuition 
+    rows and tuitionCollectionRate=null:
+    Assert: wizard does NOT show validation error for this field
+    Assert: server packet endpoint returns 200 (field is not applicable)
+
+  Given a model with fundingProfile='hybrid' and tuition rows present 
+    and tuitionCollectionRate=null:
+    Assert: wizard shows validation error
+    Assert: server endpoint returns 422
+
+  Given a model with tuitionCollectionRate=0.95:
+    Assert: wizard does not show validation error
+    Assert: server endpoint returns 200
+
+Persona-specific expectations:
+
+  Riverside Christian (FL private, tuition-based):
+    Existing tuitionCollectionRate=1.0 → no validation error, generates
+    Same model with tuitionCollectionRate=null → 422 missing field
+
+  Liberty STEM (AZ charter, public-funded, no tuition rows):
+    tuitionCollectionRate=null → no validation error, generates
+
+  Oakwood (microschool, tuition-based):
+    Existing tuitionCollectionRate=1.0 → no validation error, generates
+    Same model with tuitionCollectionRate=null → 422 missing field
+
+Grandfathering assertion:
+
+  Given a model that previously generated successfully with 
+    tuitionCollectionRate=null AND has not been edited since #928 landed:
+    Assert: opening the model in the wizard shows the field highlighted 
+      as needing completion
+    Assert: re-generating the packet returns 422 until the field is set
+    Assert: the prior-generated packet is still readable / downloadable
+
+Failure reporting:
+  "Required-input validation regression: {field} for {persona} — 
+   expected {expected_behavior}, got {actual_behavior}"
+```
+
+---
+
+## Prevention mechanism
+
+Once #928 lands, the following prevent silent-default recurrence at the class level:
+
+1. **Typed validation state:** `AssumptionRequirement` is a discriminated union. Adding a new field to the assumption registry requires explicitly choosing a validation state at the type level. Forgetting to specify is a compile-time error.
+
+2. **Single source of truth:** Wizard schema, server schema, and engine all derive from `assumption-registry`. A new required field added to the registry automatically propagates to all three layers. No hand-coded field lists.
+
+3. **Required reason field:** Every `required` and `required_conditional` entry must include a `reason` string. An unsourced requirement is a compile-time error.
+
+4. **Linting rule (optional, file as follow-up):** Warn on engine code that uses `||`, `??`, or explicit default fallbacks on values that come from required assumption fields. The pattern `field || 1.0` is suspicious; it suggests the engine is masking a missing-required-field case.
+
+---
+
+## Architectural follow-up
+
+```
+Follow-up task 1: Roll out AssumptionRequirement to other critical 
+  fields surfaced by the sibling search
+
+Rationale: Tuition Collection Rate is one of several inputs that 
+  materially affect financial output and can currently be silently 
+  defaulted. The pattern delivered in #928 (typed requirement state, 
+  three-layer enforcement, single source of truth) is reusable for 
+  each.
+
+Scope: For each category (d) field identified by the sibling search 
+  (likely candidates: tuition escalation, salary increase, retention, 
+  starting cash, loan terms, Y1 enrollment):
+    1. Apply AssumptionRequirement to the registry entry
+    2. Verify wizard schema picks up the requirement
+    3. Verify server schema picks up the requirement
+    4. Add per-field regression assertion
+    5. Document any grandfathering implications
+
+Per-field rollout, not big-bang. Each field is one task referencing 
+the #928 pattern.
+
+Tracked at: file before closing #928
+
+---
+
+Follow-up task 2: Audit engine for silent-default patterns
+
+Rationale: The engine likely contains `|| defaultValue` or `?? defaultValue` 
+  patterns that masked missing required inputs. These patterns hide bugs 
+  at the engine layer even after the wizard adds proper validation. An 
+  audit should catalog them and replace each with either:
+    a. An explicit assertion that the input is present (if truly required)
+    b. A documented intentional default with comment explaining the choice
+
+Scope: Sweep lib/finance/src/ for default-fallback patterns; categorize 
+  and remediate per-finding.
+
+Tracked at: file before closing #928
+
+---
+
+Follow-up task 3: Surface "completion confidence" in lender packet
+
+Rationale: Lenders benefit from knowing which assumptions a founder 
+  has explicitly set vs. which were defaulted. With AssumptionRequirement 
+  in place, the system can compute "X of Y critical assumptions 
+  founder-specified" and surface this metric. Complements the 
+  evidence-tagging confidence work.
+
+Scope: Add a "Founder Completion Confidence" line to the Assumptions 
+  Confidence section of the lender packet, computed from 
+  AssumptionRequirement registry entries.
+
+Tracked at: file before closing #928
+```
+
+---
+
+## Light vs full completion template
+
+This task touches assumption registry, wizard validation, server route, error handling, and grandfathering logic. **Use the full five-section completion template.**
+
+```
+Section A — What changed
+  Files modified, AssumptionRequirement type defined, Tuition 
+  Collection Rate marked required_conditional, three-layer enforcement 
+  wired, error response shape standardized
+
+Section B — Re-rendered evidence
+  For each persona fixture:
+    Existing tuitionCollectionRate=1.0 → still generates successfully
+    Test variant with tuitionCollectionRate=null:
+      Wizard step shows inline error (screenshot or DOM assertion)
+      Server returns 422 with structured error response
+      Public-funded persona (Liberty) shows no error and generates
+  Grandfathering case demonstrated
+
+Section C — Source-of-truth trace
+  AssumptionRequirement type location
+  Tuition Collection Rate registry entry with full requirement definition
+  Wizard Zod schema derivation from registry
+  Server Zod schema derivation from registry  
+  Error response shape definition
+  No hand-coded field lists anywhere
+
+Section D — Cross-section consistency check
+  Wizard validation error message matches the reason text from 
+    registry entry
+  Server error response includes the same reason text
+  Tooltip on the wizard field shows conditionDescription
+  All three layers prevent generation in the same cases and allow 
+    it in the same cases (no divergence)
+  Grandfathered models behave consistently across re-opens
+
+Section E — Side-effect check
+  Did the AssumptionRequirement type change affect other registry 
+    entries? List which.
+  Did the Zod refinement change affect other wizard validations? 
+    Verify.
+  Were there existing required-field flags in the codebase that should 
+    have been extended rather than paralleled? (i.e., sibling search 
+    results)
+  Are there in-flight founder models that will hit the grandfathering 
+    path? Document expected behavior on next open.
+  Are there engine-layer silent defaults that the new validation 
+    doesn't catch? (sets up follow-up task 2)
+```
+
+---
+
+## Quick checklist for the agent
+
+Before claiming #928 complete:
+
+- [ ] `AssumptionRequirement` discriminated union defined with four states
+- [ ] Tuition Collection Rate registry entry uses `required_conditional` with predicate and description
+- [ ] Predicate covers both `fundingProfile='tuition_based'/'hybrid'` AND row-level tuition presence
+- [ ] Wizard step shows inline validation error referencing registry `reason`
+- [ ] Step navigator shows required-step indicator
+- [ ] Wizard summary CTA deep-links to missing field
+- [ ] Server route returns 422 with structured `missingRequiredFields` response
+- [ ] Error response includes `reason`, `conditionDescription`, `wizardStep`, `wizardFieldPath`
+- [ ] All three enforcement layers (wizard UI, wizard schema, server schema) derive from registry, not hand-coded lists
+- [ ] Liberty (public-funded, no tuition rows) does NOT show validation error
+- [ ] Grandfathering path documented in code comments and verified for an existing model
+- [ ] Sibling bug search has been run; output is in the completion summary
+- [ ] Lessons from #925, #926, #927 explicitly checked
+- [ ] Regression test added with subsystem-level + persona-specific + grandfathering assertions
+- [ ] Regression test passes for all current persona fixtures
+- [ ] Test architecture supports adding a new persona fixture without modifying assertion logic
+- [ ] Three architectural follow-ups filed (per-field rollout, engine silent-default audit, completion confidence)
+- [ ] Full five-section completion template (A–E) filled in completely
+
+If any checklist item is incomplete, the task is not done.
+
+---
+
+## What to paste to Replit
+
+```
+Apply Task #928 Addendum before starting work.
+
+Framing: this task improves the required-input validation subsystem. 
+Liberty's "Not entered" is evidence the subsystem accepts silent 
+defaults on critical inputs — it is not the deliverable. The 
+deliverable is a validation subsystem that prevents critical 
+inputs from being silently defaulted, for any current or future 
+persona.
+
+Lessons to apply:
+- From #925: Check whether assumption-registry already encodes a 
+  required-field signal. Extend rather than parallel if it does.
+- From #926: Validation rules with conditions belong in structured 
+  metadata with reasons documented.
+- From #927: Prefer typed enums over magic strings for validation 
+  state taxonomy.
+
+Specifically:
+
+1. Required_conditional, not blanket required. Tuition Collection 
+   Rate is required for tuition-based/hybrid funding profiles OR 
+   any model with tuition-derived revenue rows. Public-funded 
+   charters with no tuition rows skip the field gracefully.
+
+2. Typed validation taxonomy: AssumptionRequirement discriminated 
+   union with four states (required / required_conditional / 
+   optional / deprecated). Each entry includes a reason that 
+   surfaces in wizard tooltips AND server error responses.
+
+3. Three-layer enforcement, all deriving from the same registry:
+   - Wizard UI: inline error + step indicator + summary CTA
+   - Wizard schema: Zod refinement
+   - Server route: same Zod schema, returns 422 with structured 
+     missingRequiredFields response
+
+4. Backward compat: grandfather existing models. Surface the gap 
+   on next interaction; allow prior packets to remain accessible 
+   but require completion for re-generation.
+
+5. Server error response shape: includes reason, conditionDescription, 
+   wizardStep, wizardFieldPath so the wizard CTA can deep-link.
+
+6. Add the three required addendum fields to your task spec:
+   - Canonical source: registry → wizard schema → server schema 
+     → error shape chain
+   - Sibling bug search: other critical inputs with silent defaults
+   - Explicit regression assertion: subsystem-level + persona-specific 
+     + grandfathering (Patterns A + C + E + new missing-field pattern)
+
+7. Prevention mechanism: typed validation state, single registry 
+   source, required reason field at type level.
+
+8. Use the full five-section completion template (A–E).
+
+9. Run the quick checklist before claiming complete.
+
+10. File three architectural follow-ups before closing #928:
+    - Per-field rollout of AssumptionRequirement to other critical 
+      inputs surfaced by sibling search
+    - Engine silent-default audit (|| and ?? patterns masking 
+      missing required fields)
+    - Completion confidence metric in lender packet
+
+Reference the full addendum for type signatures, full assertion 
+specifications, and follow-up templates.
+```

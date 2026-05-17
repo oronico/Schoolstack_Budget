@@ -15,6 +15,13 @@ export {
 } from "./amortization.js";
 
 export {
+  findMissingRequiredInputs,
+  checkRequiredInputs,
+  type MissingRequiredInput,
+  type RequiredInputCode,
+} from "./required-inputs.js";
+
+export {
   DEFAULT_BENEFITS_RATE,
   DEFAULT_PAYROLL_TAX_RATE,
   DEFAULT_COLA_PCT,

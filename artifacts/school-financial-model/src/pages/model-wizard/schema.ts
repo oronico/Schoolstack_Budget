@@ -1119,6 +1119,32 @@ export const fullModelSchema = z.object({
     )
     .optional(),
   chesterton: chestertonSchema.optional(),
+}).superRefine((data, ctx) => {
+  // Task #928 — block the wizard's Revenue step Continue button until
+  // the founder has set Tuition Collection Rate on every enabled
+  // tuition_and_fees row, for tuition-based and hybrid models. The
+  // engine silently defaults to 100% when this is undefined, which
+  // showed up in the Liberty appendix as "Tuition collection rate: Not
+  // entered" — a lender can't tell whether the founder picked 100% or
+  // skipped the field. Server-side companion lives in
+  // `lib/finance/src/required-inputs.ts` and is enforced at the lender /
+  // board packet routes; both surfaces emit the same gate so the
+  // wizard's "complete this step" CTA and the export 422 stay in sync.
+  const profile = data.schoolProfile as { fundingProfile?: string } | undefined;
+  const fundingProfile = profile?.fundingProfile;
+  if (fundingProfile !== "tuition_based" && fundingProfile !== "hybrid_mixed") return;
+  const rows = data.revenueRows ?? [];
+  rows.forEach((row, i) => {
+    if (row.enabled === false) return;
+    if (row.category !== "tuition_and_fees") return;
+    if (row.collectionRate !== undefined && row.collectionRate !== null) return;
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["revenueRows", i, "collectionRate"],
+      message:
+        "Set the Tuition Collection Rate — typical ranges are 95–100% for autopay and 88–95% for invoice-based billing.",
+    });
+  });
 });
 
 export type FullModelData = z.infer<typeof fullModelSchema>;

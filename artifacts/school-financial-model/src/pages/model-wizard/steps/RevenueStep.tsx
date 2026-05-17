@@ -1850,7 +1850,7 @@ function RevenueLineItem({
               </div>
               <span
                 className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200 cursor-help mb-2"
-                title="Industry benchmark: most invoiced K-8 private schools collect 88-93% of billed tuition annually. Lower rates compound across all 5 forecast years and materially reduce DSCR."
+                title="Typical ranges: 95–100% for autopay, 88–95% for invoice-based billing. Lower rates compound across all 5 forecast years and materially reduce DSCR."
               >
                 {COLLECTION_RATE_BENCHMARK_COPY}
               </span>
@@ -2069,7 +2069,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
               />
               <span
                 className="inline-flex items-center self-start mt-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200 cursor-help"
-                title="Industry benchmark: most invoiced K-8 private schools collect 88-93% of billed tuition annually. Lower rates compound across all 5 forecast years and materially reduce DSCR - set this with care and document any assumption above 95% for invoiced billing."
+                title="Typical ranges: 95–100% for autopay, 88–95% for invoice-based billing. Lower rates compound across all 5 forecast years and materially reduce DSCR — document any assumption above 95% for invoiced billing."
               >
                 Benchmark · {COLLECTION_RATE_BENCHMARK_COPY}
               </span>
@@ -2129,7 +2129,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
               />
               <span
                 className="inline-flex items-center self-start mt-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200 cursor-help"
-                title="Industry benchmark: most invoiced K-8 private schools collect 88-93% of billed tuition annually. Lower rates compound across all 5 forecast years and materially reduce DSCR - set this with care and document any assumption above 95% for invoiced billing."
+                title="Typical ranges: 95–100% for autopay, 88–95% for invoice-based billing. Lower rates compound across all 5 forecast years and materially reduce DSCR — document any assumption above 95% for invoiced billing."
               >
                 Benchmark · {COLLECTION_RATE_BENCHMARK_COPY}
               </span>

@@ -1,0 +1,500 @@
+# Task #927 Addendum — Revenue Classification Taxonomy System
+
+**Apply to:** Task #927 — Voucher/per-pupil classification
+**Base task spec:** Use the existing #927 spec as-is, with the additions below
+**Effective:** Before kickoff
+
+**Framing reminder:** This task improves the revenue classification subsystem. The Riverside `0.28×` and Liberty `0.00×` are evidence the current taxonomy is incomplete — not the deliverable. The deliverable is a classification taxonomy that produces credible Hard Revenue Coverage figures for any persona that uses voucher, ADM, or per-pupil funding, present or future.
+
+The three persona fixtures test whether the taxonomy works correctly. They are not the targets of the fix.
+
+---
+
+## Architectural lessons from #925 and #926
+
+Before starting:
+
+1. **From #925 (unit-bearing fields):** Check whether the schema already encodes the relevant signal. The agent caught my over-prescription on #925 by discovering `driverType: 'percent_of_base'` already carried unit metadata. For #927, the question is: does `RevenueRowData` already carry classification metadata beyond the binary buckets? If something analogous to a contractual-status flag exists, extend it rather than introducing a parallel signal.
+
+2. **From #926 (benchmark validation):** Reference data with metadata belongs in its own module with citation discipline. Classification rules are reference data. If you introduce new buckets or classification logic, the rules and their rationales should live somewhere structured, not buried in `revenue-quality.ts`.
+
+Apply both lessons. Surface the question if you find an existing classification signal you can extend.
+
+---
+
+## Pinned decisions
+
+### Choose Option 1: reclassify, do not add a Risk Framing note
+
+The base spec offers two paths. Option 1 (reclassify to `contracted_pending_enrollment`) is the correct choice and the task should commit to it before kickoff. Reasoning:
+
+- Option 2 (Risk Framing note) treats the symptom by adding explanation around a misleading number. The number is still misleading; the founder now has a paragraph of caveats.
+- Option 1 fixes the taxonomy so the number itself becomes accurate. The packet doesn't need a paragraph to explain why `0.00×` doesn't mean what it appears to mean — the figure reads correctly on its own.
+- Lender-grade output benefits from clean primary metrics, not from metrics-plus-asterisks.
+
+Option 1 is more work but lower long-term cost. Take it.
+
+### Revenue classification taxonomy
+
+Replace the current binary contracted-vs-policy-dependent split with a four-bucket taxonomy:
+
+```typescript
+type RevenueClassification = 
+  | 'contracted_signed'         // signed contract with named counterparty, e.g., 
+                                // multi-year service contract, signed enrollment 
+                                // agreements
+
+  | 'contracted_pending_enrollment'  // per-pupil payment structurally owed once 
+                                     // students are enrolled and verified eligible 
+                                     // (ADM, voucher per-pupil rates)
+
+  | 'projected_enrollment_driven'    // tuition revenue from enrolled students; 
+                                     // depends on collection rate and retention 
+                                     // but is otherwise predictable
+
+  | 'discretionary'             // grants, donations, fundraising — depend on 
+                                // continued funder relationships and discretion
+```
+
+The current `policy_dependent` bucket dissolves into either `contracted_pending_enrollment` (if the payment is owed per-pupil under existing statute) or `discretionary` (if the appropriation itself depends on annual legislative action).
+
+Each bucket carries different weight in Hard Revenue Coverage:
+
+```
+hard_revenue = sum(contracted_signed) + 
+               sum(contracted_pending_enrollment) × enrollment_certainty_factor
+```
+
+Where `enrollment_certainty_factor` is a documented multiplier (e.g., 0.85 for Y1 of a startup, 0.95 for operating schools with retention history). This factor:
+- Acknowledges enrollment risk explicitly
+- Is calibrated, not invented per render
+- Lives in the same canonical location as the taxonomy
+
+`projected_enrollment_driven` and `discretionary` revenue are excluded from Hard Revenue Coverage entirely (as they are today).
+
+### Storage location and citation discipline
+
+The taxonomy lives in a dedicated module:
+
+```
+lib/finance/src/classification/revenue-classification.ts
+```
+
+Each bucket carries:
+- `bucketId`: enum value
+- `description`: human-readable definition
+- `examples`: list of concrete examples (e.g., "FL FES-EO voucher", "AZ ADM per-pupil")
+- `inclusionInHardRevenue`: boolean or weighted multiplier
+- `rationale`: paragraph explaining the lender-relevant reasoning
+- `lastValidated`: YYYY-MM-DD
+- `notes`: edge cases, jurisdictional variations
+
+The `RevenueRowData` schema gets a `classification` field of type `RevenueClassification` and a `classificationRationale` field for the per-row reasoning ("AZ ADM per-pupil — contracted pending enrollment per ARS §15-185").
+
+### Per-row classification migration
+
+Existing seed data needs migration. Apply these rules to the three persona fixtures and document any judgment calls:
+
+**Riverside Christian Academy (FL private + FES-EO):**
+- Annual Tuition (K-8): `projected_enrollment_driven`
+- Registration & Activity Fees: `projected_enrollment_driven`
+- Scholarships / Financial Aid: discount, not revenue — no classification change
+- FL FES-EO Voucher: `contracted_pending_enrollment` (per-pupil rate is statutorily defined)
+- Annual Fund Donations: `discretionary`
+- Foundation Grants: `discretionary`
+- After-School Programs: `projected_enrollment_driven`
+
+**Liberty STEM Charter (AZ charter):**
+- State Per-Pupil Funding (K-5, 6-8, 9-12): `contracted_pending_enrollment` (AZ Basic State Aid is statutorily defined)
+- Title I Federal Funding: `contracted_pending_enrollment` if formula-based, `discretionary` if competitive grant
+- Charter Startup Grant (CSPP): `discretionary` (competitive grant, not formula)
+- After-School & Summer Programs: `projected_enrollment_driven`
+
+**Oakwood Learning Studio (AZ microschool tuition-based):**
+- Private Pay / Tuition: `projected_enrollment_driven`
+- Registration / Enrollment Fees: `projected_enrollment_driven`
+- Scholarships / Financial Aid: discount, not revenue
+- Donations / Fundraising: `discretionary`
+- Startup Grant (Foundation): `discretionary`
+
+Document the per-row classification decisions in code comments at the seed-data definition site and in the completion summary.
+
+### Backward compatibility
+
+Existing founder models in production carry the old binary classification. Two paths:
+
+1. **Migration script:** Map old `policy_dependent` to new buckets per row. Run once, manually verify the result, persist.
+2. **Inference layer:** When loading a model with the old shape, infer the new classification from row metadata (source, line item type). Migrate on next save.
+
+Option 2 is safer for early-stage data but creates inference logic that itself needs maintenance. Option 1 is cleaner but requires a careful migration. The agent should pick based on how much production data exists; if it's a handful of seed fixtures plus test data, option 1 is fine.
+
+### Enrollment certainty factor
+
+Don't hard-code `0.85` or `0.95`. Store it in the classification module with rationale:
+
+```typescript
+export const ENROLLMENT_CERTAINTY_FACTORS = {
+  startup_year_1: {
+    factor: 0.85,
+    rationale: 'Year 1 enrollment for startup schools carries highest 
+      uncertainty; 15% haircut reflects typical first-year attrition 
+      and over-projection',
+    source: '[citation pending]',
+    lastValidated: '2026-05-17'
+  },
+  operating_with_retention_history: {
+    factor: 0.95,
+    rationale: 'Operating schools with at least 2 years of retention 
+      data carry lower enrollment risk',
+    source: '[citation pending]',
+    lastValidated: '2026-05-17'
+  }
+  // additional factors as needed
+};
+```
+
+Same citation discipline as #926. `[citation pending]` is acknowledged in the completion summary and covered by the architectural follow-up.
+
+---
+
+## Required protocol addendum fields
+
+### Canonical source reference
+
+```
+Canonical source:
+  - Taxonomy: REVENUE_CLASSIFICATIONS in lib/finance/src/classification/
+    revenue-classification.ts — single source of truth for buckets, 
+    their definitions, and their inclusion rules
+  - Enrollment certainty: ENROLLMENT_CERTAINTY_FACTORS in same module
+  - Per-row classification: classification field on RevenueRowData; 
+    seed data carries explicit values, not inferred at runtime
+  - Hard Revenue computation: computeHardRevenue(rows, schoolStage) 
+    in lib/finance/src/revenue-quality.ts — reads classification + 
+    certainty factor; no parallel computation path
+  - Display labels: derived from REVENUE_CLASSIFICATIONS metadata, 
+    not hand-written in lender-packet-pdf.ts
+
+Every consumer reads from this canonical chain.
+```
+
+### Sibling bug search step
+
+```
+Step: Identify other classification or bucketing logic that may have 
+  the same coarseness as the current contracted-vs-policy-dependent split.
+
+Pattern (1): Two-bucket classifications where the reality has more 
+  nuance (e.g., binary "fixed vs variable" for costs that actually 
+  have committed/discretionary/seasonal sub-categories).
+
+Pattern (2): Existing classification flags on RevenueRowData or 
+  related types that the current binary system ignores or overrides.
+
+Search scope:
+  lib/finance/src/
+
+Discovery commands:
+  # Find existing classification or bucket logic
+  grep -rnP "policy_dependent|contracted|hard_revenue|projected|discretionary|bucket|classification" \
+    --include="*.ts" lib/finance/
+
+  # Find binary categorizations that may need expansion  
+  grep -rnP "type\s*[:=]\s*['\"].*['\"]\s*\|" --include="*.ts" \
+    lib/finance/src/
+
+  # Find existing flags on RevenueRowData
+  grep -rnP "RevenueRowData|driverType|category|kind" --include="*.ts" \
+    lib/finance/src/
+
+Action:
+  1. List every classification, bucket, or category field in the 
+     financial domain.
+  2. For each, decide:
+     a. Current granularity is sufficient — no change
+     b. Current granularity collapses meaningful distinctions — flag 
+        for follow-up task
+     c. Already encodes a signal that #927's new taxonomy duplicates — 
+        STOP and surface the question (apply the #925 lesson)
+  3. Document findings in the completion summary.
+
+Expected candidates beyond revenue classification:
+  - Expense classification (fixed/variable/semi-variable)
+  - Risk severity (current critical/medium might benefit from a 
+    contractual-vs-discretionary axis)
+  - Cash classification (operating/restricted/reserved)
+  - Staffing role classification (instructional/admin/support)
+```
+
+### Explicit regression assertion (Patterns A + B + E)
+
+```
+Assertion target: Revenue classification taxonomy + Hard Revenue 
+  Coverage subsystem coherence
+
+Subsystem-level assertions:
+
+  For every revenue row in every persona fixture:
+    Assert: row.classification is a valid value from RevenueClassification
+    Assert: row.classification matches the documented rule for the 
+      row's source type (per the classification rationale)
+    Assert: classificationRationale is a non-empty string
+
+  For Hard Revenue Coverage computation:
+    Assert: computeHardRevenue uses ONLY rows classified as 
+      'contracted_signed' or 'contracted_pending_enrollment'
+    Assert: 'contracted_pending_enrollment' rows are multiplied by 
+      the appropriate enrollment_certainty_factor based on schoolStage
+    Assert: no other code path computes Hard Revenue independently 
+      (the orphan-DSCR pattern from #910 must not recur here)
+
+Persona-specific expectations (current fixtures):
+
+  Liberty STEM (AZ charter, startup):
+    State Per-Pupil rows (K-5, 6-8, 9-12) classified as 
+      'contracted_pending_enrollment'
+    Hard Revenue Coverage Y1 reflects per-pupil revenue × 0.85 
+      (startup certainty factor)
+    Final value should be substantially > 0.00× (likely > 1.0× 
+      given per-pupil × enrollment vastly exceeds fixed costs + 
+      debt service)
+
+  Riverside Christian (FL private + FES-EO):
+    FES-EO Voucher row classified as 'contracted_pending_enrollment'
+    Annual Tuition row classified as 'projected_enrollment_driven' 
+      (NOT hard revenue — depends on collection rate)
+    Hard Revenue Coverage Y1 rises from 0.28× to a value reflecting 
+      voucher per-pupil × enrollment × certainty factor
+
+  Oakwood (microschool tuition-based):
+    No contracted_pending_enrollment rows
+    Hard Revenue Coverage Y1 remains low — this is correct for a 
+      tuition-based microschool with no public per-pupil funding
+    Lender packet copy should explain that low Hard Revenue Coverage 
+      for tuition-only schools is structural, not a defect
+
+Display assertions:
+
+  Revenue Quality table in lender packet shows four buckets, not two
+  Each bucket row labeled per REVENUE_CLASSIFICATIONS.description
+  Hard Revenue Coverage figure renders with the new computation
+  No "policy_dependent" string appears in any rendered PDF
+
+Failure reporting:
+  "Revenue classification subsystem regression: {persona} — row 
+   {row_id} classified as {actual}, expected {expected}; 
+   Hard Revenue Coverage computed as {actual_value}, expected {expected_range}"
+```
+
+---
+
+## Prevention mechanism
+
+Once #927 lands, the following prevent the original coarseness from returning:
+
+1. **Type-level taxonomy:** `RevenueClassification` is a TypeScript union type with four values. Adding a new bucket is a type change; misclassifying a row is a compile-time error if the seed data uses the literal types.
+
+2. **Required per-row classification:** `RevenueRowData.classification` is required, not optional. A row without classification is a schema validation error at write time.
+
+3. **Single computation path:** `computeHardRevenue` is the only function that computes Hard Revenue. Consumers reference its output, never reimplement. A second implementation is caught by code review (and ideally by a unit test that asserts the function is referenced from exactly one location).
+
+4. **Citation discipline at type level:** Enrollment certainty factors require `source` and `lastValidated` fields. An unsourced factor is a compile-time error.
+
+---
+
+## Architectural follow-up
+
+```
+Follow-up task 1: Citation calibration for enrollment certainty factors
+
+Rationale: The 0.85 / 0.95 factors are seeded with internal estimates. 
+  Lender-grade output benefits from citable sources (e.g., NACSA 
+  reports on charter enrollment first-year vs steady-state, NAIS 
+  retention data for private schools).
+
+Scope: Research and populate authoritative sources for each factor; 
+  update lastValidated dates; revise factor values if research 
+  suggests calibration is off.
+
+Tracked at: file before closing #927
+
+---
+
+Follow-up task 2: Expense classification taxonomy
+
+Rationale: If the revenue side benefits from a four-bucket taxonomy 
+  with contractual-vs-discretionary distinctions, the expense side 
+  may benefit from the same pattern (fixed-contracted, fixed-
+  discretionary, variable-enrollment-tied, variable-discretionary). 
+  The Hard Revenue Coverage denominator could become more meaningful 
+  if expenses are classified with the same rigor as revenue.
+
+Scope: Apply the #927 pattern (typed taxonomy, dedicated module, 
+  citation discipline, single computation path) to expense rows.
+
+Tracked at: file before closing #927
+
+---
+
+Follow-up task 3: Surface enrollment certainty factor in lender packet
+
+Rationale: The certainty factor is currently invisible to lenders — 
+  they see a Hard Revenue Coverage figure but not the haircut applied 
+  to per-pupil revenue. Lenders may want to see "Per-pupil revenue 
+  $X, certainty factor 0.85, contributes $0.85X to Hard Revenue 
+  Coverage" so they can apply their own factor if they disagree.
+
+Scope: Add a row to the Revenue Quality section showing the 
+  certainty-factor calculation, with the factor source cited inline.
+
+Tracked at: file before closing #927
+```
+
+---
+
+## Light vs full completion template
+
+This task touches taxonomy module, per-row schema, engine computation, seed data migration, and rendering. **Use the full five-section completion template**, not the light template.
+
+```
+Section A — What changed
+  Files modified, taxonomy module created, schema field added, 
+  computation function refactored, seed data migrated
+
+Section B — Re-rendered evidence
+  For each persona fixture:
+    Quote the Revenue Quality table before / after (showing 2 buckets → 4 buckets)
+    Quote the Hard Revenue Coverage value before / after
+    Confirm Liberty rises from 0.00× to substantially above 1.0×
+    Confirm Riverside rises from 0.28× to a credible value
+    Confirm Oakwood remains structurally low with the explanatory copy
+    Confirm no "policy_dependent" text remains anywhere
+
+Section C — Source-of-truth trace
+  Taxonomy location (file:line)
+  Schema field (file:line)
+  Computation function (file:line)
+  Display labels source (file:line)
+  All consumers route through this chain — no parallel classification 
+    logic, no hand-coded display strings
+
+Section D — Cross-section consistency check
+  Classification values consistent between schema, computation, 
+    display, and snapshot tests
+  No persona has rows with classifications that contradict the 
+    documented rules
+  Hard Revenue Coverage figure consistent across Executive Summary, 
+    Revenue Quality table, Lender Commentary, and any other surface
+  Migration of existing data produced the expected classifications
+
+Section E — Side-effect check
+  Did the schema change affect other computations downstream? Verify.
+  Did the seed data migration touch any test fixtures? List which.
+  Were there existing classification signals on RevenueRowData that 
+    should have been extended rather than paralleled? (i.e., the 
+    sibling search results)
+  Were any rows ambiguous to classify? Document the judgment call 
+    and any cases where the rule should be refined.
+  Does the migration approach (script vs inference) handle all 
+    production data shapes? List any cases that produced fallback 
+    behavior.
+```
+
+---
+
+## Quick checklist for the agent
+
+Before claiming #927 complete:
+
+- [ ] Taxonomy lives in dedicated module with citation + validation metadata
+- [ ] Four-bucket `RevenueClassification` type defined with TypeScript literal union
+- [ ] Each bucket carries description, examples, inclusion rule, rationale
+- [ ] `RevenueRowData.classification` field is required, not optional
+- [ ] `classificationRationale` field captures per-row reasoning
+- [ ] `ENROLLMENT_CERTAINTY_FACTORS` defined with source + lastValidated; `[citation pending]` markers acknowledged
+- [ ] `computeHardRevenue` is the only function computing Hard Revenue
+- [ ] All three persona fixtures migrated with documented per-row decisions
+- [ ] Backward-compat path (script or inference) handles existing production data
+- [ ] Sibling bug search has been run; output is in the completion summary
+- [ ] Lessons from #925 and #926 explicitly checked (existing signal? citation discipline?)
+- [ ] Lender packet Revenue Quality table renders four buckets
+- [ ] No "policy_dependent" string appears in any rendered PDF
+- [ ] Regression test added with subsystem-level + persona-specific assertions
+- [ ] Regression test passes for all current persona fixtures
+- [ ] Test architecture supports adding a new persona fixture without modifying assertion logic
+- [ ] Three architectural follow-ups filed (citation calibration, expense taxonomy, surface certainty factor)
+- [ ] Full five-section completion template (A–E) filled in completely
+
+If any checklist item is incomplete, the task is not done.
+
+---
+
+## What to paste to Replit
+
+```
+Apply Task #927 Addendum before starting work.
+
+Framing: this task improves the revenue classification subsystem. 
+Liberty's 0.00× and Riverside's 0.28× are evidence the current 
+taxonomy is incomplete — they are not the deliverable. The 
+deliverable is a four-bucket taxonomy that produces credible 
+Hard Revenue Coverage for any persona using voucher, ADM, or 
+per-pupil funding.
+
+Lessons to apply:
+- From #925: Check whether RevenueRowData already encodes a 
+  classification signal beyond the binary buckets. If something 
+  analogous exists, extend it. Surface the question if you find 
+  a conflict.
+- From #926: Reference data with metadata belongs in a dedicated 
+  module with citation discipline.
+
+Specifically:
+
+1. Choose Option 1 (reclassify), not Option 2 (Risk Framing note). 
+   Fix the taxonomy so the number itself becomes accurate.
+
+2. Four buckets:
+   - contracted_signed
+   - contracted_pending_enrollment (NEW — ADM, voucher per-pupil)
+   - projected_enrollment_driven  
+   - discretionary
+   
+   Hard Revenue includes contracted_signed at full weight plus 
+   contracted_pending_enrollment × enrollment_certainty_factor 
+   (0.85 startup Y1, 0.95 operating with retention history).
+
+3. Taxonomy lives in lib/finance/src/classification/
+   revenue-classification.ts. Each bucket carries description, 
+   examples, inclusion rule, rationale, citation metadata.
+
+4. Per-row classification migration: Riverside, Liberty, Oakwood 
+   each have documented expected classifications per the addendum. 
+   Apply and verify.
+
+5. Backward compat: pick migration script OR inference layer based 
+   on production data volume. Document the choice.
+
+6. Add the three required addendum fields to your task spec:
+   - Canonical source: taxonomy → per-row → computation → display 
+     chain
+   - Sibling bug search: other classification/bucket logic; check 
+     for existing signals on RevenueRowData
+   - Explicit regression assertion: subsystem-level + persona-specific 
+     expectations (Patterns A + B + E)
+
+7. Prevention mechanism: type-level union, required field, single 
+   computation path, citation discipline.
+
+8. Use the full five-section completion template (A–E).
+
+9. Run the quick checklist before claiming complete.
+
+10. File three architectural follow-ups before closing #927:
+    - Citation calibration for enrollment certainty factors
+    - Expense classification taxonomy (mirror of revenue pattern)
+    - Surface certainty factor in lender packet for lender visibility
+
+Reference the full addendum for type signatures, per-row migration 
+rules, full assertion specifications, and follow-up templates.
+```

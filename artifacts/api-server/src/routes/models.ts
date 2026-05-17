@@ -52,6 +52,7 @@ import {
   isDecisionType,
   computeBaseFinancials,
   computeDownsideBand,
+  checkRequiredInputs,
   type DecisionImpact,
   type DecisionType as DecisionEngineDecisionType,
   type DownsideBand,
@@ -124,6 +125,22 @@ function parseIfMatchVersion(raw: string): number {
   const trimmed = raw.trim().replace(/^W\//i, "");
   const unquoted = trimmed.replace(/^"|"$/g, "");
   return Number.parseInt(unquoted, 10);
+}
+
+// Task #928 — pre-packet gate that returns 422 with a structured body
+// the wizard can map to a "complete this step" CTA. Kept separate from
+// `checkUnresolvedFlags` (which gates on engine-emitted assumption flags
+// the founder must explain) because required inputs can never be cleared
+// by an explanation — only by filling the field in.
+function requiredInputGuard(data: Record<string, unknown>, res: Response): boolean {
+  const required = checkRequiredInputs(data as Parameters<typeof checkRequiredInputs>[0]);
+  if (!required.blocked) return false;
+  res.status(422).json({
+    error: required.message,
+    code: required.code,
+    missing: required.missing,
+  });
+  return true;
 }
 
 function abortGuard(req: AuthRequest, res: Response): boolean {
@@ -921,6 +938,7 @@ router.get("/models/:id/export/pro-forma-pdf", authMiddleware, async (req: AuthR
     if (abortGuard(req, res)) return;
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
+    if (requiredInputGuard(data, res)) return;
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
@@ -966,6 +984,7 @@ router.get("/models/:id/export/loan-readiness-pdf", authMiddleware, async (req: 
     if (abortGuard(req, res)) return;
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
+    if (requiredInputGuard(data, res)) return;
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const entityType = typeof profile?.entityType === "string" ? profile.entityType : undefined;
@@ -1016,6 +1035,7 @@ router.get("/models/:id/export/lender-proforma", authMiddleware, async (req: Aut
     if (abortGuard(req, res)) return;
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
+    if (requiredInputGuard(data, res)) return;
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
@@ -1068,6 +1088,7 @@ router.get("/models/:id/export/lender-packet", authMiddleware, async (req: AuthR
     if (abortGuard(req, res)) return;
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
+    if (requiredInputGuard(data, res)) return;
     const consultantOutput = await runConsultantEngine(data);
 
     if (abortGuard(req, res)) return;
@@ -1130,6 +1151,7 @@ router.get("/models/:id/export/lender-packet-pdf", authMiddleware, async (req: A
     if (abortGuard(req, res)) return;
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
+    if (requiredInputGuard(data, res)) return;
     const consultantOutput = await runConsultantEngine(data);
 
     if (abortGuard(req, res)) return;
@@ -1246,6 +1268,7 @@ router.get("/models/:id/export/board-packet", authMiddleware, async (req: AuthRe
     if (abortGuard(req, res)) return;
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
+    if (requiredInputGuard(data, res)) return;
     const consultantOutput = await runConsultantEngine(data);
 
     if (abortGuard(req, res)) return;
@@ -1306,6 +1329,7 @@ router.get("/models/:id/export/board-packet-pdf", authMiddleware, async (req: Au
     if (abortGuard(req, res)) return;
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
+    if (requiredInputGuard(data, res)) return;
     const consultantOutput = await runConsultantEngine(data);
 
     if (abortGuard(req, res)) return;
@@ -1523,6 +1547,7 @@ router.get("/models/:id/export/underwriting-v2", authMiddleware, async (req: Aut
     if (abortGuard(req, res)) return;
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
+    if (requiredInputGuard(data, res)) return;
     const consultantOutput = await runConsultantEngine(data);
 
     if (abortGuard(req, res)) return;
