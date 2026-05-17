@@ -2565,12 +2565,12 @@
         }
       ]
     },
-    "generatedAt": "2026-05-17T22:22:41.200Z"
+    "generatedAt": "2026-05-17T22:35:33.139Z"
   },
   "lenderPacket": {
     "packetType": "lender",
     "schoolName": "Liberty STEM Charter School",
-    "generatedAt": "2026-05-17T22:22:41.211Z",
+    "generatedAt": "2026-05-17T22:35:33.148Z",
     "modelId": 0,
     "narrative": {
       "headline": "This model shows promise but has areas that should be strengthened before presenting to lenders.",
@@ -6399,7 +6399,7 @@
         "negativeY5StressScenarios": [],
         "highPriorityActions": []
       },
-      "generatedAt": "2026-05-17T22:22:41.222Z"
+      "generatedAt": "2026-05-17T22:35:33.157Z"
     },
     "founderCompNormalization": {
       "reported": [

@@ -24,18 +24,24 @@
  * mirror is enforced by a type assertion in the smoke test below.
  */
 
+// Currency suffix [KMB] is intentionally case-sensitive: prose like
+// "$67,895 budgeted" would otherwise have its lowercase `b` parsed as
+// "billions" and yield a synthetic 67,895,000,000,000 token with no
+// real props counterpart. The case-insensitive alternatives (ratio
+// `x`, timing `mo`/`months`) are spelled out explicitly so the `g`
+// flag is sufficient.
 const TOKEN_RE = new RegExp(
   [
     "-?\\$\\s?-?[\\d,]+(?:\\.\\d+)?\\s?[KMB]?",
     "-?[\\d,]+(?:\\.\\d+)?\\s?%",
-    "-?[\\d,]+(?:\\.\\d+)?\\s?x",
-    "-?[\\d,]+(?:\\.\\d+)?\\s?(?:months?|mo)\\b",
+    "-?[\\d,]+(?:\\.\\d+)?\\s?[xX]",
+    "-?[\\d,]+(?:\\.\\d+)?\\s?(?:[Mm]onths?|[Mm]o)\\b",
     "-?[\\d,]+(?:\\.\\d+)?",
   ].join("|"),
-  "gi",
+  "g",
 );
 
-const CURRENCY_RE = /^-?\$?\s*-?[\d,]+(?:\.\d+)?\s*[KMB]?$/i;
+const CURRENCY_RE = /^-?\$?\s*-?[\d,]+(?:\.\d+)?\s*[KMB]?$/;
 const PERCENT_RE = /^-?[\d,]+(?:\.\d+)?\s*%$/;
 const RATIO_RE = /^-?[\d,]+(?:\.\d+)?\s*x$/i;
 const MONTHS_RE = /^-?[\d,]+(?:\.\d+)?\s*(?:mo|months?)$/i;
@@ -113,6 +119,17 @@ export interface ExtractRenderedOptions {
   /** If true, skip text nodes inside <script>/<style>/<svg> subtrees.
    *  Defaults to true. */
   skipNonContent?: boolean;
+  /**
+   * Test-id values whose subtree should be skipped entirely.
+   *
+   * Used by the M5 per-persona render coverage harness to exclude
+   * UI-local form widgets (e.g. `CustomStressTestForm`) whose
+   * defaultValue numerics come from useState defaults rather than the
+   * component's `data` props. Without this, the rendered set would
+   * include "fabricated" tokens that have no props counterpart by
+   * design — defeating the rendered ⊆ props assertion.
+   */
+  skipSubtreeTestIds?: readonly string[];
 }
 
 const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "SVG", "PATH", "DEFS"]);
@@ -123,10 +140,15 @@ export function extractRendered(
 ): ExtractedValue[] {
   const out: ExtractedValue[] = [];
   const skipNonContent = opts.skipNonContent !== false;
+  const skipTestIds = new Set(opts.skipSubtreeTestIds ?? []);
   const seenLocations = new Set<string>();
 
   function walk(el: Element, indexInParent: number, pathChain: string[]): void {
     if (skipNonContent && SKIP_TAGS.has(el.tagName)) return;
+    if (skipTestIds.size > 0) {
+      const tid = el.getAttribute("data-testid");
+      if (tid && skipTestIds.has(tid)) return;
+    }
     const anchor = nodeAnchor(el, indexInParent);
     const nextChain = [...pathChain, anchor];
     let childIndex = 0;

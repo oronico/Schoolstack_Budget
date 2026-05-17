@@ -430,7 +430,10 @@ export function CommentaryBlock({
             {p}
           </p>
         ))}
-        <p className="text-[11px] text-muted-foreground italic pt-1">
+        <p
+          data-testid={`commentary-stamp-${accent}`}
+          className="text-[11px] text-muted-foreground italic pt-1"
+        >
           Every figure above was sourced from the same canonical engine that powers the rest of this packet. Regenerated at {stamp}.
         </p>
       </div>

@@ -17,16 +17,14 @@
  *   3. Run a props-walk equivalent to api-server's
  *      `extractComponentState` over the same input ("component-props"
  *      surface — the superset).
- *   4. Assert the cross-surface invariants:
- *        a. component-rendered is non-empty per persona × component
- *           (proves the component actually paints numeric content for
- *           every persona, catching the bug where one persona renders
- *           a blank section that another does not).
- *        b. Every component-rendered value is within a generous
- *           per-token tolerance of SOME component-props value
- *           (rendered ⊆ props — catches "shown but not on the wire"
- *           regressions where the component fabricates a number the
- *           server never sent).
+ *   4. Assert BOTH cross-surface directions:
+ *        a. rendered ⊆ props (strict, no tolerance): catches "shown but
+ *           not on the wire" regressions where the component fabricates
+ *           a number the server never sent.
+ *        b. critical props leaves ⊆ rendered: catches "shipped but not
+ *           shown" / render-suppression regressions for the persona's
+ *           headline KPIs (cash runway months, lender-readiness cap
+ *           callout) — the class the rendered ⊆ props check cannot see.
  *
  * Stand-alone `pnpm --filter @workspace/school-financial-model run
  * test` invocations should still pass — when the snapshots directory
@@ -71,16 +69,58 @@ const SNAPSHOT_DIR = resolve(
   "render-props",
 );
 
+/**
+ * Local structural mirrors of the LenderPacketPreview component prop
+ * shapes (kept structural rather than imported from api-server to
+ * avoid cross-artifact dependency, and kept explicit rather than
+ * `any` so the harness retains type safety per the M5 code-review
+ * bar). Both interfaces are pure data — they mirror the runtime
+ * shape the components destructure, not the full canonical schema.
+ */
+interface NarrativeSummaryShape {
+  headline: string;
+  summary: string;
+  keyRisks: string[];
+  keyStrengths: string[];
+  recommendedFocus: string;
+}
+
+interface LenderReadinessShape {
+  status: string;
+  explanation: string;
+  result?: {
+    uncappedRating?: string;
+    effectiveRating?: string;
+    cap?: {
+      applied?: boolean;
+      reason?: string;
+      pendingEvidenceCount?: number;
+      totalAssumptionCount?: number;
+      taggedCount?: number;
+      taggedFraction?: number;
+    };
+    callout?: string;
+  };
+}
+
+interface NarrativeCommentaryShape {
+  paragraphs: string[];
+  allowedFigures: string[];
+  generatedAt: string;
+}
+
+interface LenderPacketShape {
+  narrative?: NarrativeSummaryShape;
+  lenderReadiness?: LenderReadinessShape;
+  lenderCommentary?: NarrativeCommentaryShape;
+}
+
 interface RenderPropsSnapshot {
   personaSlug: string;
   personaLabel: string;
   personaSegment: string;
   consultant: ConsultantOutput;
-  // The lender packet payload — typed loosely here because SFM doesn't
-  // import the api-server LenderPacket interface. The fields we touch
-  // (`narrative`, `lenderReadiness`, `lenderCommentary`) are validated
-  // structurally before render.
-  lenderPacket: Record<string, unknown>;
+  lenderPacket: LenderPacketShape & Record<string, unknown>;
 }
 
 function loadSnapshots(): RenderPropsSnapshot[] {
@@ -137,10 +177,14 @@ function extractPropsNumeric(
     }
     if (typeof node === "string") {
       // Strings sometimes carry numeric tokens (e.g. lender callout
-      // "Rating capped … 22 of 22 assumptions"). Extract them so the
-      // rendered-DOM walker, which DOES see those tokens, has a
-      // matching props-side counterpart.
-      const matches = node.match(/-?\d[\d,]*(?:\.\d+)?/g);
+      // "Rating capped … 22 of 22 assumptions", or ISO timestamps
+      // like "2026-05-17T22:33:37"). We extract POSITIVE numerics
+      // only — a leading `-?` would greedily consume the `-` between
+      // ISO date components ("2026-05-17" → "-17"), causing the
+      // rendered "+17" day-of-month to fail to match the props side.
+      // Genuine negative numbers in the wire schema arrive as
+      // `typeof "number"` and are handled by the number branch above.
+      const matches = node.match(/\d[\d,]*(?:\.\d+)?/g);
       if (matches) {
         let i = 0;
         for (const m of matches) {
@@ -185,19 +229,6 @@ function extractPropsNumeric(
  */
 const ABS_TOL = 0.5; // catches integer rounding (e.g. $48,500 vs 48500)
 const REL_TOL = 0.01; // 1% — catches $K rounding ($166K → 166000 from 165980)
-// Per-(persona × component) ceiling for unmatched rendered tokens. Two
-// known classes of unavoidable orphans:
-//   1. Form-default literals (e.g. the "-15" placeholder in
-//      `CustomStressTestForm` — defined as a useState initial value,
-//      not passed via props).
-//   2. extractRendered's token regex matches `$N b` (e.g. "$67,895 budgeted")
-//      and scales by 1e9 ([KMB] suffix support is case-insensitive). This
-//      yields a synthetic "billions" value that can't be reconciled to
-//      props at any scale.
-// A genuine fabrication regression would surface dozens of orphans, not
-// 1-2. The threshold below catches the systemic case while tolerating
-// the known edge-cases above; orphans are always logged for visibility.
-const MAX_ORPHANS_PER_RENDER = 3;
 
 function matchesAnyProp(
   rendered: number,
@@ -215,8 +246,19 @@ function matchesAnyProp(
     // Cross-scale aliases the renderer applies before printing.
     // - Percent rendered as fraction in props (12.5% → 0.125 rendered;
     //   props may carry 12.5 instead).
-    // - K/M rounding: rendered 166000 may correspond to props 166.
-    const aliases = [p.value, p.value * 100, p.value / 100, p.value * 1000];
+    // - K/M rounding (rendered side): rendered 166000 may correspond
+    //   to props 166 ($K shorthand).
+    // - K compact (rendered side, INVERSE): `fmtCompact($76,000)` may
+    //   collapse to bare "76" without a K suffix in tight cells (the
+    //   sensitivity matrix net-income cells do this); props carries
+    //   the full 76000.
+    const aliases = [
+      p.value,
+      p.value * 100,
+      p.value / 100,
+      p.value * 1000,
+      p.value / 1000,
+    ];
     for (const alias of aliases) {
       const aDiff = Math.abs(alias - rendered);
       if (aDiff <= ABS_TOL) return true;
@@ -224,6 +266,34 @@ function matchesAnyProp(
         return true;
       }
     }
+  }
+  return false;
+}
+
+/**
+ * `extractRendered` canonicalises tokens with the same KMB/percent/
+ * months scaling. To assert "this critical props value made it into
+ * the rendered DOM", we reuse the SAME tolerance ladder used for the
+ * subset check above so this and the orphan check agree on what
+ * "equal enough" means.
+ */
+function renderedHasValue(
+  target: number,
+  rendered: readonly { value: number }[],
+): boolean {
+  // Build a one-element synthetic props array so we can reuse the
+  // matcher's tolerance semantics in the opposite direction.
+  const fakeProps: PropsRecord[] = [
+    {
+      surface: "component-props",
+      producer: "__critical__",
+      location: "$",
+      value: target,
+      label: null,
+    },
+  ];
+  for (const r of rendered) {
+    if (matchesAnyProp(r.value, fakeProps)) return true;
   }
   return false;
 }
@@ -236,15 +306,14 @@ describe.skipIf(snapshots.length === 0)(
     it("loaded all 3 persona snapshots from the api-server harness", () => {
       expect(snapshots.length).toBeGreaterThanOrEqual(3);
       const slugs = snapshots.map((s) => s.personaSlug).sort();
-      // Auto-pickup: the harness asserts personas exist; we just
-      // re-affirm the expected baseline trio so a silent drop is
-      // caught here too.
-      expect(slugs).toEqual(expect.arrayContaining(["liberty", "oakwood", "riverside"]));
+      expect(slugs).toEqual(
+        expect.arrayContaining(["liberty", "oakwood", "riverside"]),
+      );
     });
 
     for (const snap of snapshots) {
       describe(`persona: ${snap.personaSlug} (${snap.personaSegment})`, () => {
-        it("ConsultantAnalysisView: component-rendered ⊆ component-props", () => {
+        it("ConsultantAnalysisView: rendered ⊆ props AND critical KPI ⊆ rendered", () => {
           const { container } = render(
             <ConsultantAnalysisView
               data={snap.consultant}
@@ -252,10 +321,16 @@ describe.skipIf(snapshots.length === 0)(
               cumNiLabel="Cumulative Net Income"
             />,
           );
+          // Exclude the CustomStressTestForm subtree — its `<p>` /
+          // `<input>` defaultValue numerics come from useState
+          // initialisers inside the form component, not the
+          // ConsultantAnalysisView `data` prop, so they cannot be
+          // reconciled to the props-walk by design.
           const rendered = extractRendered(container, {
             componentName: "ConsultantAnalysisView",
+            skipSubtreeTestIds: ["custom-stress-test-form"],
           });
-          // 4a. Coverage: every persona must paint at least one
+          // 4a-coverage: every persona must paint at least one
           // numeric token in this view.
           expect(rendered.length).toBeGreaterThan(0);
 
@@ -265,80 +340,107 @@ describe.skipIf(snapshots.length === 0)(
           );
           expect(props.length).toBeGreaterThan(0);
 
-          // 4b. Superset invariant (with extractor-edge-case tolerance).
+          // 4a. Strict superset invariant: every rendered numeric
+          // token MUST have a props counterpart (under the documented
+          // tolerance ladder). No ceiling, no tolerance for orphans.
           const orphans = rendered.filter(
             (r) => !matchesAnyProp(r.value, props),
           );
           if (orphans.length > 0) {
             const sample = orphans
-              .slice(0, 8)
+              .slice(0, 10)
               .map(
                 (o) =>
-                  `${o.value} @ ${o.location} (raw=${o.rawToken ?? "?"})`,
+                  `${o.value} @ ${o.location} (raw=${o.rawToken ?? "?"}, label=${o.label ?? "?"})`,
               )
               .join("\n  ");
-            console.warn(
-              `[component-rendered ⊄ component-props] persona=${snap.personaSlug} component=ConsultantAnalysisView orphans=${orphans.length}\n  ${sample}`,
+            throw new Error(
+              `persona ${snap.personaSlug} / ConsultantAnalysisView: ${orphans.length} rendered numeric token(s) have no matching props value (rendered ⊄ props):\n  ${sample}`,
             );
           }
-          expect(
-            orphans.length,
-            `persona ${snap.personaSlug} / ConsultantAnalysisView: ${orphans.length} rendered token(s) without props counterpart exceeds ceiling of ${MAX_ORPHANS_PER_RENDER}`,
-          ).toBeLessThanOrEqual(MAX_ORPHANS_PER_RENDER);
+
+          // 4b. Render-suppression guard (props ⊆ rendered for
+          // critical KPI). The cash runway months value is the
+          // consultant view's headline figure; if the component ever
+          // suppressed it conditionally we'd see this fire.
+          const runway = snap.consultant.cashRunwayMonths;
+          if (typeof runway === "number" && Number.isFinite(runway)) {
+            expect(
+              renderedHasValue(runway, rendered),
+              `persona ${snap.personaSlug} / ConsultantAnalysisView: cashRunwayMonths=${runway} present in props but NOT rendered (suppression-class regression)`,
+            ).toBe(true);
+          }
         });
 
-        it("LenderPacketPreview (NarrativeHeader + CommentaryBlock): component-rendered ⊆ component-props", () => {
-          const lp = snap.lenderPacket as {
-            narrative?: unknown;
-            lenderReadiness?: unknown;
-            lenderCommentary?: unknown;
-          };
+        it("LenderPacketPreview (NarrativeHeader + CommentaryBlock): rendered ⊆ props AND cap callout ⊆ rendered", () => {
+          const lp = snap.lenderPacket;
           // Persona payloads MUST carry the narrative + readiness
           // subtrees — they're built unconditionally by
           // `buildLenderPacket`. A missing field here is itself a
           // regression we want to flag.
           expect(lp.narrative).toBeTruthy();
           expect(lp.lenderReadiness).toBeTruthy();
+          const narrative = lp.narrative!;
+          const readiness = lp.lenderReadiness!;
 
-          const lenderCommentary =
-            lp.lenderCommentary ??
-            // Defensive fallback: if a persona happens to not have a
-            // commentary block (engine may suppress it under specific
-            // assumption-flag combos), render a minimal stub so the
-            // CommentaryBlock still mounts and the rendered-side
-            // coverage check is meaningful.
-            {
-              paragraphs: ["No lender commentary generated for this persona."],
+          // Use the snapshot's commentary verbatim when present.
+          // Missing commentary is itself a regression for personas
+          // expected to produce one (Liberty + Oakwood always have
+          // it post-#617); we render a minimal stub ONLY so the
+          // CommentaryBlock can still mount and the rendered-side
+          // coverage check is meaningful. A WARN is emitted so a
+          // silent disappearance is still surfaced.
+          let commentary = lp.lenderCommentary;
+          if (!commentary) {
+            console.warn(
+              `[lender-commentary missing] persona=${snap.personaSlug} — rendering minimal stub`,
+            );
+            commentary = {
+              paragraphs: [
+                "No lender commentary generated for this persona.",
+              ],
               allowedFigures: [],
               generatedAt: new Date("2026-01-01").toISOString(),
             };
+          }
 
           const { container } = render(
             <div>
-              {/* eslint-disable @typescript-eslint/no-explicit-any */}
               <NarrativeHeader
-                narrative={lp.narrative as any}
-                readiness={lp.lenderReadiness as any}
+                narrative={narrative}
+                readiness={readiness}
               />
               <CommentaryBlock
                 title="Lender Commentary"
                 accent="lender"
-                commentary={lenderCommentary as any}
+                commentary={commentary}
                 onRegenerate={() => {}}
                 regenerating={false}
               />
-              {/* eslint-enable @typescript-eslint/no-explicit-any */}
             </div>,
           );
           const rendered = extractRendered(container, {
             componentName: "LenderPacketPreview",
+            // The "Regenerated at {stamp}" paragraph runs
+            // `new Date(generatedAt).toLocaleString()`, which
+            // produces a locale/timezone-dependent formatting (e.g.
+            // 12-hour clock with AM/PM, locale-specific date order)
+            // that does not align 1:1 with the ISO string the props
+            // extractor walks. The stamp is purely a UI-side
+            // transformation of an existing prop, not a numeric
+            // claim, so it's excluded from the rendered ⊆ props
+            // check.
+            skipSubtreeTestIds: [
+              "commentary-stamp-lender",
+              "commentary-stamp-board",
+            ],
           });
           expect(rendered.length).toBeGreaterThan(0);
 
           const propsPayload = {
-            narrative: lp.narrative,
-            lenderReadiness: lp.lenderReadiness,
-            lenderCommentary,
+            narrative,
+            lenderReadiness: readiness,
+            lenderCommentary: commentary,
           };
           const props = extractPropsNumeric(
             propsPayload,
@@ -346,25 +448,46 @@ describe.skipIf(snapshots.length === 0)(
           );
           expect(props.length).toBeGreaterThan(0);
 
+          // 4a. Strict superset invariant.
           const orphans = rendered.filter(
             (r) => !matchesAnyProp(r.value, props),
           );
           if (orphans.length > 0) {
             const sample = orphans
-              .slice(0, 8)
+              .slice(0, 10)
               .map(
                 (o) =>
-                  `${o.value} @ ${o.location} (raw=${o.rawToken ?? "?"})`,
+                  `${o.value} @ ${o.location} (raw=${o.rawToken ?? "?"}, label=${o.label ?? "?"})`,
               )
               .join("\n  ");
-            console.warn(
-              `[component-rendered ⊄ component-props] persona=${snap.personaSlug} component=LenderPacketPreview orphans=${orphans.length}\n  ${sample}`,
+            throw new Error(
+              `persona ${snap.personaSlug} / LenderPacketPreview: ${orphans.length} rendered numeric token(s) have no matching props value (rendered ⊄ props):\n  ${sample}`,
             );
           }
-          expect(
-            orphans.length,
-            `persona ${snap.personaSlug} / LenderPacketPreview: ${orphans.length} rendered token(s) without props counterpart exceeds ceiling of ${MAX_ORPHANS_PER_RENDER}`,
-          ).toBeLessThanOrEqual(MAX_ORPHANS_PER_RENDER);
+
+          // 4b. Render-suppression guard (props ⊆ rendered): when the
+          // lender-readiness cap is applied, the pre-rendered callout
+          // string MUST surface in the DOM. The callout typically
+          // reads "Rating capped at <X> — only <tagged> of
+          // <total> assumptions tagged with evidence." Both numeric
+          // counts must reach the rendered output.
+          const cap = readiness.result?.cap;
+          if (cap?.applied) {
+            const tagged = cap.taggedCount;
+            const total = cap.totalAssumptionCount;
+            if (typeof total === "number" && Number.isFinite(total)) {
+              expect(
+                renderedHasValue(total, rendered),
+                `persona ${snap.personaSlug} / LenderPacketPreview: cap.totalAssumptionCount=${total} present in props but NOT rendered (cap callout suppression)`,
+              ).toBe(true);
+            }
+            if (typeof tagged === "number" && Number.isFinite(tagged)) {
+              expect(
+                renderedHasValue(tagged, rendered),
+                `persona ${snap.personaSlug} / LenderPacketPreview: cap.taggedCount=${tagged} present in props but NOT rendered (cap callout suppression)`,
+              ).toBe(true);
+            }
+          }
         });
       });
     }
