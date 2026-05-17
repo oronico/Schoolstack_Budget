@@ -1083,10 +1083,13 @@ function shouldShowAssumptions(sectionId: string): boolean {
 }
 
 function renderMetrics(doc: PDFDoc, metrics: LinkedMetric[]) {
+  // #923 addendum Option A — neutral metrics render with no glyph (plain
+  // label only); rely on STATUS_ICON.neutral ("") instead of overriding to
+  // a space, so a neutral row reads flush with the section heading rather
+  // than indented by one space character.
   renderLinkedMetrics(doc, metrics, {
     limit: 8,
     showBenchmark: true,
-    neutralIcon: " ",
     reserveInitialSpace: true,
   });
 }

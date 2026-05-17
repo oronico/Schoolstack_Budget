@@ -68,11 +68,11 @@ Campaign-Cycle Microschool projects $425,145 in Year 5 revenue, with 6 of 13 key
 need attention. This is a starting point, and working through the recommendations below will help
 you build the financial story your mission deserves. Watch out: projected cash first goes negative
 in Year 1 (Sep) at -$259, even though year-end runway can still look healthy.
-[ ] Readiness Level: Not Yet Ready
-[ ] Biggest Strength: Strong Year 5 profit
-[ ] Biggest Risk: Year 1 projects a $9,719 shortfall, which is very common for early-stage schools and worth
+Readiness Level: Not Yet Ready
+Biggest Strength: Strong Year 5 profit
+Biggest Risk: Year 1 projects a $9,719 shortfall, which is very common for early-stage schools and worth
 planning around
-[ ] Cash Runway: 0.2 months
+Cash Runway: 0.2 months
 SchoolStack Budget - Generated <DATE>
 Page 2 of 22
 --- PAGE 3 ---
@@ -133,11 +133,11 @@ Year 5 Enrollment  40
 Revenue Model
 The revenue model is tuition-driven (88.6% of Year 1 revenue). Year 1 total revenue is projected at
 $166K, growing to $425K by Year 5.
-[ ] Tuition %: 88.6%
-[ ] Public Funding %: 0.0%
-[ ] Philanthropy %: 11.6%
-[ ] Year 1 Contracted Revenue %: 85.9%
-[ ] Hard Revenue Coverage (Y1): 0.95×
+Tuition %: 88.6%
+Public Funding %: 0.0%
+Philanthropy %: 11.6%
+Year 1 Contracted Revenue %: 85.9%
+Hard Revenue Coverage (Y1): 0.95×
 Revenue by Year
 Year
 Total Revenue
@@ -304,7 +304,7 @@ Page 6 of 22
 --- PAGE 7 ---
 Occupational Employment & Wage Statistics, May 2023. Education Administrators, Kindergarten
 through Secondary (11-9032), national median annual wage..
-[+] Staffing % of Revenue: 52.0%
+✓ Staffing % of Revenue: 52.0%
 Suggested Founder Compensation Benchmark by Year
 Year
 Projected Enrollment
@@ -461,14 +461,14 @@ The model reaches break-even in Year 2. Year 5 net income is projected at $142K 
 Breakeven enrollment is 22 students (9% below Year 1 enrollment).
 • Accounting basis
 All projections are prepared on an accrual basis; the school currently keeps books on a undetermined basis.
-[~] Revenue per Student (Year 1): $8,282 (benchmark: Private avg: $12,000–$25,000)
-[!] Cost per Student (Year 1): $8,768 (benchmark: Target: ≤ 85% of revenue per student)
-[+] Staffing Cost (% of Revenue): 52.0% (benchmark: Industry avg: 50–65% of revenue)
-[!] Operating Cost (% of Revenue): 53.6% (benchmark: Target: under 30% of revenue)
-[!] Profit margin (Year 1): -5.9% (benchmark: Startup target: 0–5%; mature: 10%+)
-[+] Profit margin (Year 5): 33.5% (benchmark: Target: 10–15%+)
-[+] 5-Year Revenue Growth: 156.7% (benchmark: Healthy schools: 30–80% over 5 years)
-[+] Capacity Utilization (Year 5): 88.9% (benchmark: Optimal: 80–95% utilization)
+⚠ Revenue per Student (Year 1): $8,282 (benchmark: Private avg: $12,000–$25,000)
+✕ Cost per Student (Year 1): $8,768 (benchmark: Target: ≤ 85% of revenue per student)
+✓ Staffing Cost (% of Revenue): 52.0% (benchmark: Industry avg: 50–65% of revenue)
+✕ Operating Cost (% of Revenue): 53.6% (benchmark: Target: under 30% of revenue)
+✕ Profit margin (Year 1): -5.9% (benchmark: Startup target: 0–5%; mature: 10%+)
+✓ Profit margin (Year 5): 33.5% (benchmark: Target: 10–15%+)
+✓ 5-Year Revenue Growth: 156.7% (benchmark: Healthy schools: 30–80% over 5 years)
+✓ Capacity Utilization (Year 5): 88.9% (benchmark: Optimal: 80–95% utilization)
 SchoolStack Budget - Generated <DATE>
 Page 8 of 22
 --- PAGE 9 ---
@@ -511,9 +511,9 @@ $142K
 33.5%
 Opening Balance Sheet
 Net position at model start: $15K.
-[ ] Total Assets: $15K
-[ ] Total Liabilities: $0
-[ ] Net Position: $15K
+Total Assets: $15K
+Total Liabilities: $0
+Net Position: $15K
 Assets
 Item
 Amount
@@ -540,8 +540,8 @@ Total Liabilities
 $0
 Facility & Key Performance Indicators
 Breakeven enrollment is 22 students. Year 1 projects 20 students, providing a -9.1% cushion.
-[ ] Breakeven Enrollment: 22
-[ ] Facility Cost/Student: $2K
+Breakeven Enrollment: 22
+Facility Cost/Student: $2K
 Key Performance Indicators
 SchoolStack Budget - Generated <DATE>
 Page 9 of 22
@@ -560,8 +560,8 @@ Cash Flow Analysis
 Year-end cash covers only 0.2 months of fixed costs. The school may need additional funding or
 cost adjustments. Opening balance: $15K total assets, $0 total liabilities, $15K net position. Lowest
 cash month across the 5-year forecast: Year 2 — Sep at $-91K.
-[ ] Cash Runway: 0.2 months
-[ ] Lowest Cash Month: Year 2 — Sep ($-91K)
+Cash Runway: 0.2 months
+Lowest Cash Month: Year 2 — Sep ($-91K)
 Cumulative Cash Position
 Year
 Cumulative Net Income
@@ -1028,12 +1028,12 @@ Debt Service Coverage
 Year-1 debt service coverage is 0.40x on the normalized (lender-primary) view — below the 1.15x
 lender minimum. Minimum: 1.15x; target: 1.25x. See the "As-Planned vs Normalized: Net Income &
 DSCR" table for the founder / board (as-planned) view alongside this normalized series.
-[!] Debt Service Coverage Ratio (Year 1): 0.40x (benchmark: Minimum: 1.15x; target: 1.25x)
-[!] Year 1 Reserve Months: 0.0 months (benchmark: Target: 3+ months)
-[!] Year 2 Reserve Months: 1.3 months (benchmark: Target: 3+ months)
-[+] Year 3 Reserve Months: 17.7 months (benchmark: Target: 3+ months)
-[+] Year 4 Reserve Months: 26.9 months (benchmark: Target: 3+ months)
-[+] Year 5 Reserve Months: 32.2 months (benchmark: Target: 3+ months)
+✕ Debt Service Coverage Ratio (Year 1): 0.40x (benchmark: Minimum: 1.15x; target: 1.25x)
+✕ Year 1 Reserve Months: 0.0 months (benchmark: Target: 3+ months)
+✕ Year 2 Reserve Months: 1.3 months (benchmark: Target: 3+ months)
+✓ Year 3 Reserve Months: 17.7 months (benchmark: Target: 3+ months)
+✓ Year 4 Reserve Months: 26.9 months (benchmark: Target: 3+ months)
+✓ Year 5 Reserve Months: 32.2 months (benchmark: Target: 3+ months)
 DSCR Summary
 Current DSCR:  0.40x
 Benchmark:  Healthy minimum: 1.15x;
@@ -1136,18 +1136,19 @@ Lender Readiness
 Your model is a solid starting point, and now it's time to refine it. Focus on the high-priority
 recommendations first, and you'll see real progress. Every great school's financial story started as
 a first draft.
-[!] Readiness Level: Not Yet Ready
+✕ Readiness Level: Not Yet Ready
 Financial Health Assessment
 Across 8 health dimensions: 4 healthy, 1 on watch, 3 at risk.
-[+] viability: Healthy
-[!] liquidity: Needs attention
-[+] staffing burden: Healthy
-[~] facility burden: Watch closely
-[!] debt affordability: Needs attention
-[+] revenue concentration: Healthy
-[!] days cash: Needs attention
-[+] reserve strength: Healthy
+✓ viability: Healthy
+✕ liquidity: Needs attention
+✓ staffing burden: Healthy
+⚠ facility burden: Watch closely
+✕ debt affordability: Needs attention
+✓ revenue concentration: Healthy
+✕ days cash: Needs attention
+✓ reserve strength: Healthy
 Health Dimensions
+Legend: ✓ Healthy   ⚠ Watch closely   ✕ Critical
 Dimension
 Status
 Details
@@ -1202,9 +1203,9 @@ Page 17 of 22
 Key Risks
 6 risk factors have been identified. Of these, 3 are rated critical and should be addressed prior to
 lender submission.
-[!] Your cash dips below zero mid-year: critical
-[!] Let's strengthen your debt-coverage cushion: critical
-[!] Let's extend your cash runway: critical
+✕ Your cash dips below zero mid-year: critical
+✕ Let's strengthen your debt-coverage cushion: critical
+✕ Let's extend your cash runway: critical
 CRITICAL
 Your cash dips below zero mid-year
 Runway is measured off year-end cash, so it misses the in-year troughs lenders zero in on. A negative mid-year balance
@@ -1246,9 +1247,9 @@ Days cash
 Only 0 days of cash on hand — well below the 45-day minimum. The school is at risk of running out of cash.
 Evidence: days cash: Needs attention
 Mitigation: Monitor this metric and develop a remediation plan if trends persist.
-[!] Your cash dips below zero mid-year: critical
-[!] Let's strengthen your debt-coverage cushion: critical
-[!] Let's extend your cash runway: critical
+✕ Your cash dips below zero mid-year: critical
+✕ Let's strengthen your debt-coverage cushion: critical
+✕ Let's extend your cash runway: critical
 See Appendix for complete assumption details.
 Appendix: Key Assumptions
 Complete list of 24 assumptions used in this financial model, with each headline metric tied to its

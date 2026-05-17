@@ -63,10 +63,10 @@ Financial Overview
 Oakwood Learning Studio projects $400,145 in Year 5 revenue with a 37.6% profit margin. The
 model tells a strong financial story with 8 of 13 key metrics in healthy range, a great foundation for
 your mission. The school has approximately 3.1 months of cash runway.
-[~] Readiness Level: Strong
-[~] Biggest Strength: Strong Year 5 profit
-[~] Biggest Risk: No major red flags detected, so continue refining assumptions as you gather real data.
-[~] Cash Runway: 3.1 months
+Readiness Level: Strong
+Biggest Strength: Strong Year 5 profit
+Biggest Risk: No major red flags detected, so continue refining assumptions as you gather real data.
+Cash Runway: 3.1 months
 School Overview
 Oakwood Learning Studio is a Startup / Pre-Opening Microschool organized as a LLC (Single
 Member) with a Tuition-Based funding profile.
@@ -76,12 +76,12 @@ The model reaches break-even in Year 1. Year 5 net income is projected at $150K 
 Breakeven enrollment is 18 students (11% above Year 1 enrollment).
 • Accounting basis
 All projections are prepared on an accrual basis; the school currently keeps books on a undetermined basis.
-[~] Revenue per Student (Year 1): $8,282
-[~] Cost per Student (Year 1): $7,162
-[+] Staffing Cost (% of Revenue): 52.0%
-[~] Operating Cost (% of Revenue): 34.2%
-[+] Profit margin (Year 1): 13.5%
-[+] Profit margin (Year 5): 37.6%
+⚠ Revenue per Student (Year 1): $8,282
+⚠ Cost per Student (Year 1): $7,162
+✓ Staffing Cost (% of Revenue): 52.0%
+⚠ Operating Cost (% of Revenue): 34.2%
+✓ Profit margin (Year 1): 13.5%
+✓ Profit margin (Year 5): 37.6%
 5-Year Net Income Projection
 Year
 Students
@@ -125,20 +125,21 @@ range.
 SchoolStack Budget - Generated <DATE>
 Page 3 of 7
 --- PAGE 4 ---
-[+] Staffing % of Revenue: 52.0%
+✓ Staffing % of Revenue: 52.0%
 Supporting Assumptions
 Founder / Lead Teacher  $58,000, 1 FTE
 Assistant Teacher  $38,000, 1 FTE
 Part-Time Aide  $24,000, 0.5 FTE
 Financial Health Assessment
 Across 9 health dimensions: 5 healthy, 4 on watch, 0 at risk.
-[+] viability: Healthy
-[~] liquidity: Watch closely
-[~] cash flow timing: Watch closely
-[+] staffing burden: Healthy
-[~] facility burden: Watch closely
-[+] debt affordability: Healthy
+✓ viability: Healthy
+⚠ liquidity: Watch closely
+⚠ cash flow timing: Watch closely
+✓ staffing burden: Healthy
+⚠ facility burden: Watch closely
+✓ debt affordability: Healthy
 Health Dimensions
+Legend: ✓ Healthy   ⚠ Watch closely   ✕ Critical
 Dimension
 Status
 Details
@@ -192,15 +193,15 @@ Healthy
 strong buffer for unexpected costs.
 Key Strengths
 The model demonstrates 5 notable strengths.
-[+] Staffing Cost (% of Revenue): 52.0%
-[+] Profit margin (Year 1): 13.5%
+✓ Staffing Cost (% of Revenue): 52.0%
 SchoolStack Budget - Generated <DATE>
 Page 4 of 7
 --- PAGE 5 ---
-[+] Profit margin (Year 5): 37.6%
-[+] 5-Year Revenue Growth: 141.6%
-[+] Capacity Utilization (Year 5): 88.9%
-[+] Debt Service Coverage Ratio (Year 1): 5.77x
+✓ Profit margin (Year 1): 13.5%
+✓ Profit margin (Year 5): 37.6%
+✓ 5-Year Revenue Growth: 141.6%
+✓ Capacity Utilization (Year 5): 88.9%
+✓ Debt Service Coverage Ratio (Year 1): 5.77x
 What to Watch
 The board should be aware of 3 key areas:
 1. Let's extend your cash runway

@@ -67,10 +67,10 @@ Executive Summary
 Voucher + Aid Stacked Microschool projects $1,086,538 in Year 5 revenue with a 77.0% profit
 margin. The model tells a strong financial story with 13 of 13 key metrics in healthy range, a great
 foundation for your mission.
-[ ] Readiness Level: Strong
-[ ] Biggest Strength: Strong Year 5 profit
-[ ] Biggest Risk: No major red flags detected, so continue refining assumptions as you gather real data.
-[ ] Cash Runway: 25.1 months
+Readiness Level: Strong
+Biggest Strength: Strong Year 5 profit
+Biggest Risk: No major red flags detected, so continue refining assumptions as you gather real data.
+Cash Runway: 25.1 months
 Budget Narrative
 Voucher + Aid Stacked Microschool projects $1,086,538 in Year 5 revenue with a 77.0% profit
 margin. The model tells a strong financial story with 13 of 13 key metrics in healthy range, a great
@@ -130,11 +130,11 @@ Year 5 Enrollment  40
 Revenue Model
 The revenue model is anchored to enrollment-driven income. Year 1 total revenue is projected at
 $412K, growing to $1.1M by Year 5.
-[ ] Tuition %: -8.8%
-[ ] Public Funding %: 42.6%
-[ ] Philanthropy %: 1.6%
-[ ] Year 1 Contracted Revenue %: -28.9%
-[ ] Hard Revenue Coverage (Y1): -0.36×
+Tuition %: -8.8%
+Public Funding %: 42.6%
+Philanthropy %: 1.6%
+Year 1 Contracted Revenue %: -28.9%
+Hard Revenue Coverage (Y1): -0.36×
 Revenue by Year
 Year
 Total Revenue
@@ -301,7 +301,7 @@ through Secondary (11-9032), national median annual wage..
 SchoolStack Budget - Generated <DATE>
 Page 5 of 20
 --- PAGE 6 ---
-[+] Staffing % of Revenue: 20.9%
+✓ Staffing % of Revenue: 20.9%
 Suggested Founder Compensation Benchmark by Year
 Year
 Projected Enrollment
@@ -458,14 +458,14 @@ The model reaches break-even in Year 1. Year 5 net income is projected at $837K 
 Breakeven enrollment is 7 students (186% above Year 1 enrollment).
 • Accounting basis
 All projections are prepared on an accrual basis; the school currently keeps books on a undetermined basis.
-[+] Revenue per Student (Year 1): $20,617 (benchmark: Private avg: $12,000–$25,000)
-[+] Cost per Student (Year 1): $7,162 (benchmark: Target: ≤ 85% of revenue per student)
-[+] Staffing Cost (% of Revenue): 20.9% (benchmark: Industry avg: 50–65% of revenue)
-[+] Operating Cost (% of Revenue): 13.7% (benchmark: Target: under 30% of revenue)
-[+] Profit margin (Year 1): 65.3% (benchmark: Startup target: 0–5%; mature: 10%+)
-[+] Profit margin (Year 5): 77.0% (benchmark: Target: 10–15%+)
-[+] 5-Year Revenue Growth: 163.5% (benchmark: Healthy schools: 30–80% over 5 years)
-[+] Capacity Utilization (Year 5): 88.9% (benchmark: Optimal: 80–95% utilization)
+✓ Revenue per Student (Year 1): $20,617 (benchmark: Private avg: $12,000–$25,000)
+✓ Cost per Student (Year 1): $7,162 (benchmark: Target: ≤ 85% of revenue per student)
+✓ Staffing Cost (% of Revenue): 20.9% (benchmark: Industry avg: 50–65% of revenue)
+✓ Operating Cost (% of Revenue): 13.7% (benchmark: Target: under 30% of revenue)
+✓ Profit margin (Year 1): 65.3% (benchmark: Startup target: 0–5%; mature: 10%+)
+✓ Profit margin (Year 5): 77.0% (benchmark: Target: 10–15%+)
+✓ 5-Year Revenue Growth: 163.5% (benchmark: Healthy schools: 30–80% over 5 years)
+✓ Capacity Utilization (Year 5): 88.9% (benchmark: Optimal: 80–95% utilization)
 SchoolStack Budget - Generated <DATE>
 Page 7 of 20
 --- PAGE 8 ---
@@ -508,9 +508,9 @@ $837K
 77.0%
 Opening Balance Sheet
 Net position at model start: $15K.
-[ ] Total Assets: $15K
-[ ] Total Liabilities: $0
-[ ] Net Position: $15K
+Total Assets: $15K
+Total Liabilities: $0
+Net Position: $15K
 Assets
 Item
 Amount
@@ -537,8 +537,8 @@ Total Liabilities
 $0
 Facility & Key Performance Indicators
 Breakeven enrollment is 7 students. Year 1 projects 20 students, providing a 185.7% cushion.
-[ ] Breakeven Enrollment: 7
-[ ] Facility Cost/Student: $2K
+Breakeven Enrollment: 7
+Facility Cost/Student: $2K
 Key Performance Indicators
 SchoolStack Budget - Generated <DATE>
 Page 8 of 20
@@ -556,8 +556,8 @@ Enrollment Cushion
 Cash Flow Analysis
 Year-end cash covers 25.1 months of fixed costs. Opening balance: $15K total assets, $0 total
 liabilities, $15K net position. Lowest cash month across the 5-year forecast: Year 1 — Jul at $69K.
-[ ] Cash Runway: 25.1 months
-[ ] Lowest Cash Month: Year 1 — Jul ($69K)
+Cash Runway: 25.1 months
+Lowest Cash Month: Year 1 — Jul ($69K)
 Cumulative Cash Position
 Year
 Cumulative Net Income
@@ -1021,12 +1021,12 @@ Debt Service Coverage
 Year-1 debt service coverage is 55.64x on the normalized (lender-primary) view. Minimum: 1.15x;
 target: 1.25x. See the "As-Planned vs Normalized: Net Income & DSCR" table for the founder /
 board (as-planned) view alongside this normalized series.
-[+] Debt Service Coverage Ratio (Year 1): 55.64x (benchmark: Minimum: 1.15x; target: 1.25x)
-[+] Year 1 Reserve Months: 22.5 months (benchmark: Target: 3+ months)
-[+] Year 2 Reserve Months: 37.3 months (benchmark: Target: 3+ months)
-[+] Year 3 Reserve Months: 66.4 months (benchmark: Target: 3+ months)
-[+] Year 4 Reserve Months: 100.5 months (benchmark: Target: 3+ months)
-[+] Year 5 Reserve Months: 137.4 months (benchmark: Target: 3+ months)
+✓ Debt Service Coverage Ratio (Year 1): 55.64x (benchmark: Minimum: 1.15x; target: 1.25x)
+✓ Year 1 Reserve Months: 22.5 months (benchmark: Target: 3+ months)
+✓ Year 2 Reserve Months: 37.3 months (benchmark: Target: 3+ months)
+✓ Year 3 Reserve Months: 66.4 months (benchmark: Target: 3+ months)
+✓ Year 4 Reserve Months: 100.5 months (benchmark: Target: 3+ months)
+✓ Year 5 Reserve Months: 137.4 months (benchmark: Target: 3+ months)
 DSCR Summary
 Current DSCR:  55.64x
 Benchmark:  Healthy minimum: 1.15x;
@@ -1129,18 +1129,19 @@ Lender Readiness
 This model demonstrates strong financial fundamentals: a clear path to profit, controlled costs, a
 sustainable revenue mix, and adequate debt coverage. Your projections are grounded and
 achievable.
-[+] Readiness Level: Strong
+✓ Readiness Level: Strong
 Financial Health Assessment
 Across 9 health dimensions: 8 healthy, 1 on watch, 0 at risk.
-[+] viability: Healthy
-[+] liquidity: Healthy
-[~] cash flow timing: Watch closely
-[+] staffing burden: Healthy
-[+] facility burden: Healthy
-[+] debt affordability: Healthy
-[+] revenue concentration: Healthy
-[+] days cash: Healthy
+✓ viability: Healthy
+✓ liquidity: Healthy
+⚠ cash flow timing: Watch closely
+✓ staffing burden: Healthy
+✓ facility burden: Healthy
+✓ debt affordability: Healthy
+✓ revenue concentration: Healthy
+✓ days cash: Healthy
 Health Dimensions
+Legend: ✓ Healthy   ⚠ Watch closely   ✕ Critical
 Dimension
 Status
 Details
@@ -1204,8 +1205,8 @@ Page 16 of 20
 Key Risks
 2 risk factors have been identified. None are rated critical, but each should have a documented
 mitigation plan.
-[+] Let's back the enrollment ramp with evidence: medium
-[+] Let's tie new hires to enrollment milestones: medium
+✓ Let's back the enrollment ramp with evidence: medium
+✓ Let's tie new hires to enrollment milestones: medium
 MEDIUM
 Let's back the enrollment ramp with evidence
 Enrollment is the engine of every revenue and staffing assumption downstream. The more evidence we can attach to each
@@ -1223,8 +1224,8 @@ Evidence: Year 2 enrollment: 26 students  |  Year 2 staffing cost: $159,666
 Mitigation: Align staffing additions to enrollment milestones. Hire when students are enrolled, not when you hope they
 will be. Use part-time or contract roles to bridge gaps. Next step: Open Step 6: Staffing and tie each new role's start date to
 a specific enrollment milestone (e.g. 'add when Y2 enrollment hits 60'), or push the role into a later year.
-[+] Let's back the enrollment ramp with evidence: medium
-[+] Let's tie new hires to enrollment milestones: medium
+✓ Let's back the enrollment ramp with evidence: medium
+✓ Let's tie new hires to enrollment milestones: medium
 See Appendix for complete assumption details.
 Appendix: Key Assumptions
 Complete list of 24 assumptions used in this financial model, with each headline metric tied to its

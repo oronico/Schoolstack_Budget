@@ -16,7 +16,7 @@ In This Report
 6.  Recommended Next Steps
 This summary is generated from the school's financial model for board discussion purposes.
 SchoolStack Budget - Generated <DATE>
-Page 1 of 10
+Page 1 of 11
 --- PAGE 2 ---
 Board Commentary
 Trustees, this update is a snapshot of where Liberty STEM Charter School stands financially as of
@@ -53,7 +53,7 @@ Flagged Assumptions
 [Warning] 50% growth (Year 1 → 2)
 Assumptions Confidence
 SchoolStack Budget - Generated <DATE>
-Page 2 of 10
+Page 2 of 11
 --- PAGE 3 ---
 Overall: Needs Support   0% weighted evidence  ·  0 of 22 tagged
 PROJECTED
@@ -67,11 +67,11 @@ Financial Overview
 Liberty STEM Charter School projects $18,125,509 in Year 5 revenue with a 69.3% net margin.
 There is 1 area to strengthen, and the recommendations below will help you build a more
 compelling financial story. The school has approximately 11.1 months of cash runway.
-[~] Readiness Level: Needs Work
-[~] Biggest Strength: Strong Year 5 net income
-[~] Biggest Risk: Public funding is the primary revenue source — model disbursement timing carefully and
-maintain cash reserves for funding gaps
-[~] Cash Runway: 11.1 months
+Readiness Level: Needs Work
+Biggest Strength: Strong Year 5 net income
+Biggest Risk: Public funding is the primary revenue source — model disbursement timing carefully and maintain
+cash reserves for funding gaps
+Cash Runway: 11.1 months
 School Overview
 Liberty STEM Charter School is a Startup / Pre-Opening Charter School organized as a 501(c)(3)
 Nonprofit with a Public Funded (Charter) funding profile.
@@ -82,15 +82,15 @@ margin).
 Breakeven enrollment is 97 students (106% above Year 1 enrollment).
 • Accounting basis
 All projections are prepared on an accrual basis; the school currently keeps books on a undetermined basis.
-[+] Revenue per Student (Year 1): $24,375
-[+] Cost per Student (Year 1): $14,082
-[+] Staffing Cost (% of Revenue): 35.3%
-[+] Operating Cost (% of Revenue): 22.2%
-[+] Net margin (Year 1): 42.2%
-[+] Net margin (Year 5): 69.3%
+✓ Revenue per Student (Year 1): $24,375
+✓ Cost per Student (Year 1): $14,082
+✓ Staffing Cost (% of Revenue): 35.3%
+✓ Operating Cost (% of Revenue): 22.2%
+✓ Net margin (Year 1): 42.2%
+✓ Net margin (Year 5): 69.3%
 5-Year Change in Net Assets Projection
 SchoolStack Budget - Generated <DATE>
-Page 3 of 10
+Page 3 of 11
 --- PAGE 4 ---
 Year
 Students
@@ -132,7 +132,7 @@ $12.6M
 Staffing Plan
 Staffing costs are $1.7M in Year 1, representing 35.3% of revenue. This leaves healthy room for
 other operating costs.
-[+] Staffing % of Revenue: 35.3%
+✓ Staffing % of Revenue: 35.3%
 Supporting Assumptions
 Executive Director  $110,000, 1 FTE
 Principal  $90,000, 1 FTE
@@ -144,13 +144,14 @@ Office & Finance Staff  $45,000, 3 FTE
 Custodial / Maintenance  $35,000, 2 FTE
 Financial Health Assessment
 Across 9 health dimensions: 8 healthy, 1 on watch, 0 at risk.
-[+] viability: Healthy
-[+] liquidity: Healthy
-[+] cash flow timing: Healthy
-[+] staffing burden: Healthy
-[+] facility burden: Healthy
-[+] debt affordability: Healthy
+✓ viability: Healthy
+✓ liquidity: Healthy
+✓ cash flow timing: Healthy
+✓ staffing burden: Healthy
+✓ facility burden: Healthy
+✓ debt affordability: Healthy
 Health Dimensions
+Legend: ✓ Healthy   ⚠ Watch closely   ✕ Critical
 Dimension
 Status
 Details
@@ -176,14 +177,17 @@ Facility Burden
 Healthy
 Facility costs at 5% of revenue are well-
 managed and leave budget for programs.
+SchoolStack Budget - Generated <DATE>
+Page 4 of 11
+--- PAGE 5 ---
 Debt Affordability
 Healthy
 DSCR of 30.64x provides comfortable
 coverage of debt payments with room to
 spare.
 SchoolStack Budget - Generated <DATE>
-Page 4 of 10
---- PAGE 5 ---
+Page 5 of 11
+--- PAGE 6 ---
 Revenue Concentration
 Watch closely
 95% of revenue comes from public
@@ -191,31 +195,31 @@ funding. This is typical for charter schools,
 but disbursement timing and policy
 changes can create cash flow gaps.
 SchoolStack Budget - Generated <DATE>
-Page 5 of 10
---- PAGE 6 ---
+Page 6 of 11
+--- PAGE 7 ---
 Days Cash
 Healthy
 267 days of cash on hand exceeds the 90-
 day benchmark, providing a strong
 liquidity cushion.
 SchoolStack Budget - Generated <DATE>
-Page 6 of 10
---- PAGE 7 ---
+Page 7 of 11
+--- PAGE 8 ---
 Reserve Strength
 Healthy
 77.7 months of reserves by Year 5 — a
 strong buffer for unexpected costs.
 SchoolStack Budget - Generated <DATE>
-Page 7 of 10
---- PAGE 8 ---
+Page 8 of 11
+--- PAGE 9 ---
 Key Strengths
 The model demonstrates 5 notable strengths.
-[+] Revenue per Student (Year 1): $24,375
-[+] Cost per Student (Year 1): $14,082
-[+] Staffing Cost (% of Revenue): 35.3%
-[+] Operating Cost (% of Revenue): 22.2%
-[+] Net margin (Year 1): 42.2%
-[+] Net margin (Year 5): 69.3%
+✓ Revenue per Student (Year 1): $24,375
+✓ Cost per Student (Year 1): $14,082
+✓ Staffing Cost (% of Revenue): 35.3%
+✓ Operating Cost (% of Revenue): 22.2%
+✓ Net margin (Year 1): 42.2%
+✓ Net margin (Year 5): 69.3%
 What to Watch
 The board should be aware of 3 key areas:
 1. Let's extend your cash runway
@@ -256,8 +260,8 @@ This strengthens the model and reduces future risk.
 Scenario Comparison
 The model includes 3 scenarios showing how changes in key assumptions affect Year 5 outcomes.
 SchoolStack Budget - Generated <DATE>
-Page 8 of 10
---- PAGE 9 ---
+Page 9 of 11
+--- PAGE 10 ---
 Scenario
 Y5 Revenue
 Y5 Net Income
@@ -309,8 +313,8 @@ ending cash $2,272,877 · Runway 11.1
 mo · Lowest monthly cash Y1 Jul
 $554,001
 SchoolStack Budget - Generated <DATE>
-Page 9 of 10
---- PAGE 10 ---
+Page 10 of 11
+--- PAGE 11 ---
 Enrollment -10%
 All five enrollment years scaled down by 10% — the standard lender enrollment-miss sensitivity.
   Min DSCR: 26.32x   ·   Min ending cash: $1,958,775   ·   Runway: 10.2 mo   ·   Break-even: Year 1
@@ -389,4 +393,4 @@ $3
 Note: Founder is paying themselves below market rate (“sweat equity”). Lenders and boards underwrite to the market-rate
 line; the adjustment shows the gap.
 SchoolStack Budget - Generated <DATE>
-Page 10 of 10
+Page 11 of 11

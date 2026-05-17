@@ -57,10 +57,10 @@ for your mission. The school has approximately 17.5 months of cash runway.
 SchoolStack Budget - Generated <DATE>
 Page 2 of 8
 --- PAGE 3 ---
-[~] Readiness Level: Strong
-[~] Biggest Strength: Strong Year 5 net income
-[~] Biggest Risk: No major red flags detected, so continue refining assumptions as you gather real data.
-[~] Cash Runway: 17.5 months
+Readiness Level: Strong
+Biggest Strength: Strong Year 5 net income
+Biggest Risk: No major red flags detected, so continue refining assumptions as you gather real data.
+Cash Runway: 17.5 months
 School Overview
 Riverside Christian Academy is a Operating Private School organized as a 501(c)(3) Nonprofit with
 a Tuition-Based funding profile.
@@ -73,12 +73,12 @@ Breakeven enrollment is 78 students (156% above Year 1 enrollment).
 Prior-year revenue was $2.4M; Year 1 projections represent a 64.7% change.
 • Accounting basis
 All projections are prepared on an accrual basis; the school currently keeps books on a undetermined basis.
-[+] Revenue per Student (Year 1): $19,759
-[+] Cost per Student (Year 1): $8,877
-[+] Staffing Cost (% of Revenue): 32.0%
-[+] Operating Cost (% of Revenue): 9.8%
-[+] Net margin (Year 1): 55.1%
-[+] Net margin (Year 5): 66.9%
+✓ Revenue per Student (Year 1): $19,759
+✓ Cost per Student (Year 1): $8,877
+✓ Staffing Cost (% of Revenue): 32.0%
+✓ Operating Cost (% of Revenue): 9.8%
+✓ Net margin (Year 1): 55.1%
+✓ Net margin (Year 5): 66.9%
 5-Year Change in Net Assets Projection
 Year
 Students
@@ -183,7 +183,7 @@ $2.2M
 Staffing Plan
 Staffing costs are $1.3M in Year 1, representing 32.0% of revenue. This leaves healthy room for
 other operating costs.
-[+] Staffing % of Revenue: 32.0%
+✓ Staffing % of Revenue: 32.0%
 Supporting Assumptions
 Head of School  $95,000, 1 FTE
 Assistant Principal  $72,000, 1 FTE
@@ -193,16 +193,17 @@ Office Manager  $42,000, 1 FTE
 Counselor  $55,000, 1 FTE
 Financial Health Assessment
 Across 9 health dimensions: 8 healthy, 1 on watch, 0 at risk.
-[+] viability: Healthy
-[+] liquidity: Healthy
+✓ viability: Healthy
+✓ liquidity: Healthy
 SchoolStack Budget - Generated <DATE>
 Page 4 of 8
 --- PAGE 5 ---
-[~] cash flow timing: Watch closely
-[+] staffing burden: Healthy
-[+] facility burden: Healthy
-[+] debt affordability: Healthy
+⚠ cash flow timing: Watch closely
+✓ staffing burden: Healthy
+✓ facility burden: Healthy
+✓ debt affordability: Healthy
 Health Dimensions
+Legend: ✓ Healthy   ⚠ Watch closely   ✕ Critical
 Dimension
 Status
 Details
@@ -253,12 +254,12 @@ Healthy
 strong buffer for unexpected costs.
 Key Strengths
 The model demonstrates 5 notable strengths.
-[+] Revenue per Student (Year 1): $19,759
-[+] Cost per Student (Year 1): $8,877
-[+] Staffing Cost (% of Revenue): 32.0%
-[+] Operating Cost (% of Revenue): 9.8%
-[+] Net margin (Year 1): 55.1%
-[+] Net margin (Year 5): 66.9%
+✓ Revenue per Student (Year 1): $19,759
+✓ Cost per Student (Year 1): $8,877
+✓ Staffing Cost (% of Revenue): 32.0%
+✓ Operating Cost (% of Revenue): 9.8%
+✓ Net margin (Year 1): 55.1%
+✓ Net margin (Year 5): 66.9%
 What to Watch
 The board should be aware of 1 key area:
 1. Let's extend your cash runway

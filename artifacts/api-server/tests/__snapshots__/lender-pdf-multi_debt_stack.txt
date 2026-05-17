@@ -70,14 +70,14 @@ Three-Loan Stack Microschool projects $400,145 in Year 5 revenue, with 7 of 13 k
 need attention. This is a starting point, and working through the recommendations below will help
 you build the financial story your mission deserves. Watch out: projected cash first goes negative
 in Year 2 (Jul) at -$3,435, even though year-end runway can still look healthy.
-[ ] Readiness Level: Not Yet Ready
-[ ] Biggest Strength: Well-controlled staffing costs
+Readiness Level: Not Yet Ready
+Biggest Strength: Well-controlled staffing costs
 SchoolStack Budget - Generated <DATE>
 Page 2 of 24
 --- PAGE 3 ---
-[ ] Biggest Risk: Lender stress battery flags loss-of-funding risk — under the Enrollment -20% stress, Year 5 net
+Biggest Risk: Lender stress battery flags loss-of-funding risk — under the Enrollment -20% stress, Year 5 net
 income falls to -$33K (1 of 5 scenarios). The model carries limited cushion against the modeled downside.
-[ ] Cash Runway: 0.2 months
+Cash Runway: 0.2 months
 Budget Narrative
 Three-Loan Stack Microschool projects $400,145 in Year 5 revenue, with 7 of 13 key metrics that
 need attention. This is a starting point, and working through the recommendations below will help
@@ -138,11 +138,11 @@ Year 5 Enrollment  40
 Revenue Model
 The revenue model is tuition-driven (88.6% of Year 1 revenue). Year 1 total revenue is projected at
 $166K, growing to $400K by Year 5.
-[ ] Tuition %: 88.6%
-[ ] Public Funding %: 0.0%
-[ ] Philanthropy %: 11.6%
-[ ] Year 1 Contracted Revenue %: 85.9%
-[ ] Hard Revenue Coverage (Y1): 0.63×
+Tuition %: 88.6%
+Public Funding %: 0.0%
+Philanthropy %: 11.6%
+Year 1 Contracted Revenue %: 85.9%
+Hard Revenue Coverage (Y1): 0.63×
 Revenue by Year
 Year
 Total Revenue
@@ -294,7 +294,7 @@ Suggested founder compensation steps up year over year as projected enrollment c
 NACSA size bands (escalated by COLA from Y1). Source: U.S. Bureau of Labor Statistics,
 Occupational Employment & Wage Statistics, May 2023. Education Administrators, Kindergarten
 through Secondary (11-9032), national median annual wage..
-[+] Staffing % of Revenue: 52.0%
+✓ Staffing % of Revenue: 52.0%
 SchoolStack Budget - Generated <DATE>
 Page 7 of 24
 --- PAGE 8 ---
@@ -461,17 +461,17 @@ at $-84K (-21.0% margin).
 Breakeven enrollment is 32 students (38% below Year 1 enrollment).
 • Accounting basis
 All projections are prepared on an accrual basis; the school currently keeps books on a undetermined basis.
-[~] Revenue per Student (Year 1): $8,282 (benchmark: Private avg: $12,000–$25,000)
-[!] Cost per Student (Year 1): $19,064 (benchmark: Target: ≤ 85% of revenue per student)
-[+] Staffing Cost (% of Revenue): 52.0% (benchmark: Industry avg: 50–65% of revenue)
-[!] Operating Cost (% of Revenue): 102.3% (benchmark: Target: under 30% of revenue)
-[!] Profit margin (Year 1): -130.2% (benchmark: Startup target: 0–5%; mature: 10%+)
-[!] Profit margin (Year 5): -21.0% (benchmark: Target: 10–15%+)
+⚠ Revenue per Student (Year 1): $8,282 (benchmark: Private avg: $12,000–$25,000)
+✕ Cost per Student (Year 1): $19,064 (benchmark: Target: ≤ 85% of revenue per student)
+✓ Staffing Cost (% of Revenue): 52.0% (benchmark: Industry avg: 50–65% of revenue)
+✕ Operating Cost (% of Revenue): 102.3% (benchmark: Target: under 30% of revenue)
+✕ Profit margin (Year 1): -130.2% (benchmark: Startup target: 0–5%; mature: 10%+)
+✕ Profit margin (Year 5): -21.0% (benchmark: Target: 10–15%+)
 SchoolStack Budget - Generated <DATE>
 Page 9 of 24
 --- PAGE 10 ---
-[+] 5-Year Revenue Growth: 141.6% (benchmark: Healthy schools: 30–80% over 5 years)
-[+] Capacity Utilization (Year 5): 88.9% (benchmark: Optimal: 80–95% utilization)
+✓ 5-Year Revenue Growth: 141.6% (benchmark: Healthy schools: 30–80% over 5 years)
+✓ Capacity Utilization (Year 5): 88.9% (benchmark: Optimal: 80–95% utilization)
 5-Year Net Income Projection
 Year
 Students
@@ -511,9 +511,9 @@ $-84K
 -21.0%
 Opening Balance Sheet
 Net position at model start: $-135K.
-[ ] Total Assets: $975K
-[ ] Total Liabilities: $1.1M
-[ ] Net Position: $-135K
+Total Assets: $975K
+Total Liabilities: $1.1M
+Net Position: $-135K
 Assets
 Item
 Amount
@@ -540,8 +540,8 @@ Total Liabilities
 $1.1M
 Facility & Key Performance Indicators
 Breakeven enrollment is 32 students. Year 1 projects 20 students, providing a -37.5% cushion.
-[ ] Breakeven Enrollment: 32
-[ ] Facility Cost/Student: $2K
+Breakeven Enrollment: 32
+Facility Cost/Student: $2K
 SchoolStack Budget - Generated <DATE>
 Page 10 of 24
 --- PAGE 11 ---
@@ -560,8 +560,8 @@ Cash Flow Analysis
 Year-end cash covers only 0.2 months of fixed costs. The school may need additional funding or
 cost adjustments. Opening balance: $975K total assets, $1.1M total liabilities, $-135K net position.
 Lowest cash month across the 5-year forecast: Year 3 — May at $-198K.
-[ ] Cash Runway: 0.2 months
-[ ] Lowest Cash Month: Year 3 — May ($-198K)
+Cash Runway: 0.2 months
+Lowest Cash Month: Year 3 — May ($-198K)
 Cumulative Cash Position
 Year
 Cumulative Net Income
@@ -1031,12 +1031,12 @@ Debt Service Coverage
 Year-1 debt service coverage is 0.09x on the normalized (lender-primary) view — below the 1.15x
 lender minimum. Minimum: 1.15x; target: 1.25x. See the "As-Planned vs Normalized: Net Income &
 DSCR" table for the founder / board (as-planned) view alongside this normalized series.
-[!] Debt Service Coverage Ratio (Year 1): 0.09x (benchmark: Minimum: 1.15x; target: 1.25x)
-[!] Year 1 Reserve Months: 0.0 months (benchmark: Target: 3+ months)
-[!] Year 2 Reserve Months: 0.0 months (benchmark: Target: 3+ months)
-[!] Year 3 Reserve Months: 0.0 months (benchmark: Target: 3+ months)
-[!] Year 4 Reserve Months: 0.0 months (benchmark: Target: 3+ months)
-[!] Year 5 Reserve Months: 0.0 months (benchmark: Target: 3+ months)
+✕ Debt Service Coverage Ratio (Year 1): 0.09x (benchmark: Minimum: 1.15x; target: 1.25x)
+✕ Year 1 Reserve Months: 0.0 months (benchmark: Target: 3+ months)
+✕ Year 2 Reserve Months: 0.0 months (benchmark: Target: 3+ months)
+✕ Year 3 Reserve Months: 0.0 months (benchmark: Target: 3+ months)
+✕ Year 4 Reserve Months: 0.0 months (benchmark: Target: 3+ months)
+✕ Year 5 Reserve Months: 0.0 months (benchmark: Target: 3+ months)
 DSCR Summary
 Current DSCR:  0.09x
 Benchmark:  Healthy minimum: 1.15x;
@@ -1140,18 +1140,19 @@ Lender Readiness
 Your model is a solid starting point, and now it's time to refine it. Focus on the high-priority
 recommendations first, and you'll see real progress. Every great school's financial story started as
 a first draft.
-[!] Readiness Level: Not Yet Ready
+✕ Readiness Level: Not Yet Ready
 Financial Health Assessment
 Across 8 health dimensions: 2 healthy, 1 on watch, 5 at risk.
-[!] viability: Needs attention
-[!] liquidity: Needs attention
-[+] staffing burden: Healthy
-[~] facility burden: Watch closely
-[!] debt affordability: Needs attention
-[+] revenue concentration: Healthy
-[!] days cash: Needs attention
-[!] reserve strength: Needs attention
+✕ viability: Needs attention
+✕ liquidity: Needs attention
+✓ staffing burden: Healthy
+⚠ facility burden: Watch closely
+✕ debt affordability: Needs attention
+✓ revenue concentration: Healthy
+✕ days cash: Needs attention
+✕ reserve strength: Needs attention
 Health Dimensions
+Legend: ✓ Healthy   ⚠ Watch closely   ✕ Critical
 Dimension
 Status
 Details
@@ -1207,9 +1208,9 @@ Page 19 of 24
 Key Risks
 8 risk factors have been identified. Of these, 3 are rated critical and should be addressed prior to
 lender submission.
-[!] Let's close a cash gap in your early years: critical
-[!] Your cash dips below zero mid-year: critical
-[!] Let's strengthen your debt-coverage cushion: critical
+✕ Let's close a cash gap in your early years: critical
+✕ Your cash dips below zero mid-year: critical
+✕ Let's strengthen your debt-coverage cushion: critical
 CRITICAL
 Let's close a cash gap in your early years
 When the model dips below zero cash, you'd need outside funding to make payroll that month. Surfacing it now lets you
@@ -1264,9 +1265,9 @@ Mitigation: Establish a reserve fund policy targeting 3-6 months of operating ex
 SchoolStack Budget - Generated <DATE>
 Page 20 of 24
 --- PAGE 21 ---
-[!] Let's close a cash gap in your early years: critical
-[!] Your cash dips below zero mid-year: critical
-[!] Let's strengthen your debt-coverage cushion: critical
+✕ Let's close a cash gap in your early years: critical
+✕ Your cash dips below zero mid-year: critical
+✕ Let's strengthen your debt-coverage cushion: critical
 See Appendix for complete assumption details.
 Appendix: Key Assumptions
 Complete list of 21 assumptions used in this financial model, with each headline metric tied to its

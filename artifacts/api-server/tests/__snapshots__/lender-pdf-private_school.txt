@@ -63,10 +63,10 @@ Executive Summary
 Riverside Christian Academy projects $8,779,877 in Year 5 revenue with a 66.9% net margin. The
 model tells a strong financial story with 13 of 13 key metrics in healthy range, a great foundation
 for your mission.
-[ ] Readiness Level: Strong
-[ ] Biggest Strength: Strong Year 5 net income
-[ ] Biggest Risk: No major red flags detected, so continue refining assumptions as you gather real data.
-[ ] Cash Runway: 17.5 months
+Readiness Level: Strong
+Biggest Strength: Strong Year 5 net income
+Biggest Risk: No major red flags detected, so continue refining assumptions as you gather real data.
+Cash Runway: 17.5 months
 Budget Narrative
 Riverside Christian Academy projects $8,779,877 in Year 5 revenue with a 66.9% net margin. The
 model tells a strong financial story with 13 of 13 key metrics in healthy range, a great foundation
@@ -122,11 +122,11 @@ Page 3 of 37
 Revenue Model
 The revenue model is anchored to enrollment-driven income. Year 1 total revenue is projected at
 $4.0M, growing to $8.8M by Year 5.
-[ ] Tuition %: 16.2%
-[ ] Public Funding %: 40.5%
-[ ] Philanthropy %: 3.2%
-[ ] Year 1 Contracted Revenue %: 16.5%
-[ ] Hard Revenue Coverage (Y1): 0.28×
+Tuition %: 16.2%
+Public Funding %: 40.5%
+Philanthropy %: 3.2%
+Year 1 Contracted Revenue %: 16.5%
+Hard Revenue Coverage (Y1): 0.28×
 Revenue by Year
 Year
 Total Revenue
@@ -285,7 +285,7 @@ NACSA size bands (escalated by COLA from Y1). Source: NAIS Head of School Compen
 Report, 2023-24. Day-school median total cash compensation by total enrollment.. Size-band
 transitions during the forecast: Year 3 (150–300 students to 300–500 students, suggested rate
 $244,000). Each crossing bumps the lender-side market rate for the founder / head-of-school role.
-[+] Staffing % of Revenue: 32.0%
+✓ Staffing % of Revenue: 32.0%
 Suggested Founder Compensation Benchmark by Year
 SchoolStack Budget - Generated <DATE>
 Page 6 of 37
@@ -454,17 +454,17 @@ Breakeven enrollment is 78 students (156% above Year 1 enrollment).
 Prior-year revenue was $2.4M; Year 1 projections represent a 64.7% change.
 • Accounting basis
 All projections are prepared on an accrual basis; the school currently keeps books on a undetermined basis.
-[+] Revenue per Student (Year 1): $19,759 (benchmark: Private avg: $12,000–$25,000)
-[+] Cost per Student (Year 1): $8,877 (benchmark: Target: ≤ 85% of revenue per student)
-[+] Staffing Cost (% of Revenue): 32.0% (benchmark: Industry avg: 50–65% of revenue)
-[+] Operating Cost (% of Revenue): 9.8% (benchmark: Target: under 30% of revenue)
-[+] Net margin (Year 1): 55.1% (benchmark: Startup target: 0–5%; mature: 10%+)
+✓ Revenue per Student (Year 1): $19,759 (benchmark: Private avg: $12,000–$25,000)
+✓ Cost per Student (Year 1): $8,877 (benchmark: Target: ≤ 85% of revenue per student)
+✓ Staffing Cost (% of Revenue): 32.0% (benchmark: Industry avg: 50–65% of revenue)
+✓ Operating Cost (% of Revenue): 9.8% (benchmark: Target: under 30% of revenue)
+✓ Net margin (Year 1): 55.1% (benchmark: Startup target: 0–5%; mature: 10%+)
 SchoolStack Budget - Generated <DATE>
 Page 8 of 37
 --- PAGE 9 ---
-[+] Net margin (Year 5): 66.9% (benchmark: Target: 10–15%+)
-[+] 5-Year Revenue Growth: 122.2% (benchmark: Healthy schools: 30–80% over 5 years)
-[+] Capacity Utilization (Year 5): 100.0% (benchmark: Optimal: 80–95% utilization)
+✓ Net margin (Year 5): 66.9% (benchmark: Target: 10–15%+)
+✓ 5-Year Revenue Growth: 122.2% (benchmark: Healthy schools: 30–80% over 5 years)
+✓ Capacity Utilization (Year 5): 100.0% (benchmark: Optimal: 80–95% utilization)
 5-Year Change in Net Assets Projection
 Year
 Students
@@ -568,9 +568,9 @@ Page 9 of 37
 --- PAGE 10 ---
 Opening Balance Sheet
 Net position at model start: $-230K.
-[ ] Total Assets: $970K
-[ ] Total Liabilities: $1.2M
-[ ] Net Position: $-230K
+Total Assets: $970K
+Total Liabilities: $1.2M
+Net Position: $-230K
 Assets
 Item
 Amount
@@ -597,8 +597,8 @@ Total Liabilities
 $1.2M
 Facility & Key Performance Indicators
 Breakeven enrollment is 78 students. Year 1 projects 200 students, providing a 156.4% cushion.
-[ ] Breakeven Enrollment: 78
-[ ] Facility Cost/Student: $180
+Breakeven Enrollment: 78
+Facility Cost/Student: $180
 Key Performance Indicators
 Metric
 Value
@@ -616,8 +616,8 @@ liabilities, $-230K net position. Lowest cash month across the 5-year forecast: 
 SchoolStack Budget - Generated <DATE>
 Page 10 of 37
 --- PAGE 11 ---
-[ ] Cash Runway: 17.5 months
-[ ] Lowest Cash Month: Year 1 — Jul ($477K)
+Cash Runway: 17.5 months
+Lowest Cash Month: Year 1 — Jul ($477K)
 Cumulative Cash Position
 Year
 Cumulative Net Income
@@ -1132,12 +1132,12 @@ Debt Service Coverage
 Year-1 debt service coverage is 21.01x on the normalized (lender-primary) view. Minimum: 1.15x;
 target: 1.25x. See the "As-Planned vs Normalized: Net Income & DSCR" table for the founder /
 board (as-planned) view alongside this normalized series.
-[+] Debt Service Coverage Ratio (Year 1): 21.01x (benchmark: Minimum: 1.15x; target: 1.25x)
-[+] Year 1 Reserve Months: 14.7 months (benchmark: Target: 3+ months)
-[+] Year 2 Reserve Months: 30.7 months (benchmark: Target: 3+ months)
-[+] Year 3 Reserve Months: 47.0 months (benchmark: Target: 3+ months)
-[+] Year 4 Reserve Months: 64.3 months (benchmark: Target: 3+ months)
-[+] Year 5 Reserve Months: 82.0 months (benchmark: Target: 3+ months)
+✓ Debt Service Coverage Ratio (Year 1): 21.01x (benchmark: Minimum: 1.15x; target: 1.25x)
+✓ Year 1 Reserve Months: 14.7 months (benchmark: Target: 3+ months)
+✓ Year 2 Reserve Months: 30.7 months (benchmark: Target: 3+ months)
+✓ Year 3 Reserve Months: 47.0 months (benchmark: Target: 3+ months)
+✓ Year 4 Reserve Months: 64.3 months (benchmark: Target: 3+ months)
+✓ Year 5 Reserve Months: 82.0 months (benchmark: Target: 3+ months)
 DSCR Summary
 Current DSCR:  21.01x
 Benchmark:  Healthy minimum: 1.15x;
@@ -1240,21 +1240,22 @@ Lender Readiness
 This model demonstrates strong financial fundamentals: a clear path to net income, controlled
 costs, a sustainable revenue mix, and adequate debt coverage. Your projections are grounded and
 achievable.
-[+] Readiness Level: Strong
+✓ Readiness Level: Strong
 Financial Health Assessment
 Across 9 health dimensions: 8 healthy, 1 on watch, 0 at risk.
 SchoolStack Budget - Generated <DATE>
 Page 32 of 37
 --- PAGE 33 ---
-[+] viability: Healthy
-[+] liquidity: Healthy
-[~] cash flow timing: Watch closely
-[+] staffing burden: Healthy
-[+] facility burden: Healthy
-[+] debt affordability: Healthy
-[+] revenue concentration: Healthy
-[+] days cash: Healthy
+✓ viability: Healthy
+✓ liquidity: Healthy
+⚠ cash flow timing: Watch closely
+✓ staffing burden: Healthy
+✓ facility burden: Healthy
+✓ debt affordability: Healthy
+✓ revenue concentration: Healthy
+✓ days cash: Healthy
 Health Dimensions
+Legend: ✓ Healthy   ⚠ Watch closely   ✕ Critical
 Dimension
 Status
 Details
@@ -1306,7 +1307,7 @@ strong buffer for unexpected costs.
 Key Risks
 1 risk factor has been identified. None are rated critical, but each should have a documented
 mitigation plan.
-[+] Let's extend your cash runway: medium
+✓ Let's extend your cash runway: medium
 MEDIUM
 Let's extend your cash runway
 An 18-month runway means a single late tuition cycle or delayed state disbursement isn't an emergency. Building the
@@ -1315,7 +1316,7 @@ Evidence: Cash runway: 17.5 months  |  Target: 18+ months
 Mitigation: Build a cash buffer through startup fundraising, a line of credit, or by reducing early expenses. Target at least
 18 months of runway before opening. Next step: Open Step 2: School Details and raise opening cash, or trim Year 1
 expenses in Step 7, until projected cash runway clears 18 months.
-[+] Let's extend your cash runway: medium
+✓ Let's extend your cash runway: medium
 See Appendix for complete assumption details.
 SchoolStack Budget - Generated <DATE>
 Page 33 of 37

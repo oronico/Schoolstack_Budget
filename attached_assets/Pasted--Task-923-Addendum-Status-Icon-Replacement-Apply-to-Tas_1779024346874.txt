@@ -1,0 +1,219 @@
+# Task #923 Addendum — Status Icon Replacement
+
+**Apply to:** Task #923 — Replace `[+]/[~]/[!]/[ ]` bullet placeholders with icons
+**Base task spec:** Use the existing #923 spec as-is, with the additions below
+**Effective:** Before kickoff
+
+This addendum pins the open decisions and adds the three required fields from the protocol addendum that are missing from the base spec.
+
+-----
+
+## Pinned decisions
+
+These resolve the open choices in the base spec. Apply directly:
+
+### Icon mapping (Option A confirmed)
+
+```
+[+]  →  ✓   (Healthy / Pass)
+[~]  →  ⚠   (Watch closely)
+[!]  →  ✕   (Critical / Needs attention)
+[ ]  →      (no glyph — neutral header, plain label only)
+```
+
+Rationale: checkmarks and X’s carry semantic meaning at a glance, requiring no legend lookup. Option B (geometric shapes ●○◐) was considered and rejected because shapes without color require legend recall on every read.
+
+If PDFKit font rendering prevents any of the four glyphs above after Task #922 lands, fall back per-glyph to:
+
+```
+✓  →  [OK]
+⚠  →  [WATCH]
+✕  →  [CRITICAL]
+```
+
+Document any per-glyph fallback in the helper function comments with the codepoint and rendering test result.
+
+### Color scope
+
+Stay monochrome for this task. Do NOT apply green/amber/red to the icons in #923.
+
+File a follow-up task on close of #923:
+
+```
+Task: Status icon semantic color application
+Scope: Apply green (✓), amber (⚠), red (✕) to status icons in 
+  lender and board packet PDFs
+Depends on: #923 (icon swap), #922 (font / color rendering capability)
+Rationale: Monochrome icons read as flat; color is what makes 
+  status communicate at a glance for lender review.
+```
+
+### Sequencing with #922
+
+This task depends on Task #922 (font encoding fix). If #922 has not merged when #923 begins, sequence #923 to follow it. Otherwise the icon replacements introduce new corruption tokens where the placeholders were.
+
+Verification before merging #923:
+
+- Render one demo packet after #922 has merged
+- Confirm ✓ ⚠ ✕ all render correctly in the rendered PDF
+- Only then proceed with the full #923 sweep
+
+-----
+
+## Required protocol addendum fields
+
+### Canonical source reference
+
+```
+Canonical source: renderStatusIcon(level: 'healthy' | 'watch' | 'critical' 
+  | 'neutral') helper in artifacts/api-server/src/lib/packets/pdf-utils.ts
+
+Every status indicator in lender-packet-pdf.ts and board-packet-pdf.ts 
+routes through this helper. No status icon is hand-written elsewhere 
+in either file.
+```
+
+### Sibling bug search step
+
+```
+Step: Sweep for all bracketed-placeholder patterns beyond the named four.
+
+Pattern: bracketed single-character placeholders in source templates
+Search scope: artifacts/api-server/src/lib/packets/*.ts
+
+Discovery command:
+  grep -rohP "\[[+~!\*\?xo •\-]\]" --include="*.ts" \
+    artifacts/api-server/src/lib/packets/ | sort -u > /tmp/placeholder_patterns.txt
+
+Action:
+  1. Run the discovery command. Output is a deduplicated list of every 
+     bracketed-placeholder pattern in source.
+  2. For each pattern in /tmp/placeholder_patterns.txt:
+     a. Note where it's used (grep -rln for each pattern)
+     b. Decide: route through renderStatusIcon, preserve as-is (e.g., 
+        legitimate non-status bracket usage), or remove
+     c. Document the decision in the helper function comments
+  3. Update renderStatusIcon to handle any newly discovered status 
+     patterns. Update regression test to assert the broader pattern set.
+
+Expected patterns based on prior review: [+] [~] [!] [ ]
+Possible additional patterns: [*] [?] [x] [o] [•] [-]
+```
+
+### Explicit regression assertion (Pattern C — phrase guard)
+
+```
+Assertion target: rendered PDF text contents
+
+For each PDF in [Riverside_demo, Liberty_demo, Oakwood_demo, 
+                  fixture_1, fixture_2, fixture_3, fixture_4]:
+
+  Assert: rendered text does NOT contain any of:
+    "[+]", "[~]", "[!]", "[ ]"
+    + any additional patterns from the sibling search step
+
+  Assert: rendered text DOES contain the chosen glyphs where 
+    status indicators are expected:
+    - ✓ appears in sections marked "Healthy" / "Pass"
+    - ⚠ appears in sections marked "Watch closely"
+    - ✕ appears in sections marked "Critical" / "Needs attention"
+
+  Assert: a legend row appears in the first Health Dimensions table 
+    of every PDF, mapping each glyph to its meaning.
+
+  Assert: the four founder fixtures must be named in the test file 
+    so future contributors can trace the regression scope.
+
+Failure reporting: 
+  "Status icon regression in {packet} at section {section}: 
+   found placeholder '{token}' or missing expected glyph '{glyph}'."
+```
+
+-----
+
+## Cross-section consumer enumeration
+
+The helper must be wired into every section that currently uses status placeholders. Confirmed consumer sections from prior review:
+
+- Executive Summary bullets (Lender Readiness, Biggest Strength, Biggest Risk, Cash Runway)
+- Health Dimensions table (per-dimension status)
+- Financial Health Assessment summary
+- Key Risks section (`[!]` for critical risks)
+- Possibly Stress Test results (verify)
+- Possibly DSCR / Reserve / Coverage metric headers (verify)
+
+Add to the sibling search action: for each consumer section identified, confirm it routes through `renderStatusIcon` and not a local literal. The regression test should sample at least one assertion from each consumer section.
+
+-----
+
+## Light completion template (per protocol addendum)
+
+This is a templating-layer fix under one hour estimated effort, so the light four-section completion template applies:
+
+```
+Section A — What changed
+  Files modified, helper function signature, swap-in mapping
+
+Section B — Before / after evidence
+  For each of 3 demo packets + 4 fixtures:
+    Quote the changed section before (with placeholders)
+    Quote the changed section after (with glyphs)
+
+Section C — Sibling bug search results
+  Output of the discovery command (the unique pattern list)
+  Per-pattern decision (route / preserve / remove)
+  Helper function updates made
+
+Section D — Regression test added
+  Quote the new assertion code
+  Confirm it passes against all 7 PDFs (3 demos + 4 fixtures)
+  Note any per-glyph fallback applied (with codepoint)
+```
+
+-----
+
+## Quick checklist for the agent
+
+Before claiming #923 complete, verify:
+
+- [ ] Task #922 has merged and ✓ ⚠ ✕ render correctly in a test demo
+- [ ] `renderStatusIcon` helper exists in `pdf-utils.ts`
+- [ ] Sibling bug search has been run; output is in the completion summary
+- [ ] All consumer sections route through the helper (no hand-written placeholders remain in either packet file)
+- [ ] Legend row added to first Health Dimensions table in both packet types
+- [ ] All 7 PDFs render with zero placeholder strings
+- [ ] Regression test added and passing
+- [ ] Color follow-up task filed (separate ticket, referenced in #923 closure)
+- [ ] Light completion template (A–D) filled in completely
+
+If any checklist item is incomplete, the task is not done.
+
+-----
+
+## What to paste to Replit
+
+```
+Apply Task #923 Addendum before starting work. Specifically:
+
+1. Use icon mapping Option A (✓ ⚠ ✕ + no glyph for neutral). 
+   Document per-glyph fallback if PDFKit rendering prevents any glyph.
+
+2. Stay monochrome for #923. File the color follow-up task on close.
+
+3. Confirm #922 has merged before starting. If not, sequence #923 
+   after #922.
+
+4. Add the three required addendum fields to your task spec:
+   - Canonical source: renderStatusIcon helper in pdf-utils.ts
+   - Sibling bug search: per the discovery command in the addendum
+   - Explicit regression assertion: Pattern C per the addendum
+
+5. Sweep ALL consumer sections, not just Health Dimensions.
+
+6. Use the light completion template (Sections A–D) when reporting done.
+
+7. Run the quick checklist before claiming complete.
+
+Reference the full addendum document for command syntax and full 
+assertion specifications.
+```

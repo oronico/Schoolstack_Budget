@@ -544,17 +544,18 @@ function probeEmptyBullets(fragments: string[]): ProbeResult {
     else if (t === "[~]") tildeCount++;
     else if (t === "[!]") bangCount++;
   }
-  const status: Status = emptyCount > 0 ? "FAIL" : "PASS";
+  const totalAscii = emptyCount + plusCount + tildeCount + bangCount;
+  const status: Status = totalAscii > 0 ? "FAIL" : "PASS";
   const detail = [
     `ASCII "[ ]" placeholder bullets:  ${emptyCount}`,
     `ASCII "[+]" passing bullets:      ${plusCount}`,
     `ASCII "[~]" caution bullets:      ${tildeCount}`,
     `ASCII "[!]" warning bullets:      ${bangCount}`,
-    emptyCount > 0
-      ? `  → empty checkboxes leak into rendered packet (Task #923 scope).`
-      : `  → all bullets carry a status glyph.`,
+    totalAscii > 0
+      ? `  → ASCII bullet placeholders leak into rendered packet — replace via renderStatusIcon() in pdf-utils.ts (Task #923).`
+      : `  → all bullets render as Unicode status glyphs (✓ ⚠ ✕ •).`,
   ].join("\n     ");
-  return { id: "B7.empty-bullets", title: "Unrendered `[ ]` ASCII bullets in PDF (#923)", status, detail };
+  return { id: "B7.empty-bullets", title: "ASCII `[+]/[~]/[!]/[ ]` bullets in PDF (#923)", status, detail };
 }
 
 function probeLenderReadinessEvidence(pdfAll: string): ProbeResult {

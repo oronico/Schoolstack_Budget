@@ -31,7 +31,7 @@ Packet Contents
 This packet is generated from the school's financial model and is intended for lender review.
 All projections are based on assumptions entered by the school founder.
 SchoolStack Budget - Generated <DATE>
-Page 1 of 22
+Page 1 of 23
 --- PAGE 2 ---
 Lender Commentary
 Oakwood Learning Studio is a microschool, based in AZ. Oakwood Learning Studio projects
@@ -68,12 +68,12 @@ Executive Summary
 Oakwood Learning Studio projects $400,145 in Year 5 revenue with a 37.6% profit margin. The
 model tells a strong financial story with 8 of 13 key metrics in healthy range, a great foundation for
 your mission.
-[ ] Readiness Level: Strong
-[ ] Biggest Strength: Strong Year 5 profit
-[ ] Biggest Risk: No major red flags detected, so continue refining assumptions as you gather real data.
-[ ] Cash Runway: 3.1 months
+Readiness Level: Strong
+Biggest Strength: Strong Year 5 profit
+Biggest Risk: No major red flags detected, so continue refining assumptions as you gather real data.
+Cash Runway: 3.1 months
 SchoolStack Budget - Generated <DATE>
-Page 2 of 22
+Page 2 of 23
 --- PAGE 3 ---
 Budget Narrative
 Oakwood Learning Studio projects $400,145 in Year 5 revenue with a 37.6% profit margin. The
@@ -117,7 +117,7 @@ Year 4
 Year 5
 40
 SchoolStack Budget - Generated <DATE>
-Page 3 of 22
+Page 3 of 23
 --- PAGE 4 ---
 Supporting Assumptions
 Year 1 Enrollment  20
@@ -128,11 +128,11 @@ Year 5 Enrollment  40
 Revenue Model
 The revenue model is tuition-driven (88.6% of Year 1 revenue). Year 1 total revenue is projected at
 $166K, growing to $400K by Year 5.
-[ ] Tuition %: 88.6%
-[ ] Public Funding %: 0.0%
-[ ] Philanthropy %: 11.6%
-[ ] Year 1 Contracted Revenue %: 85.9%
-[ ] Hard Revenue Coverage (Y1): 1.20×
+Tuition %: 88.6%
+Public Funding %: 0.0%
+Philanthropy %: 11.6%
+Year 1 Contracted Revenue %: 85.9%
+Hard Revenue Coverage (Y1): 1.20×
 Revenue by Year
 Year
 Total Revenue
@@ -209,7 +209,7 @@ vs. Donor /
 Policy
 Dependent)
 SchoolStack Budget - Generated <DATE>
-Page 4 of 22
+Page 4 of 23
 --- PAGE 5 ---
 Bucket
 Year 1
@@ -284,9 +284,9 @@ Suggested founder compensation steps up year over year as projected enrollment c
 NACSA size bands (escalated by COLA from Y1). Source: U.S. Bureau of Labor Statistics,
 Occupational Employment & Wage Statistics, May 2023. Education Administrators, Kindergarten
 through Secondary (11-9032), national median annual wage..
-[+] Staffing % of Revenue: 52.0%
+✓ Staffing % of Revenue: 52.0%
 SchoolStack Budget - Generated <DATE>
-Page 5 of 22
+Page 5 of 23
 --- PAGE 6 ---
 Suggested Founder Compensation Benchmark by Year
 Year
@@ -396,7 +396,7 @@ Lender View (Normalized)
 Supporting Assumptions
 Founder / Lead Teacher  $58,000, 1 FTE
 SchoolStack Budget - Generated <DATE>
-Page 6 of 22
+Page 6 of 23
 --- PAGE 7 ---
 Assistant Teacher  $38,000, 1 FTE
 Part-Time Aide  $24,000, 0.5 FTE
@@ -444,17 +444,17 @@ The model reaches break-even in Year 1. Year 5 net income is projected at $150K 
 Breakeven enrollment is 18 students (11% above Year 1 enrollment).
 • Accounting basis
 All projections are prepared on an accrual basis; the school currently keeps books on a undetermined basis.
-[~] Revenue per Student (Year 1): $8,282 (benchmark: Private avg: $12,000–$25,000)
-[~] Cost per Student (Year 1): $7,162 (benchmark: Target: ≤ 85% of revenue per student)
-[+] Staffing Cost (% of Revenue): 52.0% (benchmark: Industry avg: 50–65% of revenue)
-[~] Operating Cost (% of Revenue): 34.2% (benchmark: Target: under 30% of revenue)
-[+] Profit margin (Year 1): 13.5% (benchmark: Startup target: 0–5%; mature: 10%+)
-[+] Profit margin (Year 5): 37.6% (benchmark: Target: 10–15%+)
-[+] 5-Year Revenue Growth: 141.6% (benchmark: Healthy schools: 30–80% over 5 years)
-[+] Capacity Utilization (Year 5): 88.9% (benchmark: Optimal: 80–95% utilization)
+⚠ Revenue per Student (Year 1): $8,282 (benchmark: Private avg: $12,000–$25,000)
+⚠ Cost per Student (Year 1): $7,162 (benchmark: Target: ≤ 85% of revenue per student)
+✓ Staffing Cost (% of Revenue): 52.0% (benchmark: Industry avg: 50–65% of revenue)
+⚠ Operating Cost (% of Revenue): 34.2% (benchmark: Target: under 30% of revenue)
+✓ Profit margin (Year 1): 13.5% (benchmark: Startup target: 0–5%; mature: 10%+)
+✓ Profit margin (Year 5): 37.6% (benchmark: Target: 10–15%+)
+✓ 5-Year Revenue Growth: 141.6% (benchmark: Healthy schools: 30–80% over 5 years)
+✓ Capacity Utilization (Year 5): 88.9% (benchmark: Optimal: 80–95% utilization)
 5-Year Net Income Projection
 SchoolStack Budget - Generated <DATE>
-Page 7 of 22
+Page 7 of 23
 --- PAGE 8 ---
 Year
 Students
@@ -494,9 +494,9 @@ $150K
 37.6%
 Opening Balance Sheet
 Net position at model start: $15K.
-[ ] Total Assets: $15K
-[ ] Total Liabilities: $0
-[ ] Net Position: $15K
+Total Assets: $15K
+Total Liabilities: $0
+Net Position: $15K
 Assets
 Item
 Amount
@@ -523,11 +523,11 @@ Total Liabilities
 $0
 Facility & Key Performance Indicators
 Breakeven enrollment is 18 students. Year 1 projects 20 students, providing a 11.1% cushion.
-[ ] Breakeven Enrollment: 18
-[ ] Facility Cost/Student: $2K
+Breakeven Enrollment: 18
+Facility Cost/Student: $2K
 Key Performance Indicators
 SchoolStack Budget - Generated <DATE>
-Page 8 of 22
+Page 8 of 23
 --- PAGE 9 ---
 Metric
 Value
@@ -543,8 +543,8 @@ Cash Flow Analysis
 Year-end cash covers only 3.1 months of fixed costs. The school may need additional funding or
 cost adjustments. Opening balance: $15K total assets, $0 total liabilities, $15K net position. Lowest
 cash month across the 5-year forecast: Year 1 — Jul at $4K.
-[ ] Cash Runway: 3.1 months
-[ ] Lowest Cash Month: Year 1 — Jul ($4K)
+Cash Runway: 3.1 months
+Lowest Cash Month: Year 1 — Jul ($4K)
 Cumulative Cash Position
 Year
 Cumulative Net Income
@@ -640,7 +640,7 @@ $15K
 $14K
 $34K
 SchoolStack Budget - Generated <DATE>
-Page 9 of 22
+Page 9 of 23
 --- PAGE 10 ---
 Jun
 $34K
@@ -649,7 +649,7 @@ $326
 $363
 $35K
 SchoolStack Budget - Generated <DATE>
-Page 10 of 22
+Page 10 of 23
 --- PAGE 11 ---
 Year 2 Monthly Cash Flow Summary
 Month
@@ -819,7 +819,7 @@ Monthly
 Cash Flow
 Summary
 SchoolStack Budget - Generated <DATE>
-Page 11 of 22
+Page 11 of 23
 --- PAGE 12 ---
 Month
 Beginning
@@ -987,7 +987,7 @@ Lowest
 Cash Month
 by Year
 SchoolStack Budget - Generated <DATE>
-Page 12 of 22
+Page 12 of 23
 --- PAGE 13 ---
 Year
 Month
@@ -1011,12 +1011,12 @@ Debt Service Coverage
 Year-1 debt service coverage is 3.11x on the normalized (lender-primary) view. Minimum: 1.15x;
 target: 1.25x. See the "As-Planned vs Normalized: Net Income & DSCR" table for the founder /
 board (as-planned) view alongside this normalized series.
-[+] Debt Service Coverage Ratio (Year 1): 3.11x (benchmark: Minimum: 1.15x; target: 1.25x)
-[~] Year 1 Reserve Months: 1.9 months (benchmark: Target: 3+ months)
-[~] Year 2 Reserve Months: 2.6 months (benchmark: Target: 3+ months)
-[+] Year 3 Reserve Months: 6.4 months (benchmark: Target: 3+ months)
-[+] Year 4 Reserve Months: 12.1 months (benchmark: Target: 3+ months)
-[+] Year 5 Reserve Months: 18.9 months (benchmark: Target: 3+ months)
+✓ Debt Service Coverage Ratio (Year 1): 3.11x (benchmark: Minimum: 1.15x; target: 1.25x)
+⚠ Year 1 Reserve Months: 1.9 months (benchmark: Target: 3+ months)
+⚠ Year 2 Reserve Months: 2.6 months (benchmark: Target: 3+ months)
+✓ Year 3 Reserve Months: 6.4 months (benchmark: Target: 3+ months)
+✓ Year 4 Reserve Months: 12.1 months (benchmark: Target: 3+ months)
+✓ Year 5 Reserve Months: 18.9 months (benchmark: Target: 3+ months)
 DSCR Summary
 Current DSCR:  3.11x
 Benchmark:  Healthy minimum: 1.15x;
@@ -1059,7 +1059,7 @@ gifts can't legally fund operations or debt service.
 Stress Testing
 All 6 stress scenarios maintain positive Year 5 net income, indicating financial resilience.
 SchoolStack Budget - Generated <DATE>
-Page 13 of 22
+Page 13 of 23
 --- PAGE 14 ---
 Stress Test Results
 Scenario
@@ -1119,18 +1119,19 @@ Lender Readiness
 This model demonstrates strong financial fundamentals: a clear path to profit, controlled costs, a
 sustainable revenue mix, and adequate debt coverage. Your projections are grounded and
 achievable.
-[+] Readiness Level: Strong
+✓ Readiness Level: Strong
 Financial Health Assessment
 Across 9 health dimensions: 5 healthy, 4 on watch, 0 at risk.
-[+] viability: Healthy
-[~] liquidity: Watch closely
-[~] cash flow timing: Watch closely
-[+] staffing burden: Healthy
-[~] facility burden: Watch closely
-[+] debt affordability: Healthy
-[+] revenue concentration: Healthy
-[~] days cash: Watch closely
+✓ viability: Healthy
+⚠ liquidity: Watch closely
+⚠ cash flow timing: Watch closely
+✓ staffing burden: Healthy
+⚠ facility burden: Watch closely
+✓ debt affordability: Healthy
+✓ revenue concentration: Healthy
+⚠ days cash: Watch closely
 Health Dimensions
+Legend: ✓ Healthy   ⚠ Watch closely   ✕ Critical
 Dimension
 Status
 Details
@@ -1160,14 +1161,17 @@ Watch closely
 Facility costs at 17% of revenue are
 moderate but could become a constraint
 as other costs grow.
+SchoolStack Budget - Generated <DATE>
+Page 14 of 23
+--- PAGE 15 ---
 Debt Affordability
 Healthy
 DSCR of 5.77x provides comfortable
 coverage of debt payments with room to
 spare.
 SchoolStack Budget - Generated <DATE>
-Page 14 of 22
---- PAGE 15 ---
+Page 15 of 23
+--- PAGE 16 ---
 Revenue Concentration
 Healthy
 Revenue is anchored to enrollment-driven
@@ -1176,8 +1180,8 @@ school model. A focused revenue stream
 is a strength when backed by dependable
 demand.
 SchoolStack Budget - Generated <DATE>
-Page 15 of 22
---- PAGE 16 ---
+Page 16 of 23
+--- PAGE 17 ---
 Days Cash
 Watch closely
 57 days of cash on hand is above the
@@ -1185,21 +1189,21 @@ minimum but below the 90-day target. A
 large unexpected cost could create a cash
 crunch.
 SchoolStack Budget - Generated <DATE>
-Page 16 of 22
---- PAGE 17 ---
+Page 17 of 23
+--- PAGE 18 ---
 Reserve Strength
 Healthy
 18.9 months of reserves by Year 5 — a
 strong buffer for unexpected costs.
 SchoolStack Budget - Generated <DATE>
-Page 17 of 22
---- PAGE 18 ---
+Page 18 of 23
+--- PAGE 19 ---
 Key Risks
 3 risk factors have been identified. Of these, 1 is rated critical and should be addressed prior to
 lender submission.
-[!] Let's extend your cash runway: critical
-[+] Let's back the enrollment ramp with evidence: medium
-[+] Let's tie new hires to enrollment milestones: medium
+✕ Let's extend your cash runway: critical
+✓ Let's back the enrollment ramp with evidence: medium
+✓ Let's tie new hires to enrollment milestones: medium
 CRITICAL
 Let's extend your cash runway
 An 18-month runway means a single late tuition cycle or delayed state disbursement isn't an emergency. Building the
@@ -1225,9 +1229,9 @@ Evidence: Year 2 enrollment: 26 students  |  Year 2 staffing cost: $159,666
 Mitigation: Align staffing additions to enrollment milestones. Hire when students are enrolled, not when you hope they
 will be. Use part-time or contract roles to bridge gaps. Next step: Open Step 6: Staffing and tie each new role's start date to
 a specific enrollment milestone (e.g. 'add when Y2 enrollment hits 60'), or push the role into a later year.
-[!] Let's extend your cash runway: critical
-[+] Let's back the enrollment ramp with evidence: medium
-[+] Let's tie new hires to enrollment milestones: medium
+✕ Let's extend your cash runway: critical
+✓ Let's back the enrollment ramp with evidence: medium
+✓ Let's tie new hires to enrollment milestones: medium
 See Appendix for complete assumption details.
 Appendix: Key Assumptions
 Complete list of 21 assumptions used in this financial model, with each headline metric tied to its
@@ -1249,8 +1253,8 @@ $16,167; Year 1 debt service: $4,696;
 General cost inflation: 3.0%
 Driven by inputs in: Staffing, Expenses, Capital & Financing.
 SchoolStack Budget - Generated <DATE>
-Page 18 of 22
---- PAGE 19 ---
+Page 19 of 23
+--- PAGE 20 ---
 Year 1 net income  Year 1 enrollment:
 20; Tuition per student: $10,000; Year
 1 staffing cost: $86,120; Year 1 facility
@@ -1307,8 +1311,8 @@ of capacity
 Year 5 (planned 40):  24 students · 53%
 of capacity
 SchoolStack Budget - Generated <DATE>
-Page 19 of 22
---- PAGE 20 ---
+Page 20 of 23
+--- PAGE 21 ---
 Downside Enrollment Band
 If 10% fewer students enroll
   Year 1 (18 students):  DSCR 2.90x ·
@@ -1413,8 +1417,8 @@ Base case:  Min DSCR 5.86x · Min
 ending cash $34,826 · Runway 3.1 mo
 · Lowest monthly cash Y1 Jul $5,173
 SchoolStack Budget - Generated <DATE>
-Page 20 of 22
---- PAGE 21 ---
+Page 21 of 23
+--- PAGE 22 ---
 Enrollment -10%
 All five enrollment years scaled down by 10% — the standard lender enrollment-miss sensitivity.
   Min DSCR: 1.41x   ·   Min ending cash: $20,928   ·   Runway: 1.9 mo   ·   Break-even: Year 1
@@ -1457,8 +1461,8 @@ Per-year founder pay shown two ways: as planned (what the founder draws) and at 
 (what a comparable hire would cost). The lender adjustment is the gap underwriters apply to
 staffing cost and DSCR.
 SchoolStack Budget - Generated <DATE>
-Page 21 of 22
---- PAGE 22 ---
+Page 22 of 23
+--- PAGE 23 ---
 Line
 Y1
 Y2
@@ -1504,4 +1508,4 @@ $
 Note: Founder is paying themselves below market rate (“sweat equity”). Lenders and boards underwrite to the market-rate
 line; the adjustment shows the gap.
 SchoolStack Budget - Generated <DATE>
-Page 22 of 22
+Page 23 of 23

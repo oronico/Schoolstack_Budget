@@ -69,11 +69,11 @@ Executive Summary
 Gift-Anchored Founding Microschool projects $492,145 in Year 5 revenue, with 2 of 13 key metrics
 that need attention. This is a starting point, and working through the recommendations below will
 help you build the financial story your mission deserves.
-[ ] Readiness Level: Not Yet Ready
-[ ] Biggest Strength: Strong Year 5 profit
-[ ] Biggest Risk: Philanthropy at 64.5% of revenue is a generous foundation, but building more earned revenue
-will add stability
-[ ] Cash Runway: 25.1 months
+Readiness Level: Not Yet Ready
+Biggest Strength: Strong Year 5 profit
+Biggest Risk: Philanthropy at 64.5% of revenue is a generous foundation, but building more earned revenue will
+add stability
+Cash Runway: 25.1 months
 SchoolStack Budget - Generated <DATE>
 Page 2 of 21
 --- PAGE 3 ---
@@ -130,11 +130,11 @@ Year 5 Enrollment  40
 Revenue Model
 The revenue model is with significant philanthropic support (64.5%). Year 1 total revenue is
 projected at $413K, growing to $492K by Year 5.
-[ ] Tuition %: 35.5%
-[ ] Public Funding %: 0.0%
-[ ] Philanthropy %: 64.5%
-[ ] Year 1 Contracted Revenue %: 34.5%
-[ ] Hard Revenue Coverage (Y1): 1.20×
+Tuition %: 35.5%
+Public Funding %: 0.0%
+Philanthropy %: 64.5%
+Year 1 Contracted Revenue %: 34.5%
+Hard Revenue Coverage (Y1): 1.20×
 Revenue by Year
 Year
 Total Revenue
@@ -300,7 +300,7 @@ SchoolStack Budget - Generated <DATE>
 Page 5 of 21
 --- PAGE 6 ---
 through Secondary (11-9032), national median annual wage..
-[+] Staffing % of Revenue: 20.8%
+✓ Staffing % of Revenue: 20.8%
 Suggested Founder Compensation Benchmark by Year
 Year
 Projected Enrollment
@@ -457,14 +457,14 @@ The model reaches break-even in Year 1. Year 5 net income is projected at $242K 
 Breakeven enrollment is 7 students (186% above Year 1 enrollment).
 • Accounting basis
 All projections are prepared on an accrual basis; the school currently keeps books on a undetermined basis.
-[+] Revenue per Student (Year 1): $20,657 (benchmark: Private avg: $12,000–$25,000)
-[+] Cost per Student (Year 1): $7,162 (benchmark: Target: ≤ 85% of revenue per student)
-[+] Staffing Cost (% of Revenue): 20.8% (benchmark: Industry avg: 50–65% of revenue)
-[+] Operating Cost (% of Revenue): 13.7% (benchmark: Target: under 30% of revenue)
-[+] Profit margin (Year 1): 65.3% (benchmark: Startup target: 0–5%; mature: 10%+)
-[+] Profit margin (Year 5): 49.3% (benchmark: Target: 10–15%+)
-[!] 5-Year Revenue Growth: 19.1% (benchmark: Healthy schools: 30–80% over 5 years)
-[+] Capacity Utilization (Year 5): 88.9% (benchmark: Optimal: 80–95% utilization)
+✓ Revenue per Student (Year 1): $20,657 (benchmark: Private avg: $12,000–$25,000)
+✓ Cost per Student (Year 1): $7,162 (benchmark: Target: ≤ 85% of revenue per student)
+✓ Staffing Cost (% of Revenue): 20.8% (benchmark: Industry avg: 50–65% of revenue)
+✓ Operating Cost (% of Revenue): 13.7% (benchmark: Target: under 30% of revenue)
+✓ Profit margin (Year 1): 65.3% (benchmark: Startup target: 0–5%; mature: 10%+)
+✓ Profit margin (Year 5): 49.3% (benchmark: Target: 10–15%+)
+✕ 5-Year Revenue Growth: 19.1% (benchmark: Healthy schools: 30–80% over 5 years)
+✓ Capacity Utilization (Year 5): 88.9% (benchmark: Optimal: 80–95% utilization)
 SchoolStack Budget - Generated <DATE>
 Page 7 of 21
 --- PAGE 8 ---
@@ -507,9 +507,9 @@ $242K
 49.3%
 Opening Balance Sheet
 Net position at model start: $15K.
-[ ] Total Assets: $15K
-[ ] Total Liabilities: $0
-[ ] Net Position: $15K
+Total Assets: $15K
+Total Liabilities: $0
+Net Position: $15K
 Assets
 Item
 Amount
@@ -536,8 +536,8 @@ Total Liabilities
 $0
 Facility & Key Performance Indicators
 Breakeven enrollment is 7 students. Year 1 projects 20 students, providing a 185.7% cushion.
-[ ] Breakeven Enrollment: 7
-[ ] Facility Cost/Student: $2K
+Breakeven Enrollment: 7
+Facility Cost/Student: $2K
 Key Performance Indicators
 SchoolStack Budget - Generated <DATE>
 Page 8 of 21
@@ -555,8 +555,8 @@ Enrollment Cushion
 Cash Flow Analysis
 Year-end cash covers 25.1 months of fixed costs. Opening balance: $15K total assets, $0 total
 liabilities, $15K net position. Lowest cash month across the 5-year forecast: Year 1 — Jul at $136K.
-[ ] Cash Runway: 25.1 months
-[ ] Lowest Cash Month: Year 1 — Jul ($136K)
+Cash Runway: 25.1 months
+Lowest Cash Month: Year 1 — Jul ($136K)
 Cumulative Cash Position
 Year
 Cumulative Net Income
@@ -1020,12 +1020,12 @@ Debt Service Coverage
 Year-1 debt service coverage is 55.82x on the normalized (lender-primary) view. Minimum: 1.15x;
 target: 1.25x. See the "As-Planned vs Normalized: Net Income & DSCR" table for the founder /
 board (as-planned) view alongside this normalized series.
-[+] Debt Service Coverage Ratio (Year 1): 55.82x (benchmark: Minimum: 1.15x; target: 1.25x)
-[+] Year 1 Reserve Months: 22.6 months (benchmark: Target: 3+ months)
-[+] Year 2 Reserve Months: 29.7 months (benchmark: Target: 3+ months)
-[+] Year 3 Reserve Months: 42.8 months (benchmark: Target: 3+ months)
-[+] Year 4 Reserve Months: 53.9 months (benchmark: Target: 3+ months)
-[+] Year 5 Reserve Months: 63.8 months (benchmark: Target: 3+ months)
+✓ Debt Service Coverage Ratio (Year 1): 55.82x (benchmark: Minimum: 1.15x; target: 1.25x)
+✓ Year 1 Reserve Months: 22.6 months (benchmark: Target: 3+ months)
+✓ Year 2 Reserve Months: 29.7 months (benchmark: Target: 3+ months)
+✓ Year 3 Reserve Months: 42.8 months (benchmark: Target: 3+ months)
+✓ Year 4 Reserve Months: 53.9 months (benchmark: Target: 3+ months)
+✓ Year 5 Reserve Months: 63.8 months (benchmark: Target: 3+ months)
 DSCR Summary
 Current DSCR:  55.82x
 Benchmark:  Healthy minimum: 1.15x;
@@ -1128,18 +1128,19 @@ Lender Readiness
 Your model is a solid starting point, and now it's time to refine it. Focus on the high-priority
 recommendations first, and you'll see real progress. Every great school's financial story started as
 a first draft.
-[!] Readiness Level: Not Yet Ready
+✕ Readiness Level: Not Yet Ready
 Financial Health Assessment
 Across 9 health dimensions: 7 healthy, 1 on watch, 1 at risk.
-[+] viability: Healthy
-[+] liquidity: Healthy
-[~] cash flow timing: Watch closely
-[+] staffing burden: Healthy
-[+] facility burden: Healthy
-[+] debt affordability: Healthy
-[!] revenue concentration: Needs attention
-[+] days cash: Healthy
+✓ viability: Healthy
+✓ liquidity: Healthy
+⚠ cash flow timing: Watch closely
+✓ staffing burden: Healthy
+✓ facility burden: Healthy
+✓ debt affordability: Healthy
+✕ revenue concentration: Needs attention
+✓ days cash: Healthy
 Health Dimensions
+Legend: ✓ Healthy   ⚠ Watch closely   ✕ Critical
 Dimension
 Status
 Details
@@ -1204,9 +1205,9 @@ Page 16 of 21
 Key Risks
 4 risk factors have been identified. Of these, 1 is rated critical and should be addressed prior to
 lender submission.
-[!] Let's diversify away from philanthropy over time: critical
-[+] Let's back the enrollment ramp with evidence: medium
-[+] Let's tie new hires to enrollment milestones: medium
+✕ Let's diversify away from philanthropy over time: critical
+✓ Let's back the enrollment ramp with evidence: medium
+✓ Let's tie new hires to enrollment milestones: medium
 CRITICAL
 Let's diversify away from philanthropy over time
 Grants are wonderful but cyclical — shifting toward tuition or per-pupil revenue over a few years lets philanthropy stay
@@ -1239,9 +1240,9 @@ Evidence: Year 2 enrollment: 26 students  |  Year 2 staffing cost: $159,666
 Mitigation: Align staffing additions to enrollment milestones. Hire when students are enrolled, not when you hope they
 will be. Use part-time or contract roles to bridge gaps. Next step: Open Step 6: Staffing and tie each new role's start date to
 a specific enrollment milestone (e.g. 'add when Y2 enrollment hits 60'), or push the role into a later year.
-[!] Let's diversify away from philanthropy over time: critical
-[+] Let's back the enrollment ramp with evidence: medium
-[+] Let's tie new hires to enrollment milestones: medium
+✕ Let's diversify away from philanthropy over time: critical
+✓ Let's back the enrollment ramp with evidence: medium
+✓ Let's tie new hires to enrollment milestones: medium
 See Appendix for complete assumption details.
 Appendix: Key Assumptions
 Complete list of 24 assumptions used in this financial model, with each headline metric tied to its

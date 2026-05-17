@@ -665,6 +665,15 @@ export function renderPacketTable(doc: PDFDoc, table: PacketTable) {
   doc.moveDown(0.3);
   subSection(doc, table.title);
 
+  // Task #923 — Health Dimensions is the first (and most prominent) per-status
+  // table in the packet; render the icon legend right under its sub-heading
+  // so a first-time reader can decode the ✓ / ⚠ / ✕ / • glyphs that appear
+  // both in this table's Status column and in the surrounding linked-metric
+  // bullets without having to guess.
+  if (table.title === "Health Dimensions") {
+    renderStatusIconLegend(doc);
+  }
+
   const availW = doc.page.width - doc.page.margins.left - doc.page.margins.right;
   const colCount = table.headers.length;
   const firstColWidth = Math.min(150, availW * 0.3);
@@ -727,7 +736,7 @@ export function renderLinkedMetrics(
   metrics: LinkedMetric[],
   options: RenderLinkedMetricsOptions,
 ) {
-  const neutralIcon = options.neutralIcon ?? "~";
+  const neutralIcon = options.neutralIcon ?? STATUS_ICON.neutral;
   const showBenchmark = options.showBenchmark ?? false;
 
   if (options.reserveInitialSpace) {
@@ -735,28 +744,92 @@ export function renderLinkedMetrics(
   }
 
   for (const m of metrics.slice(0, options.limit)) {
-    const statusIcon = m.status === "good"
-      ? "+"
-      : m.status === "danger"
-        ? "!"
-        : m.status === "warning"
-          ? "~"
-          : neutralIcon;
-    const statusColor = m.status === "good"
-      ? BRAND.green
-      : m.status === "danger"
-        ? BRAND.red
-        : m.status === "warning"
-          ? BRAND.amber
-          : BRAND.darkGray;
+    const { glyph, color } = renderStatusIcon(m.status, neutralIcon);
+    // #923 — neutral renders with no glyph (empty string); avoid emitting a
+    // leading space-only prefix in that case so plain header bullets read
+    // flush with the rest of the section instead of indented by one space.
+    const prefix = glyph ? `${glyph} ` : "";
 
     ensureSpace(doc, 16);
-    doc.font("Helvetica-Bold").fontSize(9).fillColor(statusColor);
-    doc.text(`[${statusIcon}] `, doc.page.margins.left, doc.y, { continued: true });
+    doc.font("Helvetica-Bold").fontSize(9).fillColor(color);
+    doc.text(prefix, doc.page.margins.left, doc.y, { continued: true });
     doc.font("Helvetica").fontSize(9).fillColor(BRAND.black);
     const benchmarkSuffix = showBenchmark && m.benchmark ? ` (benchmark: ${m.benchmark})` : "";
     doc.text(`${m.label}: ${m.value}${benchmarkSuffix}`);
   }
+  doc.moveDown(0.3);
+}
+
+/**
+ * Task #923 — single source of truth for the status glyph used by
+ * `renderLinkedMetrics` (and any future bullet renderer). Returning a small
+ * struct here lets every caller render the same Unicode glyph for a given
+ * semantic level instead of inlining `+ / ! / ~ / space` ASCII placeholders
+ * that read as draft text and that older WinAnsi PDFKit encodings used to
+ * mangle. All three semantic glyphs are present in DejaVu Sans (registered as
+ * Helvetica by Task #922) so they render correctly without fallback.
+ *
+ * - good     → "✓"   (Healthy / Pass)
+ * - warning  → "⚠"   (Watch closely)
+ * - danger   → "✕"   (Critical / Needs attention)
+ * - neutral  → ""    (no glyph — plain label header per #923 addendum Option A)
+ *
+ * Color scope per addendum: monochrome only. Per-glyph color (green / amber
+ * / red) is intentionally out of scope for #923 and will be applied by the
+ * follow-up "Status icon semantic color application" task. The `color` field
+ * returned by `renderStatusIcon` is always `BRAND.black` so callers can keep
+ * their existing fillColor call site without branching on the helper.
+ *
+ * Sibling-bug sweep (addendum step) — `grep -rohP "\[[+~!\*\?xo •\-]\]"` over
+ * `artifacts/api-server/src/lib/packets/*.ts` returned a single additional
+ * pattern: `[*]`. That match is the comment fragment `scenarios[*].netIncome`
+ * in `build-narrative-commentary.ts` (array-index notation, not a status
+ * placeholder) and is intentionally preserved as-is. No other bracketed
+ * placeholders exist in the packet source tree.
+ *
+ * PDFKit fallback policy: if a future font swap drops support for any of the
+ * three semantic glyphs, fall back to `[OK]` / `[WATCH]` / `[CRITICAL]` per
+ * the addendum and document the affected codepoint here. As of #922 + #923
+ * no fallback is engaged — all glyphs render in DejaVu Sans (U+2713 U+26A0
+ * U+2715, verified by `tests/pdf-encoding-corruption-922.ts`).
+ *
+ * The legend rendered above the first Health Dimensions table relies on the
+ * same lookup so the printed legend can never drift from the rendered glyphs.
+ */
+export const STATUS_ICON = {
+  good: "\u2713",      // ✓
+  warning: "\u26A0",   // ⚠
+  danger: "\u2715",    // ✕
+  neutral: "",         // no glyph (#923 addendum: plain label only)
+} as const;
+
+export function renderStatusIcon(
+  status: LinkedMetric["status"] | undefined,
+  neutralOverride?: string,
+): { glyph: string; color: string } {
+  if (status === "good") return { glyph: STATUS_ICON.good, color: BRAND.black };
+  if (status === "danger") return { glyph: STATUS_ICON.danger, color: BRAND.black };
+  if (status === "warning") return { glyph: STATUS_ICON.warning, color: BRAND.black };
+  return { glyph: neutralOverride ?? STATUS_ICON.neutral, color: BRAND.black };
+}
+
+/**
+ * Task #923 — Inline legend for the status glyphs used by the Health
+ * Dimensions table (and any nearby per-metric bullet block). Renders a
+ * single muted monochrome line that maps glyph → meaning so a first-time
+ * reader of the packet doesn't have to guess what ✓ / ⚠ / ✕ stand for. The
+ * neutral case has no glyph, so it is omitted from the legend.
+ */
+export function renderStatusIconLegend(doc: PDFDoc): void {
+  ensureSpace(doc, 14);
+  const margin = doc.page.margins.left;
+  doc.font("Helvetica").fontSize(8).fillColor(BRAND.darkGray);
+  doc.text(
+    `Legend: ${STATUS_ICON.good} Healthy   ${STATUS_ICON.warning} Watch closely   ${STATUS_ICON.danger} Critical`,
+    margin,
+    doc.y,
+  );
+  doc.fillColor(BRAND.black);
   doc.moveDown(0.3);
 }
 
