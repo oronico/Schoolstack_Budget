@@ -6,6 +6,7 @@
  * internal file layout can change without touching call sites.
  */
 export {
+  computeCanonicalValues,
   computeCanonicalValuesForFixture,
   computeCanonicalValuesForFixtures,
   listResolverMetricIds,

@@ -136,21 +136,29 @@ const RESOLVERS: Record<string, CanonicalResolver> = {
     //   `driverVal(row.amounts, 0, row.driverType, students,
     //              row.escalationRate)`
     // resolved per-row via the canonical helper
-    // `computeRevenueRowAmountsForYear` (which is what the live
-    // workbook / packet builder both call). Returns Y1 dollars
-    // keyed by row id so M4 can diff per-row against any surface
-    // that prints a revenue line breakdown.
+    // `computeRevenueRowAmountsForYear`. Returns Y1 dollars
+    // keyed by row id so M4 can diff per-row.
     const raw = modelData as unknown as Record<string, unknown>;
-    const rows = Array.isArray(raw.revenueRows)
-      ? (raw.revenueRows as Parameters<typeof computeRevenueRowAmountsForYear>[0])
-      : [];
+    if (!Array.isArray(raw.revenueRows)) {
+      throw new Error(
+        "[canonical] revenue-per-line-y1-value: fixture is missing `revenueRows` array.",
+      );
+    }
+    const rows = raw.revenueRows as Parameters<
+      typeof computeRevenueRowAmountsForYear
+    >[0];
     const tuitionTiers = Array.isArray(raw.tuitionTiers)
       ? (raw.tuitionTiers as Parameters<typeof computeRevenueRowAmountsForYear>[3])
       : undefined;
     const schoolProfile = raw.schoolProfile as
       | Parameters<typeof computeRevenueRowAmountsForYear>[4]
       | undefined;
-    const students = consultant.normalizedView.reported.enrollment[0] ?? 0;
+    const students = consultant.normalizedView.reported.enrollment[0];
+    if (!Number.isFinite(students)) {
+      throw new Error(
+        "[canonical] revenue-per-line-y1-value: Y1 enrollment is not a finite number.",
+      );
+    }
     const amounts = computeRevenueRowAmountsForYear(
       rows,
       0,
@@ -191,11 +199,31 @@ const RESOLVERS: Record<string, CanonicalResolver> = {
     // that's a registry-vs-surface diff for M4 to triage (Phase 2
     // shape mismatch — surfaced per Task #930 brief).
     const raw = modelData as unknown as Record<string, unknown>;
-    const revenueRows = (raw.revenueRows ?? []) as MonthlyRevenueRowLike[];
-    const sp = (raw.schoolProfile as Record<string, unknown>) || {};
-    const ob = (raw.openingBalances as Record<string, unknown>) || {};
+    if (!Array.isArray(raw.revenueRows)) {
+      throw new Error(
+        "[canonical] cash-monthly-low: fixture is missing `revenueRows` array.",
+      );
+    }
+    if (!raw.schoolProfile || typeof raw.schoolProfile !== "object") {
+      throw new Error(
+        "[canonical] cash-monthly-low: fixture is missing `schoolProfile`.",
+      );
+    }
+    if (!raw.openingBalances || typeof raw.openingBalances !== "object") {
+      throw new Error(
+        "[canonical] cash-monthly-low: fixture is missing `openingBalances`.",
+      );
+    }
+    const revenueRows = raw.revenueRows as MonthlyRevenueRowLike[];
+    const sp = raw.schoolProfile as Record<string, unknown>;
+    const ob = raw.openingBalances as Record<string, unknown>;
     const fy = sp.fiscalYear as Record<string, unknown> | undefined;
-    const startingCash = safeNumber(ob.cash) ?? 0;
+    const startingCash = safeNumber(ob.cash);
+    if (startingCash === null) {
+      throw new Error(
+        "[canonical] cash-monthly-low: `openingBalances.cash` is not a finite number.",
+      );
+    }
     const fyStartMonth = safeNumber(fy?.startMonth) ?? 1;
     const baseOpMonths = sp.isPartialFirstYear
       ? safeNumber(sp.year1OperatingMonths) ?? 10
@@ -260,18 +288,25 @@ const RESOLVERS: Record<string, CanonicalResolver> = {
     // Registry accessor: `computeAnnualDebt(capitalAndDebtRows, year)`
     // — sum of P+I across every loan row for each modeled year. A
     // loan contributes its constant amortized payment within its
-    // term and zero afterward.
+    // term and zero afterward. `computeAnnualDebt` explicitly
+    // supports zero-rate loans (returns principal / term), so we
+    // delegate to it for every loan that has a positive principal
+    // and term — only excluding rows that are not loans or are
+    // structurally invalid (non-positive principal/term).
     const raw = modelData as unknown as Record<string, unknown>;
-    const rows = Array.isArray(raw.capitalAndDebtRows)
-      ? (raw.capitalAndDebtRows as Array<Record<string, unknown>>)
-      : [];
+    if (!Array.isArray(raw.capitalAndDebtRows)) {
+      throw new Error(
+        "[canonical] annual-debt-service: fixture is missing `capitalAndDebtRows` array.",
+      );
+    }
+    const rows = raw.capitalAndDebtRows as Array<Record<string, unknown>>;
     const perYear: number[] = [0, 0, 0, 0, 0];
     for (const row of rows) {
       if (!row.isLoan) continue;
       const principal = safeNumber(row.loanPrincipal) ?? 0;
       const rate = safeNumber(row.loanRate) ?? 0;
       const term = safeNumber(row.loanTermYears) ?? 0;
-      if (principal <= 0 || rate <= 0 || term <= 0) continue;
+      if (principal <= 0 || term <= 0) continue;
       const annual = computeAnnualDebt(principal, rate, term);
       for (let y = 0; y < 5; y++) {
         if (y < term) perYear[y] += annual;
@@ -479,6 +514,31 @@ export async function computeCanonicalValuesForFixture(
     }
     const { value, note } = resolver(ctx);
     out.push({ metricId: metric.id, persona: fixture.slug, value, note });
+  }
+  return out;
+}
+
+/**
+ * Required public API per Task #975 / M3 contract.
+ *
+ * Compute the canonical value of every registered metric for a
+ * single persona fixture and return them as a plain
+ * `{ metricId -> value }` map (natural-form, JSON-serialisable).
+ * This is the shape M4 / M5 consumers should read against; the
+ * richer `CanonicalValueRecord[]` form (with persona + note
+ * fields) is also available via `computeCanonicalValuesForFixture`
+ * for harness diagnostics.
+ *
+ * Throws if any resolver throws — fail loudly so downstream
+ * milestones never silently anchor against a partial map.
+ */
+export async function computeCanonicalValues(
+  fixture: PersonaFixture,
+): Promise<Record<string, unknown>> {
+  const records = await computeCanonicalValuesForFixture(fixture);
+  const out: Record<string, unknown> = {};
+  for (const r of records) {
+    out[r.metricId] = r.value;
   }
   return out;
 }
