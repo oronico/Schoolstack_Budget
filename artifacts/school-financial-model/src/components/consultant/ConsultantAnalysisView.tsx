@@ -823,6 +823,24 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
         subtitle="Specific assumptions and metrics where a reviewer is likely to want more context, backup, or a written rationale."
       />
 
+      {/* Task #965 — Confidence-Gated Risk Severity cap callout.
+          Surfaced *above* TopIssuesPanel so a founder sees the cap
+          context before reading the (capped) severity chips. The
+          string is pre-formatted server-side via
+          `formatRiskSeverityCapCallout` so this surface and the
+          lender packet PDF render byte-identical copy. */}
+      {data.riskSeverityCap?.result.cap.applied && data.riskSeverityCap.callout && (
+        <div
+          data-testid="risk-severity-cap-callout"
+          className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm"
+        >
+          <div className="font-semibold text-amber-800 mb-1">
+            Evidence-tagging cap applied
+          </div>
+          <div className="text-amber-900">{data.riskSeverityCap.callout}</div>
+        </div>
+      )}
+
       {data.topIssues && data.topIssues.length > 0 && (
         <TopIssuesPanel
           issues={data.topIssues}
@@ -936,6 +954,24 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
           onClose={() => setOpenKpi(null)}
           modelId={modelId}
         />
+      )}
+
+      {/* Task #965 — Confidence-Gated Health Dimensions cap callout.
+          Rendered immediately above the HealthSignalsSection so the
+          (capped) dimension badges have the cap explanation framing
+          them. Pre-formatted server-side via
+          `formatHealthDimensionCapCallout` for byte-identical copy
+          with the lender packet PDF. */}
+      {data.healthDimensionCap?.result.cap.applied && data.healthDimensionCap.callout && (
+        <div
+          data-testid="health-dimension-cap-callout"
+          className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm"
+        >
+          <div className="font-semibold text-amber-800 mb-1">
+            Evidence-tagging cap applied
+          </div>
+          <div className="text-amber-900">{data.healthDimensionCap.callout}</div>
+        </div>
       )}
 
       {data.healthSignals && data.healthSignals.length > 0 && (

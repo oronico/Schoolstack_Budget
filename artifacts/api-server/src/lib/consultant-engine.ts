@@ -26,13 +26,35 @@ import {
 import { detectUnusualAssumptions } from "./assumption-flags";
 import {
   applyConfidenceCap,
+  applyHealthDimensionCap,
+  applyRiskSeverityCap,
+  computeAssumptionTagging,
   computeLenderReadiness,
   formatCapCallout,
+  formatHealthDimensionCapCallout,
+  formatRiskSeverityCapCallout,
+  healthDimensionStatusLabel,
+  type GenericCapResult,
+  type HealthDimensionRating,
   type LenderReadinessResult,
+  type RiskSeverityRating,
 } from "./lender-readiness-caps";
 // Re-exported so tests and downstream consumers have one import path.
-export { applyConfidenceCap, computeLenderReadiness, formatCapCallout };
-export type { LenderReadinessResult };
+export {
+  applyConfidenceCap,
+  applyHealthDimensionCap,
+  applyRiskSeverityCap,
+  computeLenderReadiness,
+  formatCapCallout,
+  formatHealthDimensionCapCallout,
+  formatRiskSeverityCapCallout,
+};
+export type {
+  GenericCapResult,
+  HealthDimensionRating,
+  LenderReadinessResult,
+  RiskSeverityRating,
+};
 
 interface SchoolProfile {
   schoolName?: string;
@@ -468,6 +490,41 @@ export interface ConsultantOutput {
    * the numbers reconcile exactly.
    */
   lenderStressTests: LenderStressTestResults;
+  /**
+   * Task #965 — Confidence-Gated Rating Subsystem extended to
+   * Health Dimensions. Carries the evaluator output for the
+   * worst-case (highest-ranked) dimension status before the cap so
+   * the consumer can decide whether to render the cap callout. The
+   * Health Dimensions surface — in-app HealthSignalsSection card +
+   * lender packet PDF health_assessment section — reads
+   * `callout` directly for byte-identical copy.
+   *
+   * `signalsBeforeCap` records the pre-cap signal array so audit /
+   * regression tests can verify the cap actually downgraded
+   * specific dimensions (and so a future "confidence-adjusted
+   * view" toggle can flip back to uncapped). The live
+   * `healthSignals` array above already reflects the capped
+   * status.
+   */
+  healthDimensionCap: {
+    result: GenericCapResult<HealthDimensionRating>;
+    callout: string;
+    signalsBeforeCap: HealthSignal[];
+  };
+  /**
+   * Task #965 — Confidence-Gated Rating Subsystem extended to
+   * Risk Severity bands. The cap is a *floor*: at low evidence
+   * tagging a "low / medium" severity is unsupported and gets
+   * raised to "high" or "critical". The `topIssues` array above
+   * already reflects the capped severity; `issuesBeforeCap`
+   * preserves the pre-cap severities for audit / regression tests
+   * and for a future toggle.
+   */
+  riskSeverityCap: {
+    result: GenericCapResult<RiskSeverityRating>;
+    callout: string;
+    issuesBeforeCap: import("./decision-rules").DecisionIssue[];
+  };
   generatedAt: string;
 }
 
@@ -3224,6 +3281,62 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
         })()
       : biggestRisk;
 
+  // Task #965 — Apply the confidence-gated Health Dimensions cap.
+  // The cap is a ceiling: at < 50% evidence tagging, a "healthy"
+  // signal is unsupported and the worst dimension status is read
+  // as the rating to evaluate (so the worst-case signal drives the
+  // callout). Per-signal status is then capped so the HealthSignals
+  // surface and the lender packet health_assessment table render
+  // capped statuses without re-evaluating the rule downstream.
+  const tagging = computeAssumptionTagging(rawData);
+  const HEALTH_RANK: Record<HealthDimensionRating, number> = {
+    at_risk: 0,
+    watch: 1,
+    healthy: 2,
+  };
+  const signalsBeforeCap: HealthSignal[] = healthSignals.map((s) => ({ ...s }));
+  // Pick the *best* (highest-ranked) status across all dimensions
+  // for the cap evaluation: that's the rating most exposed to the
+  // credibility problem (a "healthy" badge against a model where
+  // nothing has been evidenced). Empty list → "at_risk" sentinel
+  // so no cap callout surfaces.
+  const bestHealth: HealthDimensionRating = signalsBeforeCap.length === 0
+    ? "at_risk"
+    : signalsBeforeCap.reduce<HealthDimensionRating>((acc, s) => {
+        const r = s.status as HealthDimensionRating;
+        return HEALTH_RANK[r] > HEALTH_RANK[acc] ? r : acc;
+      }, "at_risk");
+  const healthCapResult = applyHealthDimensionCap(
+    bestHealth,
+    tagging.fraction,
+    tagging.taggedCount,
+    tagging.totalCount,
+  );
+  if (healthCapResult.cap.applied) {
+    const capAt = healthCapResult.cap.capTier.capAt!;
+    const capRank = HEALTH_RANK[capAt];
+    for (let i = 0; i < healthSignals.length; i++) {
+      const r = healthSignals[i].status as HealthDimensionRating;
+      if (HEALTH_RANK[r] > capRank) {
+        // Mutate both `status` *and* `label` together. Downstream
+        // surfaces (HealthSignalsSection badge text, packet
+        // health_assessment "Status" column, supporting metric)
+        // render `label` verbatim, so a status-only cap leaves a
+        // contradictory "Healthy" string against an at-risk chip.
+        healthSignals[i] = {
+          ...healthSignals[i],
+          status: capAt,
+          label: healthDimensionStatusLabel(capAt),
+        };
+      }
+    }
+  }
+  const healthDimensionCap = {
+    result: healthCapResult,
+    callout: formatHealthDimensionCapCallout(healthCapResult),
+    signalsBeforeCap,
+  };
+
   const topIssues = generateTopIssues({
     yearFinancials,
     cumulativeFinancials,
@@ -3253,6 +3366,48 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
         }
       : null,
   });
+
+  // Task #965 — Apply the confidence-gated Risk Severity cap. The
+  // cap is a floor: at < 50% evidence tagging, a "low" or "medium"
+  // severity is unsupported because the inputs that would prove the
+  // risk is contained have not been anchored to evidence. The
+  // lowest (least severe) severity across the issue set drives the
+  // cap evaluation; per-issue severity is then floored so the
+  // TopIssuesPanel surface and the lender packet riskMitigants
+  // render the same capped severity downstream.
+  const SEVERITY_RANK: Record<RiskSeverityRating, number> = {
+    medium: 0,
+    high: 1,
+    critical: 2,
+  };
+  const issuesBeforeCap: import("./decision-rules").DecisionIssue[] = topIssues.map((i) => ({ ...i }));
+  const lowestSeverity: RiskSeverityRating = issuesBeforeCap.length === 0
+    ? "critical"
+    : issuesBeforeCap.reduce<RiskSeverityRating>((acc, i) => {
+        const r = i.severity as RiskSeverityRating;
+        return SEVERITY_RANK[r] < SEVERITY_RANK[acc] ? r : acc;
+      }, "critical");
+  const riskCapResult = applyRiskSeverityCap(
+    lowestSeverity,
+    tagging.fraction,
+    tagging.taggedCount,
+    tagging.totalCount,
+  );
+  if (riskCapResult.cap.applied) {
+    const capAt = riskCapResult.cap.capTier.capAt!;
+    const capRank = SEVERITY_RANK[capAt];
+    for (let i = 0; i < topIssues.length; i++) {
+      const r = topIssues[i].severity as RiskSeverityRating;
+      if (SEVERITY_RANK[r] < capRank) {
+        topIssues[i] = { ...topIssues[i], severity: capAt };
+      }
+    }
+  }
+  const riskSeverityCap = {
+    result: riskCapResult,
+    callout: formatRiskSeverityCapCallout(riskCapResult),
+    issuesBeforeCap,
+  };
 
   // Task #932 — append a one-line callout to the exec summary when
   // cash first crosses zero. Use the *first* negative month (the
@@ -3308,6 +3463,12 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     assumptionFlags,
     normalizedView,
     lenderStressTests,
+    // Task #965 — Confidence-gated Health Dimensions + Risk
+    // Severity cap results, surfaced so the in-app card and the
+    // lender packet PDF render byte-identical callout copy via
+    // `formatHealthDimensionCapCallout` / `formatRiskSeverityCapCallout`.
+    healthDimensionCap,
+    riskSeverityCap,
     generatedAt: new Date().toISOString(),
   };
 }

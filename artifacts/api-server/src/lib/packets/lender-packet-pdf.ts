@@ -1027,6 +1027,43 @@ function renderSection(doc: PDFDoc, section: PacketSection, packet: LenderPacket
     renderMetrics(doc, section.linkedMetrics);
   }
 
+  // Task #965 — Evidence-tagging cap callout for the Health
+  // Dimensions section. Same visual treatment as the Lender
+  // Readiness cap callout on the cover (lines ~275–292) so a
+  // founder and a lender see one consistent surface treatment
+  // across all three confidence-gated ratings.
+  if (section.id === "health_assessment" && packet.healthDimensionCap.applied) {
+    doc.moveDown(0.4);
+    doc.save();
+    const margin = doc.page.margins.left;
+    const innerW = doc.page.width - margin * 2;
+    doc.font("Helvetica-Bold").fontSize(9).fillColor(BRAND.amber);
+    doc.text("Evidence-tagging cap applied", margin, doc.y, { width: innerW });
+    doc.font("Helvetica").fontSize(9).fillColor(BRAND.darkGray);
+    doc.text(packet.healthDimensionCap.callout, margin, doc.y, { width: innerW });
+    doc.restore();
+    doc.font("Helvetica").fillColor(BRAND.black);
+    doc.moveDown(0.3);
+  }
+
+  // Task #965 — Evidence-tagging cap callout for the Risk
+  // Severity (Key Risks) section. Rendered *before* the
+  // riskMitigants table so the cap context frames every severity
+  // chip a lender is about to read.
+  if (section.id === "key_risks" && packet.riskSeverityCap.applied) {
+    doc.moveDown(0.4);
+    doc.save();
+    const margin = doc.page.margins.left;
+    const innerW = doc.page.width - margin * 2;
+    doc.font("Helvetica-Bold").fontSize(9).fillColor(BRAND.amber);
+    doc.text("Evidence-tagging cap applied", margin, doc.y, { width: innerW });
+    doc.font("Helvetica").fontSize(9).fillColor(BRAND.darkGray);
+    doc.text(packet.riskSeverityCap.callout, margin, doc.y, { width: innerW });
+    doc.restore();
+    doc.font("Helvetica").fillColor(BRAND.black);
+    doc.moveDown(0.3);
+  }
+
   if (section.id === "key_risks" && packet.riskMitigants.length > 0) {
     renderRiskMitigants(doc, packet.riskMitigants);
     if (section.linkedMetrics.length > 0) {

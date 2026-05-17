@@ -1,5 +1,9 @@
 import type { ConsultantOutput } from "../consultant-engine";
-import { formatCapCallout } from "../lender-readiness-caps";
+import {
+  formatCapCallout,
+  formatHealthDimensionCapCallout,
+  formatRiskSeverityCapCallout,
+} from "../lender-readiness-caps";
 import type { ModelData } from "../workbook-helpers";
 import type { AssumptionFlag } from "../assumption-flags";
 import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "../benchmark-thresholds";
@@ -158,6 +162,33 @@ export interface LenderPacket extends PacketData {
       // Empty string when no cap bites; consumers render iff non-empty.
       callout: string;
     };
+  };
+  /**
+   * Task #965 — Confidence-Gated Rating Subsystem extended to
+   * Health Dimensions. Carries the pre-formatted callout string
+   * the lender packet PDF + in-app view both render verbatim
+   * (empty when no cap bites).
+   */
+  healthDimensionCap: {
+    applied: boolean;
+    effectiveRating: "healthy" | "watch" | "at_risk";
+    pendingEvidenceCount: number;
+    totalAssumptionCount: number;
+    taggedFraction: number;
+    callout: string;
+  };
+  /**
+   * Task #965 — Confidence-Gated Rating Subsystem extended to
+   * Risk Severity bands (floor cap: low/medium → high/critical
+   * when evidence tagging is below 50%).
+   */
+  riskSeverityCap: {
+    applied: boolean;
+    effectiveRating: "medium" | "high" | "critical";
+    pendingEvidenceCount: number;
+    totalAssumptionCount: number;
+    taggedFraction: number;
+    callout: string;
   };
   budgetNarrative: BudgetNarrativeData;
   /**
@@ -417,6 +448,25 @@ export function buildLenderPacket(
         ...consultantOutput.lenderReadinessResult,
         callout: formatCapCallout(consultantOutput.lenderReadinessResult),
       },
+    },
+    // Task #965 — Health Dimensions + Risk Severity cap payloads.
+    // Pre-formatted callout strings so the PDF renderer and the
+    // in-app card surface byte-identical copy.
+    healthDimensionCap: {
+      applied: consultantOutput.healthDimensionCap.result.cap.applied,
+      effectiveRating: consultantOutput.healthDimensionCap.result.effectiveRating,
+      pendingEvidenceCount: consultantOutput.healthDimensionCap.result.cap.pendingEvidenceCount,
+      totalAssumptionCount: consultantOutput.healthDimensionCap.result.cap.totalAssumptionCount,
+      taggedFraction: consultantOutput.healthDimensionCap.result.cap.taggedFraction,
+      callout: formatHealthDimensionCapCallout(consultantOutput.healthDimensionCap.result),
+    },
+    riskSeverityCap: {
+      applied: consultantOutput.riskSeverityCap.result.cap.applied,
+      effectiveRating: consultantOutput.riskSeverityCap.result.effectiveRating,
+      pendingEvidenceCount: consultantOutput.riskSeverityCap.result.cap.pendingEvidenceCount,
+      totalAssumptionCount: consultantOutput.riskSeverityCap.result.cap.totalAssumptionCount,
+      taggedFraction: consultantOutput.riskSeverityCap.result.cap.taggedFraction,
+      callout: formatRiskSeverityCapCallout(consultantOutput.riskSeverityCap.result),
     },
     budgetNarrative,
     assumptionConfidence,

@@ -1106,6 +1106,86 @@ export type ConsultantOutputLenderReadinessResult = {
 
 export type ConsultantOutputNarrativeCommentaries = { [key: string]: unknown };
 
+// ---------------------------------------------------------------------------
+// Task #965 — Confidence-Gated Rating Subsystem extended to Health
+// Dimensions + Risk Severity. Both surfaces re-use the table-driven
+// cap engine from `lender-readiness-caps.ts` and ship a pre-formatted
+// callout string so the in-app card and the lender packet PDF render
+// byte-identical copy.
+// ---------------------------------------------------------------------------
+
+export type ConsultantOutputHealthDimensionCapResultEffectiveRating =
+  HealthSignalStatus;
+
+export type ConsultantOutputHealthDimensionCapResultCapCapTier = {
+  taggedFractionMin: number;
+  taggedFractionMax: number;
+  capAt: HealthSignalStatus | null;
+  rationale: string;
+  source: string;
+  lastValidated: string;
+};
+
+export type ConsultantOutputHealthDimensionCapResultCap = {
+  applied: boolean;
+  reason: string;
+  pendingEvidenceCount: number;
+  totalAssumptionCount: number;
+  taggedCount: number;
+  taggedFraction: number;
+  capTier: ConsultantOutputHealthDimensionCapResultCapCapTier;
+};
+
+export type ConsultantOutputHealthDimensionCapResult = {
+  uncappedRating: HealthSignalStatus;
+  effectiveRating: HealthSignalStatus;
+  cap: ConsultantOutputHealthDimensionCapResultCap;
+};
+
+export type ConsultantOutputHealthDimensionCap = {
+  result: ConsultantOutputHealthDimensionCapResult;
+  /** Pre-formatted callout copy; empty string when no cap bites. */
+  callout: string;
+  /** Pre-cap snapshot of `healthSignals` for audit / regression. */
+  signalsBeforeCap: HealthSignal[];
+};
+
+export type ConsultantOutputRiskSeverityCapResultEffectiveRating =
+  DecisionIssueSeverity;
+
+export type ConsultantOutputRiskSeverityCapResultCapCapTier = {
+  taggedFractionMin: number;
+  taggedFractionMax: number;
+  capAt: DecisionIssueSeverity | null;
+  rationale: string;
+  source: string;
+  lastValidated: string;
+};
+
+export type ConsultantOutputRiskSeverityCapResultCap = {
+  applied: boolean;
+  reason: string;
+  pendingEvidenceCount: number;
+  totalAssumptionCount: number;
+  taggedCount: number;
+  taggedFraction: number;
+  capTier: ConsultantOutputRiskSeverityCapResultCapCapTier;
+};
+
+export type ConsultantOutputRiskSeverityCapResult = {
+  uncappedRating: DecisionIssueSeverity;
+  effectiveRating: DecisionIssueSeverity;
+  cap: ConsultantOutputRiskSeverityCapResultCap;
+};
+
+export type ConsultantOutputRiskSeverityCap = {
+  result: ConsultantOutputRiskSeverityCapResult;
+  /** Pre-formatted callout copy; empty string when no cap bites. */
+  callout: string;
+  /** Pre-cap snapshot of `topIssues` for audit / regression. */
+  issuesBeforeCap: DecisionIssue[];
+};
+
 export type ConsultantRecommendationPriority =
   (typeof ConsultantRecommendationPriority)[keyof typeof ConsultantRecommendationPriority];
 
@@ -1347,6 +1427,10 @@ export interface ConsultantOutput {
   lendingLabAssessment: LendingLabAssessment;
   normalizedView?: NormalizedFinancialsView;
   lenderStressTests: LenderStressTestResults;
+  /** Task #965 — Confidence-Gated Rating for Health Dimensions. */
+  healthDimensionCap: ConsultantOutputHealthDimensionCap;
+  /** Task #965 — Confidence-Gated Rating for Risk Severity bands. */
+  riskSeverityCap: ConsultantOutputRiskSeverityCap;
   narrativeCommentaries?: ConsultantOutputNarrativeCommentaries;
   generatedAt: string;
 }

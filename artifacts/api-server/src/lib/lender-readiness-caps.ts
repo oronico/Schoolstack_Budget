@@ -229,3 +229,329 @@ export function formatCapCallout(result: LenderReadinessResult): string {
     `${cap.capTier.rationale}`
   );
 }
+
+// ---------------------------------------------------------------------------
+// Task #965 — Generic cap engine.
+//
+// The Lender Readiness rating was the first surface gated on
+// `taggedFraction`, but the Health Dimensions panel and the Risk
+// Severity bands have the same credibility problem: a "Healthy"
+// Cash Health badge or a "Low / Medium" risk band can be displayed
+// against a model where almost nothing has been evidenced. Rather
+// than build a parallel ad-hoc system per surface, generalise the
+// table-driven cap subsystem here. New surfaces register a tier
+// table + ranking + `direction` ("ceiling" caps *down*, "floor"
+// raises *up*) and pick up the same threshold semantics, the same
+// callout phrasing, and the same regression-test coverage.
+// ---------------------------------------------------------------------------
+
+/**
+ * Generic cap tier — same shape as {@link RatingCapTier} but
+ * parameterised on the rating type so health-status and severity
+ * tiers can reuse the table machinery.
+ */
+export interface GenericCapTier<R extends string> {
+  taggedFractionMin: number;
+  taggedFractionMax: number;
+  /** `null` removes the cap for this tier. */
+  capAt: R | null;
+  rationale: string;
+  source: string;
+  lastValidated: string;
+}
+
+export interface GenericCapResult<R extends string> {
+  uncappedRating: R;
+  effectiveRating: R;
+  cap: {
+    applied: boolean;
+    capTier: GenericCapTier<R>;
+    reason: string;
+    pendingEvidenceCount: number;
+    totalAssumptionCount: number;
+    taggedCount: number;
+    taggedFraction: number;
+  };
+}
+
+/**
+ * Cap direction:
+ *
+ *  - "ceiling": cap reduces the rating — the effective rating is
+ *    the lower of the candidate and the tier's `capAt`. Higher
+ *    `ranking` = "better" (Strong, Healthy). Used by Lender
+ *    Readiness and Health Dimensions.
+ *  - "floor": cap *raises* the rating — the effective rating is
+ *    the higher of the candidate and the tier's `capAt`. Higher
+ *    `ranking` = "more severe" (Critical). Used by Risk Severity
+ *    so that "Low" / "Medium" risk bands can't surface against a
+ *    model with almost no evidence tagging.
+ */
+export type CapDirection = "ceiling" | "floor";
+
+function tierFor<R extends string>(
+  table: GenericCapTier<R>[],
+  fraction: number,
+): GenericCapTier<R> {
+  const clamped = Math.max(0, Math.min(1, fraction));
+  for (const tier of table) {
+    if (clamped >= tier.taggedFractionMin && clamped < tier.taggedFractionMax) {
+      return tier;
+    }
+  }
+  return table[table.length - 1];
+}
+
+/**
+ * Generic cap evaluator. Used directly by the Health Dimensions
+ * and Risk Severity surfaces; the Lender Readiness path keeps its
+ * dedicated wrapper for backwards compatibility.
+ */
+export function applyGenericCap<R extends string>(
+  uncappedRating: R,
+  ranking: Record<R, number>,
+  table: GenericCapTier<R>[],
+  direction: CapDirection,
+  taggedFraction: number,
+  taggedCount: number,
+  totalAssumptionCount: number,
+): GenericCapResult<R> {
+  const tier = tierFor(table, taggedFraction);
+  const pendingEvidenceCount = Math.max(0, totalAssumptionCount - taggedCount);
+
+  let effectiveRating = uncappedRating;
+  let applied = false;
+  if (tier.capAt && tier.capAt !== uncappedRating) {
+    const candidateRank = ranking[uncappedRating];
+    const capRank = ranking[tier.capAt];
+    if (direction === "ceiling" && candidateRank > capRank) {
+      effectiveRating = tier.capAt;
+      applied = true;
+    } else if (direction === "floor" && candidateRank < capRank) {
+      effectiveRating = tier.capAt;
+      applied = true;
+    }
+  }
+
+  return {
+    uncappedRating,
+    effectiveRating,
+    cap: {
+      applied,
+      capTier: tier,
+      reason: applied ? tier.rationale : "",
+      pendingEvidenceCount,
+      totalAssumptionCount,
+      taggedCount,
+      taggedFraction: Math.max(0, Math.min(1, taggedFraction)),
+    },
+  };
+}
+
+/**
+ * Subject-aware callout for {@link GenericCapResult}. Mirrors
+ * {@link formatCapCallout} so every consumer prints the same
+ * canonical sentence end-to-end (founder card + lender PDF).
+ *
+ * Template (ceiling):
+ *   "{subject} capped at {effective} pending evidence tagging on
+ *    {pending} of {total} assumptions. {rationale}"
+ * Template (floor):
+ *   "{subject} raised to {effective} pending evidence tagging on
+ *    {pending} of {total} assumptions. {rationale}"
+ */
+export function formatGenericCapCallout<R extends string>(
+  subject: string,
+  direction: CapDirection,
+  result: GenericCapResult<R>,
+): string {
+  if (!result.cap.applied) return "";
+  const verb = direction === "ceiling" ? "capped at" : "raised to";
+  const { effectiveRating, cap } = result;
+  return (
+    `${subject} ${verb} ${effectiveRating} pending evidence tagging on ` +
+    `${cap.pendingEvidenceCount} of ${cap.totalAssumptionCount} assumptions. ` +
+    `${cap.capTier.rationale}`
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Health Dimensions cap (Task #965).
+// ---------------------------------------------------------------------------
+
+export type HealthDimensionRating = "healthy" | "watch" | "at_risk";
+
+/** Higher = healthier; cap is a ceiling (can't display "healthy" without evidence). */
+export const HEALTH_DIMENSION_RANK: Record<HealthDimensionRating, number> = {
+  at_risk: 0,
+  watch: 1,
+  healthy: 2,
+};
+
+export const HEALTH_DIMENSION_CAPS: GenericCapTier<HealthDimensionRating>[] = [
+  {
+    taggedFractionMin: 0.0,
+    taggedFractionMax: 0.25,
+    capAt: "at_risk",
+    rationale:
+      "Below 25% evidence tagging, a healthy or watch-level signal cannot be trusted — the underlying inputs have not been anchored to evidence a lender or board can verify.",
+    source: "[citation pending — mirrors Task #929 Lender Readiness 0–25% tier]",
+    lastValidated: "2026-05-17",
+  },
+  {
+    taggedFractionMin: 0.25,
+    taggedFractionMax: 0.5,
+    capAt: "watch",
+    rationale:
+      "Between 25% and 50% evidence tagging, a healthy signal is unsupported. The dimension is downgraded to 'watch' until enough inputs are anchored to evidence to credibly clear the bar.",
+    source: "[citation pending — mirrors Task #929 Lender Readiness 25–50% tier]",
+    lastValidated: "2026-05-17",
+  },
+  {
+    taggedFractionMin: 0.5,
+    taggedFractionMax: 1.01,
+    capAt: null,
+    rationale:
+      "At 50%+ evidence tagging, the underlying metric drives the dimension status without a confidence override.",
+    source: "[citation pending — mirrors Task #929 Lender Readiness 50%+ tier]",
+    lastValidated: "2026-05-17",
+  },
+];
+
+export function applyHealthDimensionCap(
+  uncappedRating: HealthDimensionRating,
+  taggedFraction: number,
+  taggedCount: number,
+  totalAssumptionCount: number,
+): GenericCapResult<HealthDimensionRating> {
+  return applyGenericCap(
+    uncappedRating,
+    HEALTH_DIMENSION_RANK,
+    HEALTH_DIMENSION_CAPS,
+    "ceiling",
+    taggedFraction,
+    taggedCount,
+    totalAssumptionCount,
+  );
+}
+
+export function formatHealthDimensionCapCallout(
+  result: GenericCapResult<HealthDimensionRating>,
+): string {
+  return formatGenericCapCallout("Health Dimensions ratings", "ceiling", result);
+}
+
+/**
+ * Task #965 — Canonical display label for a Health Dimension status.
+ *
+ * `HealthSignal.label` is the human-readable rating that downstream
+ * surfaces render verbatim (badge text in {@link HealthSignalsSection},
+ * the "Status" column of the lender packet `health_assessment` table,
+ * and the supporting metric in the same packet). When the cap mutates
+ * a signal's `status`, the visible `label` must move with it or the
+ * surface becomes self-contradictory (e.g. a red "at_risk" chip whose
+ * text still reads "Healthy"). The mapping here is the single source
+ * of truth — every constructor in `financial-health.ts` already emits
+ * these exact strings — and lets the cap engine restore consistency
+ * without re-running the per-dimension rule.
+ */
+export function healthDimensionStatusLabel(
+  status: HealthDimensionRating,
+): string {
+  switch (status) {
+    case "healthy":
+      return "Healthy";
+    case "watch":
+      return "Watch closely";
+    case "at_risk":
+      return "Needs attention";
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Risk Severity cap (Task #965).
+// ---------------------------------------------------------------------------
+
+export type RiskSeverityRating = "medium" | "high" | "critical";
+
+/** Higher = more severe; cap is a floor (can't display "low / medium" without evidence). */
+export const RISK_SEVERITY_RANK: Record<RiskSeverityRating, number> = {
+  medium: 0,
+  high: 1,
+  critical: 2,
+};
+
+export const RISK_SEVERITY_CAPS: GenericCapTier<RiskSeverityRating>[] = [
+  {
+    taggedFractionMin: 0.0,
+    taggedFractionMax: 0.25,
+    capAt: "critical",
+    rationale:
+      "Below 25% evidence tagging, a 'low' or 'medium' risk band is not credible — the inputs that would otherwise prove the risk is contained have not been anchored to evidence. The severity is floored at 'critical' so the gap surfaces, not the false comfort.",
+    source: "[citation pending — mirrors Task #929 Lender Readiness 0–25% tier]",
+    lastValidated: "2026-05-17",
+  },
+  {
+    taggedFractionMin: 0.25,
+    taggedFractionMax: 0.5,
+    capAt: "high",
+    rationale:
+      "Between 25% and 50% evidence tagging, a 'medium' risk severity is unsupported. The severity is floored at 'high' until enough inputs are anchored to evidence to credibly de-rate it.",
+    source: "[citation pending — mirrors Task #929 Lender Readiness 25–50% tier]",
+    lastValidated: "2026-05-17",
+  },
+  {
+    taggedFractionMin: 0.5,
+    taggedFractionMax: 1.01,
+    capAt: null,
+    rationale:
+      "At 50%+ evidence tagging, the underlying rule drives the severity without a confidence override.",
+    source: "[citation pending — mirrors Task #929 Lender Readiness 50%+ tier]",
+    lastValidated: "2026-05-17",
+  },
+];
+
+export function applyRiskSeverityCap(
+  uncappedRating: RiskSeverityRating,
+  taggedFraction: number,
+  taggedCount: number,
+  totalAssumptionCount: number,
+): GenericCapResult<RiskSeverityRating> {
+  return applyGenericCap(
+    uncappedRating,
+    RISK_SEVERITY_RANK,
+    RISK_SEVERITY_CAPS,
+    "floor",
+    taggedFraction,
+    taggedCount,
+    totalAssumptionCount,
+  );
+}
+
+export function formatRiskSeverityCapCallout(
+  result: GenericCapResult<RiskSeverityRating>,
+): string {
+  return formatGenericCapCallout("Risk Severity ratings", "floor", result);
+}
+
+/**
+ * Convenience: read the assumption-confidence tagging rollup off
+ * raw model data once and return `{ taggedCount, totalCount,
+ * fraction }`. Used by the consultant engine so the Health and
+ * Risk caps don't each recompute the rollup.
+ */
+export function computeAssumptionTagging(rawData: Record<string, unknown>): {
+  taggedCount: number;
+  totalCount: number;
+  fraction: number;
+} {
+  const rollup = computeAssumptionConfidenceRollup({
+    assumptionConfidence: (rawData as {
+      assumptionConfidence?: Record<string, { confidence: string; evidenceNote?: string }>;
+    }).assumptionConfidence,
+  });
+  const totalCount = rollup.totalKeys || listAssumptionKeys().length;
+  const taggedCount = rollup.taggedKeys;
+  const fraction = totalCount > 0 ? taggedCount / totalCount : 0;
+  return { taggedCount, totalCount, fraction };
+}
