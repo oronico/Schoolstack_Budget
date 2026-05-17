@@ -1710,12 +1710,139 @@ async function runStressNegativeY5Regression(): Promise<void> {
   }
 }
 
+// Task #924 — Reconcile stress-test label collision. Two stress-test
+// code paths used to ship nearly identical scenario names
+// ("Revenue Delayed 3 Months" in `consultantOutput.stressTests` vs
+// "ESA / Public Funding Delayed 3 Months" in
+// `consultantOutput.lenderStressTests.scenarios`), producing different
+// numbers in two different tables of the same lender packet. The
+// Lender Commentary's "toughest stress" line cited the lender-battery
+// scenario, but a reviewer reading the similarly-named consultant row
+// couldn't tell which table the claim referred to.
+//
+// Post-fix invariants this regression locks in, per persona:
+//   1. No scenario name appears in BOTH stress-test code paths
+//      (cross-table uniqueness — labels are unambiguous).
+//   2. Within each code path, scenario names are unique.
+//   3. The Lender Commentary's "toughest stress" scenario name resolves
+//      to exactly ONE row in the lender stress-test battery
+//      (`lenderStressTests.scenarios`), and its cited min-DSCR equals
+//      that scenario's min DSCR (rounded to 2 decimals — the same
+//      precision the commentary's `ratio` formatter emits).
+//   4. The commentary's worst-stress label is the literal post-rename
+//      string ("…(public funding only)" / "…(full revenue stack)" /
+//      etc.), never the legacy collision pair.
+async function runStressLabelParityRegression(): Promise<void> {
+  const tag = "[stress_label_parity_924]";
+  const { buildLenderCommentary, buildNarrativeSourceBundle } = await import(
+    "../src/lib/packets/build-narrative-commentary.js"
+  );
+
+  for (const c of CASES) {
+    const data = c.model.data as unknown as Record<string, unknown>;
+    const consultant = await runConsultantEngine(data);
+
+    const consultantNames = (consultant.stressTests ?? []).map((s) => s.scenario);
+    const lenderNames = (consultant.lenderStressTests?.scenarios ?? []).map((s) => s.name);
+
+    // (1) Cross-table uniqueness.
+    const overlap = consultantNames.filter((n) => lenderNames.includes(n));
+    check(
+      `${tag} ${c.label} no scenario name appears in both stress-test batteries`,
+      overlap.length === 0,
+      `overlap=${JSON.stringify(overlap)}`,
+    );
+
+    // (2) Within-battery uniqueness.
+    const dupConsult = consultantNames.filter((n, i) => consultantNames.indexOf(n) !== i);
+    const dupLender = lenderNames.filter((n, i) => lenderNames.indexOf(n) !== i);
+    check(
+      `${tag} ${c.label} consultant stressTests scenario names are unique`,
+      dupConsult.length === 0,
+      `dups=${JSON.stringify(dupConsult)}`,
+    );
+    check(
+      `${tag} ${c.label} lenderStressTests scenario names are unique`,
+      dupLender.length === 0,
+      `dups=${JSON.stringify(dupLender)}`,
+    );
+
+    // (4) Post-rename labels are present (legacy collision pair retired).
+    check(
+      `${tag} ${c.label} consultant battery uses disambiguated "Revenue Delayed 3 Months (full revenue stack)" label`,
+      consultantNames.some((n) => n === "Revenue Delayed 3 Months (full revenue stack)"),
+      `names=${JSON.stringify(consultantNames)}`,
+    );
+    const lenderEsaScenario = lenderNames.find((n) => /ESA \/ Public Funding Delayed/.test(n));
+    check(
+      `${tag} ${c.label} lender battery uses disambiguated ESA delay label "(public funding only)"`,
+      typeof lenderEsaScenario === "string" && /\(public funding only\)$/.test(lenderEsaScenario),
+      `lenderEsaScenario="${lenderEsaScenario}"`,
+    );
+    check(
+      `${tag} ${c.label} legacy bare "Revenue Delayed 3 Months" no longer present in either battery`,
+      !consultantNames.includes("Revenue Delayed 3 Months") &&
+        !lenderNames.includes("Revenue Delayed 3 Months"),
+      `consultant=${JSON.stringify(consultantNames)}, lender=${JSON.stringify(lenderNames)}`,
+    );
+
+    // (3) Commentary-to-table parity: the "toughest stress" claim in the
+    // Lender Commentary must resolve to exactly one row in the lender
+    // stress-test battery, and the cited min DSCR must equal that row's
+    // min DSCR to the precision the commentary formatter emits.
+    const bundle = buildNarrativeSourceBundle(
+      data as unknown as Parameters<typeof buildNarrativeSourceBundle>[0],
+      consultant,
+      0,
+    );
+    if (!bundle.worstStress) {
+      console.log(`${tag} ${c.label}: no worstStress on bundle (no debt service modeled?) — skipping parity check`);
+      continue;
+    }
+    const ws = bundle.worstStress;
+
+    const matches = (consultant.lenderStressTests?.scenarios ?? []).filter((s) => s.name === ws.name);
+    check(
+      `${tag} ${c.label} commentary worstStress name "${ws.name}" matches exactly one lenderStressTests row`,
+      matches.length === 1,
+      `matches=${matches.length}, lenderNames=${JSON.stringify(lenderNames)}`,
+    );
+    if (matches.length === 1 && ws.minDscr !== null) {
+      const finite = matches[0].dscr.filter((d) => d !== 0 && Number.isFinite(d));
+      const tableMinDscr = finite.length > 0 ? Math.min(...finite) : null;
+      check(
+        `${tag} ${c.label} commentary worstStress.minDscr (${ws.minDscr}) === lender battery row min DSCR (${tableMinDscr})`,
+        tableMinDscr !== null && Math.abs((tableMinDscr ?? 0) - ws.minDscr) < 1e-9,
+        `bundle.minDscr=${ws.minDscr}, table.minDscr=${tableMinDscr}, scenario="${ws.name}"`,
+      );
+    }
+
+    // (3b) Render the commentary and verify the printed prose carries
+    // the exact post-rename label (no legacy bare string slipped in via
+    // a stale formatter). Asserts on a normalized join so PDFKit
+    // glyph-chunking doesn't matter.
+    const commentary = buildLenderCommentary(bundle);
+    const text = commentary.paragraphs.join(" ");
+    check(
+      `${tag} ${c.label} commentary text includes post-rename worstStress label "${ws.name}"`,
+      text.includes(ws.name),
+      `commentary text did not include scenario name`,
+    );
+    check(
+      `${tag} ${c.label} commentary text does NOT include legacy bare "Revenue Delayed 3 Months"`,
+      !/Revenue Delayed 3 Months(?!\s*\()/.test(text),
+      `text="${text.slice(0, 200)}…"`,
+    );
+  }
+}
+
 async function main(): Promise<void> {
   for (const c of CASES) {
     await runOne(c);
   }
   await runDebtExcludedRegression();
   await runStressNegativeY5Regression();
+  await runStressLabelParityRegression();
   console.log(`demo-math-smoke: ${passed} passed, ${failed} failed`);
   if (failed > 0) {
     console.error(failures.join("\n"));

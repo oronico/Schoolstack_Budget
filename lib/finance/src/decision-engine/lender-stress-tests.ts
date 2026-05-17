@@ -74,7 +74,11 @@ function buildScenarioCatalog(opts: Required<LenderStressTestOptions>): readonly
     },
     {
       id: "esa_delay_3mo",
-      name: `ESA / Public Funding Delayed ${opts.esaDelayMonths} Month${opts.esaDelayMonths === 1 ? "" : "s"}`,
+      // Task #924 — name explicitly scopes this scenario to the
+      // public-funding row set so it does not collide with the
+      // consultant battery's "Revenue Delayed 3 Months (full revenue
+      // stack)" scenario, which delays ALL revenue rows.
+      name: `ESA / Public Funding Delayed ${opts.esaDelayMonths} Month${opts.esaDelayMonths === 1 ? "" : "s"} (public funding only)`,
       description: `Year-1 ESA, school-choice, and public-funding receipts reduced by ${esaPct}% (≈ ${opts.esaDelayMonths} months delayed) to simulate a slow first disbursement.`,
     },
     {

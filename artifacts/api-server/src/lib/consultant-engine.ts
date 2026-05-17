@@ -1861,7 +1861,12 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
         modifyStaffingRows: rows => rows.map(r => ({ ...r, annualizedRate: r.annualizedRate * 1.05 })),
         tuitionTiers,
       }, stressCostInflation, sp, ceRR, stressStartCash),
-      runStressScenarioFromRows("Revenue Delayed 3 Months", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
+      // Task #924 — name disambiguates this from the lender battery's
+      // "ESA / Public Funding Delayed 3 Months (public funding only)"
+      // scenario, which stresses just the public-funding rows. This
+      // scenario reduces ALL revenue rows (tuition + ESA + donations + …)
+      // by 25% in Year 1 to simulate a school-wide first-quarter slip.
+      runStressScenarioFromRows("Revenue Delayed 3 Months (full revenue stack)", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
         modifyRevenueRows: rows => rows.map(r => ({
           ...r,
           amounts: r.amounts.map((a, i) => i === 0 ? a * 0.75 : a),
@@ -1902,7 +1907,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
           otherAnnualExpenses: (f.otherAnnualExpenses || 0) * 1.1,
         }),
       ),
-      runStressScenarioLegacy("Revenue Delayed 3 Months", enrollmentByYear, rev, st, fac, Math.max(0, prorationFactor - 0.25)),
+      runStressScenarioLegacy("Revenue Delayed 3 Months (full revenue stack)", enrollmentByYear, rev, st, fac, Math.max(0, prorationFactor - 0.25)),
       runStressScenarioLegacy("Interest Rate +2%", enrollmentByYear, rev, st,
         { ...fac, annualInterestRate: (fac.annualInterestRate || 0) + 2 }, prorationFactor),
     ];

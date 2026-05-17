@@ -1,0 +1,267 @@
+# Task #924 Addendum — Stress-Test Label Uniqueness System
+
+**Apply to:** Task #924 — Reconcile stress-test label collision
+**Base task spec:** Use the existing #924 spec as-is, with the additions below
+**Effective:** Before kickoff
+
+This addendum pins the open decisions and adds the three required fields from the protocol addendum. **Framing reminder: this task improves the stress-scenario subsystem; the three demo PDFs are evidence the subsystem produces correct output, not the deliverable.**
+
+---
+
+## Pinned decisions
+
+### Approach: rename for uniqueness, not deduplicate
+
+The two delay scenarios encode different lender-facing risk questions and the subsystem should keep both. Removing one collapses two distinct analytical views into one.
+
+Rename to:
+- `Revenue Delayed 3 Months — full revenue stack`
+- `Public Funding Delayed 3 Months — public sources only`
+
+Document the input transformation each scenario applies in code comments at the scenario definition site.
+
+### "Toughest stress" criterion
+
+When the Lender Commentary generator names "the toughest stress," the deterministic criterion is:
+
+> Lowest Min DSCR across all stress scenarios for the given persona.
+
+If two scenarios tie on Min DSCR, secondary sort is largest Y1 net income decline vs base. Document this criterion in the Commentary generator helper.
+
+### Sequencing with #913
+
+Task #913 (stress-test aggregator into Lender Commentary) consumes the labels this task changes. Two paths:
+
+- **If #913 has not merged:** Sequence #924 first. #913's regression test uses the post-rename labels.
+- **If #913 has merged:** Update #913's regression test to use post-rename labels as part of #924's scope.
+
+Confirm #913's status before kickoff.
+
+---
+
+## Required protocol addendum fields
+
+### Canonical source reference
+
+```
+Canonical source: Stress scenario definitions in 
+  artifacts/api-server/src/lib/packets/build-packet-data.ts (line 1191).
+
+Each scenario carries:
+  - A unique label (enforced by the assertion below)
+  - A documented input transformation (in code comments)
+  - A single computed result set consumed by both the Stress Test 
+    Results table and the Lender Commentary generator
+
+No second code path computes a parallel scenario with a related name.
+```
+
+### Sibling bug search step
+
+```
+Step: Scan the stress-scenario subsystem for other naming collisions 
+  or duplicate-computation patterns.
+
+Pattern: 
+  (1) Stress scenarios with overlapping or ambiguous labels
+  (2) Stress scenario inputs computed in more than one code path
+
+Search scope: artifacts/api-server/src/lib/packets/build-packet-data.ts
+              artifacts/api-server/src/lib/packets/lender-packet-pdf.ts
+
+Discovery commands:
+  # Find every stress scenario label definition
+  grep -nP "label\s*[:=]\s*['\"]" \
+    artifacts/api-server/src/lib/packets/build-packet-data.ts \
+    | grep -iE "stress|scenario|delay|down|shock"
+
+  # Find every stress scenario consumer
+  grep -rnP "stress|scenario" --include="*.ts" \
+    artifacts/api-server/src/lib/packets/
+
+Action:
+  1. List every stress scenario label currently defined.
+  2. For each label, confirm:
+     a. The label is unique within the scenario set
+     b. Only one code path produces its result
+     c. All consumers (table renderer, Commentary generator, snapshot 
+        tests) read from that single result
+  3. Flag any label-collision or duplicate-computation patterns beyond 
+     the two named in the base spec.
+  4. Either fix in scope or file as separate follow-up tasks.
+
+Expected named in base spec:
+  - "Revenue Delayed 3 Months" vs "ESA / Public Funding Delayed 3 Months"
+
+Possible additional collisions to investigate:
+  - "Enrollment X% Below Plan" variants
+  - "Hard revenue only" vs "Loss of Philanthropy"
+  - "Rent Shock +25%" vs "Occupancy +15%, Personnel +5%"
+```
+
+### Explicit regression assertion (Patterns B + E)
+
+```
+Assertion target: Stress scenario subsystem output coherence
+
+Subsystem-level assertions (run on every render):
+
+  For each persona configuration the subsystem supports:
+    Assert: every stress scenario label is unique within the scenario set
+    Assert: each scenario label appears exactly once in the rendered 
+      Stress Test Results table
+    Assert: if Lender Commentary references a "toughest stress" label,
+      that label exactly matches one row of the Stress Test Results table
+    Assert: the DSCR value Commentary cites equals the DSCR value in 
+      the matched table row, to four decimal places
+    Assert: "toughest stress" is identified by the deterministic 
+      criterion (lowest Min DSCR; ties broken by largest Y1 NI decline)
+
+Coverage assertion (run on test fixtures):
+
+  The assertion set above must pass for every persona fixture in the 
+  test suite — not only the three currently-named demo packets. 
+  Adding a new persona fixture should NOT require updating the 
+  assertion logic, only adding the fixture.
+
+Failure reporting:
+  "Stress scenario subsystem regression: {assertion} failed for 
+   {persona} — {detail}"
+```
+
+---
+
+## Prevention mechanism
+
+Once #924 lands, add the following to the subsystem to prevent recurrence at the class level:
+
+1. **Type-level uniqueness:** Define a `StressScenarioId` enum or union type. Every scenario references an ID, not a string label. Display labels are derived from IDs. A duplicate ID is a compile-time error.
+
+2. **Single-result contract:** Each scenario ID maps to exactly one computation function. Consumers (table, Commentary) reference scenarios by ID and receive the canonical result. No consumer recomputes.
+
+3. **Unit test on the scenario registry:** A test that loads all scenario definitions and asserts:
+   - All IDs are unique
+   - Every ID has exactly one computation function
+   - Every consumer's reference to a scenario uses a valid ID
+
+If items 1–2 are larger than #924's scope, file them as an architectural follow-up (see below).
+
+---
+
+## Architectural follow-up
+
+```
+Follow-up task: Scenario registry with type-enforced uniqueness
+
+Rationale: The label-collision pattern surfaced in #924 is the fourth 
+  instance of "multiple code paths computing related-but-distinct 
+  values without clear naming" — alongside the orphan third DSCR 
+  (#910), the function-parity finding (#911), and the Pro-Forma 
+  generator without UI consumer (#921). 
+
+  A typed registry of canonical computations — each entry with a 
+  unique ID, a single computation function, and an enforced 
+  consumer-references-by-ID rule — would catch the next instance at 
+  definition time rather than at packet review.
+
+Scope: Phase 2 architectural pass on the stress-scenario, DSCR, and 
+  revenue subsystems. Apply the same registry pattern to all three.
+
+Tracked at: file before closing #924
+```
+
+---
+
+## Light completion template (per protocol addendum)
+
+This is engine-adjacent work (touches scenario definitions and consumer routing), so use the **full five-section template**, not the light template:
+
+```
+Section A — What changed
+  Files modified, scenario rename mapping, helper function additions
+
+Section B — Re-rendered evidence
+  For each persona fixture (3 demos + any additional):
+    Quote the Stress Test Results table labels before / after
+    Quote the Lender Commentary "toughest stress" reference before / after
+    Confirm Commentary's DSCR claim matches the matched table row
+
+Section C — Source-of-truth trace
+  For each renamed scenario:
+    Definition site (file:line)
+    Consumers updated (file:line for each)
+    Confirm no second computation path remains
+
+Section D — Cross-section consistency check
+  Stress Test Results table labels === Commentary references === 
+    snapshot test labels
+  No two scenarios share a label
+  No consumer hand-writes a stress label outside the canonical set
+
+Section E — Side-effect check
+  Did the rename touch the snapshot tests? List which.
+  Did the rename affect #913's regression? If yes, what was updated.
+  Are there any other places stress labels appear that were missed? 
+    (i.e., the sibling search results)
+```
+
+---
+
+## Quick checklist for the agent
+
+Before claiming #924 complete:
+
+- [ ] Scenario rename applied at the definition site
+- [ ] All consumers (table, Commentary, snapshot tests) updated to use new labels
+- [ ] No second computation path produces a parallel scenario result
+- [ ] Sibling bug search has been run; output is in the completion summary
+- [ ] "Toughest stress" criterion is documented in code at the Commentary generator
+- [ ] Regression test added with subsystem-level assertions (not persona-specific)
+- [ ] Regression test passes for all current persona fixtures
+- [ ] Test architecture supports adding a new persona fixture without modifying assertion logic
+- [ ] #913 sequencing confirmed (either #924 first, or #913's regression updated in scope)
+- [ ] Architectural follow-up task filed before closing
+- [ ] Full five-section completion template (A–E) filled in completely
+
+If any checklist item is incomplete, the task is not done.
+
+---
+
+## What to paste to Replit
+
+```
+Apply Task #924 Addendum before starting work.
+
+Framing: this task improves the stress-scenario subsystem. The three 
+demo PDFs are evidence the subsystem produces correct output — they 
+are not the deliverable. Solve at the subsystem level so the next 
+persona fixture passes without rework.
+
+Specifically:
+
+1. Rename — do not deduplicate. Both scenarios encode distinct 
+   lender-facing risk questions and the subsystem should keep both.
+
+2. Pin the "toughest stress" criterion: lowest Min DSCR across all 
+   scenarios, ties broken by largest Y1 NI decline. Document at the 
+   Commentary generator.
+
+3. Confirm #913 sequencing. If #913 has merged using the old labels, 
+   update its regression test in #924's scope.
+
+4. Add the three required addendum fields to your task spec:
+   - Canonical source: single result per scenario ID, no parallel paths
+   - Sibling bug search: per the discovery commands in the addendum
+   - Explicit regression assertion: subsystem-level (Patterns B + E)
+
+5. Prevention mechanism: type-level scenario IDs, single-result 
+   contract, registry unit test. If these are larger than #924, 
+   file the architectural follow-up.
+
+6. Use the full five-section completion template (A–E).
+
+7. Run the quick checklist before claiming complete.
+
+Reference the full addendum for command syntax, full assertion 
+specifications, and the architectural follow-up template.
+```
