@@ -39,7 +39,7 @@
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
   CANONICAL_METRICS,
@@ -1937,6 +1937,95 @@ const M2_UNMAPPED_RATIONALE: Record<string, string> = {
   totalDollars: "Total-dollars rollup column on revenue-per-seat tables (covered by aggregate revenue resolver).",
 };
 
+/**
+ * Task #977 / M5 — Library entry point.
+ *
+ * Runs the same orchestration as {@link main} but returns the
+ * structured result instead of writing report files / logging /
+ * calling `process.exit`. Used by
+ * `artifacts/api-server/tests/math-integrity-harness.ts` to assert
+ * the M4 acceptance bar in CI alongside the additional M5
+ * registry-shape, orphan-value, and per-persona render coverage
+ * checks.
+ *
+ * Keep this in lock-step with `main()` — both call the same
+ * underlying helpers; this wrapper just stops short of side
+ * effects.
+ */
+export interface MathIntegrityComposition {
+  personas: readonly PersonaFixture[];
+  personaCtxs: readonly {
+    ctx: Omit<SurfaceContext, "canonical">;
+    canonical: Record<string, unknown>;
+  }[];
+  registryFindings: readonly Finding[];
+  supplementalFindings: readonly Finding[];
+  m2Coverage: readonly ExtractorCoverage[];
+  m2Mapping: M2MappingResult;
+  unclassifiedLabels: readonly string[];
+  allFindings: readonly Finding[];
+  invalidTriage: readonly Finding[];
+  blankTriage: readonly Finding[];
+}
+
+export async function composeMathIntegrity(): Promise<MathIntegrityComposition> {
+  const personas = await loadPersonaFixturesAsync();
+  const registryFindings: Finding[] = [];
+  const supplementalFindings: Finding[] = [];
+  const personaCtxs: {
+    ctx: Omit<SurfaceContext, "canonical">;
+    canonical: Record<string, unknown>;
+  }[] = [];
+  for (const persona of personas) {
+    const baseCtx = await buildPersonaContext(persona);
+    const canonical = await computeCanonicalValues(persona);
+    personaCtxs.push({ ctx: baseCtx, canonical });
+    for (const metric of CANONICAL_METRICS) {
+      const canonicalForMetric = canonical[metric.id];
+      const ctx: SurfaceContext = { ...baseCtx, canonical: canonicalForMetric };
+      for (const surface of metric.surfaces) {
+        registryFindings.push(...evaluateRegistrySurface(metric, surface, ctx));
+      }
+      const supp = SUPPLEMENTAL_READERS[metric.id];
+      if (supp) {
+        for (const reader of supp) {
+          supplementalFindings.push(diff(metric, reader, ctx));
+        }
+      }
+    }
+  }
+  const m2Coverage = runM2Coverage(personaCtxs);
+  const m2Mapping = runM2Mapping(personaCtxs);
+  const unclassifiedLabels = m2Mapping.unmapped
+    .map((u) => u.label)
+    .filter((label) => renderUnmappedRationale(label) === UNCLASSIFIED_MARKER);
+  const allFindings = [
+    ...registryFindings,
+    ...supplementalFindings,
+    ...m2Mapping.mapped,
+  ];
+  const invalidTriage = allFindings.filter(
+    (f) => !ALL_TRIAGE_CODES.includes(f.triageCode),
+  );
+  const blankTriage = allFindings.filter(
+    (f) =>
+      f.severity === "skipped-structural" &&
+      (!f.triage || f.triage.trim() === ""),
+  );
+  return {
+    personas,
+    personaCtxs,
+    registryFindings,
+    supplementalFindings,
+    m2Coverage,
+    m2Mapping,
+    unclassifiedLabels,
+    allFindings,
+    invalidTriage,
+    blankTriage,
+  };
+}
+
 async function main(): Promise<void> {
   console.log("=== Math Integrity Report (M4) ===");
   const personas = await loadPersonaFixturesAsync();
@@ -2102,7 +2191,22 @@ async function main(): Promise<void> {
   );
 }
 
-main().catch((err) => {
-  console.error("run-math-integrity-report: fatal error", err);
-  process.exit(1);
-});
+// Task #977 / M5 — Only auto-run as a CLI; allow the file to be
+// imported as a library by the math-integrity-harness test
+// without triggering main()'s file writes + process.exit.
+const __isDirectRun = (() => {
+  const argv1 = process.argv[1];
+  if (!argv1) return false;
+  try {
+    return import.meta.url === pathToFileURL(argv1).href;
+  } catch {
+    return false;
+  }
+})();
+
+if (__isDirectRun) {
+  main().catch((err) => {
+    console.error("run-math-integrity-report: fatal error", err);
+    process.exit(1);
+  });
+}

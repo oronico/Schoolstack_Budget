@@ -1,0 +1,11 @@
+{
+  "personas": [
+    "liberty",
+    "oakwood",
+    "riverside"
+  ],
+  "components": [
+    "ConsultantAnalysisView",
+    "LenderPacketPreview"
+  ]
+}
