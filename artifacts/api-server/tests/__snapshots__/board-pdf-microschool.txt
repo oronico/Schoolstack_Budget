@@ -28,9 +28,13 @@ Operating cash carries the school for 3.1 months from open before another fundin
 needed, with the tightest year landing at $34,397 of cash on hand in Year 1. Operating break-even
 is reached in Year 1.
 On the same basis a lender will use, Year 1 debt service coverage is 3.11x. The packet currently
-reads as: Ready to share - keep polishing the narrative. This model demonstrates strong financial
-fundamentals: a clear path to profit, controlled costs, a sustainable revenue mix, and adequate
-debt coverage. Your projections are grounded and achievable.
+reads as: Almost there - a few targeted edits will tighten the story. Rating capped at Needs Work
+pending evidence tagging on 22 of 22 assumptions. Below 30% evidence tagging, lenders in
+Lending Lab Cycle 1 bounced 6 of 7 packets with a 'show your work' response before opening any
+underwriting conversation. The model has not demonstrated assumption rigor to a lender-credible
+threshold. This model demonstrates strong financial fundamentals: a clear path to profit, controlled
+costs, a sustainable revenue mix, and adequate debt coverage. Your projections are grounded and
+achievable.
 Three matters merit board attention this period. Let's extend your cash runway. Suggested
 response: Build a cash buffer through startup fundraising, a line of credit, or by reducing early
 expenses. Target at least 18 months of runway before opening.. Let's back the enrollment ramp
@@ -54,16 +58,16 @@ This does not mean your plan is weak. It means this part needs more clarity.
 Each major assumption below is tagged by the founder with the source they leaned on.
 Higher-confidence sources (actuals, signed agreements, written quotes) are stronger
 evidence than research benchmarks or estimates.
-0 of 22 assumptions tagged yet — the founder has not anchored any inputs to evidence. Posture defaults to
-"Needs Support" until at least some keys are tagged.
 SchoolStack Budget - Generated <DATE>
 Page 2 of 7
 --- PAGE 3 ---
+0 of 22 assumptions tagged yet — the founder has not anchored any inputs to evidence. Posture defaults to
+"Needs Support" until at least some keys are tagged.
 Financial Overview
-Oakwood Learning Studio projects $400,145 in Year 5 revenue with a 37.6% profit margin. The
-model tells a strong financial story with 8 of 13 key metrics in healthy range, a great foundation for
-your mission. The school has approximately 3.1 months of cash runway.
-Readiness Level: Strong
+Oakwood Learning Studio projects $400,145 in Year 5 revenue with a 37.6% profit margin. Margins
+are on the thinner side, and the recommendations below will help you build a more compelling
+financial story. The school has approximately 3.1 months of cash runway.
+Readiness Level: Needs Work
 Biggest Strength: Strong Year 5 profit
 Biggest Risk: No major red flags detected, so continue refining assumptions as you gather real data.
 Cash Runway: 3.1 months

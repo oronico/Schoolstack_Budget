@@ -6,10 +6,17 @@ Microschool
 5-Year Financial Model
 Prepared <DATE>
 Built from assumptions
-Ready to share — keep polishing the narrative.
-This model demonstrates strong financial fundamentals: a clear path to profit, controlled costs, a
-sustainable revenue mix, and adequate debt coverage. Your projections are grounded and
-achievable.
+Almost there — a few targeted edits will tighten the story.
+Rating capped at Needs Work pending evidence tagging on 22 of 22 assumptions. Below 30%
+evidence tagging, lenders in Lending Lab Cycle 1 bounced 6 of 7 packets with a 'show your work'
+response before opening any underwriting conversation. The model has not demonstrated
+assumption rigor to a lender-credible threshold. This model demonstrates strong financial
+fundamentals: a clear path to profit, controlled costs, a sustainable revenue mix, and adequate
+debt coverage. Your projections are grounded and achievable.
+Evidence-tagging cap applied
+Rating capped at Needs Work pending evidence tagging on 22 of 22 assumptions. Below 30% evidence tagging,
+lenders in Lending Lab Cycle 1 bounced 6 of 7 packets with a 'show your work' response before opening any
+underwriting conversation. The model has not demonstrated assumption rigor to a lender-credible threshold.
 Packet Contents
 1.  Executive Summary
 2.  School Overview
@@ -29,18 +36,25 @@ Packet Contents
 16.  Key Risks
 17.  Decision History
 18.  Appendix: Key Assumptions
+SchoolStack Budget - Generated <DATE>
+Page 1 of 19
+--- PAGE 2 ---
 This packet is generated from the school's financial model and is intended for lender review.
 All projections are based on assumptions entered by the school founder.
 SchoolStack Budget - Generated <DATE>
-Page 1 of 20
---- PAGE 2 ---
+Page 2 of 19
+--- PAGE 3 ---
 Lender Commentary
 Voucher + Aid Stacked Microschool is a microschool, based in FL. Voucher + Aid Stacked
 Microschool projects enrollment of 20 students in Year 1, growing to 40 by Year 5 against a stated
 capacity of 45 seats. Based on the canonical financial engine that powers this packet, the model
-reads as: Ready to share - keep polishing the narrative. This model demonstrates strong financial
-fundamentals: a clear path to profit, controlled costs, a sustainable revenue mix, and adequate
-debt coverage. Your projections are grounded and achievable.
+reads as: Almost there - a few targeted edits will tighten the story. Rating capped at Needs Work
+pending evidence tagging on 22 of 22 assumptions. Below 30% evidence tagging, lenders in
+Lending Lab Cycle 1 bounced 6 of 7 packets with a 'show your work' response before opening any
+underwriting conversation. The model has not demonstrated assumption rigor to a lender-credible
+threshold. This model demonstrates strong financial fundamentals: a clear path to profit, controlled
+costs, a sustainable revenue mix, and adequate debt coverage. Your projections are grounded and
+achievable.
 On the normalized base case (founder compensation marked to market), Year 1 debt service
 coverage is 55.64x. Operating cash runway extends 25.1 months from the open before additional
 capital would be required, with the tightest position at $281,090 of ending cash in Year 1. The
@@ -65,19 +79,19 @@ follows in the body of the packet.
 Every figure in this commentary is sourced from the same canonical engine that powers the rest of this packet.
 Executive Summary
 Voucher + Aid Stacked Microschool projects $1,086,538 in Year 5 revenue with a 77.0% profit
-margin. The model tells a strong financial story with 13 of 13 key metrics in healthy range, a great
-foundation for your mission.
-Readiness Level: Strong
+margin. Margins are on the thinner side, and the recommendations below will help you build a
+more compelling financial story.
+Readiness Level: Needs Work
 Biggest Strength: Strong Year 5 profit
+SchoolStack Budget - Generated <DATE>
+Page 3 of 19
+--- PAGE 4 ---
 Biggest Risk: No major red flags detected, so continue refining assumptions as you gather real data.
 Cash Runway: 25.1 months
 Budget Narrative
 Voucher + Aid Stacked Microschool projects $1,086,538 in Year 5 revenue with a 77.0% profit
-margin. The model tells a strong financial story with 13 of 13 key metrics in healthy range, a great
-SchoolStack Budget - Generated <DATE>
-Page 2 of 20
---- PAGE 3 ---
-foundation for your mission.
+margin. Margins are on the thinner side, and the recommendations below will help you build a
+more compelling financial story.
 Flagged Assumptions
 [Info] 20 students (44% of 45 capacity)
 [Warning] Y1 revenue per student of $20,617 is above the typical FL microschool range. Verify per-pupil rate breakdown.
@@ -107,6 +121,9 @@ Opening Year  2026
 Enrollment Plan
 Enrollment starts at 20 students in Year 1 and grows to 40 by Year 5 (100% growth).
 Enrollment by Year
+SchoolStack Budget - Generated <DATE>
+Page 4 of 19
+--- PAGE 5 ---
 Year
 Students
 Year 1
@@ -121,9 +138,6 @@ Year 5
 40
 Supporting Assumptions
 Year 1 Enrollment  20
-SchoolStack Budget - Generated <DATE>
-Page 3 of 20
---- PAGE 4 ---
 Year 2 Enrollment  26
 Year 3 Enrollment  32
 Year 4 Enrollment  37
@@ -158,6 +172,9 @@ $976K
 Year 5
 $1.1M
 Gross-to-Net Revenue Reconciliation
+SchoolStack Budget - Generated <DATE>
+Page 5 of 19
+--- PAGE 6 ---
 Line
 Year 1
 Year 2
@@ -212,10 +229,13 @@ $651K
 $825K
 $976K
 $1.1M
-SchoolStack Budget - Generated <DATE>
-Page 4 of 20
---- PAGE 5 ---
-Revenue Quality (Contracted vs. Projected vs. Donor / Policy Dependent)
+Revenue
+Quality (Con
+tracted vs.
+Projected
+vs. Donor /
+Policy
+Dependent)
 Bucket
 Year 1
 Year 2
@@ -284,6 +304,9 @@ Tuition Collection Method  Autopay
 Tuition Collection Rate  100.0%
 Private Pay / Tuition  $230K
 Registration / Enrollment Fees  $7K
+SchoolStack Budget - Generated <DATE>
+Page 6 of 19
+--- PAGE 7 ---
 FL FES-EO Voucher  $164K
 Step Up Tax-Credit Scholarship  $156K
 In-House Need-Based Aid (% of Gross
@@ -301,9 +324,6 @@ packet reflect the normalized view; the founder dashboard reflects the as-planne
 Suggested founder compensation steps up year over year as projected enrollment crosses NAIS /
 NACSA size bands (escalated by COLA from Y1). Source: U.S. Bureau of Labor Statistics,
 Occupational Employment & Wage Statistics, May 2023. Education Administrators, Kindergarten
-SchoolStack Budget - Generated <DATE>
-Page 5 of 20
---- PAGE 6 ---
 through Secondary (11-9032), national median annual wage..
 ✓ Staffing % of Revenue: 20.9%
 Suggested Founder Compensation Benchmark by Year
@@ -363,9 +383,10 @@ Total adjustment (Y1–Y5)
 —
 —
 $67,895
-As-Planned vs
-Normalized: Net
-Income & DSCR
+SchoolStack Budget - Generated <DATE>
+Page 7 of 19
+--- PAGE 8 ---
+As-Planned vs Normalized: Net Income & DSCR
 Year
 Net Income
 (Reported)
@@ -411,9 +432,6 @@ As Planned (Reported)
 Lender View (Normalized)
 21.8
 127.1
-SchoolStack Budget - Generated <DATE>
-Page 6 of 20
---- PAGE 7 ---
 Supporting Assumptions
 Founder / Lead Teacher  $58,000, 1 FTE
 Assistant Teacher  $38,000, 1 FTE
@@ -456,6 +474,9 @@ The model includes 1 debt instrument totaling $20K.
 Supporting Assumptions
 SchoolStack Lending Lab Microloan  $20K
 at 6.5% for 5 years ($5K/yr)
+SchoolStack Budget - Generated <DATE>
+Page 8 of 19
+--- PAGE 9 ---
 5-Year Financial Projection
 The model reaches break-even in Year 1. Year 5 net income is projected at $837K (77.0% margin).
 • Breakeven enrollment
@@ -470,9 +491,6 @@ All projections are prepared on an accrual basis; the school currently keeps boo
 ✓ Profit margin (Year 5): 77.0% (benchmark: Target: 10–15%+)
 ✓ 5-Year Revenue Growth: 163.5% (benchmark: Healthy schools: 30–80% over 5 years)
 ✓ Capacity Utilization (Year 5): 88.9% (benchmark: Optimal: 80–95% utilization)
-SchoolStack Budget - Generated <DATE>
-Page 7 of 20
---- PAGE 8 ---
 5-Year Net Income Projection
 Year
 Students
@@ -528,6 +546,9 @@ Other Assets
 $0
 Total Assets
 $15K
+SchoolStack Budget - Generated <DATE>
+Page 9 of 19
+--- PAGE 10 ---
 Liabilities
 Item
 Amount
@@ -544,9 +565,6 @@ Breakeven enrollment is 7 students. Year 1 projects 20 students, providing a 185
 Breakeven Enrollment: 7
 Facility Cost/Student: $2K
 Key Performance Indicators
-SchoolStack Budget - Generated <DATE>
-Page 8 of 20
---- PAGE 9 ---
 Metric
 Value
 Facility Cost / Student
@@ -583,6 +601,9 @@ $2.9M
 137.4 months
 Year 1 Monthly Cash Flow
 Summary
+SchoolStack Budget - Generated <DATE>
+Page 10 of 19
+--- PAGE 11 ---
 Month
 Beginning
 Inflows
@@ -662,10 +683,10 @@ $472
 ($391)
 $509
 $282K
-SchoolStack Budget - Generated <DATE>
-Page 9 of 20
---- PAGE 10 ---
-Year 2 Monthly Cash Flow Summary
+Year 2
+Monthly
+Cash Flow
+Summary
 Month
 Beginning
 Inflows
@@ -749,6 +770,9 @@ Year 3
 Monthly
 Cash Flow
 Summary
+SchoolStack Budget - Generated <DATE>
+Page 11 of 19
+--- PAGE 12 ---
 Month
 Beginning
 Inflows
@@ -832,9 +856,6 @@ Year 4
 Monthly
 Cash Flow
 Summary
-SchoolStack Budget - Generated <DATE>
-Page 10 of 20
---- PAGE 11 ---
 Month
 Beginning
 Inflows
@@ -918,6 +939,9 @@ Year 5
 Monthly
 Cash Flow
 Summary
+SchoolStack Budget - Generated <DATE>
+Page 12 of 19
+--- PAGE 13 ---
 Month
 Beginning
 Inflows
@@ -1000,9 +1024,6 @@ $2.9M
 Lowest
 Cash Month
 by Year
-SchoolStack Budget - Generated <DATE>
-Page 11 of 20
---- PAGE 12 ---
 Year
 Month
 Ending Cash
@@ -1035,6 +1056,9 @@ DSCR Summary
 Current DSCR:  55.64x
 Benchmark:  Healthy minimum: 1.15x;
 target: 1.25x
+SchoolStack Budget - Generated <DATE>
+Page 13 of 19
+--- PAGE 14 ---
 Trend:  Normalized (lender-primary) Y1
 DSCR. See the “As-Planned vs
 Normalized: Net Income & DSCR”
@@ -1072,9 +1096,6 @@ vs accrual: $2.9M (no restricted gifts). Unrestricted is the headline DSCR + run
 gifts can't legally fund operations or debt service.
 Stress Testing
 All 6 stress scenarios maintain positive Year 5 net income, indicating financial resilience.
-SchoolStack Budget - Generated <DATE>
-Page 12 of 20
---- PAGE 13 ---
 Stress Test Results
 Scenario
 Y1 Net
@@ -1131,10 +1152,16 @@ Year 1
 55.69x
 23.6
 Lender Readiness
-This model demonstrates strong financial fundamentals: a clear path to profit, controlled costs, a
-sustainable revenue mix, and adequate debt coverage. Your projections are grounded and
-achievable.
-✓ Readiness Level: Strong
+Rating capped at Needs Work pending evidence tagging on 22 of 22 assumptions. Below 30%
+evidence tagging, lenders in Lending Lab Cycle 1 bounced 6 of 7 packets with a 'show your work'
+response before opening any underwriting conversation. The model has not demonstrated
+assumption rigor to a lender-credible threshold. This model demonstrates strong financial
+fundamentals: a clear path to profit, controlled costs, a sustainable revenue mix, and adequate
+debt coverage. Your projections are grounded and achievable.
+SchoolStack Budget - Generated <DATE>
+Page 14 of 19
+--- PAGE 15 ---
+⚠ Readiness Level: Needs Work
 Financial Health Assessment
 Across 9 health dimensions: 8 healthy, 1 on watch, 0 at risk.
 ✓ viability: Healthy
@@ -1179,9 +1206,6 @@ Healthy
 DSCR of 58.30x provides comfortable
 coverage of debt payments with room to
 spare.
-SchoolStack Budget - Generated <DATE>
-Page 13 of 20
---- PAGE 14 ---
 Revenue Concentration
 Healthy
 Revenue is anchored to enrollment-driven
@@ -1189,29 +1213,23 @@ income — the strongest foundation for a
 school model. A focused revenue stream
 is a strength when backed by dependable
 demand.
-SchoolStack Budget - Generated <DATE>
-Page 14 of 20
---- PAGE 15 ---
 Days Cash
 Healthy
 686 days of cash on hand exceeds the 90-
 day benchmark, providing a strong
 liquidity cushion.
-SchoolStack Budget - Generated <DATE>
-Page 15 of 20
---- PAGE 16 ---
 Reserve Strength
 Healthy
 137.4 months of reserves by Year 5 — a
 strong buffer for unexpected costs.
-SchoolStack Budget - Generated <DATE>
-Page 16 of 20
---- PAGE 17 ---
 Key Risks
 2 risk factors have been identified. None are rated critical, but each should have a documented
 mitigation plan.
 ✓ Let's back the enrollment ramp with evidence: medium
 ✓ Let's tie new hires to enrollment milestones: medium
+SchoolStack Budget - Generated <DATE>
+Page 15 of 19
+--- PAGE 16 ---
 MEDIUM
 Let's back the enrollment ramp with evidence
 Enrollment is the engine of every revenue and staffing assumption downstream. The more evidence we can attach to each
@@ -1262,9 +1280,6 @@ enrollment: 20; Tuition per student:
 $11,500; Year 1 staffing cost: $86,120;
 Year 1 facility cost: $27,833; Year 1
 operating expenses: $16,167
-SchoolStack Budget - Generated <DATE>
-Page 17 of 20
---- PAGE 18 ---
 Driven by inputs in: Enrollment, Revenue, Staffing, Expenses.
 Debt service coverage (DSCR)  Loan
 principal: $20,000; Loan interest rate:
@@ -1272,6 +1287,9 @@ principal: $20,000; Loan interest rate:
 service: $4,696; Year 1 staffing cost:
 $86,120
 Driven by inputs in: Capital & Financing, Staffing.
+SchoolStack Budget - Generated <DATE>
+Page 16 of 19
+--- PAGE 17 ---
 Cash reserve (months)  Starting cash:
 $12,000; Year 1 operating expenses:
 $16,167; Year 1 staffing cost: $86,120;
@@ -1321,9 +1339,6 @@ Ending cash $1,113,820
 Ending cash $1,746,605
   Year 5 (36 students):  DSCR 156.98x ·
 Ending cash $2,479,052
-SchoolStack Budget - Generated <DATE>
-Page 18 of 20
---- PAGE 19 ---
 If 20% fewer students enroll
   Year 1 (16 students):  DSCR 41.44x ·
 Ending cash $201,885
@@ -1331,6 +1346,9 @@ Ending cash $201,885
 Ending cash $521,161
   Year 3 (26 students):  DSCR 95.14x ·
 Ending cash $963,213
+SchoolStack Budget - Generated <DATE>
+Page 17 of 19
+--- PAGE 18 ---
   Year 4 (30 students):  DSCR 119.26x ·
 Ending cash $1,518,568
   Year 5 (32 students):  DSCR 134.30x ·
@@ -1427,15 +1445,15 @@ soft-launch.
   Min DSCR: 41.44x   ·   Min ending cash: $201,885   ·   Runway: 18.2 mo   ·   Break-even: Year 1
   Lowest monthly cash: Year 1 (Sep) $54,238
   Year-1 net income vs base: -$79,634
-SchoolStack Budget - Generated <DATE>
-Page 19 of 20
---- PAGE 20 ---
 Public Funding Delayed 3 Months (public sources only)
 Year-1 ESA, school-choice, and public-funding receipts reduced by 25% (≈ 3 months delayed) to simulate a slow first
 disbursement.
   Min DSCR: 44.20x   ·   Min ending cash: $214,852   ·   Runway: 19.1 mo   ·   Break-even: Year 1
   Lowest monthly cash: Year 1 (Jul) $53,755
   Year-1 net income vs base: -$66,667
+SchoolStack Budget - Generated <DATE>
+Page 18 of 19
+--- PAGE 19 ---
 Rent Shock +25%
 Occupancy & facility expense rows escalated by 25% — covers a lease renewal, market-rate reset, or unbudgeted CAM/
 utilities surprise.
@@ -1505,4 +1523,4 @@ $
 Note: Founder is paying themselves below market rate (“sweat equity”). Lenders and boards underwrite to the market-rate
 line; the adjustment shows the gap.
 SchoolStack Budget - Generated <DATE>
-Page 20 of 20
+Page 19 of 19

@@ -5,14 +5,17 @@ Oakwood Learning Studio - Loan Readiness
 Report
 SchoolStack Budget Consultant Analysis
 Executive Summary
-Oakwood Learning Studio projects $400,145 in Year 5 revenue with a 37.6% profit margin. The
-model tells a strong financial story with 8 of 13 key metrics in healthy range, a great foundation for
-your mission.
+Oakwood Learning Studio projects $400,145 in Year 5 revenue with a 37.6% profit margin. Margins
+are on the thinner side, and the recommendations below will help you build a more compelling
+financial story.
 Lender Readiness Assessment
-Ready to share — keep polishing the narrative.
-This model demonstrates strong financial fundamentals: a clear path to profit, controlled costs, a
-sustainable revenue mix, and adequate debt coverage. Your projections are grounded and
-achievable.
+Almost there — a few targeted edits will tighten the story.
+Rating capped at Needs Work pending evidence tagging on 22 of 22 assumptions. Below 30%
+evidence tagging, lenders in Lending Lab Cycle 1 bounced 6 of 7 packets with a 'show your work'
+response before opening any underwriting conversation. The model has not demonstrated
+assumption rigor to a lender-credible threshold. This model demonstrates strong financial
+fundamentals: a clear path to profit, controlled costs, a sustainable revenue mix, and adequate
+debt coverage. Your projections are grounded and achievable.
 Key Financial Metrics
 Metric
 Value
@@ -63,6 +66,9 @@ Capacity Utilization (Year 5)
 ✓ Good
 Year 5 enrollment approaches facility
 capacity, an efficient use of space.
+SchoolStack Budget - Generated <DATE>
+Page 1 of 12
+--- PAGE 2 ---
 Days Cash on Hand (Year 1)
 57 days
 ⚠ Warning
@@ -70,8 +76,8 @@ Days Cash on Hand (Year 1)
 minimum but below the 90-day target.
 Build reserves to create a larger buffer.
 SchoolStack Budget - Generated <DATE>
-Page 1 of 7
---- PAGE 2 ---
+Page 2 of 12
+--- PAGE 3 ---
 Cash Trough (Minimum Cash Month)
 Month 1: $647
 ⚠ Warning
@@ -81,8 +87,8 @@ you won't run out of money before
 tuition collections start. Consider
 building reserves.
 SchoolStack Budget - Generated <DATE>
-Page 2 of 7
---- PAGE 3 ---
+Page 3 of 12
+--- PAGE 4 ---
 Debt Service Coverage Ratio (Year 1)
 5.77x
 ✓ Good
@@ -90,26 +96,38 @@ DSCR is above 1.25x, and your
 operating income comfortably covers
 debt payments.
 SchoolStack Budget - Generated <DATE>
-Page 3 of 7
---- PAGE 4 ---
+Page 4 of 12
+--- PAGE 5 ---
 Philanthropy (% of Revenue)
 11.6%
 ✓ Good
 Philanthropy supplements earned
 revenue — a healthy mix.
 SchoolStack Budget - Generated <DATE>
-Page 4 of 7
---- PAGE 5 ---
+Page 5 of 12
+--- PAGE 6 ---
+SchoolStack Budget - Generated <DATE>
+Page 6 of 12
+--- PAGE 7 ---
 Operating Reserve (Year 5)
+SchoolStack Budget - Generated <DATE>
+Page 7 of 12
+--- PAGE 8 ---
 18.9 months
+SchoolStack Budget - Generated <DATE>
+Page 8 of 12
+--- PAGE 9 ---
 ✓ Good
+SchoolStack Budget - Generated <DATE>
+Page 9 of 12
+--- PAGE 10 ---
 By Year 5, the school has built a
 healthy operating reserve of 3+
 months, a strong foundation for long-
 term stability.
 SchoolStack Budget - Generated <DATE>
-Page 5 of 7
---- PAGE 6 ---
+Page 10 of 12
+--- PAGE 11 ---
 Strengths & Risks
 Biggest Strength
 Strong Year 5 profit
@@ -189,8 +207,8 @@ Year 5
 9.4%
 18.7%
 SchoolStack Budget - Generated <DATE>
-Page 6 of 7
---- PAGE 7 ---
+Page 11 of 12
+--- PAGE 12 ---
 Cumulative Financial Trajectory
 Year
 Cumulative Profit
@@ -271,4 +289,4 @@ Y1
 2.90241103
 4736015
 SchoolStack Budget - Generated <DATE>
-Page 7 of 7
+Page 12 of 12

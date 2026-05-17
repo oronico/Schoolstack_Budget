@@ -28,9 +28,13 @@ Operating cash carries the school for 17.5 months from open before another fundi
 needed, with the tightest year landing at $2,296,259 of cash on hand in Year 1. Operating break-
 even is reached in Year 1.
 On the same basis a lender will use, Year 1 debt service coverage is 21.01x. The packet currently
-reads as: Ready to share - keep polishing the narrative. This model demonstrates strong financial
-fundamentals: a clear path to net income, controlled costs, a sustainable revenue mix, and
-adequate debt coverage. Your projections are grounded and achievable.
+reads as: Almost there - a few targeted edits will tighten the story. Rating capped at Needs Work
+pending evidence tagging on 22 of 22 assumptions. Below 30% evidence tagging, lenders in
+Lending Lab Cycle 1 bounced 6 of 7 packets with a 'show your work' response before opening any
+underwriting conversation. The model has not demonstrated assumption rigor to a lender-credible
+threshold. This model demonstrates strong financial fundamentals: a clear path to net income,
+controlled costs, a sustainable revenue mix, and adequate debt coverage. Your projections are
+grounded and achievable.
 Three matters merit board attention this period. Let's extend your cash runway. Suggested
 response: Build a cash buffer through startup fundraising, a line of credit, or by reducing early
 expenses. Target at least 18 months of runway before opening..
@@ -51,13 +55,13 @@ evidence than research benchmarks or estimates.
 0 of 22 assumptions tagged yet — the founder has not anchored any inputs to evidence. Posture defaults to
 "Needs Support" until at least some keys are tagged.
 Financial Overview
-Riverside Christian Academy projects $8,779,877 in Year 5 revenue with a 66.9% net margin. The
-model tells a strong financial story with 13 of 13 key metrics in healthy range, a great foundation
-for your mission. The school has approximately 17.5 months of cash runway.
+Riverside Christian Academy projects $8,779,877 in Year 5 revenue with a 66.9% net margin.
+Margins are on the thinner side, and the recommendations below will help you build a more
 SchoolStack Budget - Generated <DATE>
 Page 2 of 8
 --- PAGE 3 ---
-Readiness Level: Strong
+compelling financial story. The school has approximately 17.5 months of cash runway.
+Readiness Level: Needs Work
 Biggest Strength: Strong Year 5 net income
 Biggest Risk: No major red flags detected, so continue refining assumptions as you gather real data.
 Cash Runway: 17.5 months

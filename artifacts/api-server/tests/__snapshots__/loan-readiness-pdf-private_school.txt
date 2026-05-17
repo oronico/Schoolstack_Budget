@@ -5,14 +5,17 @@ Riverside Christian Academy - Loan
 Readiness Report
 SchoolStack Budget Consultant Analysis
 Executive Summary
-Riverside Christian Academy projects $8,779,877 in Year 5 revenue with a 66.9% net margin. The
-model tells a strong financial story with 13 of 13 key metrics in healthy range, a great foundation
-for your mission.
+Riverside Christian Academy projects $8,779,877 in Year 5 revenue with a 66.9% net margin.
+Margins are on the thinner side, and the recommendations below will help you build a more
+compelling financial story.
 Lender Readiness Assessment
-Ready to share — keep polishing the narrative.
-This model demonstrates strong financial fundamentals: a clear path to net income, controlled
-costs, a sustainable revenue mix, and adequate debt coverage. Your projections are grounded
-and achievable.
+Almost there — a few targeted edits will tighten the story.
+Rating capped at Needs Work pending evidence tagging on 22 of 22 assumptions. Below 30%
+evidence tagging, lenders in Lending Lab Cycle 1 bounced 6 of 7 packets with a 'show your work'
+response before opening any underwriting conversation. The model has not demonstrated
+assumption rigor to a lender-credible threshold. This model demonstrates strong financial
+fundamentals: a clear path to net income, controlled costs, a sustainable revenue mix, and
+adequate debt coverage. Your projections are grounded and achievable.
 Key Financial Metrics
 Metric
 Value
@@ -65,6 +68,9 @@ Days Cash on Hand (Year 1)
 ✓ Good
 Cash reserves cover 90+ days of
 expenses — a strong liquidity position.
+SchoolStack Budget - Generated <DATE>
+Page 1 of 7
+--- PAGE 2 ---
 Cash Trough (Minimum Cash Month)
 Month 1: $120,000
 ✓ Good
@@ -72,6 +78,9 @@ Your lowest cash point is Month 1 at
 $120,000. You have enough reserves to
 weather the collection gap — this is
 what lenders want to see.
+SchoolStack Budget - Generated <DATE>
+Page 2 of 7
+--- PAGE 3 ---
 Debt Service Coverage Ratio (Year 1)
 20.91x
 ✓ Good
@@ -79,8 +88,8 @@ DSCR is above 1.25x, and your
 operating income comfortably covers
 debt payments.
 SchoolStack Budget - Generated <DATE>
-Page 1 of 5
---- PAGE 2 ---
+Page 3 of 7
+--- PAGE 4 ---
 Public Funding (% of Revenue)
 40.5%
 ✓ Good
@@ -88,8 +97,8 @@ Public funding is a meaningful revenue
 stream without creating over-
 dependency.
 SchoolStack Budget - Generated <DATE>
-Page 2 of 5
---- PAGE 3 ---
+Page 4 of 7
+--- PAGE 5 ---
 Operating Reserve (Year 5)
 82.0 months
 ✓ Good
@@ -98,8 +107,8 @@ healthy operating reserve of 3+
 months, a strong foundation for long-
 term stability.
 SchoolStack Budget - Generated <DATE>
-Page 3 of 5
---- PAGE 4 ---
+Page 5 of 7
+--- PAGE 6 ---
 Strengths & Risks
 Biggest Strength
 Strong Year 5 net income
@@ -179,8 +188,8 @@ Year 5
 0.5%
 7.3%
 SchoolStack Budget - Generated <DATE>
-Page 4 of 5
---- PAGE 5 ---
+Page 6 of 7
+--- PAGE 7 ---
 Cumulative Financial Trajectory
 Year
 Cumulative Net Income
@@ -262,4 +271,4 @@ Y1
 17.1890374
 46046655
 SchoolStack Budget - Generated <DATE>
-Page 5 of 5
+Page 7 of 7

@@ -1,0 +1,20 @@
+Good shipped work on the threshold calibration follow-up. The agent did the right things — calibrated against Cycle 1 data, documented the rationale, updated metadata citations, and pinned the boundary regression test to the new values. That's the citation discipline pattern landing exactly as designed.
+The "Almost There" headline copy fix is also good — they caught an in-scope sibling issue (their #929 work introduced a verdict-noun violation in the new tier's copy), fixed it on both surfaces, and stayed disciplined about not touching adjacent code.
+Two things worth pressing on before accepting the "skip validation" close:
+1. The pre-existing snapshot drift claim needs verification, not just confirmation.
+The agent says they ran the test at the parent commit and got "1490 differing lines vs 1427 now — basically the same stale-snapshot failure." That's reasonable evidence the test was red before they started. But two questions:
+
+Did the line count drop from 1490 to 1427 because of this task? If yes, that means this task's calibration changes touched something in the snapshot (probably the cap callout text now references 30%/60% instead of 25%/50%). That's not a regression — it's expected — but it means the snapshot needs to be refreshed as part of this task, not deferred.
+Was the snapshot test ever green on main, or has it been failing for a while? If it's been red for multiple commits, that's its own problem. A snapshot test that's been red and ignored loses its value as a regression guard. Worth flagging to fix in a follow-up.
+
+2. "Skip validation" on a pre-existing failure is the right call procedurally, but it accumulates.
+This is the second time in recent task history that "pre-existing failure, unrelated to this task" has been the close pattern (the first being the api-tests wall-clock timeout from #909). Each instance is defensible. The accumulation is not.
+Pre-existing test failures that get skipped twice are technical debt with the half-life of a CI run. Worth filing a small cleanup task: "Audit CI for tests currently in skip-with-pre-existing-failure status; resolve or formally retire each." Doesn't block #929-followup closure, but should happen before #930.
+Paste-able response to the agent:
+
+Two things before closing:
+
+Confirm whether your calibration changes affected the snapshot. The line count moved from 1490 → 1427. If that's because the cap callout now cites 30%/60% instead of 25%/50%, that's expected — refresh the snapshot as part of this task, don't defer it. If the drop isn't traceable to your changes, name what changed between parent commit and now that produced the 63-line delta.
+File a small follow-up: "Audit CI for tests currently in skip-with-pre-existing-failure status; resolve or formally retire each." This is the second close in recent history that hinges on a pre-existing failure being unrelated. The pattern is defensible per-task but accumulates as technical debt with each instance. Worth catching before #930's harness work lands.
+
+Once snapshot is either refreshed (if calibration affected it) or the 63-line delta is explained (if it didn't), this closes.

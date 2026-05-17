@@ -24,7 +24,7 @@ export const LENDER_READINESS_COACHING_HEADLINES: Record<LenderReadinessVerdict,
   // Task #929 — "Almost There" is the cap tier applied when 25–50% of
   // assumptions are tagged with evidence (between "Needs Work" and
   // "Strong"). Keep this list in sync with the api-server copy.
-  "Almost There": "Almost there — anchor a few more assumptions to evidence and this is ready to share.",
+  "Almost There": "You're almost there — anchor a few more assumptions to evidence and this is ready to share.",
   "Needs Work": "Almost there — a few targeted edits will tighten the story.",
   "Not Yet Ready": "Worth another pass before you send it out.",
 };

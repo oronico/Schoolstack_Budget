@@ -7,12 +7,14 @@
  *   A. Subsystem-level invariants on every `LenderReadinessResult`
  *      (shape, cap.applied iff effective ≠ uncapped, reason
  *      non-empty when applied, pendingEvidenceCount = total − tagged).
- *   B. Cap logic per tier at and around the 0.25 / 0.50 boundaries
- *      (0.24 / 0.25 / 0.49 / 0.50 / 0.99 / 1.00).
+ *   B. Cap logic per tier at and around the 0.30 / 0.60 boundaries
+ *      (0.29 / 0.30 / 0.59 / 0.60 / 0.99 / 1.00). Thresholds were
+ *      calibrated against Lending Lab Cycle 1 outcomes — see
+ *      `../src/lib/lender-readiness-caps.calibration.md`.
  *   C. "Strong" floor — `Strong` requires both strong underlying
- *      metrics AND taggedFraction >= 0.50. A 100%-tagged-but-weak
+ *      metrics AND taggedFraction >= 0.60. A 100%-tagged-but-weak
  *      model stays at its underlying tier; a Strong-metrics model
- *      below 50% is held to a lower tier.
+ *      below 60% is held to a lower tier.
  *   D. Cross-surface consistency — the lender packet PDF data and
  *      the in-app card consume the same `LenderReadinessResult`, so
  *      the callout string the API ships must be byte-identical to
@@ -97,14 +99,14 @@ const BOUNDARY_CASES: Array<{
   expectedApplied: boolean;
   label: string;
 }> = [
-  // taggedFraction in [0, 0.25) → cap at "Needs Work"
+  // taggedFraction in [0, 0.30) → cap at "Needs Work"
   { fraction: 0.0,  uncapped: "Strong", expectedEffective: "Needs Work",   expectedApplied: true,  label: "0/22 (0%) Strong → Needs Work" },
-  { fraction: 0.24, uncapped: "Strong", expectedEffective: "Needs Work",   expectedApplied: true,  label: "5.3/22 (24%) Strong → Needs Work" },
-  // taggedFraction in [0.25, 0.50) → cap at "Almost There"
-  { fraction: 0.25, uncapped: "Strong", expectedEffective: "Almost There", expectedApplied: true,  label: "5.5/22 (25%) Strong → Almost There" },
-  { fraction: 0.49, uncapped: "Strong", expectedEffective: "Almost There", expectedApplied: true,  label: "10.8/22 (49%) Strong → Almost There" },
-  // taggedFraction in [0.50, 1.0] → no cap
-  { fraction: 0.5,  uncapped: "Strong", expectedEffective: "Strong",       expectedApplied: false, label: "11/22 (50%) Strong → unchanged" },
+  { fraction: 0.29, uncapped: "Strong", expectedEffective: "Needs Work",   expectedApplied: true,  label: "6.4/22 (29%) Strong → Needs Work" },
+  // taggedFraction in [0.30, 0.60) → cap at "Almost There"
+  { fraction: 0.3,  uncapped: "Strong", expectedEffective: "Almost There", expectedApplied: true,  label: "6.6/22 (30%) Strong → Almost There" },
+  { fraction: 0.59, uncapped: "Strong", expectedEffective: "Almost There", expectedApplied: true,  label: "13.0/22 (59%) Strong → Almost There" },
+  // taggedFraction in [0.60, 1.0] → no cap
+  { fraction: 0.6,  uncapped: "Strong", expectedEffective: "Strong",       expectedApplied: false, label: "13.2/22 (60%) Strong → unchanged" },
   { fraction: 0.99, uncapped: "Strong", expectedEffective: "Strong",       expectedApplied: false, label: "21.8/22 (99%) Strong → unchanged" },
   { fraction: 1.0,  uncapped: "Strong", expectedEffective: "Strong",       expectedApplied: false, label: "22/22 (100%) Strong → unchanged" },
 ];
@@ -121,7 +123,7 @@ for (const c of BOUNDARY_CASES) {
 }
 
 // ---------------------------------------------------------------------------
-// C. "Strong" floor — cap never upgrades, never produces Strong below 0.50
+// C. "Strong" floor — cap never upgrades, never produces Strong below 0.60
 // ---------------------------------------------------------------------------
 
 console.log("\n— C. \"Strong\" floor invariants —");
@@ -138,8 +140,8 @@ check(
   r100Mid.effectiveRating === "Needs Work" && r100Mid.cap.applied === false,
 );
 
-// "Strong" cannot surface below 0.50 regardless of metric strength.
-const strongSweep = [0.0, 0.1, 0.24, 0.25, 0.49];
+// "Strong" cannot surface below 0.60 regardless of metric strength.
+const strongSweep = [0.0, 0.1, 0.29, 0.3, 0.59];
 for (const f of strongSweep) {
   const r = applyConfidenceCap("Strong", f, Math.round(f * 22), 22);
   check(

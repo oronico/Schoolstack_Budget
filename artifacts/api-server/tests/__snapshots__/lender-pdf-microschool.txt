@@ -5,10 +5,17 @@ Oakwood Learning Studio
 5-Year Financial Model
 Prepared <DATE>
 Built from assumptions
-Ready to share — keep polishing the narrative.
-This model demonstrates strong financial fundamentals: a clear path to profit, controlled costs, a
-sustainable revenue mix, and adequate debt coverage. Your projections are grounded and
-achievable.
+Almost there — a few targeted edits will tighten the story.
+Rating capped at Needs Work pending evidence tagging on 22 of 22 assumptions. Below 30%
+evidence tagging, lenders in Lending Lab Cycle 1 bounced 6 of 7 packets with a 'show your work'
+response before opening any underwriting conversation. The model has not demonstrated
+assumption rigor to a lender-credible threshold. This model demonstrates strong financial
+fundamentals: a clear path to profit, controlled costs, a sustainable revenue mix, and adequate
+debt coverage. Your projections are grounded and achievable.
+Evidence-tagging cap applied
+Rating capped at Needs Work pending evidence tagging on 22 of 22 assumptions. Below 30% evidence tagging,
+lenders in Lending Lab Cycle 1 bounced 6 of 7 packets with a 'show your work' response before opening any
+underwriting conversation. The model has not demonstrated assumption rigor to a lender-credible threshold.
 Packet Contents
 1.  Executive Summary
 2.  School Overview
@@ -31,15 +38,18 @@ Packet Contents
 This packet is generated from the school's financial model and is intended for lender review.
 All projections are based on assumptions entered by the school founder.
 SchoolStack Budget - Generated <DATE>
-Page 1 of 23
+Page 1 of 26
 --- PAGE 2 ---
 Lender Commentary
 Oakwood Learning Studio is a microschool, based in AZ. Oakwood Learning Studio projects
 enrollment of 20 students in Year 1, growing to 40 by Year 5 against a stated capacity of 45 seats.
-Based on the canonical financial engine that powers this packet, the model reads as: Ready to
-share - keep polishing the narrative. This model demonstrates strong financial fundamentals: a
-clear path to profit, controlled costs, a sustainable revenue mix, and adequate debt coverage. Your
-projections are grounded and achievable.
+Based on the canonical financial engine that powers this packet, the model reads as: Almost there -
+a few targeted edits will tighten the story. Rating capped at Needs Work pending evidence tagging
+on 22 of 22 assumptions. Below 30% evidence tagging, lenders in Lending Lab Cycle 1 bounced 6
+of 7 packets with a 'show your work' response before opening any underwriting conversation. The
+model has not demonstrated assumption rigor to a lender-credible threshold. This model
+demonstrates strong financial fundamentals: a clear path to profit, controlled costs, a sustainable
+revenue mix, and adequate debt coverage. Your projections are grounded and achievable.
 On the normalized base case (founder compensation marked to market), Year 1 debt service
 coverage is 3.11x. Operating cash runway extends 3.1 months from the open before additional
 capital would be required, with the tightest position at $34,397 of ending cash in Year 1. The model
@@ -65,20 +75,20 @@ and minimum ending cash at $5,200. Strong Year 5 profit The full risk and recomm
 follows in the body of the packet.
 Every figure in this commentary is sourced from the same canonical engine that powers the rest of this packet.
 Executive Summary
-Oakwood Learning Studio projects $400,145 in Year 5 revenue with a 37.6% profit margin. The
-model tells a strong financial story with 8 of 13 key metrics in healthy range, a great foundation for
-your mission.
-Readiness Level: Strong
+Oakwood Learning Studio projects $400,145 in Year 5 revenue with a 37.6% profit margin. Margins
+are on the thinner side, and the recommendations below will help you build a more compelling
+financial story.
+SchoolStack Budget - Generated <DATE>
+Page 2 of 26
+--- PAGE 3 ---
+Readiness Level: Needs Work
 Biggest Strength: Strong Year 5 profit
 Biggest Risk: No major red flags detected, so continue refining assumptions as you gather real data.
 Cash Runway: 3.1 months
-SchoolStack Budget - Generated <DATE>
-Page 2 of 23
---- PAGE 3 ---
 Budget Narrative
-Oakwood Learning Studio projects $400,145 in Year 5 revenue with a 37.6% profit margin. The
-model tells a strong financial story with 8 of 13 key metrics in healthy range, a great foundation for
-your mission.
+Oakwood Learning Studio projects $400,145 in Year 5 revenue with a 37.6% profit margin. Margins
+are on the thinner side, and the recommendations below will help you build a more compelling
+financial story.
 Flagged Assumptions
 [Info] 20 students (44% of 45 capacity)
 [Positive] Tuition covers 144% of Year 1 total expenses
@@ -112,13 +122,19 @@ Year 2
 26
 Year 3
 32
+SchoolStack Budget - Generated <DATE>
+Page 3 of 26
+--- PAGE 4 ---
 Year 4
 37
+SchoolStack Budget - Generated <DATE>
+Page 4 of 26
+--- PAGE 5 ---
 Year 5
 40
 SchoolStack Budget - Generated <DATE>
-Page 3 of 23
---- PAGE 4 ---
+Page 5 of 26
+--- PAGE 6 ---
 Supporting Assumptions
 Year 1 Enrollment  20
 Year 2 Enrollment  26
@@ -209,8 +225,8 @@ vs. Donor /
 Policy
 Dependent)
 SchoolStack Budget - Generated <DATE>
-Page 4 of 23
---- PAGE 5 ---
+Page 6 of 26
+--- PAGE 7 ---
 Bucket
 Year 1
 Year 2
@@ -286,8 +302,8 @@ Occupational Employment & Wage Statistics, May 2023. Education Administrators, K
 through Secondary (11-9032), national median annual wage..
 ✓ Staffing % of Revenue: 52.0%
 SchoolStack Budget - Generated <DATE>
-Page 5 of 23
---- PAGE 6 ---
+Page 7 of 26
+--- PAGE 8 ---
 Suggested Founder Compensation Benchmark by Year
 Year
 Projected Enrollment
@@ -396,8 +412,8 @@ Lender View (Normalized)
 Supporting Assumptions
 Founder / Lead Teacher  $58,000, 1 FTE
 SchoolStack Budget - Generated <DATE>
-Page 6 of 23
---- PAGE 7 ---
+Page 8 of 26
+--- PAGE 9 ---
 Assistant Teacher  $38,000, 1 FTE
 Part-Time Aide  $24,000, 0.5 FTE
 Expense Summary
@@ -454,8 +470,8 @@ All projections are prepared on an accrual basis; the school currently keeps boo
 ✓ Capacity Utilization (Year 5): 88.9% (benchmark: Optimal: 80–95% utilization)
 5-Year Net Income Projection
 SchoolStack Budget - Generated <DATE>
-Page 7 of 23
---- PAGE 8 ---
+Page 9 of 26
+--- PAGE 10 ---
 Year
 Students
 Revenue
@@ -527,8 +543,8 @@ Breakeven Enrollment: 18
 Facility Cost/Student: $2K
 Key Performance Indicators
 SchoolStack Budget - Generated <DATE>
-Page 8 of 23
---- PAGE 9 ---
+Page 10 of 26
+--- PAGE 11 ---
 Metric
 Value
 Facility Cost / Student
@@ -640,8 +656,8 @@ $15K
 $14K
 $34K
 SchoolStack Budget - Generated <DATE>
-Page 9 of 23
---- PAGE 10 ---
+Page 11 of 26
+--- PAGE 12 ---
 Jun
 $34K
 $326
@@ -649,8 +665,8 @@ $326
 $363
 $35K
 SchoolStack Budget - Generated <DATE>
-Page 10 of 23
---- PAGE 11 ---
+Page 12 of 26
+--- PAGE 13 ---
 Year 2 Monthly Cash Flow Summary
 Month
 Beginning
@@ -819,8 +835,8 @@ Monthly
 Cash Flow
 Summary
 SchoolStack Budget - Generated <DATE>
-Page 11 of 23
---- PAGE 12 ---
+Page 13 of 26
+--- PAGE 14 ---
 Month
 Beginning
 Inflows
@@ -987,8 +1003,8 @@ Lowest
 Cash Month
 by Year
 SchoolStack Budget - Generated <DATE>
-Page 12 of 23
---- PAGE 13 ---
+Page 14 of 26
+--- PAGE 15 ---
 Year
 Month
 Ending Cash
@@ -1059,8 +1075,8 @@ gifts can't legally fund operations or debt service.
 Stress Testing
 All 6 stress scenarios maintain positive Year 5 net income, indicating financial resilience.
 SchoolStack Budget - Generated <DATE>
-Page 13 of 23
---- PAGE 14 ---
+Page 15 of 26
+--- PAGE 16 ---
 Stress Test Results
 Scenario
 Y1 Net
@@ -1117,10 +1133,13 @@ Year 1
 5.59x
 2.9
 Lender Readiness
-This model demonstrates strong financial fundamentals: a clear path to profit, controlled costs, a
-sustainable revenue mix, and adequate debt coverage. Your projections are grounded and
-achievable.
-✓ Readiness Level: Strong
+Rating capped at Needs Work pending evidence tagging on 22 of 22 assumptions. Below 30%
+evidence tagging, lenders in Lending Lab Cycle 1 bounced 6 of 7 packets with a 'show your work'
+response before opening any underwriting conversation. The model has not demonstrated
+assumption rigor to a lender-credible threshold. This model demonstrates strong financial
+fundamentals: a clear path to profit, controlled costs, a sustainable revenue mix, and adequate
+debt coverage. Your projections are grounded and achievable.
+⚠ Readiness Level: Needs Work
 Financial Health Assessment
 Across 9 health dimensions: 5 healthy, 4 on watch, 0 at risk.
 ✓ viability: Healthy
@@ -1153,6 +1172,9 @@ generates in 10 months. Opening cash
 absorbs the gap today, but tight timing
 leaves no margin for late tuition or a
 delayed disbursement.
+SchoolStack Budget - Generated <DATE>
+Page 16 of 26
+--- PAGE 17 ---
 Staffing Burden
 Healthy
 Staffing at 52% of revenue leaves room
@@ -1163,16 +1185,16 @@ Facility costs at 17% of revenue are
 moderate but could become a constraint
 as other costs grow.
 SchoolStack Budget - Generated <DATE>
-Page 14 of 23
---- PAGE 15 ---
+Page 17 of 26
+--- PAGE 18 ---
 Debt Affordability
 Healthy
 DSCR of 5.77x provides comfortable
 coverage of debt payments with room to
 spare.
 SchoolStack Budget - Generated <DATE>
-Page 15 of 23
---- PAGE 16 ---
+Page 18 of 26
+--- PAGE 19 ---
 Revenue Concentration
 Healthy
 Revenue is anchored to enrollment-driven
@@ -1181,8 +1203,8 @@ school model. A focused revenue stream
 is a strength when backed by dependable
 demand.
 SchoolStack Budget - Generated <DATE>
-Page 16 of 23
---- PAGE 17 ---
+Page 19 of 26
+--- PAGE 20 ---
 Days Cash
 Watch closely
 57 days of cash on hand is above the
@@ -1190,15 +1212,15 @@ minimum but below the 90-day target. A
 large unexpected cost could create a cash
 crunch.
 SchoolStack Budget - Generated <DATE>
-Page 17 of 23
---- PAGE 18 ---
+Page 20 of 26
+--- PAGE 21 ---
 Reserve Strength
 Healthy
 18.9 months of reserves by Year 5 — a
 strong buffer for unexpected costs.
 SchoolStack Budget - Generated <DATE>
-Page 18 of 23
---- PAGE 19 ---
+Page 21 of 26
+--- PAGE 22 ---
 Key Risks
 3 risk factors have been identified. Of these, 1 is rated critical and should be addressed prior to
 lender submission.
@@ -1254,8 +1276,8 @@ $16,167; Year 1 debt service: $4,696;
 General cost inflation: 3.0%
 Driven by inputs in: Staffing, Expenses, Capital & Financing.
 SchoolStack Budget - Generated <DATE>
-Page 19 of 23
---- PAGE 20 ---
+Page 22 of 26
+--- PAGE 23 ---
 Year 1 net income  Year 1 enrollment:
 20; Tuition per student: $10,000; Year
 1 staffing cost: $86,120; Year 1 facility
@@ -1312,8 +1334,8 @@ of capacity
 Year 5 (planned 40):  24 students · 53%
 of capacity
 SchoolStack Budget - Generated <DATE>
-Page 20 of 23
---- PAGE 21 ---
+Page 23 of 26
+--- PAGE 24 ---
 Downside Enrollment Band
 If 10% fewer students enroll
   Year 1 (18 students):  DSCR 2.90x ·
@@ -1418,8 +1440,8 @@ Base case:  Min DSCR 5.86x · Min
 ending cash $34,826 · Runway 3.1 mo
 · Lowest monthly cash Y1 Jul $5,173
 SchoolStack Budget - Generated <DATE>
-Page 21 of 23
---- PAGE 22 ---
+Page 24 of 26
+--- PAGE 25 ---
 Enrollment -10%
 All five enrollment years scaled down by 10% — the standard lender enrollment-miss sensitivity.
   Min DSCR: 1.41x   ·   Min ending cash: $20,928   ·   Runway: 1.9 mo   ·   Break-even: Year 1
@@ -1462,8 +1484,8 @@ Per-year founder pay shown two ways: as planned (what the founder draws) and at 
 (what a comparable hire would cost). The lender adjustment is the gap underwriters apply to
 staffing cost and DSCR.
 SchoolStack Budget - Generated <DATE>
-Page 22 of 23
---- PAGE 23 ---
+Page 25 of 26
+--- PAGE 26 ---
 Line
 Y1
 Y2
@@ -1509,4 +1531,4 @@ $
 Note: Founder is paying themselves below market rate (“sweat equity”). Lenders and boards underwrite to the market-rate
 line; the adjustment shows the gap.
 SchoolStack Budget - Generated <DATE>
-Page 23 of 23
+Page 26 of 26

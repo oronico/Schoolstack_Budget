@@ -2924,7 +2924,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
   // path mandated by the addendum. The "Strong" floor is enforced
   // intrinsically: the metric-only branch above can only assign
   // "Strong" when underlying metrics support it, and the cap below
-  // forbids "Strong" whenever taggedFraction < 0.50 — so a
+  // forbids "Strong" whenever taggedFraction < 0.60 — so a
   // 100%-tagged-but-weak model stays at "Not Yet Ready" / "Needs
   // Work", and a strong-metrics-but-untagged model is held to
   // "Needs Work" / "Almost There".

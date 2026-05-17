@@ -5,10 +5,17 @@ Riverside Christian Academy
 5-Year Financial Model
 Prepared <DATE>
 Built from actuals
-Ready to share — keep polishing the narrative.
-This model demonstrates strong financial fundamentals: a clear path to net income, controlled
-costs, a sustainable revenue mix, and adequate debt coverage. Your projections are grounded
-and achievable.
+Almost there — a few targeted edits will tighten the story.
+Rating capped at Needs Work pending evidence tagging on 22 of 22 assumptions. Below 30%
+evidence tagging, lenders in Lending Lab Cycle 1 bounced 6 of 7 packets with a 'show your work'
+response before opening any underwriting conversation. The model has not demonstrated
+assumption rigor to a lender-credible threshold. This model demonstrates strong financial
+fundamentals: a clear path to net income, controlled costs, a sustainable revenue mix, and
+adequate debt coverage. Your projections are grounded and achievable.
+Evidence-tagging cap applied
+Rating capped at Needs Work pending evidence tagging on 22 of 22 assumptions. Below 30% evidence tagging,
+lenders in Lending Lab Cycle 1 bounced 6 of 7 packets with a 'show your work' response before opening any
+underwriting conversation. The model has not demonstrated assumption rigor to a lender-credible threshold.
 Packet Contents
 1.  Executive Summary
 2.  School Overview
@@ -32,15 +39,19 @@ Packet Contents
 This packet is generated from the school's financial model and is intended for lender review.
 All projections are based on assumptions entered by the school founder.
 SchoolStack Budget - Generated <DATE>
-Page 1 of 21
+Page 1 of 26
 --- PAGE 2 ---
 Lender Commentary
 Riverside Christian Academy is a private school, based in FL. Riverside Christian Academy projects
 enrollment of 200 students in Year 1, growing to 400 by Year 5 against a stated capacity of 400
-seats. Based on the canonical financial engine that powers this packet, the model reads as: Ready
-to share - keep polishing the narrative. This model demonstrates strong financial fundamentals: a
-clear path to net income, controlled costs, a sustainable revenue mix, and adequate debt
-coverage. Your projections are grounded and achievable.
+seats. Based on the canonical financial engine that powers this packet, the model reads as: Almost
+there - a few targeted edits will tighten the story. Rating capped at Needs Work pending evidence
+tagging on 22 of 22 assumptions. Below 30% evidence tagging, lenders in Lending Lab Cycle 1
+bounced 6 of 7 packets with a 'show your work' response before opening any underwriting
+conversation. The model has not demonstrated assumption rigor to a lender-credible threshold.
+This model demonstrates strong financial fundamentals: a clear path to net income, controlled
+costs, a sustainable revenue mix, and adequate debt coverage. Your projections are grounded and
+achievable.
 On the normalized base case (founder compensation marked to market), Year 1 debt service
 coverage is 21.01x. Operating cash runway extends 17.5 months from the open before additional
 capital would be required, with the tightest position at $2,296,259 of ending cash in Year 1. The
@@ -60,20 +71,20 @@ and minimum ending cash at $1,843,518. Strong Year 5 net income Recommended next
 before lender conversations: Address Cash Reserve Deficit from Prior Year.
 Every figure in this commentary is sourced from the same canonical engine that powers the rest of this packet.
 Executive Summary
-Riverside Christian Academy projects $8,779,877 in Year 5 revenue with a 66.9% net margin. The
-model tells a strong financial story with 13 of 13 key metrics in healthy range, a great foundation
-for your mission.
-Readiness Level: Strong
+Riverside Christian Academy projects $8,779,877 in Year 5 revenue with a 66.9% net margin.
+Margins are on the thinner side, and the recommendations below will help you build a more
+compelling financial story.
+Readiness Level: Needs Work
 Biggest Strength: Strong Year 5 net income
 Biggest Risk: No major red flags detected, so continue refining assumptions as you gather real data.
 Cash Runway: 17.5 months
 Budget Narrative
-Riverside Christian Academy projects $8,779,877 in Year 5 revenue with a 66.9% net margin. The
-model tells a strong financial story with 13 of 13 key metrics in healthy range, a great foundation
-for your mission.
+Riverside Christian Academy projects $8,779,877 in Year 5 revenue with a 66.9% net margin.
+Margins are on the thinner side, and the recommendations below will help you build a more
 SchoolStack Budget - Generated <DATE>
-Page 2 of 21
+Page 2 of 26
 --- PAGE 3 ---
+compelling financial story.
 Flagged Assumptions
 [Info] Y1 revenue per student of $19,759 is above the typical FL private range ($10,000–$18,000) but below the $20,000
 ceiling.
@@ -117,10 +128,10 @@ Year 1 Enrollment  200
 Year 2 Enrollment  250
 Year 3 Enrollment  300
 Year 4 Enrollment  350
-Year 5 Enrollment  400
 SchoolStack Budget - Generated <DATE>
-Page 3 of 21
+Page 3 of 26
 --- PAGE 4 ---
+Year 5 Enrollment  400
 Revenue Model
 The revenue model is anchored to enrollment-driven income. Year 1 total revenue is projected at
 $4.0M, growing to $8.8M by Year 5.
@@ -213,7 +224,7 @@ vs. Donor /
 Policy
 Dependent)
 SchoolStack Budget - Generated <DATE>
-Page 4 of 21
+Page 4 of 26
 --- PAGE 5 ---
 Bucket
 Year 1
@@ -295,7 +306,7 @@ NACSA size bands (escalated by COLA from Y1). Source: NAIS Head of School Compen
 Report, 2023-24. Day-school median total cash compensation by total enrollment.. Size-band
 transitions during the forecast: Year 3 (150–300 students to 300–500 students, suggested rate
 SchoolStack Budget - Generated <DATE>
-Page 5 of 21
+Page 5 of 26
 --- PAGE 6 ---
 $244,000). Each crossing bumps the lender-side market rate for the founder / head-of-school role.
 ✓ Staffing % of Revenue: 32.0%
@@ -406,7 +417,7 @@ Lender View (Normalized)
 15.7
 79.6
 SchoolStack Budget - Generated <DATE>
-Page 6 of 21
+Page 6 of 26
 --- PAGE 7 ---
 Supporting Assumptions
 Head of School  $95,000, 1 FTE
@@ -465,7 +476,7 @@ Prior-year revenue was $2.4M; Year 1 projections represent a 64.7% change.
 • Accounting basis
 All projections are prepared on an accrual basis; the school currently keeps books on a undetermined basis.
 SchoolStack Budget - Generated <DATE>
-Page 7 of 21
+Page 7 of 26
 --- PAGE 8 ---
 ✓ Revenue per Student (Year 1): $19,759 (benchmark: Private avg: $12,000–$25,000)
 ✓ Cost per Student (Year 1): $8,877 (benchmark: Target: ≤ 85% of revenue per student)
@@ -569,7 +580,7 @@ $1.8M
 Net Income
 Comparison
 SchoolStack Budget - Generated <DATE>
-Page 8 of 21
+Page 8 of 26
 --- PAGE 9 ---
 Prior Year (Actual)
 Year 1 (Projected)
@@ -621,7 +632,7 @@ Breakeven Enrollment
 Enrollment Cushion
 +156.4%
 SchoolStack Budget - Generated <DATE>
-Page 9 of 21
+Page 9 of 26
 --- PAGE 10 ---
 Cash Flow Analysis
 Year-end cash covers 17.5 months of fixed costs. Opening balance: $970K total assets, $1.2M total
@@ -733,7 +744,7 @@ Monthly
 Cash Flow
 Summary
 SchoolStack Budget - Generated <DATE>
-Page 10 of 21
+Page 10 of 26
 --- PAGE 11 ---
 Month
 Beginning
@@ -902,7 +913,7 @@ Monthly
 Cash Flow
 Summary
 SchoolStack Budget - Generated <DATE>
-Page 11 of 21
+Page 11 of 26
 --- PAGE 12 ---
 Month
 Beginning
@@ -1070,7 +1081,7 @@ Lowest
 Cash Month
 by Year
 SchoolStack Budget - Generated <DATE>
-Page 12 of 21
+Page 12 of 26
 --- PAGE 13 ---
 Year
 Month
@@ -1142,7 +1153,7 @@ gifts can't legally fund operations or debt service.
 Stress Testing
 All 6 stress scenarios maintain positive Year 5 net income, indicating financial resilience.
 SchoolStack Budget - Generated <DATE>
-Page 13 of 21
+Page 13 of 26
 --- PAGE 14 ---
 Stress Test Results
 Scenario
@@ -1200,10 +1211,13 @@ Year 1
 18.63x
 17.2
 Lender Readiness
-This model demonstrates strong financial fundamentals: a clear path to net income, controlled
-costs, a sustainable revenue mix, and adequate debt coverage. Your projections are grounded and
-achievable.
-✓ Readiness Level: Strong
+Rating capped at Needs Work pending evidence tagging on 22 of 22 assumptions. Below 30%
+evidence tagging, lenders in Lending Lab Cycle 1 bounced 6 of 7 packets with a 'show your work'
+response before opening any underwriting conversation. The model has not demonstrated
+assumption rigor to a lender-credible threshold. This model demonstrates strong financial
+fundamentals: a clear path to net income, controlled costs, a sustainable revenue mix, and
+adequate debt coverage. Your projections are grounded and achievable.
+⚠ Readiness Level: Needs Work
 Financial Health Assessment
 Across 9 health dimensions: 8 healthy, 1 on watch, 0 at risk.
 ✓ viability: Healthy
@@ -1239,43 +1253,58 @@ Staffing Burden
 Healthy
 Staffing at 32% of revenue leaves room
 for facilities, programs, and reserves.
+SchoolStack Budget - Generated <DATE>
+Page 14 of 26
+--- PAGE 15 ---
 Facility Burden
 Healthy
 Facility costs at 1% of revenue are well-
 managed and leave budget for programs.
+SchoolStack Budget - Generated <DATE>
+Page 15 of 26
+--- PAGE 16 ---
 Debt Affordability
 Healthy
 DSCR of 20.91x provides comfortable
 coverage of debt payments with room to
 spare.
 SchoolStack Budget - Generated <DATE>
-Page 14 of 21
---- PAGE 15 ---
+Page 16 of 26
+--- PAGE 17 ---
 Revenue Concentration
 Healthy
 Revenue is anchored to enrollment-driven
 income — the strongest foundation for a
 school model. A focused revenue stream
 is a strength when backed by dependable
-demand.
 SchoolStack Budget - Generated <DATE>
-Page 15 of 21
---- PAGE 16 ---
+Page 17 of 26
+--- PAGE 18 ---
+demand.
 Days Cash
 Healthy
 472 days of cash on hand exceeds the 90-
 day benchmark, providing a strong
+SchoolStack Budget - Generated <DATE>
+Page 18 of 26
+--- PAGE 19 ---
 liquidity cushion.
 SchoolStack Budget - Generated <DATE>
-Page 16 of 21
---- PAGE 17 ---
+Page 19 of 26
+--- PAGE 20 ---
 Reserve Strength
+SchoolStack Budget - Generated <DATE>
+Page 20 of 26
+--- PAGE 21 ---
 Healthy
+SchoolStack Budget - Generated <DATE>
+Page 21 of 26
+--- PAGE 22 ---
 82.0 months of reserves by Year 5 — a
 strong buffer for unexpected costs.
 SchoolStack Budget - Generated <DATE>
-Page 17 of 21
---- PAGE 18 ---
+Page 22 of 26
+--- PAGE 23 ---
 Key Risks
 1 risk factor has been identified. None are rated critical, but each should have a documented
 mitigation plan.
@@ -1329,8 +1358,8 @@ debt service: $109,328; Year 1
 staffing cost: $1,265,734
 Driven by inputs in: Capital & Financing, Staffing.
 SchoolStack Budget - Generated <DATE>
-Page 18 of 21
---- PAGE 19 ---
+Page 23 of 26
+--- PAGE 24 ---
 Cash reserve (months)  Starting cash:
 $120,000; Year 1 operating expenses:
 $243,000; Year 1 staffing cost:
@@ -1388,8 +1417,8 @@ Ending cash $1,843,518
   Year 2 (200 students):  DSCR 22.62x ·
 Ending cash $4,207,714
 SchoolStack Budget - Generated <DATE>
-Page 19 of 21
---- PAGE 20 ---
+Page 24 of 26
+--- PAGE 25 ---
   Year 3 (240 students):  DSCR 29.61x ·
 Ending cash $7,336,025
   Year 4 (280 students):  DSCR 36.25x ·
@@ -1495,8 +1524,8 @@ disbursement.
   Lowest monthly cash: Year 1 (Jul) $389,868
   Year-1 net income vs base: -$400,000
 SchoolStack Budget - Generated <DATE>
-Page 20 of 21
---- PAGE 21 ---
+Page 25 of 26
+--- PAGE 26 ---
 Rent Shock +25%
 Occupancy & facility expense rows escalated by 25% — covers a lease renewal, market-rate reset, or unbudgeted CAM/
 utilities surprise.
@@ -1566,4 +1595,4 @@ $7
 Note: Founder is paying themselves below market rate (“sweat equity”). Lenders and boards underwrite to the market-rate
 line; the adjustment shows the gap.
 SchoolStack Budget - Generated <DATE>
-Page 21 of 21
+Page 26 of 26

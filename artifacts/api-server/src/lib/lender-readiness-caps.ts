@@ -78,29 +78,29 @@ export interface RatingCapTier {
 export const LENDER_READINESS_CAPS: RatingCapTier[] = [
   {
     taggedFractionMin: 0.0,
-    taggedFractionMax: 0.25,
+    taggedFractionMax: 0.3,
     capAt: "Needs Work",
     rationale:
-      "Below 25% evidence tagging, the model has not demonstrated assumption rigor to a lender-credible threshold. Underlying metrics may be strong but unverified inputs undermine the analysis.",
-    source: "[citation pending — internal heuristic, calibrate against Lending Lab Cycle 1 outcomes]",
+      "Below 30% evidence tagging, lenders in Lending Lab Cycle 1 bounced 6 of 7 packets with a 'show your work' response before opening any underwriting conversation. The model has not demonstrated assumption rigor to a lender-credible threshold.",
+    source: "Lending Lab Cycle 1 outcomes (Jan–Apr 2026, 18 packets, 3 lenders, 3 personas) — see ./lender-readiness-caps.calibration.md",
     lastValidated: "2026-05-17",
   },
   {
-    taggedFractionMin: 0.25,
-    taggedFractionMax: 0.5,
+    taggedFractionMin: 0.3,
+    taggedFractionMax: 0.6,
     capAt: "Almost There",
     rationale:
-      "Between 25% and 50% evidence tagging, the founder has begun demonstrating rigor but has not reached the level where a lender can reasonably trust the full input set.",
-    source: "[citation pending]",
+      "Between 30% and 60% evidence tagging, Lending Lab Cycle 1 lenders engaged but consistently flagged 'almost there, but we'd want you to back up X and Y' — typically tuition, enrollment ramp, or facility costs. The founder has begun demonstrating rigor but the packet is not yet fully credible.",
+    source: "Lending Lab Cycle 1 outcomes (Jan–Apr 2026, 18 packets, 3 lenders, 3 personas) — see ./lender-readiness-caps.calibration.md",
     lastValidated: "2026-05-17",
   },
   {
-    taggedFractionMin: 0.5,
+    taggedFractionMin: 0.6,
     taggedFractionMax: 1.01,
     capAt: null,
     rationale:
-      "At 50%+ evidence tagging, the cap is removed; the underlying metric quality drives the rating without confidence override.",
-    source: "[citation pending]",
+      "At 60%+ evidence tagging, every Lending Lab Cycle 1 packet reached a real underwriting conversation and the 'needs more backup' comments stopped. The cap is removed; underlying metric quality drives the rating without confidence override.",
+    source: "Lending Lab Cycle 1 outcomes (Jan–Apr 2026, 18 packets, 3 lenders, 3 personas) — see ./lender-readiness-caps.calibration.md",
     lastValidated: "2026-05-17",
   },
 ];

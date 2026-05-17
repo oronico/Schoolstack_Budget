@@ -19,7 +19,7 @@ export const LENDER_READINESS_COACHING_HEADLINES: Record<LenderReadinessVerdict,
   // assumptions are tagged with evidence. It sits between "Needs Work"
   // and "Strong" so a model with healthy headline metrics but mid-range
   // evidence coverage doesn't read as fully ready.
-  "Almost There": "Almost there — anchor a few more assumptions to evidence and this is ready to share.",
+  "Almost There": "You're almost there — anchor a few more assumptions to evidence and this is ready to share.",
   "Needs Work": "Almost there — a few targeted edits will tighten the story.",
   "Not Yet Ready": "Worth another pass before you send it out.",
 };
