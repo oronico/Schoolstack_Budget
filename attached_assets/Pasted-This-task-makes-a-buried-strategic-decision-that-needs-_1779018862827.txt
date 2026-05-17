@@ -1,0 +1,41 @@
+This task makes a buried strategic decision that needs to surface before approval.
+
+The hidden decision:
+
+My original Task 3.3 framed this as a fork: (a) BUILD the Lender Pro-Forma export so two workbooks ship, OR (b) REWRITE the disclaimer to describe the single workbook that actually ships. Option (b) is faster; option (a) is more valuable.
+
+Task #921 assumes option (a) is being delivered by Tasks #897, #902, #903. Reading those task descriptions — “in-app preview reading note,” “board packet preview note,” “drift-prevention between app + PDF copy” — none of them sound like they’re actually building the Lender Pro-Forma workbook. They sound like copy alignment and preview behavior, not a new export generator.
+
+If those tasks don’t build the second workbook, this task’s verification (“verify that both workbooks ship”) cannot pass. The task as written would land in a stuck state.
+
+Three possibilities to resolve before kickoff:
+
+	1.	Confirm what #897, #902, #903 actually deliver. If any of them builds the Lender Pro-Forma export, this task is fine as written. If none do, the task scope is mis-aligned with reality.
+	2.	If no in-flight task builds the second workbook, make the decision explicitly. Either:
+	•	Expand scope of an in-flight task (or open a new one) to build the Lender Pro-Forma export
+	•	OR pivot this task to “rewrite the disclaimer to describe the single workbook that actually ships, removing references to a workbook that doesn’t exist”
+	3.	The decision has product implications worth a deliberate yes/no. The Lender Pro-Forma is a sophisticated piece of value — a single-page comparator with editable per-row averages that lets a reviewer sensitivity-test by changing one assumption. Choosing to defer it isn’t just a templating choice; it affects what reviewers can do with the packet. Worth deciding intentionally, not by default.
+
+Missing the addendum fields:
+
+	•	Canonical source reference: The disclaimer should describe whatever workbook(s) actually ship in the packet zip. Source: actual zip contents at render time.
+	•	Sibling bug search: Are there other PDF sections that reference the “Lender Pro-Forma” or “second workbook”? Check the body of the packet, not just the trailing disclaimer. The Founder Compensation section near the end is separate — verify it’s not affected.
+	•	Explicit regression assertion:
+
+Assertion target: packet zip contents + disclaimer text
+For each demo in {Riverside, Liberty, Oakwood}:
+  Assert: workbook count in zip equals N (1 or 2 depending on decision)
+  Assert: disclaimer text references exactly N workbooks by name
+  Assert: each named workbook in disclaimer corresponds to a file in zip
+
+
+Recommendation: Do not approve as written. Before kickoff:
+
+	1.	Confirm what #897, #902, #903 actually deliver — copy fixes or export build?
+	2.	Make the build-vs-rewrite decision explicitly and document it (one-paragraph rationale, even if just “deferring Lender Pro-Forma build to Phase 2”)
+	3.	Update this task’s scope to match the decision
+	4.	Apply the three required addendum fields
+
+If the decision is “defer the build, rewrite the disclaimer,” this becomes a fast task. If the decision is “build the export now,” this is a multi-task effort with #921 as the final verification step. Either path is defensible; the implicit-default path is not.
+
+One small note: this is exactly the kind of decision that should surface to you for sign-off, not get made by subtask routing. The Lender Pro-Forma is a product feature, not an implementation detail.
