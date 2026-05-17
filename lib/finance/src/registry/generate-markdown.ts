@@ -41,6 +41,18 @@ const CATEGORY_ORDER: MetricCategory[] = [
   "narrative",
 ];
 
+function renderRounding(r: CanonicalMetric["rounding"]): string {
+  const mode = r.mode ?? "half_up";
+  return `${r.decimals} decimals (${mode})`;
+}
+
+function renderTolerance(t: CanonicalMetric["tolerance"]): string {
+  const parts: string[] = [];
+  if (t.abs !== undefined) parts.push(`abs ≤ ${t.abs}`);
+  if (t.rel !== undefined) parts.push(`rel ≤ ${(t.rel * 100).toFixed(2)}%`);
+  return parts.length > 0 ? parts.join(" OR ") : "exact match";
+}
+
 function renderMetric(m: CanonicalMetric): string {
   const tasks =
     m.relatedTasks.length > 0
@@ -53,7 +65,10 @@ function renderMetric(m: CanonicalMetric): string {
     `### ${m.label}`,
     "",
     `- **id:** \`${m.id}\``,
+    `- **description:** ${m.description}`,
     `- **unit:** ${m.unit}`,
+    `- **rounding:** ${renderRounding(m.rounding)}`,
+    `- **tolerance:** ${renderTolerance(m.tolerance)}`,
     `- **canonical:** \`${m.canonical.accessor}\` (in \`${m.canonical.module}\`)`,
     `- **related tasks:** ${tasks}`,
     "",

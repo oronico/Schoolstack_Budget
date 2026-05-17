@@ -85,6 +85,41 @@ for (const m of CANONICAL_METRICS) {
   }
 }
 
+// 3c. No consumer (path + location) appears under two metrics.
+// This is the M1 "no consumer location appears under two metrics" rule —
+// it would otherwise let two canonical sources silently claim the same
+// rendered cell, defeating the registry.
+const seenConsumers = new Map<string, string>();
+for (const m of CANONICAL_METRICS) {
+  for (const s of m.surfaces) {
+    const key = `${s.path}::${s.location}`;
+    const prior = seenConsumers.get(key);
+    assert.ok(
+      prior === undefined,
+      `Consumer "${key}" appears under both "${prior}" and "${m.id}". ` +
+        `Each rendered location must map to exactly one canonical metric — ` +
+        `pick one owner or differentiate the surface location.`,
+    );
+    seenConsumers.set(key, m.id);
+  }
+}
+
+// 3d. Every materialized entry has description, rounding, tolerance.
+for (const m of CANONICAL_METRICS) {
+  assert.ok(
+    typeof m.description === "string" && m.description.length > 0,
+    `Metric "${m.id}" has empty description.`,
+  );
+  assert.ok(
+    m.rounding && Number.isInteger(m.rounding.decimals) && m.rounding.decimals >= 0,
+    `Metric "${m.id}" has invalid rounding.`,
+  );
+  assert.ok(
+    m.tolerance && (m.tolerance.abs !== undefined || m.tolerance.rel !== undefined),
+    `Metric "${m.id}" has no tolerance (need abs and/or rel).`,
+  );
+}
+
 // 4. markdown view is current
 const mdPath = resolve(repoRoot, "docs/primary-data-source-registry.md");
 assert.ok(

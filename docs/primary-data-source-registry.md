@@ -8,7 +8,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Total revenue by year (Y1–Y5)
 
 - **id:** `revenue-total-year`
+- **description:** Total revenue by year (Y1–Y5)
 - **unit:** usd
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
 - **canonical:** `computeYearFinancialsFromData(modelData)[y].totalRevenue` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** #860, #912, #915, #925
 
@@ -26,7 +29,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Per-line revenue value (Year 1)
 
 - **id:** `revenue-per-line-y1-value`
+- **description:** Per-line revenue value (Year 1)
 - **unit:** usd
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
 - **canonical:** `driverVal(row.amounts, 0, row.driverType, students, row.escalationRate)` (in `artifacts/api-server/src/lib/workbook-helpers.ts`)
 - **related tasks:** #925, #927
 
@@ -42,7 +48,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Revenue quality by bucket (contracted / projected / donor / policy)
 
 - **id:** `revenue-quality-by-bucket`
+- **description:** Revenue quality by bucket (contracted / projected / donor / policy)
 - **unit:** pct
+- **rounding:** 1 decimals (half_up)
+- **tolerance:** abs ≤ 0.1
 - **canonical:** `ConsultantOutput.revenueQuality[y].pctByBucket.{contracted|projected|donor_dependent|policy_dependent}` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** #613, #927
 
@@ -59,7 +68,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Revenue composition (tuition / public / philanthropy %)
 
 - **id:** `revenue-composition`
+- **description:** Revenue composition (tuition / public / philanthropy %)
 - **unit:** pct
+- **rounding:** 1 decimals (half_up)
+- **tolerance:** abs ≤ 0.1
 - **canonical:** `ConsultantOutput.revenueComposition[y].{tuitionPct|publicPct|philanthropyPct}` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -75,7 +87,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Hard revenue coverage ratio (Year 1)
 
 - **id:** `revenue-hard-coverage-y1`
+- **description:** Hard revenue coverage ratio (Year 1)
 - **unit:** ratio
+- **rounding:** 2 decimals (half_up)
+- **tolerance:** abs ≤ 0.01
 - **canonical:** `ConsultantOutput.revenueQuality[0].hardRevenueCoverage` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** #613
 
@@ -93,7 +108,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Cash runway (months)
 
 - **id:** `cash-runway-months`
+- **description:** Cash runway (months)
 - **unit:** months
+- **rounding:** 1 decimals (half_up)
+- **tolerance:** abs ≤ 0.1
 - **canonical:** `ConsultantOutput.cashRunwayMonths` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** #937
 
@@ -111,7 +129,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Trough ending cash (lowest year-end)
 
 - **id:** `cash-trough-ending-cash`
+- **description:** Trough ending cash (lowest year-end)
 - **unit:** usd
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
 - **canonical:** `buildNarrativeBundle → troughEndingCash (= min(openingCash + cumulativeNetIncome[y]))` (in `artifacts/api-server/src/lib/packets/build-narrative-commentary.ts`)
 - **related tasks:** —
 
@@ -128,7 +149,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Lowest monthly ending cash (across all years)
 
 - **id:** `cash-monthly-low`
+- **description:** Lowest monthly ending cash (across all years)
 - **unit:** usd
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
 - **canonical:** `findLowestCashMonthAcrossYears(computeYear1MonthlyCashFlow(...))` (in `@workspace/finance`)
 - **related tasks:** —
 
@@ -144,7 +168,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Operating reserve months (last modeled year)
 
 - **id:** `reserve-months-last-year`
+- **description:** Operating reserve months (last modeled year)
 - **unit:** months
+- **rounding:** 1 decimals (half_up)
+- **tolerance:** abs ≤ 0.1
 - **canonical:** `ConsultantOutput.cumulativeFinancials[last].reserveMonths` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -162,7 +189,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### DSCR series (normalized, Y1–Y5)
 
 - **id:** `dscr-year-series-normalized`
+- **description:** DSCR series (normalized, Y1–Y5)
 - **unit:** ratio
+- **rounding:** 2 decimals (half_up)
+- **tolerance:** abs ≤ 0.01
 - **canonical:** `ConsultantOutput.normalizedView.normalized.dscr[y]` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -179,7 +209,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### DSCR series (reported / founder plan)
 
 - **id:** `dscr-year-series-reported`
+- **description:** DSCR series (reported / founder plan)
 - **unit:** ratio
+- **rounding:** 2 decimals (half_up)
+- **tolerance:** abs ≤ 0.01
 - **canonical:** `ConsultantOutput.normalizedView.reported.dscr[y]` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -194,7 +227,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Minimum DSCR across modeled years (normalized)
 
 - **id:** `dscr-min-normalized`
+- **description:** Minimum DSCR across modeled years (normalized)
 - **unit:** ratio
+- **rounding:** 2 decimals (half_up)
+- **tolerance:** abs ≤ 0.01
 - **canonical:** `buildNarrativeBundle → dscrMinNormalized (filters 0 sentinels)` (in `artifacts/api-server/src/lib/packets/build-narrative-commentary.ts`)
 - **related tasks:** —
 
@@ -210,7 +246,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Annual debt service by year
 
 - **id:** `annual-debt-service`
+- **description:** Annual debt service by year
 - **unit:** usd
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
 - **canonical:** `computeAnnualDebt(capitalAndDebtRows, year)` (in `@workspace/finance`)
 - **related tasks:** —
 
@@ -228,7 +267,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Revenue per student (by year)
 
 - **id:** `revenue-per-student`
+- **description:** Revenue per student (by year)
 - **unit:** usd
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
 - **canonical:** `ConsultantOutput.keyMetrics[name='Revenue per student'].value` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -244,7 +286,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Cost per student (by year)
 
 - **id:** `cost-per-student`
+- **description:** Cost per student (by year)
 - **unit:** usd
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
 - **canonical:** `ConsultantOutput.keyMetrics[name='Cost per student'].value` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -261,7 +306,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Capacity utilization (Year 1)
 
 - **id:** `capacity-utilization-y1`
+- **description:** Capacity utilization (Year 1)
 - **unit:** pct
+- **rounding:** 1 decimals (half_up)
+- **tolerance:** abs ≤ 0.1
 - **canonical:** `ConsultantOutput.keyMetrics[name~='Capacity utilization'].value` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -277,7 +325,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Break-even year (first cumulative-positive year)
 
 - **id:** `break-even-year`
+- **description:** Break-even year (first cumulative-positive year)
 - **unit:** year
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 0
 - **canonical:** `breakEvenYearFromAnnual(cumulativeFinancials)` (in `@workspace/finance`)
 - **related tasks:** —
 
@@ -293,7 +344,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Break-even students (Year 1)
 
 - **id:** `break-even-students-y1`
+- **description:** Break-even students (Year 1)
 - **unit:** count
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 0
 - **canonical:** `ConsultantOutput.lenderStressTests.base.breakEvenStudents[0]` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -311,7 +365,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Base scenario net income (Y1–Y5)
 
 - **id:** `stress-base-net-income`
+- **description:** Base scenario net income (Y1–Y5)
 - **unit:** usd
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
 - **canonical:** `ConsultantOutput.lenderStressTests.base.netIncome[y]` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -326,7 +383,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Stress scenario DSCR (per-scenario, Y1–Y5)
 
 - **id:** `stress-scenario-dscr`
+- **description:** Stress scenario DSCR (per-scenario, Y1–Y5)
 - **unit:** ratio
+- **rounding:** 2 decimals (half_up)
+- **tolerance:** abs ≤ 0.01
 - **canonical:** `ConsultantOutput.lenderStressTests.scenarios[*].dscr[y]` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -342,7 +402,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Stress scenario ending cash (per-scenario, Y1–Y5)
 
 - **id:** `stress-scenario-ending-cash`
+- **description:** Stress scenario ending cash (per-scenario, Y1–Y5)
 - **unit:** usd
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
 - **canonical:** `ConsultantOutput.lenderStressTests.scenarios[*].endingCash[y]` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -358,7 +421,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Stress scenario net income (per-scenario, Y1–Y5)
 
 - **id:** `stress-scenario-net-income`
+- **description:** Stress scenario net income (per-scenario, Y1–Y5)
 - **unit:** usd
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
 - **canonical:** `ConsultantOutput.lenderStressTests.scenarios[*].netIncome[y]` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** #918
 
@@ -374,7 +440,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Worst-case stress scenario
 
 - **id:** `stress-worst-scenario`
+- **description:** Worst-case stress scenario
 - **unit:** text
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 0
 - **canonical:** `buildNarrativeBundle → worstStress` (in `artifacts/api-server/src/lib/packets/build-narrative-commentary.ts`)
 - **related tasks:** #924
 
@@ -389,7 +458,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Stress scenarios with negative Y5 net income
 
 - **id:** `stress-negative-y5-scenarios`
+- **description:** Stress scenarios with negative Y5 net income
 - **unit:** count
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 0
 - **canonical:** `buildNarrativeBundle → negativeY5StressScenarios[]` (in `artifacts/api-server/src/lib/packets/build-narrative-commentary.ts`)
 - **related tasks:** #918
 
@@ -407,7 +479,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Founder compensation normalization adjustment
 
 - **id:** `founder-comp-adjustment`
+- **description:** Founder compensation normalization adjustment
 - **unit:** usd
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
 - **canonical:** `ConsultantOutput.normalizedView.founderComp.{hasAdjustment, totalDelta, perYearDelta[]}` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -425,7 +500,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Lender readiness — uncapped rating
 
 - **id:** `lender-readiness-uncapped`
+- **description:** Lender readiness — uncapped rating
 - **unit:** enum
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 0
 - **canonical:** `applyConfidenceCap(...).uncappedRating` (in `artifacts/api-server/src/lib/lender-readiness-caps.ts`)
 - **related tasks:** #929
 
@@ -440,7 +518,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Lender readiness — effective (displayed) rating
 
 - **id:** `lender-readiness-effective`
+- **description:** Lender readiness — effective (displayed) rating
 - **unit:** enum
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 0
 - **canonical:** `applyConfidenceCap(...).effectiveRating` (in `artifacts/api-server/src/lib/lender-readiness-caps.ts`)
 - **related tasks:** #929
 
@@ -457,7 +538,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Lender readiness — confidence cap metadata
 
 - **id:** `lender-readiness-cap`
+- **description:** Lender readiness — confidence cap metadata
 - **unit:** text
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 0
 - **canonical:** `applyConfidenceCap(...).cap.{applied, reason, pendingEvidenceCount, totalAssumptionCount, taggedCount, taggedFraction}` (in `artifacts/api-server/src/lib/lender-readiness-caps.ts`)
 - **related tasks:** #929, #966
 
@@ -474,7 +558,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Biggest strength (one-liner)
 
 - **id:** `biggest-strength`
+- **description:** Biggest strength (one-liner)
 - **unit:** text
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 0
 - **canonical:** `ConsultantOutput.biggestStrength` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -484,13 +571,16 @@ This document lists every canonical value the SchoolStack Budget product renders
 
 | File | Where |
 | --- | --- |
-| `artifacts/api-server/src/lib/packets/build-packet-data.ts` | buildExecutiveSummary linkedMetrics |
-| `artifacts/api-server/src/lib/packets/build-narrative-commentary.ts` | Narrative bundle, surfaced in commentary prose |
+| `artifacts/api-server/src/lib/packets/build-packet-data.ts` | buildExecutiveSummary linkedMetrics — biggestStrength entry |
+| `artifacts/api-server/src/lib/packets/build-narrative-commentary.ts` | Narrative bundle, surfaced in commentary prose (biggestStrength) |
 
 ### Biggest risk (one-liner)
 
 - **id:** `biggest-risk`
+- **description:** Biggest risk (one-liner)
 - **unit:** text
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 0
 - **canonical:** `ConsultantOutput.biggestRisk` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -500,15 +590,18 @@ This document lists every canonical value the SchoolStack Budget product renders
 
 | File | Where |
 | --- | --- |
-| `artifacts/api-server/src/lib/packets/build-packet-data.ts` | buildExecutiveSummary linkedMetrics |
-| `artifacts/api-server/src/lib/packets/build-narrative-commentary.ts` | Narrative bundle |
+| `artifacts/api-server/src/lib/packets/build-packet-data.ts` | buildExecutiveSummary linkedMetrics — biggestRisk entry |
+| `artifacts/api-server/src/lib/packets/build-narrative-commentary.ts` | Narrative bundle (biggestRisk) |
 
 ## Assumptions / Evidence
 
 ### Assumption registry (every tagged input)
 
 - **id:** `assumption-registry`
+- **description:** Assumption registry (every tagged input)
 - **unit:** text
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 0
 - **canonical:** `ASSUMPTION_REGISTRY` (in `@workspace/finance`)
 - **related tasks:** #929
 
@@ -527,7 +620,10 @@ This document lists every canonical value the SchoolStack Budget product renders
 ### Narrative source bundle (lender + board commentary)
 
 - **id:** `narrative-commentary-bundle`
+- **description:** Narrative source bundle (lender + board commentary)
 - **unit:** text
+- **rounding:** 0 decimals (half_up)
+- **tolerance:** abs ≤ 0
 - **canonical:** `buildNarrativeBundle(modelData, consultantOutput)` (in `artifacts/api-server/src/lib/packets/build-narrative-commentary.ts`)
 - **related tasks:** #617, #918, #924, #937
 

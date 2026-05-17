@@ -74,11 +74,43 @@ export interface MetricSurface {
   location: string;
 }
 
+/**
+ * How a value should be rounded when extracted and printed for diffing.
+ * `decimals` is the number of fractional digits the canonical value
+ * should be rounded to before comparison. M2's extractor uses this to
+ * normalize raw values pulled out of PDFs / JSON / DOM.
+ */
+export interface MetricRounding {
+  decimals: number;
+  /** "half_up" (default) or "trunc"; only "half_up" used today. */
+  mode?: "half_up" | "trunc";
+}
+
+/**
+ * Per-metric reconciliation tolerance used by M4 (integrity report) and
+ * M5 (CI harness). A surface value is considered "in sync" with the
+ * canonical value when either `abs(diff) <= abs` OR
+ * `abs(diff) / abs(canonical) <= rel`. `abs` is in the metric's unit
+ * (USD for unit=usd, ratio points for unit=ratio, etc.).
+ */
+export interface MetricTolerance {
+  abs?: number;
+  rel?: number;
+}
+
 export interface CanonicalMetric {
   id: string;
   category: MetricCategory;
   label: string;
+  /**
+   * One-sentence reviewer-facing definition of what this metric means.
+   * Defaults to `label` if not explicitly set (most labels are already
+   * self-describing); override when the metric needs disambiguation.
+   */
+  description: string;
   unit: MetricUnit;
+  rounding: MetricRounding;
+  tolerance: MetricTolerance;
   canonical: {
     module: string;
     accessor: string;
@@ -89,11 +121,86 @@ export interface CanonicalMetric {
 }
 
 /**
+ * Input form: description / rounding / tolerance are optional and
+ * filled by `materializeMetric()` from sensible per-unit defaults.
+ * This keeps entries terse while still guaranteeing every materialized
+ * `CanonicalMetric` carries all three fields (asserted by lint).
+ */
+export type CanonicalMetricInput = Omit<
+  CanonicalMetric,
+  "description" | "rounding" | "tolerance"
+> & {
+  description?: string;
+  rounding?: MetricRounding;
+  tolerance?: MetricTolerance;
+};
+
+/**
+ * Per-unit defaults. M4/M5 use these as the baseline tolerance when
+ * an entry does not override. Override on individual entries when a
+ * tighter / looser bound is justified.
+ */
+export function defaultRounding(unit: MetricUnit): MetricRounding {
+  switch (unit) {
+    case "usd":
+      return { decimals: 0 };
+    case "pct":
+      return { decimals: 1 };
+    case "ratio":
+      return { decimals: 2 };
+    case "months":
+      return { decimals: 1 };
+    case "count":
+    case "year":
+      return { decimals: 0 };
+    case "enum":
+    case "text":
+      return { decimals: 0 };
+  }
+}
+
+export function defaultTolerance(unit: MetricUnit): MetricTolerance {
+  switch (unit) {
+    case "usd":
+      // Within $1 OR 0.1% relative — accommodates rounding-mode drift
+      // between the engine ($) and PDFs (rounded display).
+      return { abs: 1, rel: 0.001 };
+    case "pct":
+      return { abs: 0.1 };
+    case "ratio":
+      return { abs: 0.01 };
+    case "months":
+      return { abs: 0.1 };
+    case "count":
+    case "year":
+      return { abs: 0 };
+    case "enum":
+    case "text":
+      // Exact string match.
+      return { abs: 0 };
+  }
+}
+
+export function materializeMetric(m: CanonicalMetricInput): CanonicalMetric {
+  return {
+    ...m,
+    description: m.description ?? m.label,
+    rounding: m.rounding ?? defaultRounding(m.unit),
+    tolerance: m.tolerance ?? defaultTolerance(m.unit),
+  };
+}
+
+/**
  * The registry. Ordered by category, then by render order within
  * each category. Keep ordering stable — the generated markdown view
  * preserves it.
+ *
+ * Entries are written in the terse `CanonicalMetricInput` form;
+ * `materializeMetric` fills in description / rounding / tolerance
+ * defaults at module load so every exported `CanonicalMetric` has
+ * all three fields (asserted by the lint test).
  */
-export const CANONICAL_METRICS: readonly CanonicalMetric[] = [
+const RAW_METRICS: readonly CanonicalMetricInput[] = [
   // ─────────────────────────────────────────────────────────────────
   // REVENUE
   // ─────────────────────────────────────────────────────────────────
@@ -788,11 +895,11 @@ export const CANONICAL_METRICS: readonly CanonicalMetric[] = [
     surfaces: [
       {
         path: "artifacts/api-server/src/lib/packets/build-packet-data.ts",
-        location: "buildExecutiveSummary linkedMetrics",
+        location: "buildExecutiveSummary linkedMetrics — biggestStrength entry",
       },
       {
         path: "artifacts/api-server/src/lib/packets/build-narrative-commentary.ts",
-        location: "Narrative bundle, surfaced in commentary prose",
+        location: "Narrative bundle, surfaced in commentary prose (biggestStrength)",
       },
     ],
     notes: "Engine-authored — never recompute in renderers.",
@@ -810,11 +917,11 @@ export const CANONICAL_METRICS: readonly CanonicalMetric[] = [
     surfaces: [
       {
         path: "artifacts/api-server/src/lib/packets/build-packet-data.ts",
-        location: "buildExecutiveSummary linkedMetrics",
+        location: "buildExecutiveSummary linkedMetrics — biggestRisk entry",
       },
       {
         path: "artifacts/api-server/src/lib/packets/build-narrative-commentary.ts",
-        location: "Narrative bundle",
+        location: "Narrative bundle (biggestRisk)",
       },
     ],
     notes: "Engine-authored.",
@@ -882,7 +989,15 @@ export const CANONICAL_METRICS: readonly CanonicalMetric[] = [
       "#617: every numeric figure in the rendered prose MUST come from a FigureScribe formatter so the guard test can prove no hallucinated numbers slipped in. Bundle is surfaced on the packet JSON for in-app 'Regenerate' to refresh prose without re-fetching the whole packet.",
     relatedTasks: [617, 918, 924, 937],
   },
-] as const;
+];
+
+/**
+ * Materialized registry. Every entry has `description`, `rounding`,
+ * and `tolerance` filled in (from per-entry overrides or per-unit
+ * defaults). Downstream consumers (M2–M5) read from this.
+ */
+export const CANONICAL_METRICS: readonly CanonicalMetric[] =
+  RAW_METRICS.map(materializeMetric);
 
 /**
  * Lookup helper. Throws if the id is unknown — callers (the M5
