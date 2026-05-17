@@ -253,7 +253,7 @@ $2.5M
 Registration & Activity Fees
 $150K
 Scholarships / Financial Aid
-$12
+12.0% of gross tuition
 FL FES-EO Voucher
 $1.6M
 Annual Fund Donations
@@ -267,7 +267,8 @@ Tuition Collection Method  Autopay
 Tuition Collection Rate  100.0%
 Annual Tuition (K-8)  $2.5M
 Registration & Activity Fees  $150K
-Scholarships / Financial Aid  $12
+Scholarships / Financial Aid  12.0% of
+gross tuition
 FL FES-EO Voucher  $1.6M
 Annual Fund Donations  $75K
 Foundation Grants  $50K

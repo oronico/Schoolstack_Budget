@@ -741,7 +741,17 @@ function buildAssumptions(
     ws.getCell(r, 1).value = rv.lineItem || "Unnamed"; dc(ws.getCell(r, 1));
     ws.getCell(r, 2).value = catLabel(rv.category); dc(ws.getCell(r, 2));
     ws.getCell(r, 3).value = driverLabel(rv.driverType); dc(ws.getCell(r, 3));
-    ws.getCell(r, 4).value = rv.amounts?.[0] ?? 0; ws.getCell(r, 4).numFmt = CUR; dc(ws.getCell(r, 4)); inputCell(ws.getCell(r, 4));
+    // Task #925 — honor driverType when formatting Y1 amount. percent_of_base
+    // rows store amounts[] as PERCENT (e.g. 12 = 12%), not USD; rendering them
+    // with CUR format produced reviewer-visible bugs like Riverside "$12" for a
+    // 12% scholarship rate. Match the renderer convention in
+    // `formatRevenueRowY1Value` (build-packet-data.ts).
+    if (rv.driverType === "percent_of_base") {
+      ws.getCell(r, 4).value = (rv.amounts?.[0] ?? 0) / 100; ws.getCell(r, 4).numFmt = PCT;
+    } else {
+      ws.getCell(r, 4).value = rv.amounts?.[0] ?? 0; ws.getCell(r, 4).numFmt = CUR;
+    }
+    dc(ws.getCell(r, 4)); inputCell(ws.getCell(r, 4));
     ws.getCell(r, 5).value = (rv.escalationRate ?? 0) / 100; ws.getCell(r, 5).numFmt = PCT; dc(ws.getCell(r, 5)); inputCell(ws.getCell(r, 5));
     ws.getCell(r, 6).value = rv.billingMonths ?? 12; ws.getCell(r, 6).numFmt = NUM; dc(ws.getCell(r, 6)); inputCell(ws.getCell(r, 6));
     ws.getCell(r, 7).value = (rv.collectionRate ?? 100) / 100; ws.getCell(r, 7).numFmt = PCT; dc(ws.getCell(r, 7)); inputCell(ws.getCell(r, 7));

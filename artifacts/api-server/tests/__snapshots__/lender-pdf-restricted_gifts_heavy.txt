@@ -261,7 +261,7 @@ Registration / Enrollment Fees
 $5K
 Scholarships / Financial Aid /
 Discount Rate
-$8
+8.0% of gross tuition
 Named Program Gift (Restricted)
 $120K
 Family Foundation Grant
@@ -280,7 +280,7 @@ Tuition Collection Rate  100.0%
 Private Pay / Tuition  $200K
 Registration / Enrollment Fees  $5K
 Scholarships / Financial Aid / Discount Rate
-  $8
+  8.0% of gross tuition
 Named Program Gift (Restricted)  $120K
 Family Foundation Grant (Restricted)  $85K
 Sponsoring Church Partnership  $50K

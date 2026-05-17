@@ -270,10 +270,10 @@ Step Up Tax-Credit Scholarship
 $156K
 In-House Need-Based Aid (% of
 Gross Tuition)
-$18
+18.0% of gross tuition
 Sibling Discount (% of Gross
 Tuition)
-$6
+6.0% of gross tuition
 Donations / Fundraising
 $8K
 Supporting Assumptions
@@ -284,8 +284,9 @@ Registration / Enrollment Fees  $7K
 FL FES-EO Voucher  $164K
 Step Up Tax-Credit Scholarship  $156K
 In-House Need-Based Aid (% of Gross
-Tuition)  $18
-Sibling Discount (% of Gross Tuition)  $6
+Tuition)  18.0% of gross tuition
+Sibling Discount (% of Gross Tuition)  6.0%
+of gross tuition
 Donations / Fundraising  $8K
 Staffing Plan
 Staffing costs are $86K in Year 1, representing 20.9% of revenue. This leaves healthy room for

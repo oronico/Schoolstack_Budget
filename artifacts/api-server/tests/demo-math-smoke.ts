@@ -996,27 +996,42 @@ async function runOne(c: DemoCase): Promise<void> {
     const offsets = (data as { revenueRows?: RevRowLike[] }).revenueRows?.filter(
       (r) => r.enabled && r.category === "tuition_offsets" && r.driverType === "percent_of_base",
     ) ?? [];
+    // Escape any regex metachars in dynamic substrings (label fragments,
+    // numeric rates). Without this, a label containing `(` or `.` would
+    // build an invalid pattern and silently mis-target the window.
+    const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     for (const row of offsets) {
       const pct = row.amounts?.[0] ?? 0;
+      const pctRe = escapeRe(String(pct));
       const label = (row as { lineItem?: string }).lineItem || "";
-      const labelPrefix = label.split(/[\/]/)[0].trim().replace(/\s+/g, "");
+      // Match the FULL label (not just the slash-prefix word, which is
+      // ambiguous if any unrelated label happens to share the first
+      // word). normalizePdf collapses intra-word letter spacing but
+      // preserves whitespace around slashes/punctuation, so we build a
+      // pattern that escapes each slash-delimited segment, strips its
+      // internal spaces (mirroring normalizePdf's letter-space collapse),
+      // and joins with `\s*/\s*` to tolerate the PDF's slash spacing.
+      const labelPattern = label
+        .split("/")
+        .map((seg) => escapeRe(seg.replace(/\s+/g, "")))
+        .join("\\s*/\\s*");
       const haystack = normText;
-      const lblIdx = haystack.search(new RegExp(labelPrefix, "i"));
+      const lblIdx = haystack.search(new RegExp(labelPattern, "i"));
       check(
         `${tag} scholarship row "${label}" appears in lender PDF text`,
         lblIdx >= 0,
-        `searched prefix="${labelPrefix}" in normalized PDF`,
+        `searched pattern="${labelPattern}" in normalized PDF`,
       );
       if (lblIdx >= 0) {
         // Look in a window starting at the label. Renderer prints the
         // value on the same line / next few lines depending on column
-        // wrap, so 200 chars is generous.
+        // wrap, so 240 chars is generous.
         const win = haystack.slice(lblIdx, lblIdx + 240);
         // Forbidden: raw "$N" or "$N.0" matching the percent rate as
         // if it were dollars. We allow "$N" later in the window only
         // if it's clearly a different number (denomination suffix K/M),
-        // so we anchor on \b and disallow K/M/B suffixes here.
-        const forbid = new RegExp(`\\$${pct}(?:\\.0)?(?![0-9KMB])`);
+        // so we disallow K/M/B suffixes and any trailing digit here.
+        const forbid = new RegExp(`\\$${pctRe}(?:\\.0)?(?![0-9KMB])`);
         check(
           `${tag} scholarship "${label}" NOT rendered as raw "$${pct}" (would mis-read a ${pct}% rate as dollars)`,
           !forbid.test(win),
@@ -1026,7 +1041,7 @@ async function runOne(c: DemoCase): Promise<void> {
         // "N.0%" or the full "N.0% of gross tuition" form. PDFKit may
         // split "%" off the digits with whitespace, so the
         // normalizePdf pass collapsed those.
-        const requirePct = new RegExp(`${pct}\\.0%`);
+        const requirePct = new RegExp(`${pctRe}\\.0%`);
         check(
           `${tag} scholarship "${label}" rendered as "${pct}.0%" percentage`,
           requirePct.test(win),

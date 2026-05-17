@@ -269,7 +269,7 @@ Registration / Enrollment Fees
 $5K
 Scholarships / Financial Aid /
 Discount Rate
-$8
+8.0% of gross tuition
 Donations / Fundraising
 $8K
 Startup Grant (Foundation)
@@ -280,7 +280,7 @@ Tuition Collection Rate  100.0%
 Private Pay / Tuition  $200K
 Registration / Enrollment Fees  $5K
 Scholarships / Financial Aid / Discount Rate
-  $8
+  8.0% of gross tuition
 Donations / Fundraising  $8K
 Startup Grant (Foundation)  $15K
 Staffing Plan

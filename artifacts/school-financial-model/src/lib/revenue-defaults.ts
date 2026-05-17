@@ -171,6 +171,27 @@ export const GRANT_STATUS_LABELS: Record<GrantStatus, string> = {
   projected: "Projected",
 };
 
+// Task #925 — Unit-encoding convention for revenue rows.
+//
+// The unit signal for a revenue row's `amounts[]` lives in `driverType`
+// (see the `RevenueDriverType` union above):
+//   - "per_student"     → amounts[y] is USD per student
+//   - "monthly"         → amounts[y] is USD per month (× 12 = annual)
+//   - "annual_fixed"    → amounts[y] is USD per year
+//   - "percent_of_base" → amounts[y] is a PERCENT (e.g. 12 means 12%);
+//        the engine resolves it as amounts[y]/100 × value(percentBase)
+//
+// Consumers (engine, formula export, workbook tabs, packet renderers)
+// MUST honor driverType to choose USD vs PCT formatting. A renderer that
+// blindly USD-formats a percent_of_base row produced the Riverside "$12"
+// / Oakwood "$8" bug. See `formatRevenueRowY1Value` in
+// `artifacts/api-server/src/lib/packets/build-packet-data.ts` for the
+// canonical rendering helper that respects the convention.
+//
+// New financial fields without an existing unit encoding should adopt
+// the `UnitBearingValue` pattern (Task #925 follow-ups) rather than
+// double-encoding the unit on this interface. Do not put the same
+// field's unit in both places.
 export interface RevenueRowData {
   id: string;
   category: RevenueCategory;
