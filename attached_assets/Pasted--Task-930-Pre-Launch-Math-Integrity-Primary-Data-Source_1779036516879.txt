@@ -1,0 +1,575 @@
+# Task #930 — Pre-Launch Math Integrity & Primary Data Source Verification
+
+**Type:** Pre-launch readiness gate
+**Blocks:** Go-live for beta founders, Phase 2 funder demos, Lending Lab Cycle 2 packet review
+**Estimated effort:** 2–3 days
+**Pairs with:** Verification Protocol + Addendum (existing)
+
+---
+
+## What & Why
+
+After the #909–#929 remediation sweep, the system has been hardened against a known set of drift patterns. Before going live with real founders, lenders, and funders, the math must be verified end-to-end against a designated primary data source, with explicit confirmation that the engine, the workbooks, and the PDFs all agree.
+
+This task is a verification gate, not a refactor. It produces a math-integrity report covering every financial output the system produces, traced to its canonical source. Any discrepancy uncovered is either resolved in scope (if it's a routing bug) or filed as a blocker follow-up (if it's a calculation issue).
+
+The primary data source designation is the architectural component: every downstream surface (engine intermediate, workbook tab, PDF section, in-app card, exported file) must trace back to one canonical source per metric. After this task, "where does this number come from?" has exactly one answer per metric.
+
+---
+
+## Done looks like
+
+1. **Primary Data Source Registry** — A single document (in-code or in `docs/`) names the canonical source for every financial metric the system produces. Every metric appears exactly once with a designated source.
+
+2. **Math integrity report** — For each persona fixture, every numeric figure in every output surface has been traced to its primary source and confirmed to match within rounding. A structured report (CSV or markdown) lists every metric, every surface where it appears, the value rendered, and the source-of-truth value.
+
+3. **Zero unresolved discrepancies** — Any drift between sources and surfaces is either fixed in scope (routing bug) or filed as a blocker task that gates go-live.
+
+4. **Cross-surface harness** — A test that runs the verification automatically. When a new persona fixture is added or an engine calculation changes, the harness re-runs and flags any new drift. This is the standing safeguard after this task closes.
+
+5. **Go-live gate checklist** — A documented list of conditions that must be true before generating packets for real founders. The harness passing is one item; others include workbook download integrity, PDF render integrity at scale, and at least one human-reviewed end-to-end sample.
+
+---
+
+## Primary Data Source Registry
+
+Build a registry covering every metric the system produces. Structure:
+
+```typescript
+type CanonicalMetric = {
+  metricId: string;                    // e.g., 'y1_revenue', 'y1_dscr_normalized'
+  description: string;
+  primarySource: {
+    location: string;                  // file:function or workbook!cell range
+    type: 'engine_function' | 'workbook_cell' | 'derived';
+    formula?: string;                  // human-readable if derived
+  };
+  consumers: ConsumerLocation[];       // every place this metric appears
+  unit: 'USD' | 'PCT' | 'COUNT' | 'MONTHS' | 'RATIO';
+  rounding: { precision: number; method: 'round' | 'truncate' | 'banker' };
+  notes?: string;
+};
+
+type ConsumerLocation = {
+  surface: 'engine' | 'workbook_5yr' | 'workbook_proforma' | 'lender_pdf' 
+         | 'board_pdf' | 'in_app_card' | 'export_json';
+  location: string;                    // section name, cell, component
+  transformation?: string;             // any unit/format change applied
+};
+```
+
+The registry covers, at minimum, the metrics listed below. The sibling search step identifies any additional ones.
+
+### Required registry entries
+
+**Revenue & income (Y1–Y5):**
+- Total revenue (gross billing)
+- Total revenue (net of collection rate / scholarship netting)
+- Tuition revenue by category (K-8, 9-12, etc.)
+- Per-pupil funding by category (state ADM, voucher, federal)
+- Donations / grants / discretionary
+- Total expenses (personnel + operating + debt service)
+- Personnel cost
+- Operating expense
+- Debt service (interest + principal)
+- Change in net assets / net income (normalized + as-planned)
+- Operating margin %
+
+**Cash & liquidity (Y1–Y5):**
+- Starting cash
+- Ending cash (each year)
+- Lowest cash month + value
+- Days cash on hand
+- Months of runway
+- Reserve months
+
+**Debt & coverage (Y1–Y5):**
+- DSCR (normalized)
+- DSCR (as-planned)
+- Total debt service
+- Loan principal balance (each loan, each year)
+- Interest paid (each loan, each year)
+- Principal paid (each loan, each year)
+
+**Per-student metrics (Y1–Y5):**
+- Revenue per student
+- Cost per student
+- Facility cost per student
+- Staffing cost % of revenue
+
+**Capacity & breakeven:**
+- Capacity utilization %
+- Breakeven enrollment (each year)
+- Enrollment cushion %
+
+**Stress scenarios (per scenario):**
+- Min DSCR under stress
+- Min ending cash under stress
+- Y1 NI delta vs base
+- Break-even year under stress
+
+**Founder compensation:**
+- As-planned compensation (each year)
+- Market-rate compensation (each year)
+- Fully-loaded as-planned (each year)
+- Fully-loaded market-rate (each year)
+- Lender adjustment (each year)
+- Total adjustment (5-year)
+
+**Ratings & flags:**
+- Lender Readiness (uncapped + effective)
+- Health Dimensions (per dimension, 8 dimensions)
+- Hard Revenue Coverage (by year)
+- Confidence score / tagged fraction
+- Risk severity flags (per risk)
+
+**Assumptions:**
+- Every assumption value referenced in any rendered output
+
+---
+
+## Math integrity verification procedure
+
+For each persona fixture in the test suite (Riverside, Liberty, Oakwood, plus any additional fixtures):
+
+### Step 1 — Render all outputs
+
+Generate every output surface end-to-end:
+- 5-Year Financial Model workbook (`.xlsx`)
+- Lender Pro-Forma workbook if it ships (`.xlsx`)
+- Lender packet PDF
+- Board packet PDF
+- In-app dashboard state (snapshot JSON)
+- Any export endpoints (JSON, CSV)
+
+### Step 2 — Extract every numeric value
+
+For each surface, programmatically extract every numeric value rendered. Tools:
+
+- **Workbook extraction:** Read every cell with a numeric value, including formula-derived cells (post-recalc). Tag with sheet name, cell reference, value.
+- **PDF extraction:** Extract text, parse for numeric tokens with context (preceding label, surrounding paragraph). Use a regex catalog covering currency (`\$[\d,]+`), percentages (`[\d.]+%`), DSCR (`[\d.]+x`), counts (raw integers).
+- **In-app state:** Serialize the rendered component state; extract all numeric props/fields.
+- **Export endpoints:** Parse the response payload; extract all numeric fields.
+
+### Step 3 — Map extracted values to registry metrics
+
+For each extracted value, identify which `CanonicalMetric` it represents. This is the hardest part — text near the value provides context (e.g., "Year 1 DSCR: 21.01x" maps to `y1_dscr_normalized`). Build a label-to-metric mapping during this step; future runs reuse it.
+
+Values that cannot be mapped to a registry metric are flagged. They are either:
+- Metrics the registry missed (add to registry)
+- Cosmetic numbers like page numbers (annotate and exclude)
+- Bugs where the surface renders a number with no clear source (the highest-priority finding)
+
+### Step 4 — Compute the primary source value
+
+For each registry metric, compute the canonical value from the primary source. Workbook cells are read post-recalc. Engine functions are called with the persona's input set and the result captured. Derived metrics are computed from their dependencies using the documented formula.
+
+### Step 5 — Compare and report
+
+For each (metric, surface) pair, compare the extracted value to the canonical value. The comparison tolerance is per-metric:
+
+- Currency: ±$1 (allows for rounding-display differences)
+- Percentages: ±0.05 percentage points
+- DSCR / ratios: ±0.01
+- Counts: 0 (exact match required)
+- Months: ±0.1
+
+Any pair outside tolerance is a discrepancy. Report shape:
+
+```
+| metricId | surface | location | extracted | canonical | delta | severity |
+```
+
+### Step 6 — Triage discrepancies
+
+For each discrepancy:
+
+- **Routing bug** (surface reads wrong source): fix in scope. The fix routes the surface to the canonical primary source.
+- **Calculation bug** (canonical source itself is wrong): file as a blocker follow-up. Do not paper over with a workaround.
+- **Unit/format issue** (value is right, formatting is wrong): fix in scope.
+- **Acceptable variance** (documented intentional difference, e.g., normalized vs as-planned): annotate in the registry; not a discrepancy.
+
+The math integrity report includes the triage decision for every discrepancy.
+
+---
+
+## Cross-surface harness
+
+After the verification report passes, the procedure becomes a standing test:
+
+```typescript
+// pseudocode
+describe('Cross-surface math integrity', () => {
+  for (const fixture of personaFixtures) {
+    it(`${fixture.name}: every metric matches across all surfaces`, async () => {
+      const outputs = await renderAllSurfaces(fixture);
+      const extracted = extractAllValues(outputs);
+      const canonical = computeCanonicalValues(fixture);
+      
+      const discrepancies = compareWithTolerances(extracted, canonical);
+      
+      expect(discrepancies).toEqual([]);
+    });
+  }
+});
+```
+
+The harness runs on every CI build. New persona fixtures are added by dropping them into the fixture directory; no test code changes required. New metrics are added by extending the registry; the harness picks them up automatically.
+
+---
+
+## Go-live gate checklist
+
+Before generating packets for real founders, all of the following must be true:
+
+- [ ] Primary Data Source Registry complete and committed to repo
+- [ ] Math integrity report produced for all persona fixtures with zero unresolved discrepancies
+- [ ] Cross-surface harness in CI and passing
+- [ ] Workbook downloads verified — both 5-Year Financial Model and Lender Pro-Forma (if shipping) open cleanly in Excel and LibreOffice, with formulas recalculating correctly
+- [ ] PDF rendering verified at scale — generate 10 distinct persona fixtures and confirm zero render errors, encoding artifacts, or missing sections
+- [ ] At least one full end-to-end sample reviewed by a human with financial domain knowledge (Lance, Allison, or a third party). Sample includes wizard input → engine compute → workbook export → packet PDF generation → lender-facing presentation.
+- [ ] Acknowledged-warning lifecycle verified end-to-end (founder triggers warning, acknowledges in wizard, lender packet renders with "acknowledged by founder" suffix)
+- [ ] Required-field validation verified for all `required_conditional` fields (#928 follow-up)
+- [ ] Confidence cap verified at threshold boundaries (#929 follow-up)
+- [ ] Pre-launch sweep of TODO / FIXME / `[citation pending]` markers in the codebase; each item either resolved or explicitly deferred with rationale
+- [ ] Production data migration plan documented for any schema changes since beta started (e.g., classification migration from #927, unit field migration from #925)
+
+Each unchecked item is a go-live blocker.
+
+---
+
+## Out of scope for this task
+
+- Adding new features
+- Calibrating benchmark or cap thresholds against external data (covered by follow-ups in #926 and #929)
+- Brand typography / styling fixes
+- Lender Pro-Forma workbook build (covered by the follow-up from #921)
+- Per-input rollout of `AssumptionRequirement` to additional fields (follow-up from #928)
+- Per-rating rollout of confidence gating (follow-up from #929)
+
+If a discrepancy uncovered here reveals a calculation bug requiring engine changes, that becomes its own blocker task — not absorbed into this verification work.
+
+---
+
+## Steps
+
+1. **Build the Primary Data Source Registry.** Start with the metrics listed above; extend via the sibling search step.
+
+2. **Run the sibling search.** Identify every metric the system produces that isn't yet in the registry. Likely sources of missed metrics: in-app cards, exported JSON shapes, board packet sections, decision-comparison PDFs.
+
+3. **Build the extraction tooling.** Workbook reader, PDF text-with-context extractor, in-app state serializer. These become reusable utilities for the standing harness.
+
+4. **Build the canonical computation layer.** Function per metric that returns the primary source value for a given fixture.
+
+5. **Run verification for all persona fixtures.** Produce the math integrity report.
+
+6. **Triage every discrepancy.** Fix routing bugs in scope; file calculation bugs as blocker follow-ups.
+
+7. **Wire the harness into CI.** Add to the test suite that runs on every build.
+
+8. **Document the go-live gate checklist.** Make it visible to anyone with merge authority.
+
+9. **Hand-review one sample end-to-end.** This is non-automatable. Allison, Lance, or a designated reviewer walks through a complete packet and signs off.
+
+---
+
+## Relevant files
+
+- New: `docs/primary-data-source-registry.md` (or `lib/finance/src/registry/canonical-metrics.ts`)
+- New: `artifacts/api-server/tests/math-integrity-harness.ts`
+- New: `scripts/run-math-integrity-report.ts` (one-off + reusable)
+- Existing: every file in the canonical chain for each metric (touched only if a discrepancy requires fixing a routing bug)
+
+---
+
+## Required protocol addendum fields
+
+### Canonical source reference
+
+```
+Canonical source: 
+  - Registry: docs/primary-data-source-registry.md (or in-code registry)
+  - Harness: artifacts/api-server/tests/math-integrity-harness.ts
+  - Computation layer: scripts/compute-canonical-values.ts
+
+The registry is itself the meta-canonical source for "where does any 
+number come from." After this task, every future task that touches 
+a metric updates the registry entry as part of completion.
+```
+
+### Sibling bug search step
+
+```
+Step: Identify metrics produced by the system that are not yet in the 
+  draft registry.
+
+Pattern: Any numeric value rendered in any output surface (workbook 
+  cell, PDF section, in-app card, JSON export) that does not appear 
+  in the Primary Data Source Registry.
+
+Search scope:
+  All output surfaces — workbooks, PDFs, in-app components, export 
+  endpoints.
+
+Discovery commands:
+  # Find every numeric value in lender PDF templates  
+  grep -rnP "\\\$\\\{[^}]+\\}|formatCurrency|formatPercent|toFixed" \
+    --include="*.ts" --include="*.tsx" \
+    artifacts/api-server/src/lib/packets/ \
+    artifacts/school-financial-model/src/
+
+  # Find every numeric export field
+  grep -rnP "(revenue|expense|cash|dscr|margin|enrollment|coverage)" \
+    --include="*.ts" \
+    artifacts/api-server/src/lib/
+
+  # Find every dashboard card
+  find artifacts/school-financial-model/src/components/ -name "*Card.tsx"
+
+Action:
+  1. List every metric that appears in any output surface.
+  2. Cross-reference against the draft registry.
+  3. For each metric not in the registry:
+     a. Identify its primary source
+     b. Add a registry entry
+     c. Add the consumers to the entry
+  4. If any metric has no clear primary source, that's a finding — 
+     it's a number rendered with no canonical origin. File as a 
+     blocker. The system should not render numbers it cannot trace.
+
+Expected category of missed metrics:
+  - Sub-totals computed at render time
+  - Display-only ratios (e.g., "X% of revenue" computed from two 
+    canonical metrics)
+  - Stress-scenario derived values
+  - In-app card metrics not in the packet
+```
+
+### Explicit regression assertion (subsystem-level, covering all patterns)
+
+```
+Assertion target: End-to-end math integrity across all output surfaces
+
+Subsystem-level assertions:
+
+  For every persona fixture:
+    For every metric in the Primary Data Source Registry:
+      Let canonical = computeCanonicalValue(fixture, metric)
+      For every consumer in metric.consumers:
+        Let extracted = extractValueAtConsumer(fixture, consumer)
+        Assert: |extracted - canonical| <= metric.tolerance
+      Assert: no consumer is missing from the registry's consumer list
+
+  For the registry itself:
+    Assert: every metric has at least one consumer
+    Assert: no consumer location appears in two different metric entries 
+      (no surface should render the same field via two different metrics)
+    Assert: every metric has a documented primarySource location
+
+  For the harness coverage:
+    Assert: every numeric value extracted from any output surface 
+      maps to a registry metric
+    Assert: orphan values (extracted but not in registry) produce a 
+      test failure listing the surface and value
+
+Persona-specific expectations:
+  For each fixture, the harness produces a zero-discrepancy report.
+
+Failure reporting:
+  "Math integrity discrepancy: {metric} in {fixture} at {surface}/
+   {location} — canonical {canonical_value}, rendered {extracted_value}, 
+   delta {delta}, tolerance {tolerance}"
+```
+
+---
+
+## Prevention mechanism
+
+The registry + harness combination prevents drift permanently:
+
+1. **Registry as living document:** Every future task that introduces a metric updates the registry. Reviewers reject PRs that add metrics without registry entries.
+
+2. **Harness in CI:** New consumers added without updating the registry produce test failures. Changes to canonical sources that don't propagate to consumers produce test failures.
+
+3. **Orphan detection:** Numbers rendered without a registry entry are caught at the harness layer. The system cannot silently produce values without a documented source.
+
+4. **Migration discipline for breaking changes:** Any change to a canonical source includes updates to all consumer locations in the same PR. The harness enforces this at merge time.
+
+---
+
+## Architectural follow-up
+
+```
+Follow-up task 1: Continuous metric integrity dashboard
+
+Rationale: The math integrity harness produces a binary pass/fail. A 
+  monitoring dashboard would show trends — how many metrics, how many 
+  consumers, how often discrepancies appear at PR time, which metrics 
+  drift most often. Useful for tracking system maturity over time.
+
+Scope: Build a dashboard that surfaces harness output trends from CI 
+  runs.
+
+Tracked at: file before closing #930
+
+---
+
+Follow-up task 2: Production drift monitoring
+
+Rationale: The harness verifies fixtures, not production data. As real 
+  founders generate packets, those renders should also pass an 
+  integrity check. A production-side audit (sampling rendered packets 
+  and verifying against the engine state at render time) catches drift 
+  that only appears with real-world input distributions.
+
+Scope: Wire the harness into a production audit job that samples N 
+  packets per day, runs the integrity check, alerts on discrepancies.
+
+Tracked at: file before closing #930
+
+---
+
+Follow-up task 3: Migration tooling for schema evolution
+
+Rationale: This task's go-live gate includes a manual production data 
+  migration step (#927 classification, #925 unit fields). A tooling 
+  pattern for schema evolution — versioned migrations, backward-compat 
+  loaders, automated migration on next-edit — would convert manual 
+  migration work into routine engineering.
+
+Scope: Build a schema migration framework; backfill migrations for 
+  changes since beta started.
+
+Tracked at: file before closing #930
+```
+
+---
+
+## Light vs full completion template
+
+This task touches every subsystem in the financial pipeline. **Use the full five-section completion template**, with the additional requirement that Section B (re-rendered evidence) includes the complete math integrity report as an artifact attached to the completion summary.
+
+```
+Section A — What changed
+  Registry built, harness wired, extraction tooling created, 
+  discrepancies triaged and resolved (or filed as blockers)
+
+Section B — Re-rendered evidence
+  Complete math integrity report attached for all persona fixtures
+  Zero unresolved discrepancies confirmed
+  Workbook download integrity verified
+  PDF render at scale (10+ fixtures) verified
+
+Section C — Source-of-truth trace
+  Registry location and structure
+  Harness location and integration into CI
+  Each metric has a documented primary source
+  Each consumer references the registry, not parallel calculations
+
+Section D — Cross-section consistency check
+  Every metric in the registry matches across every consumer surface
+  No surface renders a value not in the registry
+  Acknowledged-warning lifecycle, required-field validation, and 
+    confidence cap all verified end-to-end
+
+Section E — Side-effect check
+  Did the verification surface any calculation bugs (not just routing 
+    bugs)? List with blocker tickets filed.
+  Did the registry construction reveal metrics with ambiguous primary 
+    sources? Document the resolutions.
+  Are there outputs the harness does not cover? Document gaps and 
+    plan to close them.
+  Production migration plan documented for all schema changes since 
+    beta started.
+```
+
+---
+
+## Quick checklist for the agent
+
+Before claiming #930 complete:
+
+- [ ] Primary Data Source Registry built with every metric named in this task
+- [ ] Sibling search complete; additional metrics added to registry
+- [ ] Extraction tooling built for workbooks, PDFs, in-app state, JSON exports
+- [ ] Canonical computation layer built and tested
+- [ ] Math integrity report generated for every persona fixture
+- [ ] Zero unresolved discrepancies; routing bugs fixed in scope, calculation bugs filed as blockers
+- [ ] Cross-surface harness wired into CI and passing
+- [ ] Go-live gate checklist documented and visible
+- [ ] At least one full end-to-end sample hand-reviewed by a domain expert
+- [ ] Workbook download integrity verified
+- [ ] PDF render at scale verified (10+ fixtures)
+- [ ] All `[citation pending]` markers in the codebase resolved or explicitly deferred
+- [ ] Production data migration plan documented for schema changes since beta started
+- [ ] Three architectural follow-ups filed (continuous dashboard, production drift monitoring, schema migration tooling)
+- [ ] Full five-section completion template (A–E) filled in completely
+
+If any checklist item is incomplete, the task is not done. If any go-live gate item is unchecked, go-live is not approved.
+
+---
+
+## What to paste to Replit
+
+```
+Apply Task #930 before generating any packet for real founders, 
+lenders, or funders.
+
+This is a pre-launch verification gate, not a refactor. The system 
+has been hardened across #909–#929; before going live, the math 
+must be verified end-to-end against a designated primary data 
+source, with explicit confirmation that engine, workbooks, and PDFs 
+all agree.
+
+Deliverables:
+1. Primary Data Source Registry covering every metric
+2. Math integrity report for all persona fixtures with zero 
+   unresolved discrepancies
+3. Cross-surface harness in CI as standing safeguard
+4. Go-live gate checklist with at least one human-reviewed sample
+
+Procedure:
+1. Build the registry. Start with the metrics enumerated in the 
+   task spec; extend via sibling search.
+2. Build extraction tooling for workbooks, PDFs, in-app state, 
+   JSON exports.
+3. Build the canonical computation layer.
+4. Run verification for every persona fixture; produce the report.
+5. Triage every discrepancy: routing bugs fixed in scope, 
+   calculation bugs filed as blockers.
+6. Wire the harness into CI.
+7. Document the go-live gate.
+8. Coordinate one end-to-end sample review with a domain expert 
+   (Allison, Lance, or designated).
+
+Lessons to apply (cumulative from prior tasks):
+- Single source of truth (every metric, one primary source)
+- Citation discipline (every threshold/factor with source + date)
+- Typed structures over magic strings
+- Reusable patterns over per-instance fixes
+- Reason-surfacing through plumbing (errors, warnings, acknowledgments)
+- Stay disciplined to scope; file follow-ups rather than expanding
+
+Add the three required addendum fields to your task spec:
+- Canonical source: the registry IS the meta-canonical reference
+- Sibling bug search: identify every numeric output not yet in 
+  the registry
+- Explicit regression assertion: subsystem-level math integrity 
+  across all surfaces
+
+Use the full five-section completion template, with the math 
+integrity report attached as a required artifact in Section B.
+
+File three architectural follow-ups before closing #930:
+- Continuous metric integrity dashboard
+- Production drift monitoring  
+- Schema migration tooling
+
+Reference the full task spec for type signatures, full assertion 
+specifications, the complete go-live gate checklist, and follow-up 
+templates.
+
+This task is the gate between "remediated" and "go-live ready." 
+Treat the harness as the system's permanent insurance policy against 
+drift, not a one-time check.
+```
