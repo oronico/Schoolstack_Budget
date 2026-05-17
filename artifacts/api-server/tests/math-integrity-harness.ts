@@ -177,21 +177,33 @@ async function main(): Promise<void> {
     `blank=${c.blankTriage.length}`,
   );
 
-  // M2 orphan-value gate — PER-VALUE granularity.
+  // M2 orphan-value gate — PER-VALUE granularity, per task #977
+  // "Done looks like": "any numeric value extracted from any output
+  // surface that does not map to a registry metric produces a test
+  // failure with the surface + value in the message."
   //
-  // Failure mode the architect explicitly called out for M5: an
-  // aggregated-by-label check (M4's behaviour) can mask a regression
-  // where a known-classified label leaks a NEW numeric leaf at a new
-  // location. We assert on every individual orphan leaf and emit
-  // each as `<surface> | value=<value> | <location> | label=<label>`
-  // so the failure message names the exact wire-payload coordinate
-  // the registry author has to absorb.
+  // The registry contract here is the UNION of two single-source-of-
+  // truth tables:
+  //   1. `M2_LABEL_TO_METRIC` — labels that map to a canonical-
+  //      comparable metric (drift-checked against the M3 canonical).
+  //   2. `M2_UNMAPPED_RATIONALE` — labels that are registered as
+  //      non-canonical-comparable numeric leaves (per-year/per-scenario
+  //      arrays, ordinal indices, wizard input echoes). Adding a new
+  //      entry requires an auditable code change exactly like adding
+  //      a new `CANONICAL_METRICS` entry, so this table IS part of
+  //      the registry, not a carve-out from it.
   //
-  // `unclassifiedOrphanLeaves` is the set of orphan leaves whose
-  // label is neither mapped via M2_LABEL_TO_METRIC nor covered by
-  // an M2_UNMAPPED_RATIONALE rationale entry — the same UNCLASSIFIED
-  // predicate the M4 markdown table uses, applied per VALUE.
-  const orphanReport = c.unclassifiedOrphanLeaves
+  // `c.m2Mapping.orphanLeaves` is the STRICT subset: every leaf whose
+  // label is in NEITHER table. The gate fails per-leaf with the full
+  // `(surface, value, persona, location, label)` payload so the
+  // registry author sees exactly which numeric escaped the wire and
+  // where to register it.
+  //
+  // `c.m2Mapping.unregisteredLeaves` is the full pre-allowlist set
+  // (every leaf that did not route to a canonical-compare metric,
+  // even if its label is on the rationale allowlist) and is used
+  // ONLY for the diagnostic count below.
+  const orphanReport = c.m2Mapping.orphanLeaves
     .slice(0, 20)
     .map(
       (o) =>
@@ -199,15 +211,23 @@ async function main(): Promise<void> {
     )
     .join("\n      ");
   check(
-    "M2 orphan-value: every numeric leaf is mapped to a registry metric or carries an auditable rationale",
-    c.unclassifiedOrphanLeaves.length === 0,
-    c.unclassifiedOrphanLeaves.length > 0
-      ? `${c.unclassifiedOrphanLeaves.length} orphan leaf value(s):\n      ${orphanReport}${c.unclassifiedOrphanLeaves.length > 20 ? `\n      …(+${c.unclassifiedOrphanLeaves.length - 20} more)` : ""}`
+    "M2 orphan-value: every numeric leaf maps to a registry entry (M2_LABEL_TO_METRIC or M2_UNMAPPED_RATIONALE)",
+    c.m2Mapping.orphanLeaves.length === 0,
+    c.m2Mapping.orphanLeaves.length > 0
+      ? `${c.m2Mapping.orphanLeaves.length} orphan leaf value(s):\n      ${orphanReport}${c.m2Mapping.orphanLeaves.length > 20 ? `\n      …(+${c.m2Mapping.orphanLeaves.length - 20} more)` : ""}`
       : "",
   );
-  // Defence-in-depth: also keep the label-level gate so a regression
-  // that flips an entire label class to unclassified is reported with
-  // its own dedicated failure (label-aggregated diagnostic).
+  // Diagnostic: surface the count of leaves that route through the
+  // rationale allowlist rather than a canonical-compare metric. Not a
+  // gate (the allowlist is a registry construct), but a visible
+  // signal so a sudden jump in allowlist usage is noticeable in the
+  // CI log.
+  console.log(
+    `  INFO: rationale-allowlisted (non-canonical) leaves: ${c.m2Mapping.unregisteredLeaves.length - c.m2Mapping.orphanLeaves.length} across ${c.m2Mapping.unmapped.length} label classes`,
+  );
+  // Defence-in-depth: keep the label-level gate so a regression
+  // that flips an entire label class to unclassified is reported
+  // with its own label-aggregated diagnostic.
   check(
     "M2 orphan-value (label-aggregated): every unmapped label is classified",
     c.unclassifiedLabels.length === 0,

@@ -2442,12 +2442,12 @@
         }
       ]
     },
-    "generatedAt": "2026-05-17T22:45:39.846Z"
+    "generatedAt": "2026-05-17T22:56:48.893Z"
   },
   "lenderPacket": {
     "packetType": "lender",
     "schoolName": "Riverside Christian Academy",
-    "generatedAt": "2026-05-17T22:45:39.849Z",
+    "generatedAt": "2026-05-17T22:56:48.896Z",
     "modelId": 0,
     "narrative": {
       "headline": "This model shows promise but has areas that should be strengthened before presenting to lenders.",
@@ -6352,7 +6352,7 @@
           }
         ]
       },
-      "generatedAt": "2026-05-17T22:45:39.852Z"
+      "generatedAt": "2026-05-17T22:56:48.899Z"
     },
     "founderCompNormalization": {
       "reported": [

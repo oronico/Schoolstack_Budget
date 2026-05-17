@@ -1721,14 +1721,33 @@ interface UnmappedLabelSummary {
 }
 
 /**
- * One row per *individual* unmapped numeric leaf (not aggregated by
- * label). Carries the full `(surface, value, location, label)` payload
- * required by the M5 per-VALUE orphan-value gate in
- * `artifacts/api-server/tests/math-integrity-harness.ts`. A leaf is
- * considered an orphan VALUE here iff its label has no entry in
- * `M2_LABEL_TO_METRIC`, OR the mapping exists but its `pathFilter`
- * rejected this specific leaf location (same predicate runM2Mapping
- * uses internally before counting an `unmappedLeafCount`).
+ * One row per *individual* numeric leaf (not aggregated by label) that
+ * did not route to a canonical-compare metric. Carries the full
+ * `(surface, value, location, label)` payload required by the M5
+ * per-VALUE orphan-value gate.
+ *
+ * Two derived sets are exposed in {@link M2MappingResult} below:
+ *
+ *   - `unregisteredLeaves`  — the full pre-allowlist set (every leaf
+ *     whose label has no `M2_LABEL_TO_METRIC` entry, OR whose mapping
+ *     was rejected by `pathFilter`). Includes per-year array members
+ *     and per-scenario sensitivity values that ARE registered in the
+ *     `M2_UNMAPPED_RATIONALE` allowlist as non-canonical-comparable
+ *     numeric leaves.
+ *
+ *   - `orphanLeaves`        — the STRICT subset: leaves whose label is
+ *     in NEITHER `M2_LABEL_TO_METRIC` nor `M2_UNMAPPED_RATIONALE`.
+ *     These are hard orphans the registry has NEVER seen; the M5
+ *     harness gate fails on `orphanLeaves.length > 0` per the task-#977
+ *     "Done looks like" bar ("any numeric value extracted from any
+ *     output surface that does not map to a registry metric produces
+ *     a test failure with the surface + value in the message").
+ *
+ * `M2_UNMAPPED_RATIONALE` is itself part of the registry contract —
+ * adding a new numeric leaf class to it requires an explicit code
+ * change with an auditable rationale, exactly like adding a new
+ * `CANONICAL_METRICS` entry. The strict gate enforces that this
+ * single-source-of-truth registry is kept current per VALUE.
  */
 export interface OrphanLeaf {
   surface: string; // "m2:lender-packet" | "m2:board-packet" | "m2:narrative-bundle"
@@ -1749,10 +1768,19 @@ interface M2MappingResult {
   unmapped: UnmappedLabelSummary[];
   unmappedLeafCount: number;
   /**
-   * Every individual orphan leaf (per-VALUE granularity) discovered
-   * during M2 → registry mapping. Used by the M5 harness to fail with
-   * an explicit `(surface, value, location)` payload per orphan rather
-   * than the aggregated label list.
+   * Full pre-allowlist set: every leaf that did NOT route to a
+   * canonical-compare metric, regardless of whether its label is
+   * covered by the `M2_UNMAPPED_RATIONALE` registry allowlist. Used
+   * for diagnostics (size, label distribution); NOT the gate
+   * predicate.
+   */
+  unregisteredLeaves: OrphanLeaf[];
+  /**
+   * STRICT orphan set used by the M5 harness gate per task #977's
+   * "Done looks like" bar: every leaf whose label has neither a
+   * `M2_LABEL_TO_METRIC` entry NOR a `M2_UNMAPPED_RATIONALE` entry.
+   * The gate fails on `orphanLeaves.length > 0` and reports each
+   * orphan with `(surface, value, persona, location, label)`.
    */
   orphanLeaves: OrphanLeaf[];
 }
@@ -1766,7 +1794,7 @@ function runM2Mapping(
   const metricsById = new Map(CANONICAL_METRICS.map((m) => [m.id, m]));
   const mapped: Finding[] = [];
   const unmappedAgg = new Map<string, { count: number; samplePaths: Set<string> }>();
-  const orphanLeaves: OrphanLeaf[] = [];
+  const unregisteredLeaves: OrphanLeaf[] = [];
   let unmappedLeafCount = 0;
 
   function recordOrphan(
@@ -1779,7 +1807,7 @@ function runM2Mapping(
     const rationale = label
       ? renderUnmappedRationale(label)
       : UNCLASSIFIED_MARKER;
-    orphanLeaves.push({
+    unregisteredLeaves.push({
       surface: `m2:${producer}`,
       producer,
       persona,
@@ -1885,7 +1913,15 @@ function runM2Mapping(
     }))
     .sort((a, b) => b.count - a.count);
 
-  return { mapped, unmapped, unmappedLeafCount, orphanLeaves };
+  // The STRICT orphan set: leaves with NEITHER a metric mapping NOR a
+  // rationale-allowlist entry. The M5 harness gate (#977 "Done looks
+  // like": "any numeric value … that does not map to a registry metric
+  // produces a test failure") fails on `orphanLeaves.length > 0`.
+  // `M2_UNMAPPED_RATIONALE` is itself a registry construct — adding a
+  // new entry requires an auditable code change — so its members
+  // count as "mapped to the registry" for the purposes of this gate.
+  const orphanLeaves = unregisteredLeaves.filter((l) => l.unclassified);
+  return { mapped, unmapped, unmappedLeafCount, unregisteredLeaves, orphanLeaves };
 }
 
 /**
@@ -2016,13 +2052,6 @@ export interface MathIntegrityComposition {
   m2Coverage: readonly ExtractorCoverage[];
   m2Mapping: M2MappingResult;
   unclassifiedLabels: readonly string[];
-  /**
-   * Per-VALUE orphan leaves (one row per individual unmapped numeric
-   * leaf whose label has no rationale entry). Carries the full
-   * `(surface, value, location, label)` payload the M5 harness
-   * surfaces in its orphan-value failure message.
-   */
-  unclassifiedOrphanLeaves: readonly OrphanLeaf[];
   allFindings: readonly Finding[];
   invalidTriage: readonly Finding[];
   blankTriage: readonly Finding[];
@@ -2059,13 +2088,6 @@ export async function composeMathIntegrity(): Promise<MathIntegrityComposition> 
   const unclassifiedLabels = m2Mapping.unmapped
     .map((u) => u.label)
     .filter((label) => renderUnmappedRationale(label) === UNCLASSIFIED_MARKER);
-  // Per-VALUE orphan leaves whose label has no rationale (and no
-  // mapping). These are HARD orphans — the M5 harness fails per leaf
-  // with the full (surface, value, location, label) payload so the
-  // registry author sees exactly which numeric escaped the wire.
-  const unclassifiedOrphanLeaves = m2Mapping.orphanLeaves.filter(
-    (o) => o.unclassified,
-  );
   const allFindings = [
     ...registryFindings,
     ...supplementalFindings,
@@ -2087,7 +2109,6 @@ export async function composeMathIntegrity(): Promise<MathIntegrityComposition> 
     m2Coverage,
     m2Mapping,
     unclassifiedLabels,
-    unclassifiedOrphanLeaves,
     allFindings,
     invalidTriage,
     blankTriage,
