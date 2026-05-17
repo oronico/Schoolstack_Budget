@@ -617,7 +617,15 @@ function buildRevenueModel(
   // answer in the same section as the headline revenue numbers.
   const rqRollup = co.revenueQuality ?? [];
   if (rqRollup.length > 0) {
-    const qualityHeaders = ["Bucket", ...rqRollup.map((y) => yearLabel(y.year))];
+    // Task #919 — `co.revenueQuality[].year` is 1-indexed (1..5) because
+    // it mirrors `yearFinancials[].year = idx + 1` in the consultant
+    // engine. `yearLabel(n)` returns `Year ${n+1}`, so passing y.year
+    // directly rendered headers as Year 2..6 — off by one against the
+    // first-column data, which is Y1. Other tables using `yearLabel`
+    // pass `yd.year` from `computeYearlyData` (0-indexed), so they were
+    // never affected. Use the array index here for the same 0-indexed
+    // contract.
+    const qualityHeaders = ["Bucket", ...rqRollup.map((_y, i) => yearLabel(i))];
     const qualityRows: PacketTableRow[] = REVENUE_QUALITY_ORDER.map((bucket: RevenueQuality) => ({
       label: REVENUE_QUALITY_LABELS[bucket],
       values: rqRollup.map((y) => `${fmt(y.byBucket[bucket])} (${pct(y.pctByBucket[bucket])})`),

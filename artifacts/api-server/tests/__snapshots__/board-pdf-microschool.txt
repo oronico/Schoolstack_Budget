@@ -400,7 +400,7 @@ Y
 ear 1.
  
 Y
-ear 5 net income is projected at $151K (37.7% margin).
+ear 5 net income is projected at $150K (37.6% margin).
  Breake
 ven enr
 ollment
@@ -468,37 +468,37 @@ Y
 ear 1
 20
 $166K
-$152K
-$14K
-8.5%
+$143K
+$22K
+13.5%
 Y
 ear 2
 26
 $251K
 $224K
 $27K
-10.9%
+10.7%
 Y
 ear 3
 32
 $308K
-$232K
+$233K
 $75K
-24.5%
+24.4%
 Y
 ear 4
 37
 $360K
-$241K
+$242K
 $119K
-33.1%
+33.0%
 Y
 ear 5
 40
 $400K
-$249K
-$151K
-37.7%
+$250K
+$150K
+37.6%
 Staffing Plan
 Staffing costs are $86K in 
 Y

@@ -366,7 +366,7 @@ Y
 ear 1.
  
 Y
-ear 5 change in net assets is projected at $6.0M (68.3% margin).
+ear 5 change in net assets is projected at $5.9M (66.9% margin).
  Breake
 ven enr
 ollment
@@ -451,37 +451,37 @@ Y
 ear 1
 200
 $4.0M
-$1.7M
-$2.3M
-58.1%
+$1.8M
+$2.2M
+55.1%
 Y
 ear 2
 250
 $5.0M
-$1.9M
-$3.1M
-62.2%
+$2.0M
+$3.0M
+59.8%
 Y
 ear 3
 300
 $6.3M
-$2.2M
-$4.1M
-64.8%
+$2.3M
+$3.9M
+62.8%
 Y
 ear 4
 350
 $7.5M
-$2.5M
-$5.0M
-66.7%
+$2.6M
+$4.9M
+65.1%
 Y
 ear 5
 400
 $8.8M
-$2.8M
-$6.0M
-68.3%
+$2.9M
+$5.9M
+66.9%
 Prior
 -Y
 ear Actuals
@@ -584,8 +584,8 @@ $115K
 T
 otal Expenses
 $2.2M
-$1.7M
--24.8%
+$1.8M
+-19.3%
 Net Income Comparison
 Prior 
 Y
@@ -595,7 +595,7 @@ ear 1 (Pr
 ojected)
 Net Income
 $200K
-$2.3M
+$2.2M
 Staffing Plan
 Staffing costs are $1.3M in 
 Y

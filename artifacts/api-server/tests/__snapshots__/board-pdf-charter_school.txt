@@ -423,7 +423,7 @@ Y
 ear 1.
  
 Y
-ear 5 change in net assets is projected at $12.6M (69.4% margin).
+ear 5 change in net assets is projected at $12.6M (69.3% margin).
  Breake
 ven enr
 ollment
@@ -494,37 +494,37 @@ Y
 ear 1
 200
 $4.9M
-$2.9M
-$1.9M
-39.8%
+$2.8M
+$2.1M
+42.2%
 Y
 ear 2
 300
 $8.7M
 $3.9M
 $4.8M
-55.2%
+55.0%
 Y
 ear 3
 400
 $11.6M
 $4.7M
 $7.0M
-59.9%
+59.8%
 Y
 ear 4
 500
 $14.8M
 $5.2M
 $9.7M
-65.2%
+65.1%
 Y
 ear 5
 600
 $18.1M
-$5.5M
+$5.6M
 $12.6M
-69.4%
+69.3%
 SchoolStac
 k Budget - Gener
 ated <DATE>

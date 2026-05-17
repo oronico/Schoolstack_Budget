@@ -123,7 +123,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 1 of 18
+age 1 of 22
 --- PAGE 2 ---
 Lender Commentar
 y
@@ -462,7 +462,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 2 of 18
+age 2 of 22
 --- PAGE 3 ---
 financial stor
 y y
@@ -622,7 +622,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 3 of 18
+age 3 of 22
 --- PAGE 4 ---
 Y
 ear 5 Enrollment
@@ -703,16 +703,13 @@ $496K
 Y
 ear 5
 $492K
-Re
+Gr
+oss-to-Net Re
 ven
-ue Quality (Contracted vs.
- Pr
-ojected vs.
- Donor / P
-olic
-y Dependent)
-Buc
-ket
+ue Reconciliation
+Line
+Y
+ear 1
 Y
 ear 2
 Y
@@ -721,8 +718,100 @@ Y
 ear 4
 Y
 ear 5
+Gross 
+T
+uition Billing
+$191K
+$254K
+$324K
+$388K
+$433K
+Less:
+ Scholarship netting
+($15K)
+($20K)
+($27K)
+($33K)
+($38K)
+Plus:
+ Non-tuition re
+v
+en
+ue (pub
+lic
+, 
+philanthrop
+y
+, other)
+$320K
+$330K
+$339K
+$350K
+$360K
+= Enrollment 
+T
+uition Fcst total
+$496K
+$564K
+$637K
+$705K
+$755K
+Seasonality / par
+tial-y
+ear timing 
+adjustment
+($83K)
+$0
+$0
+$0
+$0
+Residual reconciliation (collection r
+ate
+, 
+delinquency
+, scholarship treatment, 
+other engine adjustments)
+($292)
+($55K)
+($129K)
+($208K)
+($263K)
+= Net Re
+v
+en
+ue (Oper
+ating Statement)
+$413K
+$509K
+$508K
+$496K
+$492K
+Re
+ven
+ue 
+Quality 
+(Contracted 
+vs.
+ Pr
+ojected 
+vs.
+ Donor / 
+P
+olic
+y 
+Dependent)
+Buc
+ket
 Y
-ear 6
+ear 1
+Y
+ear 2
+Y
+ear 3
+Y
+ear 4
+Y
+ear 5
 Contr
 acted
 $143K (34.5%)
@@ -743,12 +832,24 @@ $7K (1.3%)
 $8K (1.6%)
 $9K (1.9%)
 $10K (2.0%)
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 4 of 22
+--- PAGE 5 ---
 Donor-Dependent
 $267K (64.5%)
 $275K (54.0%)
 $210K (41.3%)
 $140K (28.2%)
 $95K (19.3%)
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 5 of 22
+--- PAGE 6 ---
 Hard re
 v
 en
@@ -762,10 +863,15 @@ ed + debt
 1.42×
 1.65×
 1.79×
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 6 of 22
+--- PAGE 7 ---
 Re
 ven
-ue 
-Lines (Y
+ue Lines (Y
 ear 1)
 Line Item
 Y
@@ -810,12 +916,6 @@ ating Gr
 ant (P
 ending)
 $40K
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 4 of 18
---- PAGE 5 ---
 Suppor
 ting Assumptions
 T
@@ -975,6 +1075,12 @@ hmark b
 y 
 Y
 ear
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 7 of 22
+--- PAGE 8 ---
 Y
 ear
 Pr
@@ -1044,26 +1150,16 @@ ear 5
 $65,280
 $79,000
 $14,770
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 5 of 18
---- PAGE 6 ---
 T
 otal adjustment (Y1Y5)
 
 
 $67,895
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 6 of 18
---- PAGE 7 ---
-As-Planned vs Normaliz
+As-Planned vs 
+Normaliz
 ed:
- Net Income & DSCR
+ Net Income 
+& DSCR
 Y
 ear
 Net Income 
@@ -1147,15 +1243,21 @@ ar
 t-Time Aide
   $24,000,
  0.5 FTE
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 8 of 22
+--- PAGE 9 ---
 Expense Summar
 y
 T
 otal e
 xpenses g
 ro
-w from $152K in 
+w from $143K in 
 Y
-ear 1 to $249K b
+ear 1 to $250K b
 y 
 Y
 ear 5.
@@ -1174,33 +1276,33 @@ otal
 Y
 ear 1
 $86K
-$61K
+$52K
 $5K
-$152K
+$143K
 Y
 ear 2
 $160K
-$59K
+$60K
 $5K
 $224K
 Y
 ear 3
 $164K
-$63K
+$64K
 $5K
-$232K
+$233K
 Y
 ear 4
 $169K
 $67K
 $5K
-$241K
+$242K
 Y
 ear 5
 $174K
 $70K
 $5K
-$249K
+$250K
 Capital & Debt
 The model includes 1 debt instr
 ument totaling $20K.
@@ -1212,13 +1314,7 @@ k Lending Lab Microloan
 6.5% f
 or 5 y
 ear
-s
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 7 of 18
---- PAGE 8 ---
+s ($5K/yr)
 5-Y
 ear Financial Pr
 ojection
@@ -1229,7 +1325,7 @@ Y
 ear 1.
  
 Y
-ear 5 net income is projected at $243K (49.4% margin).
+ear 5 net income is projected at $242K (49.3% margin).
  Breake
 ven enr
 ollment
@@ -1346,6 +1442,12 @@ k:
 5-Y
 ear Net Income Pr
 ojection
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 9 of 22
+--- PAGE 10 ---
 Y
 ear
 Students
@@ -1360,37 +1462,37 @@ Y
 ear 1
 20
 $413K
-$152K
-$262K
-63.3%
+$143K
+$270K
+65.3%
 Y
 ear 2
 26
 $509K
 $224K
 $285K
-56.1%
+56.0%
 Y
 ear 3
 32
 $508K
-$232K
+$233K
 $275K
 54.2%
 Y
 ear 4
 37
 $496K
-$241K
+$242K
 $255K
-51.4%
+51.3%
 Y
 ear 5
 40
 $492K
-$249K
-$243K
-49.4%
+$250K
+$242K
+49.3%
 Opening Balance Sheet
 Net position at model star
 t:
@@ -1425,12 +1527,6 @@ $0
 T
 otal Assets
 $15K
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 8 of 18
---- PAGE 9 ---
 Liabilities
 Item
 Amount
@@ -1484,6 +1580,12 @@ y P
 erf
 ormance Indicator
 s
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 10 of 22
+--- PAGE 11 ---
 Metric
 V
 alue
@@ -1523,7 +1625,7 @@ orecast:
  
 Y
 ear 1  J
-ul at $135K.
+ul at $136K.
 [ ] 
 Cash Runw
 a
@@ -1536,7 +1638,7 @@ est Cash Month:
  
 Y
 ear 1  J
-ul ($135K)
+ul ($136K)
 Cum
 ulative Cash P
 osition
@@ -1571,12 +1673,6 @@ ear 1 Monthl
 y Cash Flo
 w Summar
 y
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 9 of 18
---- PAGE 10 ---
 Month
 Beginning
 Inflo
@@ -1590,88 +1686,91 @@ J
 ul
 $12K
 $138K
-($15K)
-$123K
-$135K
+($14K)
+$124K
+$136K
 A
 ug
-$135K
+$136K
 $15K
-($15K)
-$190
-$135K
+($14K)
+$1K
+$137K
 Sep
-$135K
+$137K
 $15K
-($15K)
-$190
-$136K
+($14K)
+$1K
+$138K
 Oct
-$136K
+$138K
 $84K
-($15K)
-$69K
-$205K
+($14K)
+$70K
+$208K
 No
 v
-$205K
+$208K
 $15K
-($15K)
-$190
-$205K
+($14K)
+$1K
+$209K
 Dec
-$205K
+$209K
 $15K
-($15K)
-$190
-$205K
+($14K)
+$1K
+$210K
 J
 an
-$205K
+$210K
 $48K
-($15K)
+($14K)
 $33K
-$238K
+$244K
 F
 eb
-$238K
+$244K
 $15K
-($15K)
-$190
-$238K
+($14K)
+$1K
+$245K
 Mar
-$238K
+$245K
 $15K
-($15K)
-$190
-$238K
+($14K)
+$1K
+$246K
 Apr
-$238K
+$246K
 $36K
-($15K)
-$20K
-$259K
+($14K)
+$21K
+$267K
 Ma
 y
-$259K
+$267K
 $15K
 ($391)
 $15K
-$274K
+$282K
 J
 un
-$274K
+$282K
 $338
 ($391)
-$9K
+$375
 $282K
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 11 of 22
+--- PAGE 12 ---
 Y
-ear 2 
-Monthl
-y Cash 
-Flo
-w 
-Summar
+ear 2 Monthl
+y Cash Flo
+w Summar
 y
 Month
 Beginning
@@ -1714,9 +1813,9 @@ $474K
 $24K
 ($19K)
 $6K
-$480K
+$479K
 Dec
-$480K
+$479K
 $24K
 ($19K)
 $6K
@@ -1740,9 +1839,9 @@ $535K
 $24K
 ($19K)
 $6K
-$541K
+$540K
 Apr
-$541K
+$540K
 $58K
 ($19K)
 $39K
@@ -1753,10 +1852,10 @@ $580K
 $24K
 ($19K)
 $6K
-$586K
+$585K
 J
 un
-$586K
+$585K
 $522
 ($19K)
 $-18K
@@ -1769,12 +1868,6 @@ Flo
 w 
 Summar
 y
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 10 of 18
---- PAGE 11 ---
 Month
 Beginning
 Inflo
@@ -1836,22 +1929,22 @@ $769K
 $31K
 ($19K)
 $11K
-$781K
+$780K
 Mar
-$781K
+$780K
 $31K
 ($19K)
 $11K
-$792K
+$791K
 Apr
-$792K
+$791K
 $78K
 ($19K)
 $59K
-$851K
+$850K
 Ma
 y
-$851K
+$850K
 $31K
 ($19K)
 $11K
@@ -1871,6 +1964,12 @@ Flo
 w 
 Summar
 y
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 12 of 22
+--- PAGE 13 ---
 Month
 Beginning
 Inflo
@@ -1957,7 +2056,7 @@ un
 $1.1M
 $734
 ($20K)
-$-19K
+$-18K
 $1.1M
 Y
 ear 5 
@@ -1967,12 +2066,6 @@ Flo
 w 
 Summar
 y
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 11 of 18
---- PAGE 12 ---
 Month
 Beginning
 Inflo
@@ -2059,7 +2152,7 @@ un
 $1.4M
 $790
 ($21K)
-$-19K
+$-18K
 $1.3M
 Lo
 west Cash 
@@ -2067,6 +2160,12 @@ Month b
 y 
 Y
 ear
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 13 of 22
+--- PAGE 14 ---
 Y
 ear
 Month
@@ -2075,7 +2174,7 @@ Y
 ear 1
 J
 ul
-$135K
+$136K
 Y
 ear 2
 J
@@ -2238,12 +2337,6 @@ d
 w alongside the normaliz
 ed 
 series.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 12 of 18
---- PAGE 13 ---
 Operating Reser
 ve & Ending Cash
 Y
@@ -2311,6 +2404,12 @@ Y
 ear 5 net income
 , indicating financial resilience
 .
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 14 of 22
+--- PAGE 15 ---
 Stress 
 T
 est Results
@@ -2444,12 +2543,6 @@ staffing b
 urden:
  Health
 y
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 13 of 18
---- PAGE 14 ---
 [+] 
 f
 acility b
@@ -2603,6 +2696,12 @@ en
 income
 , not fundr
 aising.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 15 of 22
+--- PAGE 16 ---
 Da
 ys Cash
 Health
@@ -2614,6 +2713,12 @@ y
 benchmar
 k, pro
 viding a strong liquidity cushion.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 16 of 22
+--- PAGE 17 ---
 Reser
 v
 e Strength
@@ -2631,6 +2736,12 @@ er f
 or une
 xpected costs
 .
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 17 of 22
+--- PAGE 18 ---
 K
 e
 y Risks
@@ -2886,12 +2997,6 @@ w
 ers see the e
 vidence
 .
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 14 of 18
---- PAGE 15 ---
 MEDIUM
 Let's tie ne
 w hires to enr
@@ -3011,6 +3116,12 @@ ic tied to its dr
 iving 
 assumptions
 .
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 18 of 22
+--- PAGE 19 ---
 Suppor
 ting Assumptions
  Assumption sources b
@@ -3219,12 +3330,6 @@ v
 en
 ue
 .
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 15 of 18
---- PAGE 16 ---
 Y
 ear 1 ending cash
   Star
@@ -3356,6 +3461,12 @@ Y
 ear 2 (planned 26):
   11 students · 24% of 
 capacity
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 19 of 22
+--- PAGE 20 ---
 Y
 ear 3 (planned 32):
   14 students · 31% of 
@@ -3429,12 +3540,6 @@ Y
 ear 5 (32 students):
   DSCR 36.88x · Ending 
 cash $1,093,981
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 16 of 18
---- PAGE 17 ---
 Enr
 ollment × 
 T
@@ -3557,6 +3662,12 @@ or
 ma w
 or
 kbook.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 20 of 22
+--- PAGE 21 ---
 Base case:
   Min DSCR 52.98x · Min ending 
 cash $282,326 · Runwa
@@ -3709,12 +3820,6 @@ ul) $136,223
 Y
 ear-1 net income vs base:
  -$6,958
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 17 of 18
---- PAGE 18 ---
 Founder Comp Normaliz
 ed to Market
 F
@@ -3846,6 +3951,12 @@ ould cost).
  
 The lender adjustment is the gap underwr
 iters apply to staffing cost and DSCR.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 21 of 22
+--- PAGE 22 ---
 Line
 Y1
 Y2
@@ -3924,4 +4035,4 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 18 of 18
+age 22 of 22

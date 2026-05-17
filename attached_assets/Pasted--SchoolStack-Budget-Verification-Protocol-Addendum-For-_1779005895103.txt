@@ -1,0 +1,282 @@
+# SchoolStack Budget — Verification Protocol Addendum
+
+**For:** Replit build agent working on `budget.schoolstack.ai`
+**Pairs with:** `SchoolStack_Budget_Verification_Protocol_v2.md`
+**Effective from:** Task #919 onward; retroactively recommended for in-flight tasks.
+
+This addendum extends the verification protocol with six framework improvements drawn from patterns observed across the first eight tasks of the engagement. Adoption is required for new tasks and recommended for in-flight ones. The base protocol — Five Standing Rules, Per-Task Verification Template, Regression Harness, Plan Before You Code — remains in effect without changes.
+
+-----
+
+## What this addendum changes
+
+The addendum adds:
+
+- **Three required fields** to every task spec — canonical source reference, sibling bug search step, explicit regression assertion
+- **Two optional fields** — prevention mechanism, architectural follow-up
+- **A light completion template** for small templating-layer fixes
+- **An assertion pattern library** to standardize regression tests
+
+-----
+
+## Required additions to every task spec
+
+### Field 1: Canonical source reference
+
+Every task that fixes a data-rendering, calculation, or routing issue must explicitly name the engine source that the fix routes to or from. Use this format:
+
+```
+Canonical source: <Sheet>!<Cell range>  OR  <function name>(<inputs>) → <output>
+Example: 5-Year Operating Stmt!B5:F5 ("Total Revenue")
+Example: compute_runway(ending_cash, annual_opex) → months_of_runway
+```
+
+If a task has multiple consumers reading from the same source, list the source once and enumerate the consumers. If a task involves comparison between two sources, list each with its role.
+
+For tasks that refactor without changing values, write: `Canonical source: unchanged — refactor only.`
+
+-----
+
+### Field 2: Sibling bug search step
+
+Every task must include a Steps entry of this form:
+
+```
+Step N: Search the codebase for similar patterns elsewhere.
+- Pattern: <describe the issue pattern>
+- Search scope: <file glob or directory>
+- Action: If sibling patterns are found, list them in the completion summary
+  and either fix them in scope or file as separate tasks.
+```
+
+The intent is to catch the next instance of the same class of issue proactively rather than waiting for a future packet review to surface it.
+
+**Worked example for Task #919 (column header off-by-one):**
+
+```
+Pattern: range(N+1, ...) used to generate column labels for an N-year table
+Search scope: artifacts/api-server/src/lib/packets/*.ts
+Action: List all matches; verify the resulting labels match the data range
+  for each
+```
+
+-----
+
+### Field 3: Explicit regression assertion template
+
+The base protocol requires “the regression harness must pass.” That’s necessary but not sufficient. Every task must also specify the assertion the new regression test makes, in this format:
+
+```
+Assertion target: <metric or output>
+For each: <iteration scope — packets, years, sections>
+  Assert: <left side> equals <right side> within <tolerance>
+Reporting: <what the assertion reports when it triggers>
+```
+
+**Worked example for Task #919:**
+
+```
+Assertion target: Revenue Quality table column headers
+For each: demo packet in {Riverside, Liberty, Oakwood}
+  Assert: headers === ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"]
+  Assert: for each year N in 1..5, column N data row equals canonical
+    Enrollment Plan YearN value (rounding tolerance 0%)
+Reporting: "Revenue Quality table header mismatch in {packet} at year {N}"
+```
+
+The vague form (“assert header sequence and first-column Y1 alignment”) leaves too much to the agent’s judgment. The explicit form leaves no room for interpretation.
+
+-----
+
+## Optional additions
+
+### Field 4: Prevention mechanism
+
+Where applicable, name a mechanism beyond the regression test that prevents the issue class from recurring. Options include:
+
+- **Linting rule** — e.g., warn on any column-label loop with a range start greater than 1
+- **Type constraint** — e.g., a `ColumnDef` type that pairs label and accessor at definition time
+- **Code review checklist item** — add a one-line entry to the PR template
+- **Architectural pattern** — e.g., “all multi-year tables consume a `columns: ColumnDef[]` object”
+
+Not every task will have a good answer. Leave the field blank if none applies. When a mechanism does apply, the cumulative effect is meaningful — each task contributes one piece of hardening.
+
+-----
+
+### Field 5: Architectural follow-up
+
+When a task surfaces a pattern worth refactoring at a layer broader than the current task, file the follow-up as a separate tracked item rather than expanding current scope. Use this format:
+
+```
+Architectural follow-up: <one-line description>
+Rationale: <why this is broader than the current fix>
+Suggested scope: <Phase 2 / Sprint N / etc>
+Tracked at: <ticket reference, once filed>
+```
+
+**Worked example for Task #919:**
+
+```
+Architectural follow-up: Multi-year tables should accept columns: ColumnDef[]
+Rationale: Today, headers and data are generated independently in each table.
+  Off-by-one issues like #919 and label/data drift like #914 are symptoms
+  of the same root cause. A typed column-metadata pattern eliminates the
+  class of issue rather than patching instances.
+Suggested scope: Phase 2 templating refactor
+Tracked at: #TBD (file before closing #919)
+```
+
+This keeps current task scope clean while ensuring the deeper pattern is captured rather than rediscovered later.
+
+-----
+
+## Completion template: full vs. light
+
+The five-section template from the base protocol (What changed / Re-rendered evidence / Source-of-truth trace / Cross-section consistency / Side-effect check) remains the default and is required for tasks that touch engine logic, data flow, or affect more than one rendered section.
+
+For small templating-layer fixes (estimated under one hour, single function, single output section), the **light template** is sufficient:
+
+```
+Section A — What changed
+  Brief description, files touched
+
+Section B — Before / after evidence
+  All three demo packets, the changed section quoted before and after
+
+Section C — Sibling bug search results
+  Pattern searched, scope, matches found (or "none")
+
+Section D — Regression test added
+  Quote the new assertion in code, confirm it passes
+```
+
+Decide which template applies before starting work, not after. If the task expands during execution to touch more than expected, upgrade to the full template before claiming done.
+
+-----
+
+## Assertion pattern library
+
+Five common assertion patterns codified. Use these directly or adapt.
+
+### Pattern A — Single value matches canonical
+
+```
+For packet in [demos]:
+  For year in 1..5:
+    Assert <PDF section>.<field>[year] equals <Sheet>!<Cell>(year)
+      within <tolerance>
+```
+
+Use for: simple metric verification against canonical Excel source.
+
+### Pattern B — Cross-section consistency
+
+```
+For packet in [demos]:
+  For metric in [list]:
+    For each pair (sectionA, sectionB) where metric appears:
+      Assert sectionA.<metric> equals sectionB.<metric> within rounding
+```
+
+Use for: ensuring the same metric reads the same value across multiple PDF sections (Rule 4 enforcement).
+
+### Pattern C — Grep-based phrase guard
+
+```
+For packet in [demos]:
+  Assert rendered PDF text does NOT contain "<exact phrase>"
+```
+
+Use for: preventing regression of specific misleading copy (e.g., “Cash goes negative in month” after the Task #909 fix). High-leverage, low-cost.
+
+### Pattern D — Header / data alignment
+
+```
+For packet in [demos]:
+  For each multi-year table:
+    Assert headers === expected_sequence
+    Assert for each column N, column.data corresponds to year N
+```
+
+Use for: any table where labels and data are generated separately. Directly applicable to Task #919.
+
+### Pattern E — Conditional message presence
+
+```
+For packet in [demos]:
+  If <engine signal> > threshold:
+    Assert rendered <section> contains <required reference>
+  Else:
+    Assert rendered <section> does NOT contain <required reference>
+```
+
+Use for: signal-aware narrative aggregators. Directly applicable to Task #913 (Lender Commentary references failing stress scenarios when they exist, and only when they exist).
+
+-----
+
+## Migration guidance for in-flight tasks
+
+Tasks #912, #913, #914, #915 are in flight or recently closed without the addendum requirements. For each:
+
+- **If not yet verified by architect review:** add the three required fields retroactively before review.
+- **If verified and closed:** no rework. Apply the addendum to new tasks only.
+
+Tasks #919 onward must include the three required fields at task-spec creation time. If a task spec arrives without them, the agent should request clarification before starting work.
+
+-----
+
+## Updated onboarding addition
+
+For new agent contexts, paste this in addition to the original onboarding prompt:
+
+> A protocol addendum applies starting at Task #919. Read `SchoolStack_Budget_Verification_Protocol_Addendum.md` end to end before beginning any task. Confirm you understand:
+> 
+> 1. Three required fields per task spec — canonical source reference, sibling bug search step, explicit regression assertion
+> 1. Two optional fields — prevention mechanism, architectural follow-up
+> 1. The light completion template for small templating-layer fixes
+> 1. The five assertion pattern library
+> 
+> Do not begin work on any new task until the task spec includes the three required fields. If a task is handed to you without them, request clarification before starting.
+
+-----
+
+## Quick reference
+
+**At task creation time, every spec must include:**
+
+- Canonical source reference (Field 1)
+- Sibling bug search step (Field 2)
+- Explicit regression assertion (Field 3)
+
+**Optional but encouraged:**
+
+- Prevention mechanism (Field 4)
+- Architectural follow-up (Field 5)
+
+**Completion template selection:**
+
+- Full five-section template: default for engine, data flow, or multi-section work
+- Light four-section template: small templating fixes under one hour
+
+**Assertion library selection:**
+
+- Pattern A: value matches canonical
+- Pattern B: cross-section consistency
+- Pattern C: phrase guard
+- Pattern D: header/data alignment
+- Pattern E: conditional message presence
+
+-----
+
+## Why this addendum exists
+
+The first eight tasks of the engagement have largely succeeded but have surfaced repeated patterns:
+
+- Tasks that “fix” an issue at the engine level without verifying renderer-level output (the source-of-truth drift pattern)
+- Single-instance fixes that miss sibling instances in nearby code
+- Vague regression assertions that leave room for the same issue to reappear in adjacent rows or columns
+- Architectural insights that could prevent classes of issues but get lost in task-specific scope
+
+Each of the six additions here addresses one of those patterns directly. None require process overhead beyond what a careful task author would already do; the addendum makes the discipline explicit so it survives agent handoff and context resets.
+
+The base protocol remains the primary reference. This addendum extends it.
