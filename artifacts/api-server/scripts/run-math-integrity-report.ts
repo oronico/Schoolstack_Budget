@@ -115,6 +115,36 @@ interface SurfaceReader {
   projectCanonical?: (canonical: unknown) => SurfaceValue | SurfaceValue[];
 }
 
+/**
+ * Strict triage taxonomy required by M4 governance. Every Finding
+ * carries one of these codes so the discrepancy report can be filtered,
+ * counted, and gated reliably as the registry evolves.
+ */
+type TriageCode =
+  | "in-tolerance"
+  | "exact-text-match"
+  | "acceptable-variance-annotated-in-registry"
+  | "routing-bug-fixed-in-this-milestone"
+  | "format-fix-in-this-milestone"
+  | "calc-bug-blocker"
+  | "no-reader-declared"
+  | "reader-threw"
+  | "missing-canonical"
+  | "non-metric-numeric-leaf";
+
+const ALL_TRIAGE_CODES: readonly TriageCode[] = [
+  "in-tolerance",
+  "exact-text-match",
+  "acceptable-variance-annotated-in-registry",
+  "routing-bug-fixed-in-this-milestone",
+  "format-fix-in-this-milestone",
+  "calc-bug-blocker",
+  "no-reader-declared",
+  "reader-threw",
+  "missing-canonical",
+  "non-metric-numeric-leaf",
+];
+
 interface Finding {
   metricId: string;
   category: string;
@@ -129,6 +159,7 @@ interface Finding {
   toleranceAbs: string;
   toleranceRel: string;
   severity: Severity;
+  triageCode: TriageCode;
   triage: string;
 }
 
@@ -1065,6 +1096,7 @@ function diff(
       toleranceAbs: String(metric.tolerance.abs ?? "—"),
       toleranceRel: String(metric.tolerance.rel ?? "—"),
       severity: "skipped-structural",
+      triageCode: "acceptable-variance-annotated-in-registry",
       triage: reader.intentionalSkip,
     };
   }
@@ -1086,6 +1118,7 @@ function diff(
       toleranceAbs: String(metric.tolerance.abs ?? "—"),
       toleranceRel: String(metric.tolerance.rel ?? "—"),
       severity: "drift",
+      triageCode: "reader-threw",
       triage: `Reader threw: ${(err as Error).message}`,
     };
   }
@@ -1112,6 +1145,7 @@ function diff(
       toleranceAbs: String(metric.tolerance.abs ?? "—"),
       toleranceRel: String(metric.tolerance.rel ?? "—"),
       severity: "unresolved",
+      triageCode: "no-reader-declared",
       triage: "No reader for this surface — add a dotted accessor.",
     };
   }
@@ -1158,6 +1192,7 @@ function diff(
       toleranceAbs: String(metric.tolerance.abs ?? "—"),
       toleranceRel: String(metric.tolerance.rel ?? "—"),
       severity: "skipped-structural",
+      triageCode: "acceptable-variance-annotated-in-registry",
       triage: TRIAGE_NOTES[metric.id],
     };
   }
@@ -1187,12 +1222,20 @@ function diff(
     toleranceAbs: String(metric.tolerance.abs ?? "—"),
     toleranceRel: String(metric.tolerance.rel ?? "—"),
     severity: result.severity,
+    triageCode:
+      result.severity === "pass"
+        ? "in-tolerance"
+        : result.severity === "skipped-structural"
+        ? "exact-text-match"
+        : result.severity === "missing"
+        ? "missing-canonical"
+        : "calc-bug-blocker",
     triage:
       result.severity === "pass"
         ? "in tolerance"
         : result.severity === "skipped-structural"
         ? "exact-match string (text/enum)"
-        : TRIAGE_NOTES[metric.id] ?? "investigate calc/routing",
+        : TRIAGE_NOTES[metric.id] ?? "investigate calc/routing (file blocker before merge)",
   };
 }
 
@@ -1215,6 +1258,7 @@ function toCsv(findings: Finding[]): string {
     "toleranceAbs",
     "toleranceRel",
     "severity",
+    "triageCode",
     "triage",
   ];
   const escape = (s: string) =>
@@ -1236,6 +1280,7 @@ function toCsv(findings: Finding[]): string {
         f.toleranceAbs,
         f.toleranceRel,
         f.severity,
+        f.triageCode,
         f.triage,
       ]
         .map((v) => escape(String(v)))
@@ -1250,6 +1295,7 @@ function toMarkdown(
   personas: readonly PersonaFixture[],
   supplemental: Finding[],
   m2Coverage: ExtractorCoverage[],
+  m2Mapping: M2MappingResult,
 ): string {
   const counts = findings.reduce(
     (acc, f) => {
@@ -1302,6 +1348,66 @@ function toMarkdown(
   for (const c of m2Coverage) {
     lines.push(
       `| ${c.persona} | ${c.producer} | ${c.leafCount} | ${c.uniqueLabels} | ${c.sampleLabels.join(", ")} |`,
+    );
+  }
+  lines.push("");
+
+  // ── M2 → M1 mapping section ────────────────────────────────────────────
+  const mapCounts = m2Mapping.mapped.reduce(
+    (acc, f) => ((acc[f.severity] = (acc[f.severity] ?? 0) + 1), acc),
+    {} as Record<Severity, number>,
+  );
+  lines.push("## M2 → M1 mapping (extracted leaves diffed vs canonical)");
+  lines.push("");
+  lines.push(
+    "Every numeric leaf the M2 extractor (`extractJsonExport`) yields from the rendered lender/board/narrative payloads is either (a) routed to a registry metric via `M2_LABEL_TO_METRIC` and diffed against the M3 canonical (with the canonical projected to the leaf's scalar shape), or (b) classified as a non-metric numeric leaf via `M2_UNMAPPED_RATIONALE` with an auditable reason (per-scenario sensitivity values, per-year/per-month ordinals, audit-trail year indices, UI rollup duplicates, wizard input echoes). The run fails if any new label appears that has neither a mapping nor a rationale.",
+  );
+  lines.push("");
+  lines.push(`- mapped leaf findings: ${m2Mapping.mapped.length}`);
+  lines.push(`  - pass: ${mapCounts.pass ?? 0}`);
+  lines.push(`  - drift: ${mapCounts.drift ?? 0}`);
+  lines.push(`  - missing: ${mapCounts.missing ?? 0}`);
+  lines.push(`  - skipped-structural: ${mapCounts["skipped-structural"] ?? 0}`);
+  lines.push(`- unmapped leaves (non-metric, classified): ${m2Mapping.unmappedLeafCount}`);
+  lines.push(`- unmapped label classes: ${m2Mapping.unmapped.length}`);
+  lines.push("");
+  lines.push(
+    "**Acceptance bar (M4):** zero `drift` in the M2 → M1 mapping section AND zero unclassified labels.",
+  );
+  lines.push("");
+  const mapGroups: Severity[] = ["drift", "missing", "skipped-structural", "pass"];
+  for (const sev of mapGroups) {
+    const rows = m2Mapping.mapped.filter((f) => f.severity === sev);
+    if (rows.length === 0) continue;
+    lines.push(`### M2-mapped ${sev} (${rows.length})`);
+    lines.push("");
+    lines.push(
+      "| metricId | persona | producer leaf path | extracted | canonical | Δabs | Δrel | triageCode |",
+    );
+    lines.push("|---|---|---|---|---|---|---|---|");
+    const cap = sev === "pass" ? 50 : rows.length;
+    for (const f of rows.slice(0, cap)) {
+      const esc = (s: string) =>
+        String(s).replace(/\|/g, "\\|").replace(/\n/g, " ");
+      lines.push(
+        `| ${esc(f.metricId)} | ${esc(f.persona)} | ${esc(f.location)} | ${esc(f.extracted)} | ${esc(f.canonical)} | ${esc(f.deltaAbs)} | ${esc(f.deltaRel)} | ${esc(f.triageCode)} |`,
+      );
+    }
+    if (rows.length > cap) {
+      lines.push(`| _…${rows.length - cap} more rows omitted (full list in CSV)…_ | | | | | | | |`);
+    }
+    lines.push("");
+  }
+  lines.push("### M2 unmapped labels (classified as non-metric numeric leaves)");
+  lines.push("");
+  lines.push("| label | leaf count | sample paths | rationale |");
+  lines.push("|---|---|---|---|");
+  for (const u of m2Mapping.unmapped) {
+    const rationale = M2_UNMAPPED_RATIONALE[u.label] ?? "_(unclassified — fail)_";
+    const esc = (s: string) =>
+      String(s).replace(/\|/g, "\\|").replace(/\n/g, " ");
+    lines.push(
+      `| \`${esc(u.label)}\` | ${u.count} | ${u.samplePaths.map((p) => `\`${esc(p)}\``).join("<br>")} | ${esc(rationale)} |`,
     );
   }
   lines.push("");
@@ -1420,6 +1526,7 @@ function evaluateRegistrySurface(
         toleranceAbs: String(metric.tolerance.abs ?? "—"),
         toleranceRel: String(metric.tolerance.rel ?? "—"),
         severity: "skipped-structural",
+        triageCode: "acceptable-variance-annotated-in-registry",
         triage: structuralNote,
       },
     ];
@@ -1446,6 +1553,7 @@ function evaluateRegistrySurface(
       toleranceAbs: String(metric.tolerance.abs ?? "—"),
       toleranceRel: String(metric.tolerance.rel ?? "—"),
       severity: "unresolved",
+      triageCode: "no-reader-declared",
       triage:
         "No typed-shape reader and no structural-skip note for this declared surface. Add one to TYPED_READERS_BY_SURFACE or STRUCTURAL_SKIPS_BY_PATH.",
     },
@@ -1494,6 +1602,311 @@ function runM2Coverage(
   return out;
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// M2 → M1 mapping
+// ─────────────────────────────────────────────────────────────────────────
+//
+// The M2 extractor (`extractJsonExport`) walks every numeric leaf in the
+// rendered payload (lender packet, board packet, narrative bundle) and
+// labels each with its parent field name. The map below routes those
+// labels to a registry metric and projects the canonical value to the
+// scalar shape the leaf carries, so every mappable extracted leaf
+// becomes an actual comparison (not just a coverage count).
+//
+// Unmapped labels are reported as `non-metric numeric leaves` — those
+// are composite array/per-scenario/per-year leaves that are not first-
+// class registry metrics (e.g. the per-scenario sensitivity tables, the
+// per-year scenario `values`/`endingCash`/`dscr`/`netIncome` arrays,
+// the wizard `enrollment`/`tuition` deltas). Each unmapped label is
+// listed in the report with its leaf count so it remains auditable and
+// can be promoted to a registry metric later if needed.
+
+interface M2LabelMapping {
+  metricId: string;
+  /** Project the canonical for `metricId` to the scalar shape the leaf carries. */
+  pickCanonical?: (canonical: unknown) => SurfaceValue;
+  /**
+   * Optional path-filter predicate. If set, only leaves whose path
+   * satisfies the predicate are routed to this metric. Used to exclude
+   * per-scenario sensitivity duplicates (`scenarios[N]` paths) so the
+   * mapped comparison stays anchored to the base/headline scenario.
+   */
+  pathFilter?: (path: string) => boolean;
+}
+
+/**
+ * Default path filter for headline/base-scenario leaves only — excludes
+ * any leaf inside `lenderStressTests.scenarios[N]` (per-scenario
+ * sensitivity rows that intentionally deviate from base canonical) and
+ * inside `deltaVsBase` (sensitivity deltas, not absolute values).
+ */
+const BASE_SCENARIO_ONLY = (path: string): boolean =>
+  !/\.scenarios\[\d+\]/.test(path) && !/\.deltaVsBase\./.test(path);
+
+const pickFromObject = <K extends string>(key: K) =>
+  (c: unknown): SurfaceValue =>
+    typeof c === "object" && c !== null && key in c
+      ? ((c as Record<string, unknown>)[key] as SurfaceValue)
+      : null;
+
+const M2_LABEL_TO_METRIC: Record<string, M2LabelMapping> = {
+  cashRunwayMonths: {
+    metricId: "cash-runway-months",
+    pathFilter: BASE_SCENARIO_ONLY,
+  },
+  troughEndingCash: { metricId: "cash-trough-ending-cash" },
+  reserveMonthsLastYear: { metricId: "reserve-months-last-year" },
+  breakEvenYear: {
+    metricId: "break-even-year",
+    pathFilter: BASE_SCENARIO_ONLY,
+  },
+  breakEvenStudentsY1: { metricId: "break-even-students-y1" },
+  dscrY1Normalized: {
+    metricId: "dscr-year-series-normalized",
+    pickCanonical: (c) => (Array.isArray(c) ? (c[0] as SurfaceValue) : null),
+  },
+  dscrMinNormalized: {
+    metricId: "dscr-min-normalized",
+    pickCanonical: pickFromObject("min"),
+  },
+  founderCompTotalDelta: {
+    metricId: "founder-comp-adjustment",
+    pickCanonical: pickFromObject("totalDelta"),
+  },
+  taggedFraction: {
+    metricId: "lender-readiness-cap",
+    pickCanonical: pickFromObject("taggedFraction"),
+    // Only the lender-readiness "result.cap" exposes the realized
+    // overall tagged fraction. The intermediate dimension/severity
+    // caps are diagnostic and don't always equal the overall.
+    pathFilter: (p) => p.includes("lenderReadiness.result.cap"),
+  },
+  // Per-bucket Y1 percentage projections. Canonical is the per-year
+  // `pctByBucket` array (snake_case keys, 0-1 fractions). The leaves
+  // carry the camelCase pre-formatted percent (×100).
+  contractedPct: {
+    metricId: "revenue-quality-by-bucket",
+    pickCanonical: (c) => pickBucketPct(c, "contracted"),
+  },
+  projectedPct: {
+    metricId: "revenue-quality-by-bucket",
+    pickCanonical: (c) => pickBucketPct(c, "projected"),
+  },
+  donorDependentPct: {
+    metricId: "revenue-quality-by-bucket",
+    pickCanonical: (c) => pickBucketPct(c, "donor_dependent"),
+  },
+  policyDependentPct: {
+    metricId: "revenue-quality-by-bucket",
+    pickCanonical: (c) => pickBucketPct(c, "policy_dependent"),
+  },
+};
+
+function pickBucketPct(canonical: unknown, key: string): SurfaceValue {
+  if (!Array.isArray(canonical) || canonical.length === 0) return null;
+  const y1 = canonical[0] as Record<string, unknown> | undefined;
+  if (!y1 || typeof y1 !== "object") return null;
+  const v = y1[key];
+  return typeof v === "number" ? v * 100 : null;
+}
+
+interface UnmappedLabelSummary {
+  label: string;
+  count: number;
+  samplePaths: string[];
+}
+
+interface M2MappingResult {
+  mapped: Finding[];
+  unmapped: UnmappedLabelSummary[];
+  unmappedLeafCount: number;
+}
+
+function runM2Mapping(
+  personaCtxs: readonly {
+    ctx: Omit<SurfaceContext, "canonical">;
+    canonical: Record<string, unknown>;
+  }[],
+): M2MappingResult {
+  const metricsById = new Map(CANONICAL_METRICS.map((m) => [m.id, m]));
+  const mapped: Finding[] = [];
+  const unmappedAgg = new Map<string, { count: number; samplePaths: Set<string> }>();
+  let unmappedLeafCount = 0;
+
+  for (const { ctx, canonical } of personaCtxs) {
+    for (const [producer, payload] of [
+      ["lender-packet", ctx.lenderPacket],
+      ["board-packet", ctx.boardPacket],
+      ["narrative-bundle", ctx.narrativeBundle],
+    ] as const) {
+      const leaves = extractJsonExport(payload as unknown, { producer });
+      for (const leaf of leaves) {
+        const label = leaf.label;
+        const mapping = label ? M2_LABEL_TO_METRIC[label] : undefined;
+        if (!mapping) {
+          const key = label ?? "(no-label)";
+          const agg = unmappedAgg.get(key) ?? { count: 0, samplePaths: new Set<string>() };
+          agg.count += 1;
+          if (agg.samplePaths.size < 3) agg.samplePaths.add(`${producer}:${leaf.location}`);
+          unmappedAgg.set(key, agg);
+          unmappedLeafCount += 1;
+          continue;
+        }
+        if (mapping.pathFilter && !mapping.pathFilter(leaf.location)) {
+          // Treat scenario/aux leaves as classified (counted as
+          // non-metric) rather than mapped — register them under the
+          // label so the unclassified-label assertion still holds.
+          const key = label!;
+          const agg = unmappedAgg.get(key) ?? { count: 0, samplePaths: new Set<string>() };
+          agg.count += 1;
+          if (agg.samplePaths.size < 3) agg.samplePaths.add(`${producer}:${leaf.location}`);
+          unmappedAgg.set(key, agg);
+          unmappedLeafCount += 1;
+          continue;
+        }
+        const metric = metricsById.get(mapping.metricId);
+        if (!metric) continue;
+        const canonicalRaw = canonical[mapping.metricId];
+        const canonicalScalar = mapping.pickCanonical
+          ? mapping.pickCanonical(canonicalRaw)
+          : (canonicalRaw as SurfaceValue);
+
+        const result = compareScalar(
+          leaf.value,
+          canonicalScalar,
+          metric,
+        );
+        const sev = result.severity;
+        const triageCode: TriageCode =
+          sev === "pass"
+            ? "in-tolerance"
+            : sev === "skipped-structural"
+            ? "exact-text-match"
+            : sev === "missing"
+            ? "missing-canonical"
+            : "calc-bug-blocker";
+        mapped.push({
+          metricId: metric.id,
+          category: metric.category,
+          unit: metric.unit,
+          persona: ctx.persona.slug,
+          surface: `m2:${producer}`,
+          location: `${producer} ${leaf.location} (label=${label})`,
+          extracted:
+            leaf.rawToken !== undefined
+              ? leaf.rawToken
+              : formatNumber(leaf.value, metric.unit),
+          canonical: fmt(canonicalScalar, metric.unit),
+          deltaAbs:
+            result.deltaAbs !== null ? formatNumber(result.deltaAbs, metric.unit) : "—",
+          deltaRel:
+            result.deltaRel !== null
+              ? (result.deltaRel * 100).toFixed(4) + "%"
+              : "—",
+          toleranceAbs: String(metric.tolerance.abs ?? "—"),
+          toleranceRel: String(metric.tolerance.rel ?? "—"),
+          severity: sev,
+          triageCode,
+          triage:
+            sev === "pass"
+              ? "in tolerance (M2 leaf → registry metric)"
+              : sev === "skipped-structural"
+              ? "exact-text-match (M2 leaf → registry metric)"
+              : sev === "missing"
+              ? "canonical missing for mapped leaf"
+              : `M2 leaf drift vs canonical — investigate calc/routing (file blocker before merge)`,
+        });
+      }
+    }
+  }
+
+  const unmapped: UnmappedLabelSummary[] = [...unmappedAgg.entries()]
+    .map(([label, { count, samplePaths }]) => ({
+      label,
+      count,
+      samplePaths: [...samplePaths],
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  return { mapped, unmapped, unmappedLeafCount };
+}
+
+/**
+ * Auditable classification of unmapped M2 labels — every unmapped label
+ * MUST be listed here with a rationale, so reviewers can confirm the
+ * non-mapping is intentional (composite/per-scenario/per-year array)
+ * rather than a forgotten registry hole. The harness fails if any
+ * unmapped label is missing from this table.
+ */
+const M2_UNMAPPED_RATIONALE: Record<string, string> = {
+  values: "Per-scenario/per-year sensitivity table values (composite array, not a first-class registry metric).",
+  endingCash: "Per-scenario/per-year ending-cash array (covered as registry metric cash-trough-ending-cash via troughEndingCash leaf).",
+  dscr: "Per-scenario/per-year DSCR array (covered as registry metrics dscr-year-series-normalized/min via dscrY1Normalized/dscrMinNormalized leaves).",
+  netIncome: "Per-scenario/per-year net-income array (composite, not a first-class registry metric).",
+  breakEvenStudents: "Per-scenario break-even students array (covered as registry metric break-even-students-y1 via breakEvenStudentsY1 leaf).",
+  value: "Generic display field on packet linkedMetrics rows; covered via the metric-specific labels (cashRunwayMonths, dscrY1Normalized, etc.) on the same rows.",
+  allowedFigures: "Per-scenario allowed-figure ranges for sensitivity tables (not a metric, just a UI bound).",
+  enrollment: "Wizard per-scenario enrollment input echo (not a derived metric).",
+  order: "Display ordering index (not a metric).",
+  enrollmentDelta: "Wizard sensitivity-table delta input echo (not a derived metric).",
+  tuitionDelta: "Wizard sensitivity-table delta input echo (not a derived metric).",
+  breakEvenYearShift: "Per-scenario delta vs base year (composite sensitivity, not a registry metric).",
+  year: "Per-row year ordinal in packet tables (not a metric).",
+  monthIndex: "Per-row month ordinal in packet tables (not a metric).",
+  amount: "Per-line currency amount on packet tables (each line covered via its parent metric — composite).",
+  yearIndex: "Per-row year ordinal in packet tables (not a metric).",
+  cumulative: "Cumulative running total on packet trough table (covered via cash-trough-ending-cash; cumulative is a UI rollup).",
+  reserveMonths: "Per-year reserve-months array on packet tables (covered as registry metric reserve-months-last-year via reserveMonthsLastYear leaf).",
+  unrestrictedCash: "Per-year unrestricted-cash array on packet tables (covered via cash-trough-ending-cash; this is a UI breakdown column).",
+  y1NetIncome: "Per-scenario Y1 net-income on sensitivity rows (composite, not a registry metric).",
+  y1Dscr: "Per-scenario Y1 DSCR on sensitivity rows (covered via dscr-year-series-normalized for the base scenario; per-scenario sensitivity values are composite).",
+  reported: "Per-row 'reported' value on founder-comp packet table (covered via founder-comp-adjustment).",
+  reportedLoaded: "Per-row fully-loaded reported value on founder-comp table (covered via founder-comp-adjustment).",
+  normalized: "Per-row 'normalized' value on founder-comp packet table (covered via founder-comp-adjustment).",
+  normalizedLoaded: "Per-row fully-loaded normalized value on founder-comp table (covered via founder-comp-adjustment).",
+  delta: "Per-row founder-comp delta (covered via founder-comp-adjustment.totalDelta).",
+  enrollmentDeltas: "Wizard sensitivity-table delta-list input echo (not a derived metric).",
+  breakEvenUtilization: "Per-scenario break-even utilization fraction (covered via break-even-students-y1 utilization; per-scenario is composite).",
+  maxCapacity: "Per-scenario max-capacity bound for sensitivity table (input echo, not a derived metric).",
+  tuitionDeltas: "Wizard sensitivity-table delta-list input echo (not a derived metric).",
+  pendingEvidenceCount: "Lender-readiness pending evidence count (covered via lender-readiness-cap).",
+  totalAssumptionCount: "Lender-readiness total assumption count (covered via lender-readiness-cap).",
+  enrollmentY1: "Per-persona Y1 enrollment input echo (not a derived metric).",
+  enrollmentY5: "Per-persona Y5 enrollment input echo (not a derived metric).",
+  retentionRatePct: "Per-persona retention-rate input echo (not a derived metric).",
+  dscrY1Reported: "Reported DSCR Y1 — diagnostic; canonical metric uses normalized basis (covered via dscrY1Normalized).",
+  dscrMinNormalizedYear: "Index of the year that produced the min normalized DSCR (audit-trail field, not a derived metric).",
+  reserveLastYearNumber: "Display alias of reserveMonthsLastYear rounded to integer (UI rollup, not a separate metric).",
+  troughYear: "Index of the year that produced the cash trough (audit-trail field, not a derived metric).",
+  breakEvenUtilizationY1Pct: "Y1 break-even utilization as a percent (covered via break-even-students-y1; this is a UI percentage rollup).",
+  y5Revenue: "Headline Y5 revenue display on packet headers (composite revenue total — covered via canonical resolver but no dedicated leaf metric).",
+  y5Margin: "Headline Y5 net-margin display on packet headers (composite, not a first-class registry metric).",
+  modelId: "Packet model-identifier ordinal (not a metric).",
+  percentFormat: "Display format hint constant (not a metric).",
+  y5NetIncome: "Per-scenario Y5 net-income on sensitivity rows (composite, not a registry metric).",
+  minDscr: "Per-scenario worst-year DSCR (covered as registry metric dscr-min-normalized for the base scenario; per-scenario sensitivity is composite).",
+  minEndingCash: "Per-scenario worst-month ending cash (covered as registry metric cash-trough-ending-cash for the base scenario; per-scenario sensitivity is composite).",
+  runwayMonths: "Unrounded runway-months alias in commentary bundle (covered as registry metric cash-runway-months via cashRunwayMonths leaf — this is the float source the rounded display reads).",
+  unrestrictedCashLabel: "Display-label numeric for the cash-drift commentary section (UI label echo, not a derived metric).",
+  accrualCashLabel: "Display-label numeric for the accrual cash commentary section (UI label echo, not a derived metric).",
+  forecastAccuracyUnfilteredCount: "Lender-readiness diagnostic count of unfiltered forecast-accuracy items (audit-trail field).",
+  totalDelta: "Alias of founderCompTotalDelta on the founder-comp adjustment object (covered via founder-comp-adjustment).",
+  yearIdx: "Row-ordinal year index on revenue-per-seat tables (not a metric).",
+  students: "Per-row enrolled-student count on revenue-per-seat tables (input echo, not a derived metric).",
+  stickerPerSeat: "Per-seat sticker-tuition on revenue-per-seat tables (per-seat unit economic — composite, not a first-class registry metric).",
+  netPerSeat: "Per-seat net tuition after discounts on revenue-per-seat tables (per-seat composite, not a registry metric).",
+  familyPayPerSeat: "Per-seat family-pay component on revenue-per-seat tables (per-seat composite, not a registry metric).",
+  familyPayTotal: "Total family-pay revenue on revenue-per-seat tables (covered by aggregate revenue resolver; not a leaf-level registry metric).",
+  recognizedPerSeat: "Per-seat recognized-revenue on revenue-per-seat tables (per-seat composite, not a registry metric).",
+  funderTotalPerSeat: "Per-seat funder-revenue on revenue-per-seat tables (per-seat composite, not a registry metric).",
+  currentDSCR: "Alias of dscrY1Normalized inside the lender-readiness DSCR-cap diagnostic (covered via dscr-year-series-normalized).",
+  taggedFractionMin: "Lender-readiness cap-curve floor (configuration constant, not a derived metric).",
+  taggedFractionMax: "Lender-readiness cap-curve ceiling (configuration constant, not a derived metric).",
+  taggedCount: "Lender-readiness count of tagged items (diagnostic count, covered via lender-readiness-cap.taggedFraction).",
+  perSeat: "Per-seat unit-economic generic column (composite, not a first-class registry metric).",
+  totalDollars: "Total-dollars rollup column on revenue-per-seat tables (covered by aggregate revenue resolver).",
+};
+
 async function main(): Promise<void> {
   console.log("=== Math Integrity Report (M4) ===");
   const personas = await loadPersonaFixturesAsync();
@@ -1540,6 +1953,27 @@ async function main(): Promise<void> {
   // rendered payload and reports how many numeric leaves it observed.
   const m2Coverage = runM2Coverage(personaCtxs);
 
+  // M2 → M1 mapping pass — every numeric leaf the M2 extractor yields
+  // is either routed to a registry metric and compared to canonical, or
+  // classified as a non-metric numeric leaf with an auditable rationale
+  // in M2_UNMAPPED_RATIONALE.
+  const m2Mapping = runM2Mapping(personaCtxs);
+
+  // Validate that EVERY unmapped label has a rationale entry. If a new
+  // label appears that is not classified, fail the run — the operator
+  // must either add it to M2_LABEL_TO_METRIC or M2_UNMAPPED_RATIONALE.
+  // A label is "classified" if it is either explicitly routed to a
+  // registry metric via M2_LABEL_TO_METRIC (even if some of its leaves
+  // were excluded by a pathFilter — those scenario-path leaves count as
+  // intentionally non-metric on the same label), or annotated with a
+  // rationale in M2_UNMAPPED_RATIONALE.
+  const unclassifiedLabels = m2Mapping.unmapped
+    .map((u) => u.label)
+    .filter(
+      (label) =>
+        !(label in M2_UNMAPPED_RATIONALE) && !(label in M2_LABEL_TO_METRIC),
+    );
+
   const here = dirname(fileURLToPath(import.meta.url));
   const reportsDir = join(here, "..", "reports");
   mkdirSync(reportsDir, { recursive: true });
@@ -1547,9 +1981,35 @@ async function main(): Promise<void> {
   const csvPath = join(reportsDir, "math-integrity-report.csv");
   writeFileSync(
     mdPath,
-    toMarkdown(findings, personas, supplementalFindings, m2Coverage),
+    toMarkdown(findings, personas, supplementalFindings, m2Coverage, m2Mapping),
   );
-  writeFileSync(csvPath, toCsv([...findings, ...supplementalFindings]));
+  writeFileSync(
+    csvPath,
+    toCsv([...findings, ...supplementalFindings, ...m2Mapping.mapped]),
+  );
+
+  // Assert every Finding carries a valid triageCode from the strict enum.
+  const allFindings = [...findings, ...supplementalFindings, ...m2Mapping.mapped];
+  const invalidTriage = allFindings.filter(
+    (f) => !ALL_TRIAGE_CODES.includes(f.triageCode),
+  );
+  if (invalidTriage.length > 0) {
+    console.error(
+      `\nFAIL: ${invalidTriage.length} findings carry triageCode outside the enum:`,
+      invalidTriage.slice(0, 5).map((f) => ({ metricId: f.metricId, triageCode: f.triageCode })),
+    );
+    process.exit(1);
+  }
+  // Assert every skipped-structural row has non-empty triage text.
+  const blankTriage = allFindings.filter(
+    (f) => f.severity === "skipped-structural" && (!f.triage || f.triage.trim() === ""),
+  );
+  if (blankTriage.length > 0) {
+    console.error(
+      `\nFAIL: ${blankTriage.length} skipped-structural findings have blank triage text.`,
+    );
+    process.exit(1);
+  }
 
   const counts = findings.reduce(
     (acc, f) => ((acc[f.severity] = (acc[f.severity] ?? 0) + 1), acc),
@@ -1573,20 +2033,42 @@ async function main(): Promise<void> {
   for (const c of m2Coverage) {
     console.log(`  ${c.persona}/${c.producer}: ${c.leafCount} numeric leaves, ${c.uniqueLabels} unique labels`);
   }
+  const m2MapCounts = m2Mapping.mapped.reduce(
+    (acc, f) => ((acc[f.severity] = (acc[f.severity] ?? 0) + 1), acc),
+    {} as Record<Severity, number>,
+  );
+  console.log("\n=== M2 → M1 mapping (extracted leaves diffed vs canonical) ===");
+  console.log(`  mapped leaf findings:        ${m2Mapping.mapped.length}`);
+  console.log(`    pass:                      ${m2MapCounts.pass ?? 0}`);
+  console.log(`    drift:                     ${m2MapCounts.drift ?? 0}`);
+  console.log(`    missing:                   ${m2MapCounts.missing ?? 0}`);
+  console.log(`    skipped-structural:        ${m2MapCounts["skipped-structural"] ?? 0}`);
+  console.log(`  unmapped leaves (non-metric): ${m2Mapping.unmappedLeafCount}`);
+  console.log(`  unmapped label classes:       ${m2Mapping.unmapped.length}`);
   console.log(`\nReport written to:\n  ${mdPath}\n  ${csvPath}`);
 
-  // Acceptance bar: zero unresolved in the registry-surface section
-  // AND zero drift (because the registry-surface loop now diffs every
-  // declared surface — a drift here is a genuine routing/calc bug).
-  const unresolved = counts.unresolved ?? 0;
-  const drift = counts.drift ?? 0;
-  if (unresolved > 0 || drift > 0) {
+  if (unclassifiedLabels.length > 0) {
     console.error(
-      `\nFAIL: ${unresolved} unresolved, ${drift} drift in registry-surface coverage. See report.`,
+      `\nFAIL: ${unclassifiedLabels.length} M2 labels are neither mapped to a registry metric nor classified as non-metric. Add them to M2_LABEL_TO_METRIC or M2_UNMAPPED_RATIONALE: ${unclassifiedLabels.join(", ")}`,
     );
     process.exit(1);
   }
-  console.log("\nOK: zero unresolved + zero drift in registry-surface coverage.");
+
+  // Acceptance bar: zero unresolved + zero drift in both the
+  // registry-surface section AND the M2 → M1 mapping section. A drift
+  // in either section is a genuine routing/calc bug.
+  const unresolved = counts.unresolved ?? 0;
+  const drift = counts.drift ?? 0;
+  const m2Drift = m2MapCounts.drift ?? 0;
+  if (unresolved > 0 || drift > 0 || m2Drift > 0) {
+    console.error(
+      `\nFAIL: ${unresolved} unresolved, ${drift} drift (registry-surface) + ${m2Drift} drift (M2-mapped leaves). See report.`,
+    );
+    process.exit(1);
+  }
+  console.log(
+    "\nOK: zero unresolved + zero drift in registry-surface coverage AND zero drift in M2 → M1 mapping.",
+  );
 }
 
 main().catch((err) => {

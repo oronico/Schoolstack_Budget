@@ -33,6 +33,158 @@ The M2 JSON extractor (`extractJsonExport`) is run over each persona's lender pa
 | riverside | board-packet | 409 | 66 | modelId, order, value, values, percentFormat, y5Revenue |
 | riverside | narrative-bundle | 23 | 23 | enrollmentY1, enrollmentY5, retentionRatePct, maxCapacity, dscrY1Normalized, dscrY1Reported |
 
+## M2 → M1 mapping (extracted leaves diffed vs canonical)
+
+Every numeric leaf the M2 extractor (`extractJsonExport`) yields from the rendered lender/board/narrative payloads is either (a) routed to a registry metric via `M2_LABEL_TO_METRIC` and diffed against the M3 canonical (with the canonical projected to the leaf's scalar shape), or (b) classified as a non-metric numeric leaf via `M2_UNMAPPED_RATIONALE` with an auditable reason (per-scenario sensitivity values, per-year/per-month ordinals, audit-trail year indices, UI rollup duplicates, wizard input echoes). The run fails if any new label appears that has neither a mapping nor a rationale.
+
+- mapped leaf findings: 159
+  - pass: 156
+  - drift: 0
+  - missing: 0
+  - skipped-structural: 3
+- unmapped leaves (non-metric, classified): 4302
+- unmapped label classes: 69
+
+**Acceptance bar (M4):** zero `drift` in the M2 → M1 mapping section AND zero unclassified labels.
+
+### M2-mapped skipped-structural (3)
+
+| metricId | persona | producer leaf path | extracted | canonical | Δabs | Δrel | triageCode |
+|---|---|---|---|---|---|---|---|
+| lender-readiness-cap | liberty | lender-packet lenderReadiness.result.cap.taggedFraction (label=taggedFraction) | 0 | 0 | 0 | 0.0000% | exact-text-match |
+| lender-readiness-cap | oakwood | lender-packet lenderReadiness.result.cap.taggedFraction (label=taggedFraction) | 0 | 0 | 0 | 0.0000% | exact-text-match |
+| lender-readiness-cap | riverside | lender-packet lenderReadiness.result.cap.taggedFraction (label=taggedFraction) | 0 | 0 | 0 | 0.0000% | exact-text-match |
+
+### M2-mapped pass (156)
+
+| metricId | persona | producer leaf path | extracted | canonical | Δabs | Δrel | triageCode |
+|---|---|---|---|---|---|---|---|
+| cash-runway-months | liberty | lender-packet lenderStressTests.base.cashRunwayMonths (label=cashRunwayMonths) | 11.10 | 11.12 | -0.02 | 0.2052% | in-tolerance |
+| break-even-year | liberty | lender-packet lenderStressTests.base.breakEvenYear (label=breakEvenYear) | 1 | 1 | 0 | 0.0000% | in-tolerance |
+| dscr-year-series-normalized | liberty | lender-packet lenderCommentary.bundle.dscrY1Normalized (label=dscrY1Normalized) | 30.650 | 30.650 | 0.000 | 0.0000% | in-tolerance |
+| dscr-min-normalized | liberty | lender-packet lenderCommentary.bundle.dscrMinNormalized (label=dscrMinNormalized) | 30.650 | 30.650 | 0.000 | 0.0000% | in-tolerance |
+| cash-runway-months | liberty | lender-packet lenderCommentary.bundle.cashRunwayMonths (label=cashRunwayMonths) | 11.12 | 11.12 | 0.00 | 0.0000% | in-tolerance |
+| reserve-months-last-year | liberty | lender-packet lenderCommentary.bundle.reserveMonthsLastYear (label=reserveMonthsLastYear) | 77.70 | 77.70 | 0.00 | 0.0000% | in-tolerance |
+| cash-trough-ending-cash | liberty | lender-packet lenderCommentary.bundle.troughEndingCash (label=troughEndingCash) | 2258592 | 2258592 | 0 | 0.0000% | in-tolerance |
+| break-even-year | liberty | lender-packet lenderCommentary.bundle.breakEvenYear (label=breakEvenYear) | 1 | 1 | 0 | 0.0000% | in-tolerance |
+| break-even-students-y1 | liberty | lender-packet lenderCommentary.bundle.breakEvenStudentsY1 (label=breakEvenStudentsY1) | 93 | 93 | 0 | 0.0000% | in-tolerance |
+| founder-comp-adjustment | liberty | lender-packet lenderCommentary.bundle.founderCompTotalDelta (label=founderCompTotalDelta) | 344883 | 344883 | 0 | 0.0000% | in-tolerance |
+| revenue-quality-by-bucket | liberty | lender-packet lenderCommentary.bundle.revenueQualityY1.contractedPct (label=contractedPct) | 0.00 | 0.00 | 0.00 | 0.0000% | in-tolerance |
+| revenue-quality-by-bucket | liberty | lender-packet lenderCommentary.bundle.revenueQualityY1.projectedPct (label=projectedPct) | 1.03 | 1.03 | 0.00 | 0.0000% | in-tolerance |
+| revenue-quality-by-bucket | liberty | lender-packet lenderCommentary.bundle.revenueQualityY1.donorDependentPct (label=donorDependentPct) | 4.27 | 4.27 | 0.00 | 0.0000% | in-tolerance |
+| revenue-quality-by-bucket | liberty | lender-packet lenderCommentary.bundle.revenueQualityY1.policyDependentPct (label=policyDependentPct) | 94.70 | 94.70 | 0.00 | 0.0000% | in-tolerance |
+| dscr-year-series-normalized | liberty | board-packet boardCommentary.bundle.dscrY1Normalized (label=dscrY1Normalized) | 30.650 | 30.650 | 0.000 | 0.0000% | in-tolerance |
+| dscr-min-normalized | liberty | board-packet boardCommentary.bundle.dscrMinNormalized (label=dscrMinNormalized) | 30.650 | 30.650 | 0.000 | 0.0000% | in-tolerance |
+| cash-runway-months | liberty | board-packet boardCommentary.bundle.cashRunwayMonths (label=cashRunwayMonths) | 11.12 | 11.12 | 0.00 | 0.0000% | in-tolerance |
+| reserve-months-last-year | liberty | board-packet boardCommentary.bundle.reserveMonthsLastYear (label=reserveMonthsLastYear) | 77.70 | 77.70 | 0.00 | 0.0000% | in-tolerance |
+| cash-trough-ending-cash | liberty | board-packet boardCommentary.bundle.troughEndingCash (label=troughEndingCash) | 2258592 | 2258592 | 0 | 0.0000% | in-tolerance |
+| break-even-year | liberty | board-packet boardCommentary.bundle.breakEvenYear (label=breakEvenYear) | 1 | 1 | 0 | 0.0000% | in-tolerance |
+| break-even-students-y1 | liberty | board-packet boardCommentary.bundle.breakEvenStudentsY1 (label=breakEvenStudentsY1) | 93 | 93 | 0 | 0.0000% | in-tolerance |
+| founder-comp-adjustment | liberty | board-packet boardCommentary.bundle.founderCompTotalDelta (label=founderCompTotalDelta) | 344883 | 344883 | 0 | 0.0000% | in-tolerance |
+| revenue-quality-by-bucket | liberty | board-packet boardCommentary.bundle.revenueQualityY1.contractedPct (label=contractedPct) | 0.00 | 0.00 | 0.00 | 0.0000% | in-tolerance |
+| revenue-quality-by-bucket | liberty | board-packet boardCommentary.bundle.revenueQualityY1.projectedPct (label=projectedPct) | 1.03 | 1.03 | 0.00 | 0.0000% | in-tolerance |
+| revenue-quality-by-bucket | liberty | board-packet boardCommentary.bundle.revenueQualityY1.donorDependentPct (label=donorDependentPct) | 4.27 | 4.27 | 0.00 | 0.0000% | in-tolerance |
+| revenue-quality-by-bucket | liberty | board-packet boardCommentary.bundle.revenueQualityY1.policyDependentPct (label=policyDependentPct) | 94.70 | 94.70 | 0.00 | 0.0000% | in-tolerance |
+| dscr-year-series-normalized | liberty | board-packet grantCommentary.bundle.dscrY1Normalized (label=dscrY1Normalized) | 30.650 | 30.650 | 0.000 | 0.0000% | in-tolerance |
+| dscr-min-normalized | liberty | board-packet grantCommentary.bundle.dscrMinNormalized (label=dscrMinNormalized) | 30.650 | 30.650 | 0.000 | 0.0000% | in-tolerance |
+| cash-runway-months | liberty | board-packet grantCommentary.bundle.cashRunwayMonths (label=cashRunwayMonths) | 11.12 | 11.12 | 0.00 | 0.0000% | in-tolerance |
+| reserve-months-last-year | liberty | board-packet grantCommentary.bundle.reserveMonthsLastYear (label=reserveMonthsLastYear) | 77.70 | 77.70 | 0.00 | 0.0000% | in-tolerance |
+| cash-trough-ending-cash | liberty | board-packet grantCommentary.bundle.troughEndingCash (label=troughEndingCash) | 2258592 | 2258592 | 0 | 0.0000% | in-tolerance |
+| break-even-year | liberty | board-packet grantCommentary.bundle.breakEvenYear (label=breakEvenYear) | 1 | 1 | 0 | 0.0000% | in-tolerance |
+| break-even-students-y1 | liberty | board-packet grantCommentary.bundle.breakEvenStudentsY1 (label=breakEvenStudentsY1) | 93 | 93 | 0 | 0.0000% | in-tolerance |
+| founder-comp-adjustment | liberty | board-packet grantCommentary.bundle.founderCompTotalDelta (label=founderCompTotalDelta) | 344883 | 344883 | 0 | 0.0000% | in-tolerance |
+| revenue-quality-by-bucket | liberty | board-packet grantCommentary.bundle.revenueQualityY1.contractedPct (label=contractedPct) | 0.00 | 0.00 | 0.00 | 0.0000% | in-tolerance |
+| revenue-quality-by-bucket | liberty | board-packet grantCommentary.bundle.revenueQualityY1.projectedPct (label=projectedPct) | 1.03 | 1.03 | 0.00 | 0.0000% | in-tolerance |
+| revenue-quality-by-bucket | liberty | board-packet grantCommentary.bundle.revenueQualityY1.donorDependentPct (label=donorDependentPct) | 4.27 | 4.27 | 0.00 | 0.0000% | in-tolerance |
+| revenue-quality-by-bucket | liberty | board-packet grantCommentary.bundle.revenueQualityY1.policyDependentPct (label=policyDependentPct) | 94.70 | 94.70 | 0.00 | 0.0000% | in-tolerance |
+| cash-runway-months | liberty | board-packet lenderStressTests.base.cashRunwayMonths (label=cashRunwayMonths) | 11.10 | 11.12 | -0.02 | 0.2052% | in-tolerance |
+| break-even-year | liberty | board-packet lenderStressTests.base.breakEvenYear (label=breakEvenYear) | 1 | 1 | 0 | 0.0000% | in-tolerance |
+| dscr-year-series-normalized | liberty | narrative-bundle dscrY1Normalized (label=dscrY1Normalized) | 30.650 | 30.650 | 0.000 | 0.0000% | in-tolerance |
+| dscr-min-normalized | liberty | narrative-bundle dscrMinNormalized (label=dscrMinNormalized) | 30.650 | 30.650 | 0.000 | 0.0000% | in-tolerance |
+| cash-runway-months | liberty | narrative-bundle cashRunwayMonths (label=cashRunwayMonths) | 11.12 | 11.12 | 0.00 | 0.0000% | in-tolerance |
+| reserve-months-last-year | liberty | narrative-bundle reserveMonthsLastYear (label=reserveMonthsLastYear) | 77.70 | 77.70 | 0.00 | 0.0000% | in-tolerance |
+| cash-trough-ending-cash | liberty | narrative-bundle troughEndingCash (label=troughEndingCash) | 2258592 | 2258592 | 0 | 0.0000% | in-tolerance |
+| break-even-year | liberty | narrative-bundle breakEvenYear (label=breakEvenYear) | 1 | 1 | 0 | 0.0000% | in-tolerance |
+| break-even-students-y1 | liberty | narrative-bundle breakEvenStudentsY1 (label=breakEvenStudentsY1) | 93 | 93 | 0 | 0.0000% | in-tolerance |
+| founder-comp-adjustment | liberty | narrative-bundle founderCompTotalDelta (label=founderCompTotalDelta) | 344883 | 344883 | 0 | 0.0000% | in-tolerance |
+| revenue-quality-by-bucket | liberty | narrative-bundle revenueQualityY1.contractedPct (label=contractedPct) | 0.00 | 0.00 | 0.00 | 0.0000% | in-tolerance |
+| revenue-quality-by-bucket | liberty | narrative-bundle revenueQualityY1.projectedPct (label=projectedPct) | 1.03 | 1.03 | 0.00 | 0.0000% | in-tolerance |
+| _…106 more rows omitted (full list in CSV)…_ | | | | | | | |
+
+### M2 unmapped labels (classified as non-metric numeric leaves)
+
+| label | leaf count | sample paths | rationale |
+|---|---|---|---|
+| `values` | 1451 | `lender-packet:sections[3].tables[0].rows[0].values[0]`<br>`lender-packet:sections[3].tables[0].rows[1].values[0]`<br>`lender-packet:sections[3].tables[0].rows[2].values[0]` | Per-scenario/per-year sensitivity table values (composite array, not a first-class registry metric). |
+| `endingCash` | 330 | `lender-packet:cashRunway.yearByYearCash[0].endingCash`<br>`lender-packet:cashRunway.yearByYearCash[1].endingCash`<br>`lender-packet:cashRunway.yearByYearCash[2].endingCash` | Per-scenario/per-year ending-cash array (covered as registry metric cash-trough-ending-cash via troughEndingCash leaf). |
+| `dscr` | 294 | `lender-packet:breakEvenDownside.downsideBand.minus10.dscr[0]`<br>`lender-packet:breakEvenDownside.downsideBand.minus10.dscr[1]`<br>`lender-packet:breakEvenDownside.downsideBand.minus10.dscr[2]` | Per-scenario/per-year DSCR array (covered as registry metrics dscr-year-series-normalized/min via dscrY1Normalized/dscrMinNormalized leaves). |
+| `netIncome` | 294 | `lender-packet:breakEvenDownside.downsideBand.minus10.netIncome[0]`<br>`lender-packet:breakEvenDownside.downsideBand.minus10.netIncome[1]`<br>`lender-packet:breakEvenDownside.downsideBand.minus10.netIncome[2]` | Per-scenario/per-year net-income array (composite, not a first-class registry metric). |
+| `breakEvenStudents` | 225 | `lender-packet:breakEvenDownside.breakEvenStudents[0]`<br>`lender-packet:breakEvenDownside.breakEvenStudents[1]`<br>`lender-packet:breakEvenDownside.breakEvenStudents[2]` | Per-scenario break-even students array (covered as registry metric break-even-students-y1 via breakEvenStudentsY1 leaf). |
+| `value` | 216 | `lender-packet:sections[1].linkedMetrics[3].value`<br>`lender-packet:sections[2].linkedAssumptions[5].value`<br>`lender-packet:sections[3].linkedAssumptions[0].value` | Generic display field on packet linkedMetrics rows; covered via the metric-specific labels (cashRunwayMonths, dscrY1Normalized, etc.) on the same rows. |
+| `enrollment` | 129 | `lender-packet:breakEvenDownside.enrollment[0]`<br>`lender-packet:breakEvenDownside.enrollment[1]`<br>`lender-packet:breakEvenDownside.enrollment[2]` | Wizard per-scenario enrollment input echo (not a derived metric). |
+| `allowedFigures` | 121 | `lender-packet:lenderCommentary.allowedFigures[0]`<br>`lender-packet:lenderCommentary.allowedFigures[2]`<br>`lender-packet:lenderCommentary.allowedFigures[4]` | Per-scenario allowed-figure ranges for sensitivity tables (not a metric, just a UI bound). |
+| `order` | 93 | `lender-packet:sections[0].order`<br>`lender-packet:sections[1].order`<br>`lender-packet:sections[2].order` | Display ordering index (not a metric). |
+| `enrollmentDelta` | 90 | `lender-packet:breakEvenDownside.downsideBand.minus10.enrollmentDelta`<br>`lender-packet:breakEvenDownside.downsideBand.minus20.enrollmentDelta`<br>`lender-packet:breakEvenDownside.sensitivityGrid.cells[0][0].enrollmentDelta` | Wizard sensitivity-table delta input echo (not a derived metric). |
+| `tuitionDelta` | 84 | `lender-packet:breakEvenDownside.sensitivityGrid.cells[0][0].tuitionDelta`<br>`lender-packet:breakEvenDownside.sensitivityGrid.cells[0][1].tuitionDelta`<br>`lender-packet:breakEvenDownside.sensitivityGrid.cells[0][2].tuitionDelta` | Wizard sensitivity-table delta input echo (not a derived metric). |
+| `cashRunwayMonths` | 60 | `lender-packet:lenderStressTests.scenarios[0].cashRunwayMonths`<br>`lender-packet:lenderStressTests.scenarios[0].deltaVsBase.cashRunwayMonths`<br>`lender-packet:lenderStressTests.scenarios[1].cashRunwayMonths` | _(unclassified — fail)_ |
+| `minDscr` | 42 | `lender-packet:lenderStressTests.scenarios[0].deltaVsBase.minDscr`<br>`lender-packet:lenderStressTests.scenarios[1].deltaVsBase.minDscr`<br>`lender-packet:lenderStressTests.scenarios[2].deltaVsBase.minDscr` | Per-scenario worst-year DSCR (covered as registry metric dscr-min-normalized for the base scenario; per-scenario sensitivity is composite). |
+| `minEndingCash` | 42 | `lender-packet:lenderStressTests.scenarios[0].deltaVsBase.minEndingCash`<br>`lender-packet:lenderStressTests.scenarios[1].deltaVsBase.minEndingCash`<br>`lender-packet:lenderStressTests.scenarios[2].deltaVsBase.minEndingCash` | Per-scenario worst-month ending cash (covered as registry metric cash-trough-ending-cash for the base scenario; per-scenario sensitivity is composite). |
+| `y5NetIncome` | 38 | `lender-packet:lenderStressTests.scenarios[0].deltaVsBase.y5NetIncome`<br>`lender-packet:lenderStressTests.scenarios[1].deltaVsBase.y5NetIncome`<br>`lender-packet:lenderStressTests.scenarios[2].deltaVsBase.y5NetIncome` | Per-scenario Y5 net-income on sensitivity rows (composite, not a registry metric). |
+| `year` | 36 | `lender-packet:cashRunway.yearByYearCash[0].year`<br>`lender-packet:cashRunway.yearByYearCash[1].year`<br>`lender-packet:cashRunway.yearByYearCash[2].year` | Per-row year ordinal in packet tables (not a metric). |
+| `monthIndex` | 36 | `lender-packet:lenderStressTests.base.lowestCashMonth.monthIndex`<br>`lender-packet:lenderStressTests.scenarios[0].lowestCashMonth.monthIndex`<br>`lender-packet:lenderStressTests.scenarios[1].lowestCashMonth.monthIndex` | Per-row month ordinal in packet tables (not a metric). |
+| `amount` | 36 | `lender-packet:lenderStressTests.base.lowestCashMonth.amount`<br>`lender-packet:lenderStressTests.scenarios[0].lowestCashMonth.amount`<br>`lender-packet:lenderStressTests.scenarios[1].lowestCashMonth.amount` | Per-line currency amount on packet tables (each line covered via its parent metric — composite). |
+| `yearIndex` | 36 | `lender-packet:lenderStressTests.base.lowestCashMonth.yearIndex`<br>`lender-packet:lenderStressTests.scenarios[0].lowestCashMonth.yearIndex`<br>`lender-packet:lenderStressTests.scenarios[1].lowestCashMonth.yearIndex` | Per-row year ordinal in packet tables (not a metric). |
+| `cumulative` | 30 | `lender-packet:cashRunway.yearByYearCash[0].cumulative`<br>`lender-packet:cashRunway.yearByYearCash[1].cumulative`<br>`lender-packet:cashRunway.yearByYearCash[2].cumulative` | Cumulative running total on packet trough table (covered via cash-trough-ending-cash; cumulative is a UI rollup). |
+| `reserveMonths` | 30 | `lender-packet:cashRunway.yearByYearCash[0].reserveMonths`<br>`lender-packet:cashRunway.yearByYearCash[1].reserveMonths`<br>`lender-packet:cashRunway.yearByYearCash[2].reserveMonths` | Per-year reserve-months array on packet tables (covered as registry metric reserve-months-last-year via reserveMonthsLastYear leaf). |
+| `unrestrictedCash` | 30 | `lender-packet:cashRunway.yearByYearCash[0].unrestrictedCash`<br>`lender-packet:cashRunway.yearByYearCash[1].unrestrictedCash`<br>`lender-packet:cashRunway.yearByYearCash[2].unrestrictedCash` | Per-year unrestricted-cash array on packet tables (covered via cash-trough-ending-cash; this is a UI breakdown column). |
+| `breakEvenYear` | 30 | `lender-packet:lenderStressTests.scenarios[0].breakEvenYear`<br>`lender-packet:lenderStressTests.scenarios[1].breakEvenYear`<br>`lender-packet:lenderStressTests.scenarios[2].breakEvenYear` | _(unclassified — fail)_ |
+| `y1NetIncome` | 30 | `lender-packet:lenderStressTests.scenarios[0].deltaVsBase.y1NetIncome`<br>`lender-packet:lenderStressTests.scenarios[1].deltaVsBase.y1NetIncome`<br>`lender-packet:lenderStressTests.scenarios[2].deltaVsBase.y1NetIncome` | Per-scenario Y1 net-income on sensitivity rows (composite, not a registry metric). |
+| `y1Dscr` | 30 | `lender-packet:lenderStressTests.scenarios[0].deltaVsBase.y1Dscr`<br>`lender-packet:lenderStressTests.scenarios[1].deltaVsBase.y1Dscr`<br>`lender-packet:lenderStressTests.scenarios[2].deltaVsBase.y1Dscr` | Per-scenario Y1 DSCR on sensitivity rows (covered via dscr-year-series-normalized for the base scenario; per-scenario sensitivity values are composite). |
+| `breakEvenYearShift` | 30 | `lender-packet:lenderStressTests.scenarios[0].deltaVsBase.breakEvenYearShift`<br>`lender-packet:lenderStressTests.scenarios[1].deltaVsBase.breakEvenYearShift`<br>`lender-packet:lenderStressTests.scenarios[2].deltaVsBase.breakEvenYearShift` | Per-scenario delta vs base year (composite sensitivity, not a registry metric). |
+| `reported` | 30 | `lender-packet:founderCompNormalization.reported[0]`<br>`lender-packet:founderCompNormalization.reported[1]`<br>`lender-packet:founderCompNormalization.reported[2]` | Per-row 'reported' value on founder-comp packet table (covered via founder-comp-adjustment). |
+| `reportedLoaded` | 30 | `lender-packet:founderCompNormalization.reportedLoaded[0]`<br>`lender-packet:founderCompNormalization.reportedLoaded[1]`<br>`lender-packet:founderCompNormalization.reportedLoaded[2]` | Per-row fully-loaded reported value on founder-comp table (covered via founder-comp-adjustment). |
+| `normalized` | 30 | `lender-packet:founderCompNormalization.normalized[0]`<br>`lender-packet:founderCompNormalization.normalized[1]`<br>`lender-packet:founderCompNormalization.normalized[2]` | Per-row 'normalized' value on founder-comp packet table (covered via founder-comp-adjustment). |
+| `normalizedLoaded` | 30 | `lender-packet:founderCompNormalization.normalizedLoaded[0]`<br>`lender-packet:founderCompNormalization.normalizedLoaded[1]`<br>`lender-packet:founderCompNormalization.normalizedLoaded[2]` | Per-row fully-loaded normalized value on founder-comp table (covered via founder-comp-adjustment). |
+| `delta` | 30 | `lender-packet:founderCompNormalization.delta[0]`<br>`lender-packet:founderCompNormalization.delta[1]`<br>`lender-packet:founderCompNormalization.delta[2]` | Per-row founder-comp delta (covered via founder-comp-adjustment.totalDelta). |
+| `enrollmentDeltas` | 21 | `lender-packet:breakEvenDownside.sensitivityGrid.enrollmentDeltas[0]`<br>`lender-packet:breakEvenDownside.sensitivityGrid.enrollmentDeltas[1]`<br>`lender-packet:breakEvenDownside.sensitivityGrid.enrollmentDeltas[2]` | Wizard sensitivity-table delta-list input echo (not a derived metric). |
+| `breakEvenUtilization` | 15 | `lender-packet:breakEvenDownside.breakEvenUtilization[0]`<br>`lender-packet:breakEvenDownside.breakEvenUtilization[1]`<br>`lender-packet:breakEvenDownside.breakEvenUtilization[2]` | Per-scenario break-even utilization fraction (covered via break-even-students-y1 utilization; per-scenario is composite). |
+| `maxCapacity` | 15 | `lender-packet:breakEvenDownside.maxCapacity`<br>`lender-packet:lenderCommentary.bundle.maxCapacity`<br>`board-packet:boardCommentary.bundle.maxCapacity` | Per-scenario max-capacity bound for sensitivity table (input echo, not a derived metric). |
+| `tuitionDeltas` | 12 | `lender-packet:breakEvenDownside.sensitivityGrid.tuitionDeltas[0]`<br>`lender-packet:breakEvenDownside.sensitivityGrid.tuitionDeltas[1]`<br>`lender-packet:breakEvenDownside.sensitivityGrid.tuitionDeltas[2]` | Wizard sensitivity-table delta-list input echo (not a derived metric). |
+| `enrollmentY1` | 12 | `lender-packet:lenderCommentary.bundle.enrollmentY1`<br>`board-packet:boardCommentary.bundle.enrollmentY1`<br>`board-packet:grantCommentary.bundle.enrollmentY1` | Per-persona Y1 enrollment input echo (not a derived metric). |
+| `enrollmentY5` | 12 | `lender-packet:lenderCommentary.bundle.enrollmentY5`<br>`board-packet:boardCommentary.bundle.enrollmentY5`<br>`board-packet:grantCommentary.bundle.enrollmentY5` | Per-persona Y5 enrollment input echo (not a derived metric). |
+| `retentionRatePct` | 12 | `lender-packet:lenderCommentary.bundle.retentionRatePct`<br>`board-packet:boardCommentary.bundle.retentionRatePct`<br>`board-packet:grantCommentary.bundle.retentionRatePct` | Per-persona retention-rate input echo (not a derived metric). |
+| `dscrY1Reported` | 12 | `lender-packet:lenderCommentary.bundle.dscrY1Reported`<br>`board-packet:boardCommentary.bundle.dscrY1Reported`<br>`board-packet:grantCommentary.bundle.dscrY1Reported` | Reported DSCR Y1 — diagnostic; canonical metric uses normalized basis (covered via dscrY1Normalized). |
+| `dscrMinNormalizedYear` | 12 | `lender-packet:lenderCommentary.bundle.dscrMinNormalizedYear`<br>`board-packet:boardCommentary.bundle.dscrMinNormalizedYear`<br>`board-packet:grantCommentary.bundle.dscrMinNormalizedYear` | Index of the year that produced the min normalized DSCR (audit-trail field, not a derived metric). |
+| `reserveLastYearNumber` | 12 | `lender-packet:lenderCommentary.bundle.reserveLastYearNumber`<br>`board-packet:boardCommentary.bundle.reserveLastYearNumber`<br>`board-packet:grantCommentary.bundle.reserveLastYearNumber` | Display alias of reserveMonthsLastYear rounded to integer (UI rollup, not a separate metric). |
+| `troughYear` | 12 | `lender-packet:lenderCommentary.bundle.troughYear`<br>`board-packet:boardCommentary.bundle.troughYear`<br>`board-packet:grantCommentary.bundle.troughYear` | Index of the year that produced the cash trough (audit-trail field, not a derived metric). |
+| `breakEvenUtilizationY1Pct` | 12 | `lender-packet:lenderCommentary.bundle.breakEvenUtilizationY1Pct`<br>`board-packet:boardCommentary.bundle.breakEvenUtilizationY1Pct`<br>`board-packet:grantCommentary.bundle.breakEvenUtilizationY1Pct` | Y1 break-even utilization as a percent (covered via break-even-students-y1; this is a UI percentage rollup). |
+| `pendingEvidenceCount` | 9 | `lender-packet:lenderReadiness.result.cap.pendingEvidenceCount`<br>`lender-packet:healthDimensionCap.pendingEvidenceCount`<br>`lender-packet:riskSeverityCap.pendingEvidenceCount` | Lender-readiness pending evidence count (covered via lender-readiness-cap). |
+| `totalAssumptionCount` | 9 | `lender-packet:lenderReadiness.result.cap.totalAssumptionCount`<br>`lender-packet:healthDimensionCap.totalAssumptionCount`<br>`lender-packet:riskSeverityCap.totalAssumptionCount` | Lender-readiness total assumption count (covered via lender-readiness-cap). |
+| `y5Revenue` | 8 | `board-packet:scenarioSnapshots[0].y5Revenue`<br>`board-packet:scenarioSnapshots[1].y5Revenue`<br>`board-packet:scenarioSnapshots[2].y5Revenue` | Headline Y5 revenue display on packet headers (composite revenue total — covered via canonical resolver but no dedicated leaf metric). |
+| `y5Margin` | 8 | `board-packet:scenarioSnapshots[0].y5Margin`<br>`board-packet:scenarioSnapshots[1].y5Margin`<br>`board-packet:scenarioSnapshots[2].y5Margin` | Headline Y5 net-margin display on packet headers (composite, not a first-class registry metric). |
+| `modelId` | 6 | `lender-packet:modelId`<br>`board-packet:modelId` | Packet model-identifier ordinal (not a metric). |
+| `percentFormat` | 6 | `lender-packet:formatRules.percentFormat`<br>`board-packet:formatRules.percentFormat` | Display format hint constant (not a metric). |
+| `taggedFraction` | 6 | `lender-packet:healthDimensionCap.taggedFraction`<br>`lender-packet:riskSeverityCap.taggedFraction` | _(unclassified — fail)_ |
+| `runwayMonths` | 6 | `lender-packet:cashRunway.runwayMonths`<br>`board-packet:cashRunway.runwayMonths` | Unrounded runway-months alias in commentary bundle (covered as registry metric cash-runway-months via cashRunwayMonths leaf — this is the float source the rounded display reads). |
+| `unrestrictedCashLabel` | 6 | `lender-packet:cashRunway.accrualToggle.unrestrictedCashLabel`<br>`board-packet:cashRunway.accrualToggle.unrestrictedCashLabel` | Display-label numeric for the cash-drift commentary section (UI label echo, not a derived metric). |
+| `accrualCashLabel` | 6 | `lender-packet:cashRunway.accrualToggle.accrualCashLabel`<br>`board-packet:cashRunway.accrualToggle.accrualCashLabel` | Display-label numeric for the accrual cash commentary section (UI label echo, not a derived metric). |
+| `forecastAccuracyUnfilteredCount` | 6 | `lender-packet:forecastAccuracyUnfilteredCount`<br>`board-packet:forecastAccuracyUnfilteredCount` | Lender-readiness diagnostic count of unfiltered forecast-accuracy items (audit-trail field). |
+| `totalDelta` | 6 | `lender-packet:founderCompNormalization.totalDelta`<br>`board-packet:founderCompNormalization.totalDelta` | Alias of founderCompTotalDelta on the founder-comp adjustment object (covered via founder-comp-adjustment). |
+| `yearIdx` | 4 | `lender-packet:perSeatFundingMixY1.yearIdx`<br>`board-packet:perSeatFundingMixY1.yearIdx` | Row-ordinal year index on revenue-per-seat tables (not a metric). |
+| `students` | 4 | `lender-packet:perSeatFundingMixY1.students`<br>`board-packet:perSeatFundingMixY1.students` | Per-row enrolled-student count on revenue-per-seat tables (input echo, not a derived metric). |
+| `stickerPerSeat` | 4 | `lender-packet:perSeatFundingMixY1.stickerPerSeat`<br>`board-packet:perSeatFundingMixY1.stickerPerSeat` | Per-seat sticker-tuition on revenue-per-seat tables (per-seat unit economic — composite, not a first-class registry metric). |
+| `netPerSeat` | 4 | `lender-packet:perSeatFundingMixY1.netPerSeat`<br>`board-packet:perSeatFundingMixY1.netPerSeat` | Per-seat net tuition after discounts on revenue-per-seat tables (per-seat composite, not a registry metric). |
+| `familyPayPerSeat` | 4 | `lender-packet:perSeatFundingMixY1.familyPayPerSeat`<br>`board-packet:perSeatFundingMixY1.familyPayPerSeat` | Per-seat family-pay component on revenue-per-seat tables (per-seat composite, not a registry metric). |
+| `familyPayTotal` | 4 | `lender-packet:perSeatFundingMixY1.familyPayTotal`<br>`board-packet:perSeatFundingMixY1.familyPayTotal` | Total family-pay revenue on revenue-per-seat tables (covered by aggregate revenue resolver; not a leaf-level registry metric). |
+| `recognizedPerSeat` | 4 | `lender-packet:perSeatFundingMixY1.recognizedPerSeat`<br>`board-packet:perSeatFundingMixY1.recognizedPerSeat` | Per-seat recognized-revenue on revenue-per-seat tables (per-seat composite, not a registry metric). |
+| `funderTotalPerSeat` | 4 | `lender-packet:perSeatFundingMixY1.funderTotalPerSeat`<br>`board-packet:perSeatFundingMixY1.funderTotalPerSeat` | Per-seat funder-revenue on revenue-per-seat tables (per-seat composite, not a registry metric). |
+| `currentDSCR` | 3 | `lender-packet:dscrSummary.currentDSCR` | Alias of dscrY1Normalized inside the lender-readiness DSCR-cap diagnostic (covered via dscr-year-series-normalized). |
+| `taggedFractionMin` | 3 | `lender-packet:lenderReadiness.result.cap.capTier.taggedFractionMin` | Lender-readiness cap-curve floor (configuration constant, not a derived metric). |
+| `taggedFractionMax` | 3 | `lender-packet:lenderReadiness.result.cap.capTier.taggedFractionMax` | Lender-readiness cap-curve ceiling (configuration constant, not a derived metric). |
+| `taggedCount` | 3 | `lender-packet:lenderReadiness.result.cap.taggedCount` | Lender-readiness count of tagged items (diagnostic count, covered via lender-readiness-cap.taggedFraction). |
+| `perSeat` | 2 | `lender-packet:perSeatFundingMixY1.funders[0].perSeat`<br>`board-packet:perSeatFundingMixY1.funders[0].perSeat` | Per-seat unit-economic generic column (composite, not a first-class registry metric). |
+| `totalDollars` | 2 | `lender-packet:perSeatFundingMixY1.funders[0].totalDollars`<br>`board-packet:perSeatFundingMixY1.funders[0].totalDollars` | Total-dollars rollup column on revenue-per-seat tables (covered by aggregate revenue resolver). |
+
 ## Registry-surface findings
 
 ### skipped-structural (183)
