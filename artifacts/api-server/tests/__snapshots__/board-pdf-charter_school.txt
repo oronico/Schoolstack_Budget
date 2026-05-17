@@ -51,10 +51,11 @@ Cash Position: Cash runway is approximately 11.1 months
 Founder's Narrative
 Flagged Assumptions
 [Warning] 50% growth (Year 1 → 2)
-Assumptions Confidence
+[Warning] Y1 revenue per student of $24,375 is above the typical AZ charter range. Verify per-pupil rate breakdown.
 SchoolStack Budget - Generated <DATE>
 Page 2 of 11
 --- PAGE 3 ---
+Assumptions Confidence
 Overall: Needs Support   0% weighted evidence  ·  0 of 22 tagged
 PROJECTED
 This does not mean your plan is weak. It means this part needs more clarity.

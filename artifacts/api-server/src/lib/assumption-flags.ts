@@ -17,6 +17,9 @@ import {
   HIGH_IMPACT_CONFIDENCE_KEYS,
   isEstimateWithoutEvidence,
   ASSUMPTION_REGISTRY,
+  findPerPupilBenchmark,
+  evaluatePerPupilRevenue,
+  buildPerPupilFlagCopy,
   type AssumptionConfidenceEntry,
   type FragileProgramMatch,
   type SchoolType,
@@ -336,6 +339,47 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
     }
 
     if (yearFinancials.length > 0) {
+      // Task #926 — Per-pupil revenue benchmark validation.
+      //
+      // Compute Y1 revenue per student from the canonical engine
+      // (totalRevenue is post-funding-mix v2, post-proration — exactly
+      // what prints at `5-Year Operating Stmt!B5`). When the result
+      // sits above the published ceiling for the (state, schoolType)
+      // pair we emit a warning the founder can acknowledge. The
+      // Liberty (AZ charter) demo at task-time produced $24,375 /
+      // student — far above the $18k AZ ceiling — and the engine
+      // silently passed the number through to the lender packet.
+      //
+      // Severity is `warning` (not `critical`): the model is still
+      // exportable; we just want the lender to see the explanation
+      // alongside the headline.
+      const y1ForPP = yearFinancials[0];
+      const y1StudentsForPP = enrollmentByYear[0] ?? 0;
+      if (y1StudentsForPP > 0 && y1ForPP.totalRevenue > 0) {
+        const perPupil = y1ForPP.totalRevenue / y1StudentsForPP;
+        const benchmark = findPerPupilBenchmark(
+          sp.state,
+          sp.schoolType as SchoolType,
+          sp.fundingProfile as string | undefined,
+        );
+        const evaluation = evaluatePerPupilRevenue(perPupil, benchmark);
+        const copy = buildPerPupilFlagCopy(evaluation, {
+          state: sp.state,
+          schoolType: sp.schoolType as SchoolType,
+        });
+        if (copy) {
+          flags.push({
+            field: copy.field,
+            flagType: copy.flagType,
+            currentValue: copy.currentValue,
+            benchmark: copy.benchmark,
+            severity: copy.severity,
+            defaultPrompt: copy.defaultPrompt,
+            nextStep: copy.nextStep,
+          });
+        }
+      }
+
       const y1 = yearFinancials[0];
       // Task #911 — Tuition coverage signal:
       //

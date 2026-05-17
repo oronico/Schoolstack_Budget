@@ -75,6 +75,8 @@ SchoolStack Budget - Generated <DATE>
 Page 2 of 37
 --- PAGE 3 ---
 Flagged Assumptions
+[Info] Y1 revenue per student of $19,759 is above the typical FL private range ($10,000–$18,000) but below the $20,000
+ceiling.
 [Positive] Tuition covers 160% of Year 1 total expenses
 Assumptions Confidence
 Overall: Needs Support   0% weighted evidence  ·  0 of 22 tagged

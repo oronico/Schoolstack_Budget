@@ -31,7 +31,7 @@ Packet Contents
 This packet is generated from the school's financial model and is intended for lender review.
 All projections are based on assumptions entered by the school founder.
 SchoolStack Budget - Generated <DATE>
-Page 1 of 24
+Page 1 of 25
 --- PAGE 2 ---
 Lender Commentary
 Liberty STEM Charter School is a charter school, based in AZ. Liberty STEM Charter School projects
@@ -74,7 +74,7 @@ Biggest Risk: Public funding is the primary revenue source — model disbursemen
 cash reserves for funding gaps
 Cash Runway: 11.1 months
 SchoolStack Budget - Generated <DATE>
-Page 2 of 24
+Page 2 of 25
 --- PAGE 3 ---
 Budget Narrative
 Liberty STEM Charter School projects $18,125,509 in Year 5 revenue with a 69.3% net margin.
@@ -83,6 +83,7 @@ compelling financial story.
 Flagged Assumptions
 [Warning] 50% growth (Year 1 → 2)
 [Info] 200 students (33% of 600 capacity)
+[Warning] Y1 revenue per student of $24,375 is above the typical AZ charter range. Verify per-pupil rate breakdown.
 Assumptions Confidence
 Overall: Needs Support   0% weighted evidence  ·  0 of 22 tagged
 PROJECTED
@@ -115,11 +116,14 @@ Year 3
 400
 Year 4
 500
+SchoolStack Budget - Generated <DATE>
+Page 3 of 25
+--- PAGE 4 ---
 Year 5
 600
 SchoolStack Budget - Generated <DATE>
-Page 3 of 24
---- PAGE 4 ---
+Page 4 of 25
+--- PAGE 5 ---
 Supporting Assumptions
 Year 1 Enrollment  200
 Year 2 Enrollment  300
@@ -210,8 +214,8 @@ vs. Donor /
 Policy
 Dependent)
 SchoolStack Budget - Generated <DATE>
-Page 4 of 24
---- PAGE 5 ---
+Page 5 of 25
+--- PAGE 6 ---
 Bucket
 Year 1
 Year 2
@@ -292,8 +296,8 @@ School cash compensation by enrollment.. Size-band transitions during the foreca
 1,000 students, suggested rate $202,000). Each crossing bumps the lender-side market rate for
 the founder / head-of-school role.
 SchoolStack Budget - Generated <DATE>
-Page 5 of 24
---- PAGE 6 ---
+Page 6 of 25
+--- PAGE 7 ---
 ✓ Staffing % of Revenue: 35.3%
 Suggested Founder Compensation Benchmark by Year
 Year
@@ -403,8 +407,8 @@ Lender View (Normalized)
 11.0
 75.8
 SchoolStack Budget - Generated <DATE>
-Page 6 of 24
---- PAGE 7 ---
+Page 7 of 25
+--- PAGE 8 ---
 Supporting Assumptions
 Executive Director  $110,000, 1 FTE
 Principal  $90,000, 1 FTE
@@ -465,8 +469,8 @@ All projections are prepared on an accrual basis; the school currently keeps boo
 ✓ Cost per Student (Year 1): $14,082 (benchmark: Target: ≤ 85% of revenue per student)
 ✓ Staffing Cost (% of Revenue): 35.3% (benchmark: Industry avg: 50–65% of revenue)
 SchoolStack Budget - Generated <DATE>
-Page 7 of 24
---- PAGE 8 ---
+Page 8 of 25
+--- PAGE 9 ---
 ✓ Operating Cost (% of Revenue): 22.2% (benchmark: Target: under 30% of revenue)
 ✓ Net margin (Year 1): 42.2% (benchmark: Startup target: 0–5%; mature: 10%+)
 ✓ Net margin (Year 5): 69.3% (benchmark: Target: 10–15%+)
@@ -542,8 +546,8 @@ $0
 Facility & Key Performance Indicators
 Breakeven enrollment is 97 students. Year 1 projects 200 students, providing a 106.2% cushion.
 SchoolStack Budget - Generated <DATE>
-Page 8 of 24
---- PAGE 9 ---
+Page 9 of 25
+--- PAGE 10 ---
 Breakeven Enrollment: 97
 Facility Cost/Student: $1K
 Key Performance Indicators
@@ -646,8 +650,8 @@ $390K
 $109K
 $1.4M
 SchoolStack Budget - Generated <DATE>
-Page 9 of 24
---- PAGE 10 ---
+Page 10 of 25
+--- PAGE 11 ---
 Apr
 $1.4M
 $390K
@@ -655,8 +659,8 @@ $390K
 $109K
 $1.5M
 SchoolStack Budget - Generated <DATE>
-Page 10 of 24
---- PAGE 11 ---
+Page 11 of 25
+--- PAGE 12 ---
 May
 $1.5M
 $385K
@@ -664,8 +668,8 @@ $385K
 $379K
 $1.9M
 SchoolStack Budget - Generated <DATE>
-Page 11 of 24
---- PAGE 12 ---
+Page 12 of 25
+--- PAGE 13 ---
 Jun
 $1.9M
 $385K
@@ -673,8 +677,8 @@ $385K
 $393K
 $2.3M
 SchoolStack Budget - Generated <DATE>
-Page 12 of 24
---- PAGE 13 ---
+Page 13 of 25
+--- PAGE 14 ---
 Year 2 Monthly Cash Flow Summary
 Month
 Beginning
@@ -843,8 +847,8 @@ Monthly
 Cash Flow
 Summary
 SchoolStack Budget - Generated <DATE>
-Page 13 of 24
---- PAGE 14 ---
+Page 14 of 25
+--- PAGE 15 ---
 Month
 Beginning
 Inflows
@@ -1011,8 +1015,8 @@ Lowest
 Cash Month
 by Year
 SchoolStack Budget - Generated <DATE>
-Page 14 of 24
---- PAGE 15 ---
+Page 15 of 25
+--- PAGE 16 ---
 Year
 Month
 Ending Cash
@@ -1084,8 +1088,8 @@ Stress Testing
 1 of 6 stress scenarios result in negative Year 5 net income, suggesting the model has limited
 cushion against adverse conditions.
 SchoolStack Budget - Generated <DATE>
-Page 15 of 24
---- PAGE 16 ---
+Page 16 of 25
+--- PAGE 17 ---
 Stress Test Results
 Scenario
 Y1 Net
@@ -1189,8 +1193,8 @@ DSCR of 30.64x provides comfortable
 coverage of debt payments with room to
 spare.
 SchoolStack Budget - Generated <DATE>
-Page 16 of 24
---- PAGE 17 ---
+Page 17 of 25
+--- PAGE 18 ---
 Revenue Concentration
 Watch closely
 95% of revenue comes from public
@@ -1198,23 +1202,23 @@ funding. This is typical for charter schools,
 but disbursement timing and policy
 changes can create cash flow gaps.
 SchoolStack Budget - Generated <DATE>
-Page 17 of 24
---- PAGE 18 ---
+Page 18 of 25
+--- PAGE 19 ---
 Days Cash
 Healthy
 267 days of cash on hand exceeds the 90-
 day benchmark, providing a strong
 liquidity cushion.
 SchoolStack Budget - Generated <DATE>
-Page 18 of 24
---- PAGE 19 ---
+Page 19 of 25
+--- PAGE 20 ---
 Reserve Strength
 Healthy
 77.7 months of reserves by Year 5 — a
 strong buffer for unexpected costs.
 SchoolStack Budget - Generated <DATE>
-Page 19 of 24
---- PAGE 20 ---
+Page 20 of 25
+--- PAGE 21 ---
 Key Risks
 3 risk factors have been identified. None are rated critical, but each should have a documented
 mitigation plan.
@@ -1271,8 +1275,8 @@ $441,667; Year 1 debt service:
 $69,457; General cost inflation: 3.0%
 Driven by inputs in: Staffing, Expenses, Capital & Financing.
 SchoolStack Budget - Generated <DATE>
-Page 20 of 24
---- PAGE 21 ---
+Page 21 of 25
+--- PAGE 22 ---
 Year 1 net income  Year 1 enrollment:
 200; Tuition per student: Not entered;
 Year 1 staffing cost: $1,720,999; Year
@@ -1332,8 +1336,8 @@ Year 4 (planned 500):  146 students ·
 Year 5 (planned 600):  147 students ·
 25% of capacity
 SchoolStack Budget - Generated <DATE>
-Page 21 of 24
---- PAGE 22 ---
+Page 22 of 25
+--- PAGE 23 ---
 Downside Enrollment Band
 If 10% fewer students enroll
   Year 1 (180 students):  DSCR 26.32x ·
@@ -1439,8 +1443,8 @@ ending cash $2,272,877 · Runway 11.1
 mo · Lowest monthly cash Y1 Jul
 $554,001
 SchoolStack Budget - Generated <DATE>
-Page 22 of 24
---- PAGE 23 ---
+Page 23 of 25
+--- PAGE 24 ---
 Enrollment -10%
 All five enrollment years scaled down by 10% — the standard lender enrollment-miss sensitivity.
   Min DSCR: 26.32x   ·   Min ending cash: $1,958,775   ·   Runway: 10.2 mo   ·   Break-even: Year 1
@@ -1483,8 +1487,8 @@ Per-year founder pay shown two ways: as planned (what the founder draws) and at 
 (what a comparable hire would cost). The lender adjustment is the gap underwriters apply to
 staffing cost and DSCR.
 SchoolStack Budget - Generated <DATE>
-Page 23 of 24
---- PAGE 24 ---
+Page 24 of 25
+--- PAGE 25 ---
 Line
 Y1
 Y2
@@ -1530,4 +1534,4 @@ $3
 Note: Founder is paying themselves below market rate (“sweat equity”). Lenders and boards underwrite to the market-rate
 line; the adjustment shows the gap.
 SchoolStack Budget - Generated <DATE>
-Page 24 of 24
+Page 25 of 25

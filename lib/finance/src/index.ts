@@ -373,6 +373,19 @@ export {
 export { isRestrictedRevenueRow } from "./restricted-revenue.js";
 
 export {
+  PER_PUPIL_BENCHMARKS,
+  findPerPupilBenchmark,
+  evaluatePerPupilRevenue,
+  formatPerPupilUSD,
+  buildPerPupilFlagCopy,
+  type PerPupilBenchmark,
+  type PerPupilEvaluation,
+  type PerPupilFlagCopy,
+  type PerPupilFlagSeverity,
+  type FundingProfile,
+} from "./benchmarks/per-pupil-revenue.js";
+
+export {
   classifyRevenueRow,
   computeRevenueSourceMix,
   isCharterSchoolType,

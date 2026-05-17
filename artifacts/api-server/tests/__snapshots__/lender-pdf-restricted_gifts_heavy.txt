@@ -32,7 +32,7 @@ Packet Contents
 This packet is generated from the school's financial model and is intended for lender review.
 All projections are based on assumptions entered by the school founder.
 SchoolStack Budget - Generated <DATE>
-Page 1 of 21
+Page 1 of 22
 --- PAGE 2 ---
 Lender Commentary
 Gift-Anchored Founding Microschool is a microschool, based in AZ. Gift-Anchored Founding
@@ -75,7 +75,7 @@ Biggest Risk: Philanthropy at 64.5% of revenue is a generous foundation, but bui
 add stability
 Cash Runway: 25.1 months
 SchoolStack Budget - Generated <DATE>
-Page 2 of 21
+Page 2 of 22
 --- PAGE 3 ---
 Budget Narrative
 Gift-Anchored Founding Microschool projects $492,145 in Year 5 revenue, with 2 of 13 key metrics
@@ -83,6 +83,7 @@ that need attention. This is a starting point, and working through the recommend
 help you build the financial story your mission deserves.
 Flagged Assumptions
 [Info] 20 students (44% of 45 capacity)
+[Warning] Y1 revenue per student of $20,657 is above the typical AZ microschool range. Verify per-pupil rate breakdown.
 [Positive] Tuition covers 144% of Year 1 total expenses
 Assumptions Confidence
 Overall: Needs Support   0% weighted evidence  ·  0 of 22 tagged
@@ -116,11 +117,14 @@ Year 3
 32
 Year 4
 37
+SchoolStack Budget - Generated <DATE>
+Page 3 of 22
+--- PAGE 4 ---
 Year 5
 40
 SchoolStack Budget - Generated <DATE>
-Page 3 of 21
---- PAGE 4 ---
+Page 4 of 22
+--- PAGE 5 ---
 Supporting Assumptions
 Year 1 Enrollment  20
 Year 2 Enrollment  26
@@ -211,8 +215,8 @@ vs. Donor /
 Policy
 Dependent)
 SchoolStack Budget - Generated <DATE>
-Page 4 of 21
---- PAGE 5 ---
+Page 5 of 22
+--- PAGE 6 ---
 Bucket
 Year 1
 Year 2
@@ -297,8 +301,8 @@ Suggested founder compensation steps up year over year as projected enrollment c
 NACSA size bands (escalated by COLA from Y1). Source: U.S. Bureau of Labor Statistics,
 Occupational Employment & Wage Statistics, May 2023. Education Administrators, Kindergarten
 SchoolStack Budget - Generated <DATE>
-Page 5 of 21
---- PAGE 6 ---
+Page 6 of 22
+--- PAGE 7 ---
 through Secondary (11-9032), national median annual wage..
 ✓ Staffing % of Revenue: 20.8%
 Suggested Founder Compensation Benchmark by Year
@@ -407,8 +411,8 @@ Lender View (Normalized)
 21.9
 57.5
 SchoolStack Budget - Generated <DATE>
-Page 6 of 21
---- PAGE 7 ---
+Page 7 of 22
+--- PAGE 8 ---
 Supporting Assumptions
 Founder / Lead Teacher  $58,000, 1 FTE
 Assistant Teacher  $38,000, 1 FTE
@@ -466,8 +470,8 @@ All projections are prepared on an accrual basis; the school currently keeps boo
 ✕ 5-Year Revenue Growth: 19.1% (benchmark: Healthy schools: 30–80% over 5 years)
 ✓ Capacity Utilization (Year 5): 88.9% (benchmark: Optimal: 80–95% utilization)
 SchoolStack Budget - Generated <DATE>
-Page 7 of 21
---- PAGE 8 ---
+Page 8 of 22
+--- PAGE 9 ---
 5-Year Net Income Projection
 Year
 Students
@@ -540,8 +544,8 @@ Breakeven Enrollment: 7
 Facility Cost/Student: $2K
 Key Performance Indicators
 SchoolStack Budget - Generated <DATE>
-Page 8 of 21
---- PAGE 9 ---
+Page 9 of 22
+--- PAGE 10 ---
 Metric
 Value
 Facility Cost / Student
@@ -658,8 +662,8 @@ $338
 $375
 $282K
 SchoolStack Budget - Generated <DATE>
-Page 9 of 21
---- PAGE 10 ---
+Page 10 of 22
+--- PAGE 11 ---
 Year 2 Monthly Cash Flow Summary
 Month
 Beginning
@@ -828,8 +832,8 @@ Monthly
 Cash Flow
 Summary
 SchoolStack Budget - Generated <DATE>
-Page 10 of 21
---- PAGE 11 ---
+Page 11 of 22
+--- PAGE 12 ---
 Month
 Beginning
 Inflows
@@ -996,8 +1000,8 @@ Lowest
 Cash Month
 by Year
 SchoolStack Budget - Generated <DATE>
-Page 11 of 21
---- PAGE 12 ---
+Page 12 of 22
+--- PAGE 13 ---
 Year
 Month
 Ending Cash
@@ -1068,8 +1072,8 @@ gifts can't legally fund operations or debt service.
 Stress Testing
 All 6 stress scenarios maintain positive Year 5 net income, indicating financial resilience.
 SchoolStack Budget - Generated <DATE>
-Page 12 of 21
---- PAGE 13 ---
+Page 13 of 22
+--- PAGE 14 ---
 Stress Test Results
 Scenario
 Y1 Net
@@ -1175,8 +1179,8 @@ DSCR of 58.48x provides comfortable
 coverage of debt payments with room to
 spare.
 SchoolStack Budget - Generated <DATE>
-Page 13 of 21
---- PAGE 14 ---
+Page 14 of 22
+--- PAGE 15 ---
 Revenue Concentration
 Needs attention
 65% of revenue depends on grants and
@@ -1186,23 +1190,23 @@ is fine — but it should be anchored to
 dependable, demand-driven income, not
 fundraising.
 SchoolStack Budget - Generated <DATE>
-Page 14 of 21
---- PAGE 15 ---
+Page 15 of 22
+--- PAGE 16 ---
 Days Cash
 Healthy
 688 days of cash on hand exceeds the 90-
 day benchmark, providing a strong
 liquidity cushion.
 SchoolStack Budget - Generated <DATE>
-Page 15 of 21
---- PAGE 16 ---
+Page 16 of 22
+--- PAGE 17 ---
 Reserve Strength
 Healthy
 63.8 months of reserves by Year 5 — a
 strong buffer for unexpected costs.
 SchoolStack Budget - Generated <DATE>
-Page 16 of 21
---- PAGE 17 ---
+Page 17 of 22
+--- PAGE 18 ---
 Key Risks
 4 risk factors have been identified. Of these, 1 is rated critical and should be addressed prior to
 lender submission.
@@ -1259,8 +1263,8 @@ collection rate: 100.0%; Tuition
 escalation: 3.0%
 Driven by inputs in: Enrollment, Revenue.
 SchoolStack Budget - Generated <DATE>
-Page 17 of 21
---- PAGE 18 ---
+Page 18 of 22
+--- PAGE 19 ---
 Year 1 total expenses  Year 1 staffing
 cost: $86,120; Year 1 facility cost:
 $27,833; Year 1 operating expenses:
@@ -1319,8 +1323,8 @@ of capacity
 Year 3 (planned 32):  14 students · 31%
 of capacity
 SchoolStack Budget - Generated <DATE>
-Page 18 of 21
---- PAGE 19 ---
+Page 19 of 22
+--- PAGE 20 ---
 Year 4 (planned 37):  18 students · 40%
 of capacity
 Year 5 (planned 40):  20 students · 44%
@@ -1430,8 +1434,8 @@ ending cash $282,326 · Runway 25.1
 mo · Lowest monthly cash Y1 Jul
 $136,919
 SchoolStack Budget - Generated <DATE>
-Page 19 of 21
---- PAGE 20 ---
+Page 20 of 22
+--- PAGE 21 ---
 Enrollment -10%
 All five enrollment years scaled down by 10% — the standard lender enrollment-miss sensitivity.
   Min DSCR: 44.93x   ·   Min ending cash: $268,428   ·   Runway: 24.0 mo   ·   Break-even: Year 1
@@ -1474,8 +1478,8 @@ Per-year founder pay shown two ways: as planned (what the founder draws) and at 
 (what a comparable hire would cost). The lender adjustment is the gap underwriters apply to
 staffing cost and DSCR.
 SchoolStack Budget - Generated <DATE>
-Page 20 of 21
---- PAGE 21 ---
+Page 21 of 22
+--- PAGE 22 ---
 Line
 Y1
 Y2
@@ -1521,4 +1525,4 @@ $
 Note: Founder is paying themselves below market rate (“sweat equity”). Lenders and boards underwrite to the market-rate
 line; the adjustment shows the gap.
 SchoolStack Budget - Generated <DATE>
-Page 21 of 21
+Page 22 of 22

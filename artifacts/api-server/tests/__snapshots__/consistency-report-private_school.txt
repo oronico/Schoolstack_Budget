@@ -144,15 +144,15 @@
        - $2.3M (=2300000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $2.2M (=2200000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $5.9M (=5900000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
-       - $1.4M (=1400000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
-       - $4.8M (=4800000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
+       - $1 (=1) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $75K (=75000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $50K (=50000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $100K (=100000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $796,870 (=796870) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $8,877 (=8877) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $12,500 (=12500) — disagrees with canonical 5-Year Operating Stmt!B8:F8
-       ... +9 more
+       - $36,000 (=36000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
+       ... +7 more
      years with ≥1 matched occurrence: Y1
 
 [INFO] M.operatingExpenses — Metric-location map — Operating Expenses
@@ -261,7 +261,7 @@
 
 [FAIL] M.enrollment — Metric-location map — Enrollment
      canonical truth (Enrollment Tuition Fcst!B4:F4): Y1=2  Y2=25  Y3=3  Y4=35  Y5=4
-     keyword-anchored windows scanned: 93
+     keyword-anchored windows scanned: 94
      matched (literal → canonical year):
        - 200 → Y1
        - 400 → Y5

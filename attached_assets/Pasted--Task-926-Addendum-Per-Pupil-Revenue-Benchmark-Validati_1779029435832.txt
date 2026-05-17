@@ -1,0 +1,398 @@
+# Task #926 Addendum — Per-Pupil Revenue Benchmark Validation Subsystem
+
+**Apply to:** Task #926 — Per-pupil revenue benchmark validation
+**Base task spec:** Use the existing #926 spec as-is, with the additions below
+**Effective:** Before kickoff
+
+**Framing reminder:** This task improves the benchmark validation subsystem for founder inputs. Liberty's $24,375 per-pupil is evidence the subsystem is missing — not the deliverable. The deliverable is a subsystem that catches implausible inputs for any persona, present or future, against documented benchmarks. The three persona fixtures are tests of the subsystem, not the targets of the fix.
+
+---
+
+## Architectural lesson from #925
+
+Before starting, internalize the pattern from #925: the agent caught my over-prescription by checking whether the schema already encoded the relevant signal. Apply the same discipline here. Before introducing a new benchmark mechanism, search for existing benchmark or threshold logic in the codebase. If something analogous already exists (e.g., other "is this value in a reasonable range?" checks against state-keyed reference data), extend it rather than building a parallel system. Surface the question if you find a conflict.
+
+---
+
+## Pinned decisions
+
+### Benchmark data shape and storage location
+
+```typescript
+type PerPupilBenchmark = {
+  state: string;                    // ISO state code: 'AZ', 'FL', etc.
+  schoolType: SchoolType;           // 'charter' | 'private' | 'microschool' | etc.
+  fundingProfile?: FundingProfile;  // optional refinement: 'tuition_based' | 'voucher_eligible' | 'public_funded'
+  typicalLow: number;               // bottom of typical range, in USD/pupil
+  typicalHigh: number;              // top of typical range
+  ceiling: number;                  // above this triggers the warning
+  source: string;                   // human-readable citation (e.g., "AZ DOE Equalization Assistance Schedule 2024-25")
+  sourceUrl?: string;               // permalink if available
+  lastValidated: string;            // YYYY-MM-DD
+  notes?: string;                   // exceptions, weighting context, SPED considerations
+};
+```
+
+Store the benchmark table in a dedicated module:
+
+```
+lib/finance/src/benchmarks/per-pupil-revenue.ts
+```
+
+Not inline in `revenue-quality.ts`. Benchmarks are reference data with citation and validation-date metadata; they need their own home so future calibration tasks know where to look.
+
+### Seeded benchmark entries (from base spec)
+
+```typescript
+export const PER_PUPIL_BENCHMARKS: PerPupilBenchmark[] = [
+  {
+    state: 'AZ',
+    schoolType: 'charter',
+    typicalLow: 9_000,
+    typicalHigh: 15_000,
+    ceiling: 18_000,
+    source: '[citation pending — agent to populate]',
+    lastValidated: '2026-05-17',
+    notes: 'Base equalization + classroom site fund typical; ceiling allows for SPED weighting and federal supplements'
+  },
+  {
+    state: 'FL',
+    schoolType: 'private',
+    fundingProfile: 'voucher_eligible',
+    typicalLow: 10_000,
+    typicalHigh: 18_000,
+    ceiling: 20_000,
+    source: '[citation pending — agent to populate]',
+    lastValidated: '2026-05-17',
+    notes: 'FES-EO voucher + tuition mix typical; ceiling allows for high-tuition independent schools'
+  },
+  {
+    state: '*',  // wildcard — applies to any state
+    schoolType: 'microschool',
+    fundingProfile: 'tuition_based',
+    typicalLow: 7_000,
+    typicalHigh: 15_000,
+    ceiling: 18_000,
+    source: '[citation pending — agent to populate]',
+    lastValidated: '2026-05-17',
+    notes: 'Microschool tuition-based; ceiling allows for premium-positioned schools'
+  }
+];
+```
+
+The `[citation pending]` markers are intentional. The base spec calibrates "beyond the three seeded combinations" as out of scope, but each seeded entry still needs a citation. If the agent cannot find an authoritative source for any of the three within reasonable effort, the entry ships with `source: 'internal estimate, calibration pending'` and the architectural follow-up explicitly covers citation work.
+
+### Warning severity and lifecycle
+
+The warning is **soft validation**, not a render-prevention. Specifically:
+
+- Warning appears in the Flagged Assumptions section of the lender packet
+- Founder can acknowledge / dismiss the warning in the wizard
+- Acknowledgment is persisted on the model record with timestamp and acknowledger
+- Acknowledged warnings still render in the lender packet, but with an "acknowledged by founder" suffix
+- Unacknowledged warnings render with full severity language
+
+This matters because lenders should see whether the founder noticed and accepted the warning, not just that the warning was triggered. The acknowledgment trail is part of the assumption-confidence story.
+
+### Lookup behavior when no benchmark matches
+
+If the engine computes per-pupil revenue for a `(state, schoolType, fundingProfile)` combination that has no benchmark entry:
+
+- Do NOT emit a warning
+- Do NOT silently pass through
+- DO emit a different flag: "No per-pupil benchmark available for {state} {schoolType}. Verify rate against state appropriation schedule."
+
+This flag has informational severity (lower than the over-ceiling warning) and tells founders the system isn't validating their input. Honest about coverage gaps is better than silent gaps.
+
+---
+
+## Required protocol addendum fields
+
+### Canonical source reference
+
+```
+Canonical source: 
+  - Benchmark data: PER_PUPIL_BENCHMARKS in lib/finance/src/benchmarks/
+    per-pupil-revenue.ts
+  - Lookup function: findPerPupilBenchmark(state, schoolType, fundingProfile) 
+    in same module — returns matching entry or null
+  - Evaluation function: evaluatePerPupilRevenue(perPupilValue, benchmark) 
+    in lib/finance/src/revenue-quality.ts — returns 'within_typical' | 
+    'above_typical_below_ceiling' | 'above_ceiling' | 'no_benchmark'
+  - Flag emission: assumption-registry.ts wires evaluation result to 
+    Flagged Assumption with appropriate severity and copy
+
+Every consumer reads from this canonical chain. No other code path 
+applies its own per-pupil sanity check.
+```
+
+### Sibling bug search step
+
+```
+Step: Identify other founder inputs that pass through without 
+  benchmark validation.
+
+Pattern: Numeric founder inputs where an out-of-range value would 
+  silently produce an implausible model output.
+
+Search scope:
+  lib/finance/src/
+  artifacts/school-financial-model/src/pages/model-wizard/
+
+Discovery commands:
+  # Find every input field in the wizard
+  grep -rnP "type=['\"]number['\"]|<Input" --include="*.tsx" \
+    artifacts/school-financial-model/src/pages/model-wizard/
+
+  # Find every per-pupil or per-student computation
+  grep -rnP "per[_-]?pupil|per[_-]?student|/\\s*\\bstudents\\b|/\\s*\\benrollment\\b" \
+    --include="*.ts" lib/finance/
+
+  # Find existing benchmark/threshold logic (if any)
+  grep -rnP "benchmark|threshold|typical|reasonable|range|ceiling|floor" \
+    --include="*.ts" lib/finance/
+
+Action:
+  1. List every founder input that produces a financial computation.
+  2. For each, decide:
+     a. Has a defensible "typical range" against which it could be 
+        validated (e.g., per-pupil revenue, salary as % of revenue, 
+        facility cost per square foot) — candidate for benchmark
+     b. No defensible benchmark exists or none is needed — document why
+  3. For category (a) inputs, file individual follow-up tasks 
+     referencing the pattern established in #926.
+  4. If existing benchmark/threshold logic is found, integrate the 
+     per-pupil benchmark into that system instead of building parallel.
+
+Expected category (a) candidates beyond per-pupil revenue:
+  - Personnel cost as % of revenue (industry typical 50–65%)
+  - Facility cost per student (private $400–$1,500, charter varies)
+  - Staffing student:teacher ratios by school type
+  - Tuition collection rate (95–100% autopay, 88–95% invoice)
+  - Operating cost as % of revenue (target < 30%)
+  - Cash runway months at opening (target 18+ for startups)
+```
+
+### Explicit regression assertion (Patterns A + C + E)
+
+```
+Assertion target: Per-pupil benchmark validation subsystem coherence
+
+Subsystem-level assertions (run on every model evaluation):
+
+  For each persona fixture in the test suite:
+    Let perPupil = totalY1Revenue / totalY1Enrollment
+    Let benchmark = findPerPupilBenchmark(state, schoolType, fundingProfile)
+    
+    If benchmark exists:
+      If perPupil > benchmark.ceiling:
+        Assert: Flagged Assumptions contains a warning with severity 
+          'warning' referencing per-pupil revenue, the actual value, 
+          and the benchmark range
+        Assert: warning copy matches the canonical template (not 
+          hand-written)
+      If perPupil within typical range:
+        Assert: no per-pupil warning in Flagged Assumptions
+      If perPupil between typicalHigh and ceiling:
+        Assert: optional informational flag (not warning) about 
+          being above typical
+    
+    If no benchmark exists:
+      Assert: Flagged Assumptions contains an informational flag 
+        noting the absence of a benchmark for this 
+        (state, schoolType) combination
+
+Coverage assertion:
+
+  The assertion set above must pass for every persona fixture in the 
+  test suite — not only the three currently-named demo packets. 
+  Adding a new persona fixture should NOT require updating the 
+  assertion logic, only adding the fixture and (if applicable) a 
+  benchmark entry.
+
+Persona-specific expectations (current fixtures, derived from base spec):
+  - Liberty STEM Charter (AZ, charter): perPupil $24,375 → 
+    warning appears with ceiling breach
+  - Oakwood Learning Studio (AZ, microschool, tuition_based): 
+    perPupil $8,282 → no warning (within typical $7k–$15k)
+  - Riverside Christian Academy (FL, private, voucher_eligible): 
+    perPupil ~$19,759 → optional informational flag if between 
+    typicalHigh ($18k) and ceiling ($20k); no warning
+
+Failure reporting:
+  "Per-pupil benchmark subsystem regression: {persona} — perPupil 
+   {value}, benchmark {range}, expected {expected_outcome}, got 
+   {actual_outcome}"
+```
+
+---
+
+## Prevention mechanism
+
+Once #926 lands, the following prevent recurrence at the class level:
+
+1. **Centralized benchmark module:** All per-pupil and per-student benchmarks live in one file with citation metadata. Future contributors adding a benchmark know where to put it. Future readers can audit citations centrally.
+
+2. **Standard flag emission pattern:** The `evaluatePerPupilRevenue` function returns a typed result; the flag emission code uses a typed pattern. Future benchmark types (personnel %, facility cost per student) use the same shape.
+
+3. **Test architecture supports new fixtures:** Adding a new persona to the test suite triggers all benchmark assertions without code changes. New benchmarks added to the module trigger validation for any matching persona automatically.
+
+4. **Citation discipline:** Every benchmark entry requires `source` and `lastValidated` fields at the type level. A benchmark without citation is a compile-time error. This prevents the table from drifting into stale or unsourced data without anyone noticing.
+
+---
+
+## Architectural follow-up
+
+```
+Follow-up task: Roll out benchmark validation pattern to other 
+  founder inputs identified by the sibling search
+
+Rationale: Per-pupil revenue is one of many founder inputs that benefit 
+  from benchmark validation. The pattern delivered in #926 (typed 
+  benchmark table + lookup + evaluation + flag emission) is reusable 
+  for personnel cost %, facility cost per student, collection rate, 
+  operating cost %, cash runway at opening, and other category (a) 
+  candidates surfaced by the sibling search.
+
+Scope: For each category (a) input:
+  1. Identify or research the typical range and ceiling
+  2. Add benchmark entry to canonical benchmark module
+  3. Add evaluation function
+  4. Wire into Flagged Assumptions
+  5. Add persona-specific regression assertions
+
+Per-input rollout, not big-bang. Each input gets its own follow-up task 
+referencing the patterns established in #926.
+
+Separately: a citation calibration task to populate authoritative 
+sources for the three seeded benchmarks (AZ charter, FL private 
+voucher-eligible, microschool tuition-based).
+
+Tracked at: file before closing #926
+```
+
+---
+
+## Light vs full completion template
+
+This task touches benchmark module, engine evaluation, flag emission, and rendering — multiple subsystems. **Use the full five-section completion template**, not the light template.
+
+```
+Section A — What changed
+  Files modified, benchmark module created, evaluation function added, 
+  flag emission wired
+
+Section B — Re-rendered evidence
+  For each persona fixture:
+    Quote the Flagged Assumptions section before / after
+    Confirm Liberty shows the new warning with expected copy
+    Confirm Oakwood and Riverside behave per the assertion expectations
+
+Section C — Source-of-truth trace
+  Benchmark data location (file:line)
+  Lookup function (file:line)
+  Evaluation function (file:line)
+  Flag emission (file:line)
+  All consumers route through this chain — no parallel benchmark logic
+
+Section D — Cross-section consistency check
+  Benchmark warning copy is identical between Flagged Assumptions 
+    section and any other surface (wizard, in-app, future emails)
+  No persona triggers conflicting flags (e.g., "above ceiling" AND 
+    "no benchmark available")
+  Acknowledgment lifecycle works end-to-end: warning → acknowledge → 
+    re-render shows acknowledged status
+
+Section E — Side-effect check
+  Did the benchmark module touch other validation logic? List which.
+  Did the engine change affect computations downstream? Verify.
+  Were any other "typical range" checks already in the codebase that 
+    should have been extended rather than paralleled? (i.e., the 
+    sibling search results)
+  Are there persona fixtures in the test suite that should have a 
+    benchmark entry but don't?
+```
+
+---
+
+## Quick checklist for the agent
+
+Before claiming #926 complete:
+
+- [ ] Benchmark data lives in dedicated module with citation + validation-date metadata
+- [ ] All three seeded entries present with notes; `[citation pending]` markers documented in completion summary
+- [ ] `findPerPupilBenchmark` lookup function handles state + schoolType + fundingProfile
+- [ ] Wildcard state (`'*'`) supported for school-type-only benchmarks (e.g., microschool)
+- [ ] `evaluatePerPupilRevenue` returns typed result, not stringly-typed
+- [ ] Flag emission uses canonical copy template, not hand-written strings
+- [ ] "No benchmark available" informational flag emits when no entry matches
+- [ ] Warning is soft (does not prevent render); founder can acknowledge
+- [ ] Acknowledgment persists on the model record with timestamp + acknowledger
+- [ ] Acknowledged warnings render with "acknowledged by founder" suffix
+- [ ] Sibling bug search has been run; output is in the completion summary
+- [ ] Per-input decisions (category a/b) documented for follow-up
+- [ ] Existing benchmark/threshold logic in codebase checked before building parallel
+- [ ] Regression test added with subsystem-level assertions
+- [ ] Regression test passes for all current persona fixtures
+- [ ] Test architecture supports adding a new persona fixture without modifying assertion logic
+- [ ] Architectural follow-up tasks filed (per-input rollout + citation calibration)
+- [ ] Full five-section completion template (A–E) filled in completely
+
+If any checklist item is incomplete, the task is not done.
+
+---
+
+## What to paste to Replit
+
+```
+Apply Task #926 Addendum before starting work.
+
+Framing: this task improves the benchmark validation subsystem for 
+founder inputs. Liberty's $24,375 per-pupil is evidence the subsystem 
+is missing — it is not the deliverable. The deliverable is a subsystem 
+that catches implausible inputs for any current or future persona 
+against documented benchmarks.
+
+Lesson from #925: before introducing a new mechanism, check whether 
+the schema or codebase already encodes the signal. If similar 
+benchmark or threshold logic exists, extend it rather than building 
+parallel. Surface the question if you find a conflict.
+
+Specifically:
+
+1. Benchmark data lives in dedicated module with citation + validation 
+   metadata. Not inline in revenue-quality.ts.
+
+2. Three seeded entries with notes. Citations marked [citation pending] 
+   for the calibration follow-up; do not invent sources.
+
+3. Warning is soft — does not prevent render. Founder can acknowledge; 
+   acknowledgment persists with timestamp and renders in the lender 
+   packet as "acknowledged by founder."
+
+4. "No benchmark available" emits an informational flag — honest about 
+   coverage gaps is better than silent gaps.
+
+5. Add the three required addendum fields to your task spec:
+   - Canonical source: benchmark module → lookup → evaluation → 
+     flag emission chain
+   - Sibling bug search: identify other founder inputs that benefit 
+     from benchmark validation
+   - Explicit regression assertion: subsystem-level + persona-specific 
+     expectations (Patterns A + C + E)
+
+6. Prevention mechanism: centralized module, typed result, citation 
+   discipline at type level.
+
+7. Use the full five-section completion template (A–E).
+
+8. Run the quick checklist before claiming complete.
+
+9. File two architectural follow-ups before closing #926:
+   - Per-input rollout of the benchmark pattern to other category (a) 
+     inputs
+   - Citation calibration for the three seeded benchmarks
+
+Reference the full addendum for command syntax, full assertion 
+specifications, type signatures, and follow-up templates.
+```

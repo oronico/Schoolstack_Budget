@@ -382,6 +382,134 @@ async function runOne(c: DemoCase): Promise<void> {
       tuitionCapacity > 0, `capacity=${fmtUSD(tuitionCapacity)}`);
   }
 
+  // ── 1c. Task #926 — Per-pupil revenue benchmark validation subsystem ─
+  //
+  // Subsystem-level assertions: every persona resolves its per-pupil
+  // outcome from the canonical (findPerPupilBenchmark →
+  // evaluatePerPupilRevenue) chain, then the engine emits the
+  // appropriate flag with canonical copy. Adding a new persona
+  // fixture should NOT require updating this logic — only adding the
+  // fixture and (if applicable) a benchmark entry.
+  //
+  // Persona expectations on the current seeds:
+  //   - Liberty STEM Charter (AZ, charter)         → $24,375/student
+  //         → outcome=above_ceiling → warning
+  //         per_pupil_revenue_above_benchmark
+  //   - Oakwood Learning Studio (AZ, microschool)  → ~$8,282/student
+  //         → outcome=within_typical → no per-pupil flag
+  //   - Riverside Christian Academy (FL, private)  → ~$19,759/student
+  //         → outcome=above_typical_below_ceiling → info
+  //         per_pupil_revenue_above_typical (NOT the warning)
+  const sp = (data as { schoolProfile?: { state?: string; schoolType?: string; fundingProfile?: string } })
+    .schoolProfile ?? {};
+  const perPupil = y1Students > 0 ? y1.totalRevenue / y1Students : 0;
+  const bench = (await import("@workspace/finance")).findPerPupilBenchmark(
+    sp.state, sp.schoolType as never, sp.fundingProfile,
+  );
+  const evalRes = (await import("@workspace/finance")).evaluatePerPupilRevenue(perPupil, bench);
+  const warnFlag = flags.find((f) => f.flagType === "per_pupil_revenue_above_benchmark");
+  const infoFlag = flags.find((f) => f.flagType === "per_pupil_revenue_above_typical");
+  const noBenchFlag = flags.find((f) => f.flagType === "no_per_pupil_benchmark");
+
+  if (evalRes.outcome === "above_ceiling") {
+    check(`${tag} per-pupil subsystem: above_ceiling → warning emitted`,
+      !!warnFlag, `perPupil=${perPupil.toFixed(0)}, benchmark=${JSON.stringify(bench)}`);
+    if (warnFlag) {
+      check(`${tag} per-pupil warning severity is warning`,
+        warnFlag.severity === "warning", `severity="${warnFlag.severity}"`);
+      check(`${tag} per-pupil warning copy references actual value`,
+        warnFlag.currentValue.includes(`$${Math.round(perPupil).toLocaleString("en-US")}`),
+        `currentValue="${warnFlag.currentValue}"`);
+      check(`${tag} per-pupil warning benchmark cites range`,
+        warnFlag.benchmark.includes(`$${(evalRes as { benchmark: { typicalLow: number } }).benchmark.typicalLow.toLocaleString("en-US")}`)
+        && warnFlag.benchmark.includes(`$${(evalRes as { benchmark: { ceiling: number } }).benchmark.ceiling.toLocaleString("en-US")}`),
+        `benchmark="${warnFlag.benchmark}"`);
+    }
+    check(`${tag} per-pupil subsystem: no conflicting info / no_benchmark flag`,
+      !infoFlag && !noBenchFlag, `info=${!!infoFlag}, noBench=${!!noBenchFlag}`);
+  } else if (evalRes.outcome === "above_typical_below_ceiling") {
+    check(`${tag} per-pupil subsystem: above_typical_below_ceiling → info flag emitted`,
+      !!infoFlag, `perPupil=${perPupil.toFixed(0)}`);
+    check(`${tag} per-pupil subsystem: above_typical_below_ceiling → no warning`,
+      !warnFlag, `warning unexpectedly present`);
+    check(`${tag} per-pupil subsystem: above_typical_below_ceiling → no no_benchmark flag`,
+      !noBenchFlag);
+    if (infoFlag) {
+      check(`${tag} per-pupil info severity is info`, infoFlag.severity === "info",
+        `severity="${infoFlag.severity}"`);
+    }
+  } else if (evalRes.outcome === "no_benchmark") {
+    check(`${tag} per-pupil subsystem: no_benchmark → info gap flag emitted`,
+      !!noBenchFlag, `perPupil=${perPupil.toFixed(0)}, state=${sp.state}, type=${sp.schoolType}`);
+    check(`${tag} per-pupil subsystem: no_benchmark → no warning / typical flags`,
+      !warnFlag && !infoFlag);
+  } else {
+    // within_typical | below_typical → no per-pupil flag at all
+    check(`${tag} per-pupil subsystem: within band → no per-pupil flag`,
+      !warnFlag && !infoFlag && !noBenchFlag,
+      `outcome=${evalRes.outcome}, warn=${!!warnFlag}, info=${!!infoFlag}, noBench=${!!noBenchFlag}`);
+  }
+
+  // Synthetic branch coverage — the seeded personas naturally exercise
+  // above_ceiling / above_typical_below_ceiling / within_typical, but
+  // `no_benchmark` and `below_typical` have no current fixture. Drive
+  // those branches directly through the subsystem so the typed union
+  // is fully covered (per code-review feedback on task #926).
+  if (c.label === "charter_school") {
+    const fin = await import("@workspace/finance");
+    // (a) no_benchmark: an unseeded (state, schoolType) pair must
+    //     return null and produce the gap-disclosure flag.
+    const gapBench = fin.findPerPupilBenchmark("WY", "private_school", "tuition_based");
+    check(`${tag} per-pupil subsystem: unseeded pair → null benchmark`,
+      gapBench === null, `expected null, got ${JSON.stringify(gapBench)}`);
+    const gapEval = fin.evaluatePerPupilRevenue(12_000, gapBench);
+    check(`${tag} per-pupil subsystem: null benchmark → no_benchmark outcome`,
+      gapEval.outcome === "no_benchmark", `outcome=${gapEval.outcome}`);
+    const gapCopy = fin.buildPerPupilFlagCopy(gapEval, { state: "WY", schoolType: "private_school" });
+    check(`${tag} per-pupil subsystem: no_benchmark → copy emitted with info severity`,
+      !!gapCopy && gapCopy.flagType === "no_per_pupil_benchmark" && gapCopy.severity === "info",
+      `copy=${JSON.stringify(gapCopy)}`);
+    check(`${tag} per-pupil subsystem: no_benchmark copy mentions state+type labels`,
+      !!gapCopy && gapCopy.currentValue.includes("WY") && gapCopy.currentValue.includes("private"),
+      `currentValue="${gapCopy?.currentValue}"`);
+
+    // (b) below_typical: synthesise a perPupil under the AZ charter
+    //     typicalLow (9k) and assert outcome routes correctly and
+    //     intentionally yields no flag (suppression is the contract).
+    const azBench = fin.findPerPupilBenchmark("AZ", "charter_school");
+    check(`${tag} per-pupil subsystem: AZ charter resolves benchmark`,
+      azBench !== null && azBench.typicalLow === 9_000, `azBench=${JSON.stringify(azBench)}`);
+    const lowEval = fin.evaluatePerPupilRevenue(5_000, azBench);
+    check(`${tag} per-pupil subsystem: perPupil below typicalLow → below_typical`,
+      lowEval.outcome === "below_typical", `outcome=${lowEval.outcome}`);
+    const lowCopy = fin.buildPerPupilFlagCopy(lowEval, { state: "AZ", schoolType: "charter_school" });
+    check(`${tag} per-pupil subsystem: below_typical → no flag emitted (suppressed)`,
+      lowCopy === null, `expected null, got ${JSON.stringify(lowCopy)}`);
+
+    // (c) within_typical also stays null (regression guard).
+    const okEval = fin.evaluatePerPupilRevenue(12_000, azBench);
+    const okCopy = fin.buildPerPupilFlagCopy(okEval, { state: "AZ", schoolType: "charter_school" });
+    check(`${tag} per-pupil subsystem: within_typical → no flag emitted`,
+      okEval.outcome === "within_typical" && okCopy === null,
+      `outcome=${okEval.outcome}, copy=${JSON.stringify(okCopy)}`);
+  }
+
+  // Persona-specific anchors (current seeds) — proves the subsystem
+  // routes each demo through the expected branch.
+  if (c.label === "charter_school") {
+    check(`${tag} charter_school: outcome=above_ceiling`,
+      evalRes.outcome === "above_ceiling", `outcome=${evalRes.outcome}`);
+    check(`${tag} charter_school: perPupil near $24,375 (±$25)`,
+      Math.abs(perPupil - 24375) <= 25, `perPupil=${perPupil.toFixed(0)}`);
+  } else if (c.label === "microschool") {
+    check(`${tag} microschool: outcome=within_typical (sits in $7k–$15k band)`,
+      evalRes.outcome === "within_typical", `outcome=${evalRes.outcome}, perPupil=${perPupil.toFixed(0)}`);
+  } else if (c.label === "private_school") {
+    check(`${tag} private_school: outcome=above_typical_below_ceiling`,
+      evalRes.outcome === "above_typical_below_ceiling",
+      `outcome=${evalRes.outcome}, perPupil=${perPupil.toFixed(0)}`);
+  }
+
   // ── 2. V2 underwriting workbook ─────────────────────────────────────
   const { wb, bytes } = await loadV2Bytes(data);
 

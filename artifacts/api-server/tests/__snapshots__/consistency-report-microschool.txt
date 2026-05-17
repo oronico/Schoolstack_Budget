@@ -135,8 +135,6 @@
        - $148K (=148000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $14K (=14000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $135K (=135000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
-       - $52K (=52000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
-       - $8 (=8) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $8K (=8000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $15K (=15000) — disagrees with canonical 5-Year Operating Stmt!B8:F8
        - $67,895 (=67895) — disagrees with canonical 5-Year Operating Stmt!B8:F8

@@ -80,6 +80,7 @@ Page 2 of 20
 foundation for your mission.
 Flagged Assumptions
 [Info] 20 students (44% of 45 capacity)
+[Warning] Y1 revenue per student of $20,617 is above the typical FL microschool range. Verify per-pupil rate breakdown.
 [Positive] Tuition covers 166% of Year 1 total expenses
 [Warning] Year 1: net tuition $10,551/student, school-choice (ESA + voucher + tax-credit) total $16,000/student (over by
 $5,449)
@@ -120,10 +121,10 @@ Year 5
 40
 Supporting Assumptions
 Year 1 Enrollment  20
-Year 2 Enrollment  26
 SchoolStack Budget - Generated <DATE>
 Page 3 of 20
 --- PAGE 4 ---
+Year 2 Enrollment  26
 Year 3 Enrollment  32
 Year 4 Enrollment  37
 Year 5 Enrollment  40
