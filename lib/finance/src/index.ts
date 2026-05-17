@@ -303,6 +303,7 @@ export {
   computeRevenueRowAmountsForYear,
   detectFundingMixInconsistencies,
   applyFundingMixCorrection,
+  buildPolicyDependenceRiskFraming,
   REVENUE_QUALITY_LABELS,
   REVENUE_QUALITY_DEFINITIONS,
   REVENUE_QUALITY_ORDER,
@@ -312,6 +313,8 @@ export {
   type RevenueRowAmountsRowLike,
   type RevenueRowAmountsSchoolProfileLike,
   type TuitionTierLike,
+  type PolicyDependenceRiskFraming,
+  type PolicyDependenceRiskFramingInput,
 } from "./revenue-quality.js";
 
 export {

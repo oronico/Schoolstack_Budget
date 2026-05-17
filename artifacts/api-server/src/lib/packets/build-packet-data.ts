@@ -36,6 +36,7 @@ import {
   defaultCollectionRateForMethod,
   REVENUE_QUALITY_LABELS,
   REVENUE_QUALITY_ORDER,
+  buildPolicyDependenceRiskFraming,
   computeYear1MonthlyCashFlow,
   findLowestCashMonth,
   findLowestCashMonthAcrossYears,
@@ -638,6 +639,31 @@ function buildRevenueModel(
   // dependent?" — surfacing the engine's bucket rollup here keeps the
   // answer in the same section as the headline revenue numbers.
   const rqRollup = co.revenueQuality ?? [];
+  // Task #927 — Voucher / per-pupil Risk Framing note. When Y1
+  // revenue is dominated (≥50%) by policy-dependent funding (state
+  // per-pupil ADM, vouchers, ESA, tax-credit scholarships), the
+  // engine's conservative `hardRevenueCoverage` looks alarming
+  // (Liberty 0.00×, Riverside 0.28×) without context. The helper
+  // returns a PacketInsight explaining the classification choice so
+  // a reviewer reads the ratio alongside the "why" rather than as a
+  // bare alarm. Option 2 of Task #927 (see helper doc-comment for
+  // the option-1-vs-option-2 reasoning); regression test pins the
+  // insight's presence on the affected personas.
+  const rqY1ForFraming = rqRollup[0];
+  if (rqY1ForFraming) {
+    const framing = buildPolicyDependenceRiskFraming({
+      rqY1: rqY1ForFraming,
+      schoolType: sp?.schoolType,
+      state: sp?.state,
+    });
+    if (framing) {
+      revenueInsights.push({
+        label: framing.label,
+        body: framing.body,
+        tone: framing.tone,
+      });
+    }
+  }
   if (rqRollup.length > 0) {
     // Task #919 — `co.revenueQuality[].year` is 1-indexed (1..5) because
     // it mirrors `yearFinancials[].year = idx + 1` in the consultant

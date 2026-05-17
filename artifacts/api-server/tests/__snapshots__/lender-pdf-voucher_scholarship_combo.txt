@@ -131,6 +131,14 @@ Year 5 Enrollment  40
 Revenue Model
 The revenue model is anchored to enrollment-driven income. Year 1 total revenue is projected at
 $412K, growing to $1.1M by Year 5.
+• Risk framing — policy-dependent revenue
+120% of Year 1 revenue comes from voucher / ESA / tax-credit scholarship funding (FL), which the model
+classifies as policy-dependent. That bucket is excluded from the hard-revenue numerator by design — it
+produces the conservative Hard Revenue Coverage (Y1) of -0.36× shown above. Per-pupil and voucher
+dollars ARE contractual once a child is enrolled and eligibility is verified; the conservative classification
+reflects legislative / court risk to the funding program itself, not to individual student revenue. Reviewers
+underwriting against enrollment-backed coverage should look at the per-program break-even and the
+enrollment-risk stress tests in addition to the hard-revenue ratio.
 Tuition %: -8.8%
 Public Funding %: 42.6%
 Philanthropy %: 1.6%
@@ -204,16 +212,10 @@ $651K
 $825K
 $976K
 $1.1M
-Revenue
-Quality (Con
-tracted vs.
-Projected
-vs. Donor /
-Policy
-Dependent)
 SchoolStack Budget - Generated <DATE>
 Page 4 of 20
 --- PAGE 5 ---
+Revenue Quality (Contracted vs. Projected vs. Donor / Policy Dependent)
 Bucket
 Year 1
 Year 2
@@ -299,10 +301,10 @@ packet reflect the normalized view; the founder dashboard reflects the as-planne
 Suggested founder compensation steps up year over year as projected enrollment crosses NAIS /
 NACSA size bands (escalated by COLA from Y1). Source: U.S. Bureau of Labor Statistics,
 Occupational Employment & Wage Statistics, May 2023. Education Administrators, Kindergarten
-through Secondary (11-9032), national median annual wage..
 SchoolStack Budget - Generated <DATE>
 Page 5 of 20
 --- PAGE 6 ---
+through Secondary (11-9032), national median annual wage..
 ✓ Staffing % of Revenue: 20.9%
 Suggested Founder Compensation Benchmark by Year
 Year

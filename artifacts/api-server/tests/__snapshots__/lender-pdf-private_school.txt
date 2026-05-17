@@ -32,7 +32,7 @@ Packet Contents
 This packet is generated from the school's financial model and is intended for lender review.
 All projections are based on assumptions entered by the school founder.
 SchoolStack Budget - Generated <DATE>
-Page 1 of 37
+Page 1 of 21
 --- PAGE 2 ---
 Lender Commentary
 Riverside Christian Academy is a private school, based in FL. Riverside Christian Academy projects
@@ -72,7 +72,7 @@ Riverside Christian Academy projects $8,779,877 in Year 5 revenue with a 66.9% n
 model tells a strong financial story with 13 of 13 key metrics in healthy range, a great foundation
 for your mission.
 SchoolStack Budget - Generated <DATE>
-Page 2 of 37
+Page 2 of 21
 --- PAGE 3 ---
 Flagged Assumptions
 [Info] Y1 revenue per student of $19,759 is above the typical FL private range ($10,000–$18,000) but below the $20,000
@@ -119,11 +119,19 @@ Year 3 Enrollment  300
 Year 4 Enrollment  350
 Year 5 Enrollment  400
 SchoolStack Budget - Generated <DATE>
-Page 3 of 37
+Page 3 of 21
 --- PAGE 4 ---
 Revenue Model
 The revenue model is anchored to enrollment-driven income. Year 1 total revenue is projected at
 $4.0M, growing to $8.8M by Year 5.
+• Risk framing — policy-dependent revenue
+68% of Year 1 revenue comes from voucher / ESA / tax-credit scholarship funding (FL), which the model
+classifies as policy-dependent. That bucket is excluded from the hard-revenue numerator by design — it
+produces the conservative Hard Revenue Coverage (Y1) of 0.28× shown above. Per-pupil and voucher
+dollars ARE contractual once a child is enrolled and eligibility is verified; the conservative classification
+reflects legislative / court risk to the funding program itself, not to individual student revenue. Reviewers
+underwriting against enrollment-backed coverage should look at the per-program break-even and the
+enrollment-risk stress tests in addition to the hard-revenue ratio.
 Tuition %: 16.2%
 Public Funding %: 40.5%
 Philanthropy %: 3.2%
@@ -204,6 +212,9 @@ Projected
 vs. Donor /
 Policy
 Dependent)
+SchoolStack Budget - Generated <DATE>
+Page 4 of 21
+--- PAGE 5 ---
 Bucket
 Year 1
 Year 2
@@ -234,9 +245,6 @@ $125K (4.2%)
 $125K (3.3%)
 $125K (2.8%)
 $130K (2.5%)
-SchoolStack Budget - Generated <DATE>
-Page 4 of 37
---- PAGE 5 ---
 Hard revenue coverage of fixed +
 debt
 0.28×
@@ -244,10 +252,9 @@ debt
 0.40×
 0.45×
 0.50×
-SchoolStack Budget - Generated <DATE>
-Page 5 of 37
---- PAGE 6 ---
-Revenue Lines (Year 1)
+Revenue
+Lines (Year
+1)
 Line Item
 Year 1
 Annual Tuition (K-8)
@@ -287,12 +294,12 @@ Suggested founder compensation steps up year over year as projected enrollment c
 NACSA size bands (escalated by COLA from Y1). Source: NAIS Head of School Compensation
 Report, 2023-24. Day-school median total cash compensation by total enrollment.. Size-band
 transitions during the forecast: Year 3 (150–300 students to 300–500 students, suggested rate
+SchoolStack Budget - Generated <DATE>
+Page 5 of 21
+--- PAGE 6 ---
 $244,000). Each crossing bumps the lender-side market rate for the founder / head-of-school role.
 ✓ Staffing % of Revenue: 32.0%
 Suggested Founder Compensation Benchmark by Year
-SchoolStack Budget - Generated <DATE>
-Page 6 of 37
---- PAGE 7 ---
 Year
 Projected Enrollment
 Size Band
@@ -398,13 +405,13 @@ As Planned (Reported)
 Lender View (Normalized)
 15.7
 79.6
+SchoolStack Budget - Generated <DATE>
+Page 6 of 21
+--- PAGE 7 ---
 Supporting Assumptions
 Head of School  $95,000, 1 FTE
 Assistant Principal  $72,000, 1 FTE
 Lead Teachers (K-8)  $48,000, 12 FTE
-SchoolStack Budget - Generated <DATE>
-Page 7 of 37
---- PAGE 8 ---
 Teaching Assistants  $30,000, 6 FTE
 Office Manager  $42,000, 1 FTE
 Counselor  $55,000, 1 FTE
@@ -457,14 +464,14 @@ Breakeven enrollment is 78 students (156% above Year 1 enrollment).
 Prior-year revenue was $2.4M; Year 1 projections represent a 64.7% change.
 • Accounting basis
 All projections are prepared on an accrual basis; the school currently keeps books on a undetermined basis.
+SchoolStack Budget - Generated <DATE>
+Page 7 of 21
+--- PAGE 8 ---
 ✓ Revenue per Student (Year 1): $19,759 (benchmark: Private avg: $12,000–$25,000)
 ✓ Cost per Student (Year 1): $8,877 (benchmark: Target: ≤ 85% of revenue per student)
 ✓ Staffing Cost (% of Revenue): 32.0% (benchmark: Industry avg: 50–65% of revenue)
 ✓ Operating Cost (% of Revenue): 9.8% (benchmark: Target: under 30% of revenue)
 ✓ Net margin (Year 1): 55.1% (benchmark: Startup target: 0–5%; mature: 10%+)
-SchoolStack Budget - Generated <DATE>
-Page 8 of 37
---- PAGE 9 ---
 ✓ Net margin (Year 5): 66.9% (benchmark: Target: 10–15%+)
 ✓ 5-Year Revenue Growth: 122.2% (benchmark: Healthy schools: 30–80% over 5 years)
 ✓ Capacity Utilization (Year 5): 100.0% (benchmark: Optimal: 80–95% utilization)
@@ -561,14 +568,14 @@ $1.8M
 -19.3%
 Net Income
 Comparison
+SchoolStack Budget - Generated <DATE>
+Page 8 of 21
+--- PAGE 9 ---
 Prior Year (Actual)
 Year 1 (Projected)
 Net Income
 $200K
 $2.2M
-SchoolStack Budget - Generated <DATE>
-Page 9 of 37
---- PAGE 10 ---
 Opening Balance Sheet
 Net position at model start: $-230K.
 Total Assets: $970K
@@ -613,12 +620,12 @@ Breakeven Enrollment
 78 students
 Enrollment Cushion
 +156.4%
+SchoolStack Budget - Generated <DATE>
+Page 9 of 21
+--- PAGE 10 ---
 Cash Flow Analysis
 Year-end cash covers 17.5 months of fixed costs. Opening balance: $970K total assets, $1.2M total
 liabilities, $-230K net position. Lowest cash month across the 5-year forecast: Year 1 — Jul at $477K.
-SchoolStack Budget - Generated <DATE>
-Page 10 of 37
---- PAGE 11 ---
 Cash Runway: 17.5 months
 Lowest Cash Month: Year 1 — Jul ($477K)
 Cumulative Cash Position
@@ -725,6 +732,9 @@ Year 2
 Monthly
 Cash Flow
 Summary
+SchoolStack Budget - Generated <DATE>
+Page 10 of 21
+--- PAGE 11 ---
 Month
 Beginning
 Inflows
@@ -762,106 +772,52 @@ $297K
 ($169K)
 $128K
 $3.9M
-SchoolStack Budget - Generated <DATE>
-Page 11 of 37
---- PAGE 12 ---
 Dec
 $3.9M
 $297K
 ($169K)
 $128K
 $4.0M
-SchoolStack Budget - Generated <DATE>
-Page 12 of 37
---- PAGE 13 ---
 Jan
 $4.0M
 $780K
 ($169K)
 $611K
 $4.6M
-SchoolStack Budget - Generated <DATE>
-Page 13 of 37
---- PAGE 14 ---
 Feb
 $4.6M
 $297K
 ($169K)
 $128K
 $4.7M
-SchoolStack Budget - Generated <DATE>
-Page 14 of 37
---- PAGE 15 ---
 Mar
 $4.7M
 $297K
 ($169K)
 $128K
 $4.9M
-SchoolStack Budget - Generated <DATE>
-Page 15 of 37
---- PAGE 16 ---
 Apr
 $4.9M
 $780K
 ($169K)
 $611K
 $5.5M
-SchoolStack Budget - Generated <DATE>
-Page 16 of 37
---- PAGE 17 ---
-SchoolStack Budget - Generated <DATE>
-Page 17 of 37
---- PAGE 18 ---
 May
-SchoolStack Budget - Generated <DATE>
-Page 18 of 37
---- PAGE 19 ---
 $5.5M
-SchoolStack Budget - Generated <DATE>
-Page 19 of 37
---- PAGE 20 ---
 $297K
-SchoolStack Budget - Generated <DATE>
-Page 20 of 37
---- PAGE 21 ---
 ($169K)
-SchoolStack Budget - Generated <DATE>
-Page 21 of 37
---- PAGE 22 ---
 $128K
-SchoolStack Budget - Generated <DATE>
-Page 22 of 37
---- PAGE 23 ---
 $5.6M
-SchoolStack Budget - Generated <DATE>
-Page 23 of 37
---- PAGE 24 ---
 Jun
-SchoolStack Budget - Generated <DATE>
-Page 24 of 37
---- PAGE 25 ---
 $5.6M
-SchoolStack Budget - Generated <DATE>
-Page 25 of 37
---- PAGE 26 ---
 $10K
-SchoolStack Budget - Generated <DATE>
-Page 26 of 37
---- PAGE 27 ---
 ($169K)
-SchoolStack Budget - Generated <DATE>
-Page 27 of 37
---- PAGE 28 ---
 $-31K
-SchoolStack Budget - Generated <DATE>
-Page 28 of 37
---- PAGE 29 ---
 $5.6M
-SchoolStack Budget - Generated <DATE>
-Page 29 of 37
---- PAGE 30 ---
-Year 3 Monthly Cash Flow Summary
+Year 3
+Monthly
+Cash Flow
+Summary
 Month
 Beginning
 Inflows
@@ -945,6 +901,9 @@ Year 4
 Monthly
 Cash Flow
 Summary
+SchoolStack Budget - Generated <DATE>
+Page 11 of 21
+--- PAGE 12 ---
 Month
 Beginning
 Inflows
@@ -1028,9 +987,6 @@ Year 5
 Monthly
 Cash Flow
 Summary
-SchoolStack Budget - Generated <DATE>
-Page 30 of 37
---- PAGE 31 ---
 Month
 Beginning
 Inflows
@@ -1113,6 +1069,9 @@ $20.7M
 Lowest
 Cash Month
 by Year
+SchoolStack Budget - Generated <DATE>
+Page 12 of 21
+--- PAGE 13 ---
 Year
 Month
 Ending Cash
@@ -1145,9 +1104,6 @@ DSCR Summary
 Current DSCR:  21.01x
 Benchmark:  Healthy minimum: 1.15x;
 target: 1.25x
-SchoolStack Budget - Generated <DATE>
-Page 31 of 37
---- PAGE 32 ---
 Trend:  Normalized (lender-primary) Y1
 DSCR. See the “As-Planned vs
 Normalized: Net Income & DSCR”
@@ -1185,6 +1141,9 @@ vs accrual: $20.7M (no restricted gifts). Unrestricted is the headline DSCR + ru
 gifts can't legally fund operations or debt service.
 Stress Testing
 All 6 stress scenarios maintain positive Year 5 net income, indicating financial resilience.
+SchoolStack Budget - Generated <DATE>
+Page 13 of 21
+--- PAGE 14 ---
 Stress Test Results
 Scenario
 Y1 Net
@@ -1247,9 +1206,6 @@ achievable.
 ✓ Readiness Level: Strong
 Financial Health Assessment
 Across 9 health dimensions: 8 healthy, 1 on watch, 0 at risk.
-SchoolStack Budget - Generated <DATE>
-Page 32 of 37
---- PAGE 33 ---
 ✓ viability: Healthy
 ✓ liquidity: Healthy
 ⚠ cash flow timing: Watch closely
@@ -1292,6 +1248,9 @@ Healthy
 DSCR of 20.91x provides comfortable
 coverage of debt payments with room to
 spare.
+SchoolStack Budget - Generated <DATE>
+Page 14 of 21
+--- PAGE 15 ---
 Revenue Concentration
 Healthy
 Revenue is anchored to enrollment-driven
@@ -1299,15 +1258,24 @@ income — the strongest foundation for a
 school model. A focused revenue stream
 is a strength when backed by dependable
 demand.
+SchoolStack Budget - Generated <DATE>
+Page 15 of 21
+--- PAGE 16 ---
 Days Cash
 Healthy
 472 days of cash on hand exceeds the 90-
 day benchmark, providing a strong
 liquidity cushion.
+SchoolStack Budget - Generated <DATE>
+Page 16 of 21
+--- PAGE 17 ---
 Reserve Strength
 Healthy
 82.0 months of reserves by Year 5 — a
 strong buffer for unexpected costs.
+SchoolStack Budget - Generated <DATE>
+Page 17 of 21
+--- PAGE 18 ---
 Key Risks
 1 risk factor has been identified. None are rated critical, but each should have a documented
 mitigation plan.
@@ -1322,9 +1290,6 @@ Mitigation: Build a cash buffer through startup fundraising, a line of credit, o
 expenses in Step 7, until projected cash runway clears 18 months.
 ✓ Let's extend your cash runway: medium
 See Appendix for complete assumption details.
-SchoolStack Budget - Generated <DATE>
-Page 33 of 37
---- PAGE 34 ---
 Appendix: Key Assumptions
 Complete list of 26 assumptions used in this financial model, with each headline metric tied to its
 driving assumptions.
@@ -1363,6 +1328,9 @@ rate: 5.5%; Loan term: 25 yr; Year 1
 debt service: $109,328; Year 1
 staffing cost: $1,265,734
 Driven by inputs in: Capital & Financing, Staffing.
+SchoolStack Budget - Generated <DATE>
+Page 18 of 21
+--- PAGE 19 ---
 Cash reserve (months)  Starting cash:
 $120,000; Year 1 operating expenses:
 $243,000; Year 1 staffing cost:
@@ -1386,9 +1354,6 @@ Break-even year  Year 1 enrollment:
 per student: $12,500; Year 1 staffing
 cost: $1,265,734; Year 1 facility cost:
 $36,000
-SchoolStack Budget - Generated <DATE>
-Page 34 of 37
---- PAGE 35 ---
 Driven by inputs in: Enrollment, Revenue, Staffing, Expenses.
   ... and 26 more (see Appendix)
 Break-Even & Downside Sensitivity
@@ -1422,15 +1387,15 @@ If 20% fewer students enroll
 Ending cash $1,843,518
   Year 2 (200 students):  DSCR 22.62x ·
 Ending cash $4,207,714
+SchoolStack Budget - Generated <DATE>
+Page 19 of 21
+--- PAGE 20 ---
   Year 3 (240 students):  DSCR 29.61x ·
 Ending cash $7,336,025
   Year 4 (280 students):  DSCR 36.25x ·
 Ending cash $11,189,830
   Year 5 (320 students):  DSCR 43.64x ·
 Ending cash $15,852,122
-SchoolStack Budget - Generated <DATE>
-Page 35 of 37
---- PAGE 36 ---
 Enrollment × Tuition Sensitivity (Yr 1 DSCR / Yr 5 ending cash)
 Each cell re-runs the canonical engine with the row's enrollment delta and the column's tuition delta
 applied together. Cells shaded green clear the 1.25x DSCR benchmark; amber sit between 1.15x–
@@ -1529,15 +1494,15 @@ disbursement.
   Min DSCR: 18.36x   ·   Min ending cash: $2,017,688   ·   Runway: 14.6 mo   ·   Break-even: Year 1
   Lowest monthly cash: Year 1 (Jul) $389,868
   Year-1 net income vs base: -$400,000
+SchoolStack Budget - Generated <DATE>
+Page 20 of 21
+--- PAGE 21 ---
 Rent Shock +25%
 Occupancy & facility expense rows escalated by 25% — covers a lease renewal, market-rate reset, or unbudgeted CAM/
 utilities surprise.
   Min DSCR: 21.93x   ·   Min ending cash: $2,408,688   ·   Runway: 17.4 mo   ·   Break-even: Year 1
   Lowest monthly cash: Year 1 (Jul) $486,226
   Year-1 net income vs base: -$9,000
-SchoolStack Budget - Generated <DATE>
-Page 36 of 37
---- PAGE 37 ---
 Founder Comp Normalized to Market
 Founder compensation re-cast at the market-rate benchmark (with benefits + payroll tax). The lender / board view of
 true operating cost.
@@ -1601,4 +1566,4 @@ $7
 Note: Founder is paying themselves below market rate (“sweat equity”). Lenders and boards underwrite to the market-rate
 line; the adjustment shows the gap.
 SchoolStack Budget - Generated <DATE>
-Page 37 of 37
+Page 21 of 21

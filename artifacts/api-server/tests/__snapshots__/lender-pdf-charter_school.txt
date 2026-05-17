@@ -133,6 +133,14 @@ Year 5 Enrollment  600
 Revenue Model
 The revenue model is primarily publicly funded (94.7% of Year 1 revenue). Year 1 total revenue is
 projected at $4.9M, growing to $18.1M by Year 5.
+• Risk framing — policy-dependent revenue
+95% of Year 1 revenue comes from state per-pupil (ADM) funding (AZ), which the model classifies as policy-
+dependent. That bucket is excluded from the hard-revenue numerator by design — it produces the
+conservative Hard Revenue Coverage (Y1) of 0.00× shown above. Per-pupil and voucher dollars ARE
+contractual once a child is enrolled and eligibility is verified; the conservative classification reflects
+legislative / court risk to the funding program itself, not to individual student revenue. Reviewers
+underwriting against enrollment-backed coverage should look at the per-program break-even and the
+enrollment-risk stress tests in addition to the hard-revenue ratio.
 Tuition %: 1.0%
 Public Funding %: 94.7%
 Philanthropy %: 4.3%
@@ -206,16 +214,10 @@ $8.7M
 $11.6M
 $14.8M
 $18.1M
-Revenue
-Quality (Con
-tracted vs.
-Projected
-vs. Donor /
-Policy
-Dependent)
 SchoolStack Budget - Generated <DATE>
 Page 5 of 25
 --- PAGE 6 ---
+Revenue Quality (Contracted vs. Projected vs. Donor / Policy Dependent)
 Bucket
 Year 1
 Year 2

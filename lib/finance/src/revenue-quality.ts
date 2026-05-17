@@ -641,3 +641,97 @@ export function computeRevenueQualityRollup(
     };
   });
 }
+
+/**
+ * Task #927 — Voucher / per-pupil Risk Framing note.
+ *
+ * Per-pupil public funding (state ADM) and voucher / ESA / tax-credit
+ * school-choice rows are classified as `policy_dependent` by
+ * `inferRevenueQuality`. That is the correct lender-conservative
+ * bucket — those revenue streams disappear if legislation or a court
+ * ruling changes — but on schools where they form the bulk of revenue
+ * (Liberty STEM Charter: 100% policy-dependent; Riverside Christian
+ * Academy: 68% policy-dependent) it produces a `Hard Revenue Coverage
+ * (Y1)` of 0.00× or 0.28× with no surrounding context. A lender or
+ * board reviewer reading the bare number assumes the school cannot
+ * cover its fixed obligations, when in fact the per-pupil and voucher
+ * dollars ARE contractual once a child is enrolled and ADM/voucher
+ * eligibility is verified — they just sit in a different risk bucket
+ * than signed tuition agreements.
+ *
+ * Task #927 chose Option 2 (Risk Framing note) over Option 1
+ * (introduce a new `contracted_pending_enrollment` bucket and
+ * reclassify) because:
+ *
+ *  - Option 1 changes the revenue forecast math (the hardRevenue
+ *    numerator), which the task scope explicitly forbids
+ *    ("Out of scope: changing the underlying revenue forecasts").
+ *  - Option 2 keeps the conservative classification (a defensible
+ *    lender-side prudence signal) and adds context next to the
+ *    headline so reviewers read the 0.00× / 0.28× alongside the
+ *    "why" rather than as an unexplained alarm.
+ *  - The bucket rollup, snapshot tests, and consultant engine wiring
+ *    do not have to move; only the Revenue Model section's `insights`
+ *    block gains a callout.
+ *
+ * The note fires only when policy_dependent revenue is ≥ 50% of Y1
+ * total revenue (the threshold below which the framing is moot — a
+ * 5% voucher line has no bearing on the headline coverage ratio).
+ * Returns null otherwise so unaffected personas (e.g. microschool)
+ * see no extraneous insight.
+ */
+export interface PolicyDependenceRiskFramingInput {
+  /** Y1 entry from `computeRevenueQualityRollup`. */
+  rqY1: RevenueQualityYearRollup;
+  /** schoolProfile.schoolType — used to phrase the note in operator terms. */
+  schoolType?: string;
+  /** schoolProfile.state — surfaced in the body so reviewers see WHICH policy regime. */
+  state?: string;
+}
+
+export interface PolicyDependenceRiskFraming {
+  label: string;
+  body: string;
+  tone: "info" | "warning";
+}
+
+const POLICY_DEPENDENCE_THRESHOLD = 0.5;
+
+export function buildPolicyDependenceRiskFraming(
+  input: PolicyDependenceRiskFramingInput,
+): PolicyDependenceRiskFraming | null {
+  const { rqY1, schoolType, state } = input;
+  if (!rqY1) return null;
+  const pct = rqY1.pctByBucket.policy_dependent;
+  if (pct < POLICY_DEPENDENCE_THRESHOLD) return null;
+
+  const pctRounded = Math.round(pct * 100);
+  const stateLabel = state ? ` (${state})` : "";
+  const coverageStr =
+    rqY1.hardRevenueCoverage === null
+      ? "—"
+      : `${rqY1.hardRevenueCoverage.toFixed(2)}×`;
+
+  // Charter operators almost entirely depend on state per-pupil funding;
+  // private/microschool operators in voucher states depend on
+  // ESA / voucher / tax-credit scholarships. Phrase the note to match.
+  const fundingPhrase =
+    schoolType === "charter_school"
+      ? `state per-pupil (ADM) funding${stateLabel}`
+      : `voucher / ESA / tax-credit scholarship funding${stateLabel}`;
+
+  const body =
+    `${pctRounded}% of Year 1 revenue comes from ${fundingPhrase}, which the model classifies as ` +
+    `policy-dependent. That bucket is excluded from the hard-revenue numerator by design — it produces ` +
+    `the conservative Hard Revenue Coverage (Y1) of ${coverageStr} shown above. ` +
+    `Per-pupil and voucher dollars ARE contractual once a child is enrolled and eligibility is verified; ` +
+    `the conservative classification reflects legislative / court risk to the funding program itself, not ` +
+    `to individual student revenue. Reviewers underwriting against enrollment-backed coverage should look ` +
+    `at the per-program break-even and the enrollment-risk stress tests in addition to the hard-revenue ratio.`;
+
+  return {
+    label: "Risk framing — policy-dependent revenue",
+    body,
+    tone: "info",
+  };
+}

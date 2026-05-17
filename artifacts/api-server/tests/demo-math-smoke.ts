@@ -510,6 +510,69 @@ async function runOne(c: DemoCase): Promise<void> {
       `outcome=${evalRes.outcome}, perPupil=${perPupil.toFixed(0)}`);
   }
 
+  // ── 1d. Task #927 — Voucher / per-pupil Risk Framing note ───────────
+  //
+  // The lender packet's Revenue Model section emits a PacketInsight
+  // ("Risk framing — policy-dependent revenue") whenever Y1 revenue is
+  // ≥50% policy-dependent (state ADM, vouchers, ESA, tax-credit
+  // scholarships). Without it, Liberty's `Hard Revenue Coverage (Y1)`
+  // of 0.00× and Riverside's 0.28× read as bare alarms in the lender
+  // PDF. Persona expectations on the current seeds:
+  //   - Liberty (charter, AZ, 100% ADM):       MUST emit the framing
+  //         (body mentions "state per-pupil (ADM) funding (AZ)")
+  //   - Riverside (private, FL, ~68% voucher): MUST emit the framing
+  //         (body mentions "voucher / ESA / tax-credit ... (FL)")
+  //   - Oakwood (microschool, AZ, mostly tuition): MUST NOT emit it
+  //         (policy-dependent share < 50% threshold)
+  //
+  // Subsystem-level: import the helper directly and assert against the
+  // same Y1 rollup the engine fed to the packet, then verify the
+  // packet's revenue_model section actually carries the insight (or
+  // doesn't) — i.e. the wiring is intact and not just the helper.
+  const finModForFraming = await import("@workspace/finance");
+  const rqY1ForFraming = consultant.revenueQuality?.[0];
+  check(`${tag} revenueQuality Y1 rollup present (Task #927 input)`,
+    !!rqY1ForFraming, `consultant.revenueQuality[0] missing`);
+  if (rqY1ForFraming) {
+    const framing = finModForFraming.buildPolicyDependenceRiskFraming({
+      rqY1: rqY1ForFraming,
+      schoolType: sp.schoolType,
+      state: sp.state,
+    });
+    const pdShare = rqY1ForFraming.pctByBucket.policy_dependent;
+    if (c.label === "charter_school" || c.label === "private_school") {
+      check(`${tag} Task #927: policy_dependent share ≥ 50% (${(pdShare * 100).toFixed(0)}%)`,
+        pdShare >= 0.5, `share=${pdShare.toFixed(3)}`);
+      check(`${tag} Task #927: framing helper emits a note (non-null)`,
+        framing !== null,
+        `framing was null; pdShare=${pdShare.toFixed(3)}, schoolType=${sp.schoolType}, state=${sp.state}`);
+      if (framing) {
+        check(`${tag} Task #927: framing label is the Risk-framing callout`,
+          framing.label === "Risk framing — policy-dependent revenue",
+          `label="${framing.label}"`);
+        check(`${tag} Task #927: framing body cites the actual Y1 share %`,
+          framing.body.includes(`${Math.round(pdShare * 100)}%`),
+          `body="${framing.body.slice(0, 160)}…"`);
+        check(`${tag} Task #927: framing body names the state`,
+          sp.state ? framing.body.includes(`(${sp.state})`) : true,
+          `state=${sp.state}, body="${framing.body.slice(0, 160)}…"`);
+        const expectedFundingPhrase = c.label === "charter_school"
+          ? "state per-pupil (ADM) funding"
+          : "voucher / ESA / tax-credit scholarship funding";
+        check(`${tag} Task #927: framing body uses persona-correct funding phrase`,
+          framing.body.includes(expectedFundingPhrase),
+          `expected "${expectedFundingPhrase}" in body`);
+      }
+    } else {
+      // microschool — Oakwood is mostly tuition; framing must NOT fire.
+      check(`${tag} Task #927: microschool policy_dependent share < 50% (${(pdShare * 100).toFixed(0)}%)`,
+        pdShare < 0.5, `share=${pdShare.toFixed(3)}`);
+      check(`${tag} Task #927: microschool: framing helper returns null`,
+        framing === null,
+        `framing unexpectedly present: ${framing?.body?.slice(0, 80)}`);
+    }
+  }
+
   // ── 2. V2 underwriting workbook ─────────────────────────────────────
   const { wb, bytes } = await loadV2Bytes(data);
 
