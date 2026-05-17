@@ -28,7 +28,7 @@ import {
   findRegistryGaps,
   findResolverGaps,
   listResolverMetricIds,
-  loadPersonaFixtures,
+  loadPersonaFixturesAsync,
 } from "../src/lib/integrity/canonical/index.js";
 
 let passed = 0;
@@ -78,13 +78,25 @@ async function main(): Promise<void> {
   check("every metric carries a valid tier", badTier === 0, `bad=${badTier}`);
 
   console.log("\n— Section 3: persona-fixture smoke —");
-  const fixtures = loadPersonaFixtures();
+  // Fixtures are discovered from `src/lib/integrity/canonical/fixtures/`.
+  // The integrity gate must keep running for any future fixture
+  // dropped into that directory — so we assert "at least one" and
+  // iterate everything found, rather than pinning to a fixed list.
+  const fixtures = await loadPersonaFixturesAsync();
   check(
-    "three personas registered (Oakwood / Riverside / Liberty)",
-    fixtures.length === 3 &&
-      fixtures.map((f) => f.slug).join(",") === "oakwood,riverside,liberty",
-    fixtures.map((f) => f.slug).join(","),
+    "at least one persona fixture discovered",
+    fixtures.length >= 1,
+    `count=${fixtures.length}`,
   );
+  // Slugs must be unique (the loader throws on duplicates, but
+  // surface it as a positive assertion for the reviewer too).
+  const slugs = fixtures.map((f) => f.slug);
+  check(
+    "every discovered fixture has a unique slug",
+    new Set(slugs).size === slugs.length,
+    slugs.join(","),
+  );
+  console.log(`  · discovered fixtures: ${slugs.join(", ")}`);
 
   const valuesByPersonaMetric = new Map<string, Map<string, unknown>>();
   for (const fixture of fixtures) {

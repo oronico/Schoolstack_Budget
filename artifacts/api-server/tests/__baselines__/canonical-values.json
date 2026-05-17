@@ -1,0 +1,1200 @@
+{
+  "generatedAt": "2026-05-17T20:24:58.707Z",
+  "metricCount": 32,
+  "personas": [
+    "liberty",
+    "oakwood",
+    "riverside"
+  ],
+  "values": {
+    "liberty": {
+      "revenue-total-year": [
+        4875000,
+        8710800,
+        11633088,
+        14820187.200000001,
+        18125509.1328
+      ],
+      "revenue-per-line-y1-value": {
+        "r1": 1640000,
+        "r2": 1760000,
+        "r3": 1900000,
+        "r4": 240000,
+        "r5": 250000,
+        "r6": 60000
+      },
+      "revenue-quality-by-bucket": [
+        {
+          "contracted": 0,
+          "projected": 0.010256410256410256,
+          "donor_dependent": 0.042735042735042736,
+          "policy_dependent": 0.9470085470085471
+        },
+        {
+          "contracted": 0,
+          "projected": 0.01053864168618267,
+          "donor_dependent": 0.017220002755200442,
+          "policy_dependent": 0.9722413555586169
+        },
+        {
+          "contracted": 0,
+          "projected": 0.010732146099126904,
+          "donor_dependent": 0,
+          "policy_dependent": 0.9892678539008731
+        },
+        {
+          "contracted": 0,
+          "projected": 0.010740835986201307,
+          "donor_dependent": 0,
+          "policy_dependent": 0.9892591640137988
+        },
+        {
+          "contracted": 0,
+          "projected": 0.010749369155508061,
+          "donor_dependent": 0,
+          "policy_dependent": 0.9892506308444918
+        }
+      ],
+      "revenue-composition": [
+        {
+          "tuitionPct": 0.010256410256410256,
+          "publicPct": 0.9470085470085471,
+          "philanthropyPct": 0.042735042735042736
+        },
+        {
+          "tuitionPct": 0.01053864168618267,
+          "publicPct": 0.9722413555586169,
+          "philanthropyPct": 0.017220002755200442
+        },
+        {
+          "tuitionPct": 0.010732146099126904,
+          "publicPct": 0.9892678539008731,
+          "philanthropyPct": 0
+        },
+        {
+          "tuitionPct": 0.010740835986201307,
+          "publicPct": 0.9892591640137988,
+          "philanthropyPct": 0
+        },
+        {
+          "tuitionPct": 0.010749369155508061,
+          "publicPct": 0.9892506308444918,
+          "philanthropyPct": 0
+        }
+      ],
+      "revenue-hard-coverage-y1": 0,
+      "cash-runway-months": 11.122823375736088,
+      "cash-trough-ending-cash": 2258591.5895085065,
+      "cash-monthly-low": {
+        "monthIndex": 0,
+        "monthLabel": "Jan",
+        "amount": 638612.0218439628,
+        "isNegative": false,
+        "yearIndex": 0
+      },
+      "reserve-months-last-year": 77.7,
+      "dscr-year-series-normalized": [
+        30.65,
+        69.43,
+        100.51,
+        138.59,
+        180.48
+      ],
+      "dscr-year-series-reported": [
+        30.84,
+        70.23,
+        101.32,
+        140.15,
+        182.09
+      ],
+      "dscr-min-normalized": {
+        "min": 30.65,
+        "year": 1
+      },
+      "annual-debt-service": [
+        69457.48787244578,
+        69457.48787244578,
+        69457.48787244578,
+        69457.48787244578,
+        69457.48787244578
+      ],
+      "revenue-per-student": 24375,
+      "cost-per-student": 14082,
+      "capacity-utilization-y1": 100,
+      "break-even-year": 1,
+      "break-even-students-y1": 93,
+      "stress-base-net-income": [
+        2072877.3037942206,
+        4808465.487127554,
+        6968142.9792525545,
+        9664873.432437554,
+        12577839.381596856
+      ],
+      "stress-scenario-dscr": [
+        {
+          "name": "Enrollment -10%",
+          "dscr": [
+            26.32,
+            61.94,
+            88.65,
+            120.55,
+            158.13
+          ]
+        },
+        {
+          "name": "Enrollment -20%",
+          "dscr": [
+            21.74,
+            53.11,
+            75.44,
+            102.63,
+            134.17
+          ]
+        },
+        {
+          "name": "Public Funding Delayed 3 Months (public sources only)",
+          "dscr": [
+            14.23,
+            41.04,
+            61.63,
+            89.54,
+            120.14
+          ]
+        },
+        {
+          "name": "Rent Shock +25%",
+          "dscr": [
+            30.05,
+            69.25,
+            100.31,
+            139.11,
+            181.02
+          ]
+        },
+        {
+          "name": "Founder Comp Normalized to Market",
+          "dscr": [
+            30.65,
+            69.43,
+            100.51,
+            138.59,
+            180.48
+          ]
+        }
+      ],
+      "stress-scenario-ending-cash": [
+        {
+          "name": "Enrollment -10%",
+          "endingCash": [
+            1958775.0121275536,
+            6191257.909255108,
+            12279550.405382661,
+            20583130.575320218,
+            31496744.29438707
+          ]
+        },
+        {
+          "name": "Enrollment -20%",
+          "endingCash": [
+            1640891.262127555,
+            5260668.206755109,
+            10431285.156382663,
+            17490451.50964897,
+            26739839.566185825
+          ]
+        },
+        {
+          "name": "Public Funding Delayed 3 Months (public sources only)",
+          "endingCash": [
+            1118710.637127554,
+            3899926.124255108,
+            8111009.103507662,
+            14260631.035945218,
+            22535802.58154207
+          ]
+        },
+        {
+          "name": "Rent Shock +25%",
+          "endingCash": [
+            2217877.3037942206,
+            6958362.790921774,
+            13856486.370174328,
+            23449239.820611883,
+            35952795.620748736
+          ]
+        },
+        {
+          "name": "Founder Comp Normalized to Market",
+          "endingCash": [
+            2272877.3037942206,
+            7081342.790921774,
+            14049485.770174328,
+            23714359.202611882,
+            36292198.58420874
+          ]
+        }
+      ],
+      "stress-scenario-net-income": [
+        {
+          "name": "Enrollment -10%",
+          "netIncome": [
+            1758775.0121275536,
+            4232482.897127554,
+            6088292.496127553,
+            8303580.169937557,
+            10913613.71906685
+          ]
+        },
+        {
+          "name": "Enrollment -20%",
+          "netIncome": [
+            1440891.262127555,
+            3619776.9446275537,
+            5170616.949627554,
+            7059166.353266306,
+            9249388.056536853
+          ]
+        },
+        {
+          "name": "Public Funding Delayed 3 Months (public sources only)",
+          "netIncome": [
+            918710.637127554,
+            2781215.487127554,
+            4211082.9792525545,
+            6149621.932437555,
+            8275171.545596854
+          ]
+        },
+        {
+          "name": "Rent Shock +25%",
+          "netIncome": [
+            2017877.3037942206,
+            4740485.487127554,
+            6898123.579252554,
+            9592753.450437555,
+            12503555.800136855
+          ]
+        },
+        {
+          "name": "Founder Comp Normalized to Market",
+          "netIncome": [
+            2059612.3037942206,
+            4753150.437127554,
+            6912030.702752555,
+            9556365.732437555,
+            12466156.040596856
+          ]
+        }
+      ],
+      "stress-worst-scenario": {
+        "name": "Public Funding Delayed 3 Months (public sources only)",
+        "minDscr": 14.23,
+        "minEndingCash": 1118710.637127554
+      },
+      "stress-negative-y5-scenarios": [],
+      "founder-comp-adjustment": {
+        "hasAdjustment": true,
+        "totalDelta": 344883.36750000005,
+        "perYearDelta": [
+          13265,
+          55315.04999999999,
+          56112.27650000001,
+          108507.70000000001,
+          111683.34100000001
+        ]
+      },
+      "lender-readiness-uncapped": "Needs Work",
+      "lender-readiness-effective": "Needs Work",
+      "lender-readiness-cap": {
+        "applied": false,
+        "reason": "",
+        "pendingEvidenceCount": 22,
+        "totalAssumptionCount": 22,
+        "taggedCount": 0,
+        "taggedFraction": 0
+      },
+      "biggest-strength": "Strong Year 5 net income",
+      "biggest-risk": "Public funding is the primary revenue source — model disbursement timing carefully and maintain cash reserves for funding gaps",
+      "assumption-registry": [
+        "benefits_rate",
+        "enrollment_y1",
+        "enrollment_y5",
+        "facility_rent_y1",
+        "founder_compensation_y1",
+        "general_cost_inflation",
+        "loan_debt_service_y1",
+        "loan_principal",
+        "loan_rate",
+        "loan_term_years",
+        "operating_expenses_y1",
+        "payroll_tax_rate",
+        "philanthropy_revenue_y1",
+        "public_funding_y1",
+        "retention_rate",
+        "staffing_salary_escalation",
+        "staffing_total_cost",
+        "starting_cash",
+        "tuition_collection_rate",
+        "tuition_escalation",
+        "tuition_per_student",
+        "year1_operating_months"
+      ],
+      "narrative-commentary-bundle": {
+        "schoolName": "Liberty STEM Charter School",
+        "state": "AZ",
+        "schoolType": "charter school",
+        "schoolStage": "new school",
+        "lenderReadiness": "Needs Work",
+        "lenderReadinessExplanation": "Your model has real promise, and there are just a few areas to strengthen. The recommendations above will help you build a more resilient financial plan, and every improvement makes your projections more achievable.",
+        "biggestStrength": "Strong Year 5 net income",
+        "biggestRisk": "Public funding is the primary revenue source — model disbursement timing carefully and maintain cash reserves for funding gaps",
+        "enrollmentY1": 200,
+        "enrollmentY5": 600,
+        "retentionRatePct": 88,
+        "maxCapacity": 600,
+        "dscrY1Normalized": 30.65,
+        "dscrY1Reported": 30.84,
+        "dscrMinNormalized": 30.65,
+        "dscrMinNormalizedYear": 1,
+        "cashRunwayMonths": 11.122823375736088,
+        "reserveMonthsLastYear": 77.7,
+        "reserveLastYearNumber": 5,
+        "troughEndingCash": 2258591.5895085065,
+        "troughYear": 1,
+        "breakEvenYear": 1,
+        "breakEvenStudentsY1": 93,
+        "breakEvenUtilizationY1Pct": 15.5,
+        "founderCompHasAdjustment": true,
+        "founderCompTotalDelta": 344883.36750000005,
+        "revenueQualityY1": {
+          "contractedPct": 0,
+          "projectedPct": 1.0256410256410255,
+          "donorDependentPct": 4.273504273504273,
+          "policyDependentPct": 94.7008547008547
+        },
+        "topRisks": [
+          {
+            "title": "Let's extend your cash runway",
+            "severity": "critical",
+            "summary": "Based on your projected revenue and expenses, cash currently lasts 11.1 months. Aiming for 18+ months gives you room to absorb late tuition payments or delayed public funding without scrambling.",
+            "mitigant": "Build a cash buffer through startup fundraising, a line of credit, or by reducing early expenses. Target at least 18 months of runway before opening."
+          },
+          {
+            "title": "Let's back the enrollment ramp with evidence",
+            "severity": "critical",
+            "summary": "Year 1 to Year 2 projects 50% enrollment growth. Adding documented demand (waitlists, signed letters, or a clear recruitment pipeline) makes this story land.",
+            "mitigant": "Back every enrollment target with documented demand — signed letters of intent, waitlist depth, community survey results, or recruitment pipeline data. Growth over 25% per year typically requires an exceptional recruitment engine or facility expansion."
+          },
+          {
+            "title": "Let's tie new hires to enrollment milestones",
+            "severity": "critical",
+            "summary": "In Year 2, staffing cost growth runs more than 10 points ahead of enrollment growth. Sequencing hires to match enrollment keeps the model resilient.",
+            "mitigant": "Align staffing additions to enrollment milestones. Hire when students are enrolled, not when you hope they will be. Use part-time or contract roles to bridge gaps."
+          }
+        ],
+        "worstStress": {
+          "name": "Public Funding Delayed 3 Months (public sources only)",
+          "minDscr": 14.23,
+          "minEndingCash": 1118710.637127554
+        },
+        "negativeY5StressScenarios": [],
+        "highPriorityActions": []
+      }
+    },
+    "oakwood": {
+      "revenue-total-year": [
+        165641.66666666666,
+        251090.675,
+        308258.77375,
+        361288.94719,
+        401320.381631025
+      ],
+      "revenue-per-line-y1-value": {
+        "gross_tuition": 186000,
+        "registration_fees": 5000,
+        "donations_fundraising": 8000,
+        "grants": 15000,
+        "scholarships_aid": -14880
+      },
+      "revenue-quality-by-bucket": [
+        {
+          "contracted": 0.8593812776215348,
+          "projected": 0.025110486139011658,
+          "donor_dependent": 0.11550823623945361,
+          "policy_dependent": 0
+        },
+        {
+          "contracted": 0.9065226505562101,
+          "projected": 0.0258554370801972,
+          "donor_dependent": 0.06762191236359269,
+          "policy_dependent": 0
+        },
+        {
+          "contracted": 0.9416282469733517,
+          "projected": 0.025943001345177047,
+          "donor_dependent": 0.03242875168147131,
+          "policy_dependent": 0
+        },
+        {
+          "contracted": 0.9633052278615043,
+          "projected": 0.02561710507781774,
+          "donor_dependent": 0.011077667060677941,
+          "policy_dependent": 0
+        },
+        {
+          "contracted": 0.967563478709847,
+          "projected": 0.024951170223194593,
+          "donor_dependent": 0.007485351066958378,
+          "policy_dependent": 0
+        }
+      ],
+      "revenue-composition": [
+        {
+          "tuitionPct": 0.8860492025959653,
+          "publicPct": 0,
+          "philanthropyPct": 0.11571162650299342
+        },
+        {
+          "tuitionPct": 0.9341896287238906,
+          "publicPct": 0,
+          "philanthropyPct": 0.06775329669607028
+        },
+        {
+          "tuitionPct": 0.9693394371380165,
+          "publicPct": 0,
+          "philanthropyPct": 0.032488013628591765
+        },
+        {
+          "tuitionPct": 0.9905683108315596,
+          "publicPct": 0,
+          "philanthropyPct": 0.011096104904047551
+        },
+        {
+          "tuitionPct": 0.9940958947459005,
+          "publicPct": 0,
+          "philanthropyPct": 0.007497276513142101
+        }
+      ],
+      "revenue-hard-coverage-y1": 1.2018622063732554,
+      "cash-runway-months": 3.099853717935006,
+      "cash-trough-ending-cash": 34397.21966560036,
+      "cash-monthly-low": {
+        "monthIndex": 0,
+        "monthLabel": "Jan",
+        "amount": 6213.343702292093,
+        "isNegative": false,
+        "yearIndex": 0
+      },
+      "reserve-months-last-year": 18.9,
+      "dscr-year-series-normalized": [
+        3.11,
+        4.06,
+        14.3,
+        23.69,
+        30.24
+      ],
+      "dscr-year-series-reported": [
+        5.86,
+        6.87,
+        17.16,
+        26.59,
+        33.39
+      ],
+      "dscr-min-normalized": {
+        "min": 3.11,
+        "year": 1
+      },
+      "annual-debt-service": [
+        4695.8755724948805,
+        4695.8755724948805,
+        4695.8755724948805,
+        4695.8755724948805,
+        4695.8755724948805
+      ],
+      "revenue-per-student": 8282,
+      "cost-per-student": 7162,
+      "capacity-utilization-y1": 88.9,
+      "break-even-year": 1,
+      "break-even-students-y1": 17,
+      "stress-base-net-income": [
+        22825.791094171786,
+        27563.319427505106,
+        75862.04377750511,
+        120147.55583550513,
+        152096.18790957012
+      ],
+      "stress-scenario-dscr": [
+        {
+          "name": "Enrollment -10%",
+          "dscr": [
+            2.9,
+            1.41,
+            11.51,
+            18.78,
+            25.34
+          ]
+        },
+        {
+          "name": "Enrollment -20%",
+          "dscr": [
+            -0.06,
+            0.61,
+            5.86,
+            12.92,
+            17.29
+          ]
+        },
+        {
+          "name": "Public Funding Delayed 3 Months (public sources only)",
+          "dscr": [
+            5.86,
+            6.87,
+            17.16,
+            26.59,
+            33.39
+          ]
+        },
+        {
+          "name": "Rent Shock +25%",
+          "dscr": [
+            4.38,
+            5.04,
+            15.27,
+            24.64,
+            31.39
+          ]
+        },
+        {
+          "name": "Founder Comp Normalized to Market",
+          "dscr": [
+            3.11,
+            4.06,
+            14.3,
+            23.69,
+            30.24
+          ]
+        }
+      ],
+      "stress-scenario-ending-cash": [
+        {
+          "name": "Enrollment -10%",
+          "endingCash": [
+            20928.291094171786,
+            22871.648021676898,
+            72204.14676011953,
+            155692.779066976,
+            269982.84467144357
+          ]
+        },
+        {
+          "name": "Enrollment -20%",
+          "endingCash": [
+            7030.791094171815,
+            5199.713021676929,
+            28002.66672105706,
+            83997.10638142706,
+            160481.04968079217
+          ]
+        },
+        {
+          "name": "Public Funding Delayed 3 Months (public sources only)",
+          "endingCash": [
+            34825.791094171786,
+            62389.11052167689,
+            138251.154299182,
+            258398.71013468713,
+            410494.89804425725
+          ]
+        },
+        {
+          "name": "Rent Shock +25%",
+          "endingCash": [
+            27867.45776083847,
+            46830.27718834358,
+            113833.80596584867,
+            224857.0913513538,
+            367555.2806974239
+          ]
+        },
+        {
+          "name": "Founder Comp Normalized to Market",
+          "endingCash": [
+            34825.791094171786,
+            62389.11052167689,
+            138251.154299182,
+            258398.71013468713,
+            410494.89804425725
+          ]
+        }
+      ],
+      "stress-scenario-net-income": [
+        {
+          "name": "Enrollment -10%",
+          "netIncome": [
+            8928.291094171786,
+            1943.3569275051123,
+            49332.498738442635,
+            83488.63230685648,
+            114290.06560446759
+          ]
+        },
+        {
+          "name": "Enrollment -20%",
+          "netIncome": [
+            -4969.208905828185,
+            -1831.0780724948854,
+            22802.95369938013,
+            55994.43966037,
+            76483.94329936511
+          ]
+        },
+        {
+          "name": "Public Funding Delayed 3 Months (public sources only)",
+          "netIncome": [
+            22825.791094171786,
+            27563.319427505106,
+            75862.04377750511,
+            120147.55583550513,
+            152096.18790957012
+          ]
+        },
+        {
+          "name": "Rent Shock +25%",
+          "netIncome": [
+            15867.457760838472,
+            18962.819427505106,
+            67003.5287775051,
+            111023.28538550512,
+            142698.1893460701
+          ]
+        },
+        {
+          "name": "Founder Comp Normalized to Market",
+          "netIncome": [
+            9907.791094171786,
+            14365.429427505107,
+            62440.241777505114,
+            106559.97283550513,
+            137326.6079095701
+          ]
+        }
+      ],
+      "stress-worst-scenario": {
+        "name": "Enrollment -20%",
+        "minDscr": -0.06,
+        "minEndingCash": 5199.713021676929
+      },
+      "stress-negative-y5-scenarios": [],
+      "founder-comp-adjustment": {
+        "hasAdjustment": true,
+        "totalDelta": 67894.855,
+        "perYearDelta": [
+          12918,
+          13197.89,
+          13421.801999999996,
+          13587.582999999999,
+          14769.580000000002
+        ]
+      },
+      "lender-readiness-uncapped": "Strong",
+      "lender-readiness-effective": "Needs Work",
+      "lender-readiness-cap": {
+        "applied": true,
+        "reason": "Below 30% evidence tagging, lenders in Lending Lab Cycle 1 bounced 6 of 7 packets with a 'show your work' response before opening any underwriting conversation. The model has not demonstrated assumption rigor to a lender-credible threshold.",
+        "pendingEvidenceCount": 22,
+        "totalAssumptionCount": 22,
+        "taggedCount": 0,
+        "taggedFraction": 0
+      },
+      "biggest-strength": "Strong Year 5 profit",
+      "biggest-risk": "No major red flags detected, so continue refining assumptions as you gather real data.",
+      "assumption-registry": [
+        "benefits_rate",
+        "enrollment_y1",
+        "enrollment_y5",
+        "facility_rent_y1",
+        "founder_compensation_y1",
+        "general_cost_inflation",
+        "loan_debt_service_y1",
+        "loan_principal",
+        "loan_rate",
+        "loan_term_years",
+        "operating_expenses_y1",
+        "payroll_tax_rate",
+        "philanthropy_revenue_y1",
+        "public_funding_y1",
+        "retention_rate",
+        "staffing_salary_escalation",
+        "staffing_total_cost",
+        "starting_cash",
+        "tuition_collection_rate",
+        "tuition_escalation",
+        "tuition_per_student",
+        "year1_operating_months"
+      ],
+      "narrative-commentary-bundle": {
+        "schoolName": "Oakwood Learning Studio",
+        "state": "AZ",
+        "schoolType": "microschool",
+        "schoolStage": "new school",
+        "lenderReadiness": "Needs Work",
+        "lenderReadinessExplanation": "Rating capped at Needs Work pending evidence tagging on 22 of 22 assumptions. Below 30% evidence tagging, lenders in Lending Lab Cycle 1 bounced 6 of 7 packets with a 'show your work' response before opening any underwriting conversation. The model has not demonstrated assumption rigor to a lender-credible threshold. This model demonstrates strong financial fundamentals: a clear path to profit, controlled costs, a sustainable revenue mix, and adequate debt coverage. Your projections are grounded and achievable.",
+        "biggestStrength": "Strong Year 5 profit",
+        "biggestRisk": "No major red flags detected, so continue refining assumptions as you gather real data.",
+        "enrollmentY1": 20,
+        "enrollmentY5": 40,
+        "retentionRatePct": 88,
+        "maxCapacity": 45,
+        "dscrY1Normalized": 3.11,
+        "dscrY1Reported": 5.86,
+        "dscrMinNormalized": 3.11,
+        "dscrMinNormalizedYear": 1,
+        "cashRunwayMonths": 3.099853717935006,
+        "reserveMonthsLastYear": 18.9,
+        "reserveLastYearNumber": 5,
+        "troughEndingCash": 34397.21966560036,
+        "troughYear": 1,
+        "breakEvenYear": 1,
+        "breakEvenStudentsY1": 17,
+        "breakEvenUtilizationY1Pct": 37.77777777777778,
+        "founderCompHasAdjustment": true,
+        "founderCompTotalDelta": 67894.855,
+        "revenueQualityY1": {
+          "contractedPct": 85.93812776215348,
+          "projectedPct": 2.5110486139011656,
+          "donorDependentPct": 11.55082362394536,
+          "policyDependentPct": 0
+        },
+        "topRisks": [
+          {
+            "title": "Let's extend your cash runway",
+            "severity": "critical",
+            "summary": "Based on your projected revenue and expenses, cash currently lasts 3.1 months. Aiming for 18+ months gives you room to absorb late tuition payments or delayed public funding without scrambling.",
+            "mitigant": "Build a cash buffer through startup fundraising, a line of credit, or by reducing early expenses. Target at least 18 months of runway before opening."
+          },
+          {
+            "title": "Let's back the enrollment ramp with evidence",
+            "severity": "critical",
+            "summary": "Year 1 to Year 2 projects 30% enrollment growth. Adding documented demand (waitlists, signed letters, or a clear recruitment pipeline) makes this story land.",
+            "mitigant": "Back every enrollment target with documented demand — signed letters of intent, waitlist depth, community survey results, or recruitment pipeline data. Growth over 25% per year typically requires an exceptional recruitment engine or facility expansion."
+          },
+          {
+            "title": "Let's tie new hires to enrollment milestones",
+            "severity": "critical",
+            "summary": "In Year 2, staffing cost growth runs more than 10 points ahead of enrollment growth. Sequencing hires to match enrollment keeps the model resilient.",
+            "mitigant": "Align staffing additions to enrollment milestones. Hire when students are enrolled, not when you hope they will be. Use part-time or contract roles to bridge gaps."
+          }
+        ],
+        "worstStress": {
+          "name": "Enrollment -20%",
+          "minDscr": -0.06,
+          "minEndingCash": 5199.713021676929
+        },
+        "negativeY5StressScenarios": [],
+        "highPriorityActions": []
+      }
+    },
+    "riverside": {
+      "revenue-total-year": [
+        3951750,
+        5049500,
+        6277211.2,
+        7513054.336000001,
+        8825993.38496
+      ],
+      "revenue-per-line-y1-value": {
+        "gross_tuition": 662500,
+        "r2": 150000,
+        "voucher_revenue": 1600000,
+        "r3": 75000,
+        "r4": 50000,
+        "r5": 100000,
+        "scholarships_aid": -271500
+      },
+      "revenue-quality-by-bucket": [
+        {
+          "contracted": 0.16525781910397294,
+          "projected": 0.10566356720202874,
+          "donor_dependent": 0.05283178360101437,
+          "policy_dependent": 0.6762468300929839
+        },
+        {
+          "contracted": 0.173999667939565,
+          "projected": 0.10376888593724058,
+          "donor_dependent": 0.041507554374896234,
+          "policy_dependent": 0.6807238917482982
+        },
+        {
+          "contracted": 0.19679620623975527,
+          "projected": 0.09973557041724895,
+          "donor_dependent": 0.03324519013908298,
+          "policy_dependent": 0.670223033203913
+        },
+        {
+          "contracted": 0.20562994740117113,
+          "projected": 0.09728114709922678,
+          "donor_dependent": 0.027794613456921937,
+          "policy_dependent": 0.6692942920426802
+        },
+        {
+          "contracted": 0.2152601510828168,
+          "projected": 0.09454696974905823,
+          "donor_dependent": 0.02458221213475514,
+          "policy_dependent": 0.6656106670333699
+        }
+      ],
+      "revenue-composition": [
+        {
+          "tuitionPct": 0.16220661732143987,
+          "publicPct": 0.40488391219080155,
+          "philanthropyPct": 0.03163155563990637
+        },
+        {
+          "tuitionPct": 0.16588171136780527,
+          "publicPct": 0.40652421793664173,
+          "philanthropyPct": 0.02478806206930742
+        },
+        {
+          "tuitionPct": 0.17809322868300814,
+          "publicPct": 0.40252746355433283,
+          "philanthropyPct": 0.019966640057258574
+        },
+        {
+          "tuitionPct": 0.18204254213923327,
+          "publicPct": 0.4022303460481797,
+          "philanthropyPct": 0.016703918025256632
+        },
+        {
+          "tuitionPct": 0.18660589731138497,
+          "publicPct": 0.4009167879946685,
+          "philanthropyPct": 0.014806585920257643
+        }
+      ],
+      "revenue-hard-coverage-y1": 0.2770962334199297,
+      "cash-runway-months": 17.540002915931296,
+      "cash-trough-ending-cash": 2296259.303423545,
+      "cash-monthly-low": {
+        "monthIndex": 0,
+        "monthLabel": "Jan",
+        "amount": 515494.8229043431,
+        "isNegative": false,
+        "yearIndex": 0
+      },
+      "reserve-months-last-year": 82,
+      "dscr-year-series-normalized": [
+        21.01,
+        28.71,
+        36.54,
+        45.21,
+        54.44
+      ],
+      "dscr-year-series-reported": [
+        22.02,
+        29.74,
+        38.23,
+        46.96,
+        56.25
+      ],
+      "dscr-min-normalized": {
+        "min": 21.01,
+        "year": 1
+      },
+      "annual-debt-service": [
+        109328.12514788355,
+        109328.12514788355,
+        109328.12514788355,
+        109328.12514788355,
+        109328.12514788355
+      ],
+      "revenue-per-student": 19759,
+      "cost-per-student": 8877,
+      "capacity-utilization-y1": 100,
+      "break-even-year": 1,
+      "break-even-students-y1": 78,
+      "stress-base-net-income": [
+        2297687.874852116,
+        3142395.4548521163,
+        4070770.2178521166,
+        5024411.5137821175,
+        6040104.013839216
+      ],
+      "stress-scenario-dscr": [
+        {
+          "name": "Enrollment -10%",
+          "dscr": [
+            19.53,
+            26.33,
+            34.07,
+            41.76,
+            49.95
+          ]
+        },
+        {
+          "name": "Enrollment -20%",
+          "dscr": [
+            16.76,
+            22.62,
+            29.61,
+            36.25,
+            43.64
+          ]
+        },
+        {
+          "name": "Public Funding Delayed 3 Months (public sources only)",
+          "dscr": [
+            18.36,
+            29.74,
+            38.23,
+            46.96,
+            56.25
+          ]
+        },
+        {
+          "name": "Rent Shock +25%",
+          "dscr": [
+            21.93,
+            29.66,
+            38.15,
+            46.87,
+            56.15
+          ]
+        },
+        {
+          "name": "Founder Comp Normalized to Market",
+          "dscr": [
+            21.01,
+            28.71,
+            36.54,
+            45.21,
+            54.44
+          ]
+        }
+      ],
+      "stress-scenario-ending-cash": [
+        {
+          "name": "Enrollment -10%",
+          "endingCash": [
+            2145920.874852116,
+            4914994.069704233,
+            8530785.74715635,
+            12986632.137576466,
+            18337830.499312323
+          ]
+        },
+        {
+          "name": "Enrollment -20%",
+          "endingCash": [
+            1843517.8748521165,
+            4207713.729704233,
+            7336025.134356351,
+            11189829.617042467,
+            15852122.326674964
+          ]
+        },
+        {
+          "name": "Public Funding Delayed 3 Months (public sources only)",
+          "endingCash": [
+            2017687.8748521165,
+            5160083.3297042325,
+            9230853.547556348,
+            14255265.061338466,
+            20295369.07517768
+          ]
+        },
+        {
+          "name": "Rent Shock +25%",
+          "endingCash": [
+            2408687.874852116,
+            5541813.3297042325,
+            9603035.44755635,
+            14617612.418338468,
+            20647586.852887683
+          ]
+        },
+        {
+          "name": "Founder Comp Normalized to Market",
+          "endingCash": [
+            2417687.874852116,
+            5560083.3297042325,
+            9630853.547556348,
+            14655265.061338466,
+            20695369.07517768
+          ]
+        }
+      ],
+      "stress-scenario-net-income": [
+        {
+          "name": "Enrollment -10%",
+          "netIncome": [
+            2025920.8748521165,
+            2769073.1948521165,
+            3615791.6774521167,
+            4455846.3904201165,
+            5351198.361735857
+          ]
+        },
+        {
+          "name": "Enrollment -20%",
+          "netIncome": [
+            1723517.8748521165,
+            2364195.8548521167,
+            3128311.4046521178,
+            3853804.4826861173,
+            4662292.709632496
+          ]
+        },
+        {
+          "name": "Public Funding Delayed 3 Months (public sources only)",
+          "netIncome": [
+            1897687.8748521165,
+            3142395.4548521163,
+            4070770.2178521166,
+            5024411.5137821175,
+            6040104.013839216
+          ]
+        },
+        {
+          "name": "Rent Shock +25%",
+          "netIncome": [
+            2288687.874852116,
+            3133125.4548521163,
+            4061222.117852117,
+            5014576.970782118,
+            6029974.434549216
+          ]
+        },
+        {
+          "name": "Founder Comp Normalized to Market",
+          "netIncome": [
+            2187485.374852116,
+            3029405.479852116,
+            3885093.2668521167,
+            4833578.382282117,
+            5842936.183339216
+          ]
+        }
+      ],
+      "stress-worst-scenario": {
+        "name": "Enrollment -20%",
+        "minDscr": 16.76,
+        "minEndingCash": 1843517.8748521165
+      },
+      "stress-negative-y5-scenarios": [],
+      "founder-comp-adjustment": {
+        "hasAdjustment": true,
+        "totalDelta": 796870.388,
+        "perYearDelta": [
+          110202.5,
+          112989.975,
+          185676.951,
+          190833.13150000002,
+          197167.8305
+        ]
+      },
+      "lender-readiness-uncapped": "Strong",
+      "lender-readiness-effective": "Needs Work",
+      "lender-readiness-cap": {
+        "applied": true,
+        "reason": "Below 30% evidence tagging, lenders in Lending Lab Cycle 1 bounced 6 of 7 packets with a 'show your work' response before opening any underwriting conversation. The model has not demonstrated assumption rigor to a lender-credible threshold.",
+        "pendingEvidenceCount": 22,
+        "totalAssumptionCount": 22,
+        "taggedCount": 0,
+        "taggedFraction": 0
+      },
+      "biggest-strength": "Strong Year 5 net income",
+      "biggest-risk": "No major red flags detected, so continue refining assumptions as you gather real data.",
+      "assumption-registry": [
+        "benefits_rate",
+        "enrollment_y1",
+        "enrollment_y5",
+        "facility_rent_y1",
+        "founder_compensation_y1",
+        "general_cost_inflation",
+        "loan_debt_service_y1",
+        "loan_principal",
+        "loan_rate",
+        "loan_term_years",
+        "operating_expenses_y1",
+        "payroll_tax_rate",
+        "philanthropy_revenue_y1",
+        "public_funding_y1",
+        "retention_rate",
+        "staffing_salary_escalation",
+        "staffing_total_cost",
+        "starting_cash",
+        "tuition_collection_rate",
+        "tuition_escalation",
+        "tuition_per_student",
+        "year1_operating_months"
+      ],
+      "narrative-commentary-bundle": {
+        "schoolName": "Riverside Christian Academy",
+        "state": "FL",
+        "schoolType": "private school",
+        "schoolStage": "operating school",
+        "lenderReadiness": "Needs Work",
+        "lenderReadinessExplanation": "Rating capped at Needs Work pending evidence tagging on 22 of 22 assumptions. Below 30% evidence tagging, lenders in Lending Lab Cycle 1 bounced 6 of 7 packets with a 'show your work' response before opening any underwriting conversation. The model has not demonstrated assumption rigor to a lender-credible threshold. This model demonstrates strong financial fundamentals: a clear path to net income, controlled costs, a sustainable revenue mix, and adequate debt coverage. Your projections are grounded and achievable.",
+        "biggestStrength": "Strong Year 5 net income",
+        "biggestRisk": "No major red flags detected, so continue refining assumptions as you gather real data.",
+        "enrollmentY1": 200,
+        "enrollmentY5": 400,
+        "retentionRatePct": 92,
+        "maxCapacity": 400,
+        "dscrY1Normalized": 21.01,
+        "dscrY1Reported": 22.02,
+        "dscrMinNormalized": 21.01,
+        "dscrMinNormalizedYear": 1,
+        "cashRunwayMonths": 17.540002915931296,
+        "reserveMonthsLastYear": 82,
+        "reserveLastYearNumber": 5,
+        "troughEndingCash": 2296259.303423545,
+        "troughYear": 1,
+        "breakEvenYear": 1,
+        "breakEvenStudentsY1": 78,
+        "breakEvenUtilizationY1Pct": 19.5,
+        "founderCompHasAdjustment": true,
+        "founderCompTotalDelta": 796870.388,
+        "revenueQualityY1": {
+          "contractedPct": 16.525781910397296,
+          "projectedPct": 10.566356720202874,
+          "donorDependentPct": 5.283178360101437,
+          "policyDependentPct": 67.6246830092984
+        },
+        "topRisks": [
+          {
+            "title": "Let's extend your cash runway",
+            "severity": "critical",
+            "summary": "Based on your projected revenue and expenses, cash currently lasts 17.5 months. Aiming for 18+ months gives you room to absorb late tuition payments or delayed public funding without scrambling.",
+            "mitigant": "Build a cash buffer through startup fundraising, a line of credit, or by reducing early expenses. Target at least 18 months of runway before opening."
+          }
+        ],
+        "worstStress": {
+          "name": "Enrollment -20%",
+          "minDscr": 16.76,
+          "minEndingCash": 1843517.8748521165
+        },
+        "negativeY5StressScenarios": [],
+        "highPriorityActions": [
+          {
+            "title": "Address Cash Reserve Deficit from Prior Year",
+            "description": "Last year ended with $120,000 in cash, only 0.7 months of expenses. Building reserves to 3+ months should be a priority. Consider a bridge line of credit while growing into net income."
+          }
+        ]
+      }
+    }
+  },
+  "notes": {
+    "liberty": {
+      "cash-monthly-low": "Raw lib helpers per registry accessor. Lender packet rescales monthly inflow + locks year-end to canonical accrual cash; M4 owns surface-vs-canonical diffing.",
+      "capacity-utilization-y1": "Engine KeyMetric is \"Capacity Utilization (Year N)\" (last year, not Y1). Registry id says Y1 — flagged for M4 #976 triage."
+    },
+    "oakwood": {
+      "cash-monthly-low": "Raw lib helpers per registry accessor. Lender packet rescales monthly inflow + locks year-end to canonical accrual cash; M4 owns surface-vs-canonical diffing.",
+      "capacity-utilization-y1": "Engine KeyMetric is \"Capacity Utilization (Year N)\" (last year, not Y1). Registry id says Y1 — flagged for M4 #976 triage."
+    },
+    "riverside": {
+      "cash-monthly-low": "Raw lib helpers per registry accessor. Lender packet rescales monthly inflow + locks year-end to canonical accrual cash; M4 owns surface-vs-canonical diffing.",
+      "capacity-utilization-y1": "Engine KeyMetric is \"Capacity Utilization (Year N)\" (last year, not Y1). Registry id says Y1 — flagged for M4 #976 triage."
+    }
+  }
+}

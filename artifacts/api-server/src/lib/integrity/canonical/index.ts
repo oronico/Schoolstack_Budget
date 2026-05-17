@@ -18,7 +18,12 @@ export {
 } from "./compute.js";
 export {
   loadPersonaFixtures,
+  loadPersonaFixturesAsync,
   getPersonaFixture,
   type PersonaFixture,
   type PersonaSlug,
 } from "./fixtures.js";
+export {
+  writeCanonicalBaseline,
+  DEFAULT_BASELINE_PATH,
+} from "./baseline.js";
