@@ -29,8 +29,6 @@ export const DEFAULT_BASELINE_PATH = resolve(
 );
 
 export interface CanonicalBaseline {
-  /** ISO-8601 timestamp the baseline was generated. */
-  generatedAt: string;
   /** Number of metrics in the registry at generation time. */
   metricCount: number;
   /** Slugs of every persona included. */
@@ -69,8 +67,11 @@ export async function writeCanonicalBaseline(
     values[fx.slug] = v;
     notes[fx.slug] = n;
   }
+  // Intentionally no `generatedAt` field — the baseline is checked
+  // into version control and any change must be a real value diff
+  // worth reviewing, not timestamp churn. CI's `git log` already
+  // tells reviewers WHEN the baseline last moved.
   const baseline: CanonicalBaseline = {
-    generatedAt: new Date().toISOString(),
     metricCount: CANONICAL_METRICS.length,
     personas: personas.map((p) => p.slug),
     values,
