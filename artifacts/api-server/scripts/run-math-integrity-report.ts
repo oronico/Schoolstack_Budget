@@ -1398,12 +1398,16 @@ function toMarkdown(
     }
     lines.push("");
   }
+  lines.push(
+    `_See \`${UNCLASSIFIED_MARKER}\` in the rationale column for any label that fails the run; the gating logic shares this exact predicate._`,
+  );
+  lines.push("");
   lines.push("### M2 unmapped labels (classified as non-metric numeric leaves)");
   lines.push("");
   lines.push("| label | leaf count | sample paths | rationale |");
   lines.push("|---|---|---|---|");
   for (const u of m2Mapping.unmapped) {
-    const rationale = M2_UNMAPPED_RATIONALE[u.label] ?? "_(unclassified — fail)_";
+    const rationale = renderUnmappedRationale(u.label);
     const esc = (s: string) =>
       String(s).replace(/\|/g, "\\|").replace(/\n/g, " ");
     lines.push(
@@ -1838,6 +1842,32 @@ function runM2Mapping(
  * rather than a forgotten registry hole. The harness fails if any
  * unmapped label is missing from this table.
  */
+const UNCLASSIFIED_MARKER = "_(unclassified — fail)_";
+
+/**
+ * Single source of truth used by BOTH the markdown rendering for the
+ * "M2 unmapped labels" table AND the run-time gating check. A label
+ * is classified (rendered with a real rationale, not failing the run)
+ * if it has either an explicit unmapped rationale entry, or it is
+ * routed to a registry metric via M2_LABEL_TO_METRIC (labels mapped
+ * to a metric can still appear in the unmapped bucket when pathFilter
+ * excludes some leaf paths — e.g. BASE_SCENARIO_ONLY excluding
+ * per-scenario sensitivity rows or deltaVsBase rollups).
+ *
+ * Routing via this single predicate ensures the published report and
+ * the OK acceptance signal cannot disagree.
+ */
+function renderUnmappedRationale(label: string): string {
+  if (label in M2_UNMAPPED_RATIONALE) {
+    return M2_UNMAPPED_RATIONALE[label]!;
+  }
+  if (label in M2_LABEL_TO_METRIC) {
+    const metricId = M2_LABEL_TO_METRIC[label]!.metricId;
+    return `Mapped to metric \`${metricId}\`; leaves shown here are out-of-scope paths excluded by the projector's pathFilter (e.g. per-scenario sensitivity rows, deltaVsBase rollups).`;
+  }
+  return UNCLASSIFIED_MARKER;
+}
+
 const M2_UNMAPPED_RATIONALE: Record<string, string> = {
   values: "Per-scenario/per-year sensitivity table values (composite array, not a first-class registry metric).",
   endingCash: "Per-scenario/per-year ending-cash array (covered as registry metric cash-trough-ending-cash via troughEndingCash leaf).",
@@ -1967,12 +1997,13 @@ async function main(): Promise<void> {
   // were excluded by a pathFilter — those scenario-path leaves count as
   // intentionally non-metric on the same label), or annotated with a
   // rationale in M2_UNMAPPED_RATIONALE.
+  // Single source of truth: rendering and gating both ask
+  // `renderUnmappedRationale(label) === UNCLASSIFIED_MARKER`. Any
+  // label the markdown shows as "unclassified — fail" also fails the
+  // run, and vice versa.
   const unclassifiedLabels = m2Mapping.unmapped
     .map((u) => u.label)
-    .filter(
-      (label) =>
-        !(label in M2_UNMAPPED_RATIONALE) && !(label in M2_LABEL_TO_METRIC),
-    );
+    .filter((label) => renderUnmappedRationale(label) === UNCLASSIFIED_MARKER);
 
   const here = dirname(fileURLToPath(import.meta.url));
   const reportsDir = join(here, "..", "reports");
