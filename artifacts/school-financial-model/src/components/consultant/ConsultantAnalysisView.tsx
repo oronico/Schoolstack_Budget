@@ -51,7 +51,10 @@ import { KpiFormulaDrawer } from "@/components/coaching/ExplainerDrawer";
 import { WhyThisNumber } from "@/components/coaching/WhyThisNumber";
 import { inferRevenueQuality, type HeadlineMetricKey, type RevenueQuality } from "@workspace/finance";
 import { trackCoachingEvent } from "@/lib/coaching/track";
-import { lenderReadinessCoachingHeadline } from "@/lib/coaching/lender-readiness-coaching";
+import {
+  lenderReadinessCoachingHeadline,
+  formatLenderReadinessCallout,
+} from "@/lib/coaching/lender-readiness-coaching";
 import { TopIssuesPanel } from "./TopIssuesPanel";
 import { HealthSignalsSection } from "./HealthSignalCard";
 import { LendingLabCard } from "./LendingLabCard";
@@ -2004,18 +2007,18 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
           {data.lenderReadinessExplanation}
         </p>
 
-        {/* Task #929 — Evidence-tagging cap callout. Renders the same verbatim
-            sentence that the lender packet PDF cover prints when the engine
-            clamps the rating because fewer than 50% of assumptions are tagged
-            with evidence. The wording is shared with the API output's
-            `lenderReadinessCap.message` so on-screen and PDF copy stay in lockstep. */}
-        {data.lenderReadinessCap && (
+        {/* Task #929 — Evidence-tagging cap callout. Reads the
+            api-rendered `callout` string off `lenderReadinessResult`
+            (the structured Confidence-Gated Rating result) so the
+            wording matches the lender packet PDF cover byte-for-byte
+            modulo layout. Skipped iff no cap bites. */}
+        {data.lenderReadinessResult?.cap?.applied && (
           <div
             data-testid="readiness-cap-callout"
             className="mt-4 rounded-xl border border-amber-300 bg-amber-50/80 p-3 text-sm text-amber-900"
           >
             <span className="font-semibold">Evidence-tagging cap applied: </span>
-            {data.lenderReadinessCap.message}
+            {formatLenderReadinessCallout(data.lenderReadinessResult)}
           </div>
         )}
       </div>

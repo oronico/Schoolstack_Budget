@@ -1043,9 +1043,66 @@ export type ConsultantOutputLenderReadiness =
 
 export const ConsultantOutputLenderReadiness = {
   Strong: "Strong",
+  Almost_There: "Almost There",
   Needs_Work: "Needs Work",
   Not_Yet_Ready: "Not Yet Ready",
 } as const;
+
+export type ConsultantOutputLenderReadinessResultUncappedRating =
+  (typeof ConsultantOutputLenderReadinessResultUncappedRating)[keyof typeof ConsultantOutputLenderReadinessResultUncappedRating];
+
+export const ConsultantOutputLenderReadinessResultUncappedRating = {
+  Strong: "Strong",
+  Almost_There: "Almost There",
+  Needs_Work: "Needs Work",
+  Not_Yet_Ready: "Not Yet Ready",
+} as const;
+
+export type ConsultantOutputLenderReadinessResultEffectiveRating =
+  (typeof ConsultantOutputLenderReadinessResultEffectiveRating)[keyof typeof ConsultantOutputLenderReadinessResultEffectiveRating];
+
+export const ConsultantOutputLenderReadinessResultEffectiveRating = {
+  Strong: "Strong",
+  Almost_There: "Almost There",
+  Needs_Work: "Needs Work",
+  Not_Yet_Ready: "Not Yet Ready",
+} as const;
+
+export type ConsultantOutputLenderReadinessResultCapCapTierCapAt =
+  | (typeof ConsultantOutputLenderReadinessResultCapCapTierCapAt)[keyof typeof ConsultantOutputLenderReadinessResultCapCapTierCapAt]
+  | null;
+
+export const ConsultantOutputLenderReadinessResultCapCapTierCapAt = {
+  Strong: "Strong",
+  Almost_There: "Almost There",
+  Needs_Work: "Needs Work",
+  Not_Yet_Ready: "Not Yet Ready",
+} as const;
+
+export type ConsultantOutputLenderReadinessResultCapCapTier = {
+  taggedFractionMin: number;
+  taggedFractionMax: number;
+  capAt: ConsultantOutputLenderReadinessResultCapCapTierCapAt;
+  rationale: string;
+  source: string;
+  lastValidated: string;
+};
+
+export type ConsultantOutputLenderReadinessResultCap = {
+  applied: boolean;
+  reason: string;
+  pendingEvidenceCount: number;
+  totalAssumptionCount: number;
+  taggedCount: number;
+  taggedFraction: number;
+  capTier: ConsultantOutputLenderReadinessResultCapCapTier;
+};
+
+export type ConsultantOutputLenderReadinessResult = {
+  uncappedRating: ConsultantOutputLenderReadinessResultUncappedRating;
+  effectiveRating: ConsultantOutputLenderReadinessResultEffectiveRating;
+  cap: ConsultantOutputLenderReadinessResultCap;
+};
 
 export type ConsultantOutputNarrativeCommentaries = { [key: string]: unknown };
 
@@ -1274,6 +1331,7 @@ export interface ConsultantOutput {
   recommendations: ConsultantRecommendation[];
   lenderReadiness: ConsultantOutputLenderReadiness;
   lenderReadinessExplanation: string;
+  lenderReadinessResult: ConsultantOutputLenderReadinessResult;
   keyMetrics: ConsultantKeyMetric[];
   revenueComposition: RevenueComposition[];
   revenueQuality: RevenueQualityYearRollup[];

@@ -272,11 +272,11 @@ function drawCoverPage(doc: PDFDoc, packet: LenderPacket) {
   doc.moveDown(0.5);
   bodyText(doc, packet.lenderReadiness.explanation);
 
-  // Task #929 — Evidence-tagging cap callout. Renders the same verbatim
-  // message string the in-app LenderPacketPreview prints so a founder
-  // and a lender reviewing the PDF see one identical sentence about why
-  // the rating was clamped. Skipped silently when no cap bites.
-  if (packet.lenderReadiness.cap) {
+  // Task #929 — Evidence-tagging cap callout. Reads the pre-formatted
+  // `callout` string off the structured result so this surface and the
+  // in-app card render byte-identical copy (modulo PDF layout). The
+  // PDF never re-evaluates the cap nor hand-writes the callout text.
+  if (packet.lenderReadiness.result?.cap?.applied) {
     doc.moveDown(0.4);
     doc.save();
     const margin = doc.page.margins.left;
@@ -285,7 +285,7 @@ function drawCoverPage(doc: PDFDoc, packet: LenderPacket) {
     doc.font("Helvetica-Bold").fontSize(9).fillColor(BRAND.amber);
     doc.text("Evidence-tagging cap applied", margin, startY, { width: innerW });
     doc.font("Helvetica").fontSize(9).fillColor(BRAND.darkGray);
-    doc.text(packet.lenderReadiness.cap.message, margin, doc.y, { width: innerW });
+    doc.text(packet.lenderReadiness.result.callout, margin, doc.y, { width: innerW });
     doc.restore();
     doc.font("Helvetica").fillColor(BRAND.black);
     doc.moveDown(0.3);

@@ -3663,8 +3663,51 @@ export const GetConsultantAnalysisResponse = zod.object({
       jumpToStep: zod.number().nullish(),
     }),
   ),
-  lenderReadiness: zod.enum(["Strong", "Needs Work", "Not Yet Ready"]),
+  lenderReadiness: zod.enum([
+    "Strong",
+    "Almost There",
+    "Needs Work",
+    "Not Yet Ready",
+  ]),
   lenderReadinessExplanation: zod.string(),
+  lenderReadinessResult: zod.object({
+    uncappedRating: zod.enum([
+      "Strong",
+      "Almost There",
+      "Needs Work",
+      "Not Yet Ready",
+    ]),
+    effectiveRating: zod.enum([
+      "Strong",
+      "Almost There",
+      "Needs Work",
+      "Not Yet Ready",
+    ]),
+    cap: zod.object({
+      applied: zod.boolean(),
+      reason: zod.string(),
+      pendingEvidenceCount: zod.number(),
+      totalAssumptionCount: zod.number(),
+      taggedCount: zod.number(),
+      taggedFraction: zod.number(),
+      capTier: zod.object({
+        taggedFractionMin: zod.number(),
+        taggedFractionMax: zod.number(),
+        capAt: zod
+          .union([
+            zod.literal("Strong"),
+            zod.literal("Almost There"),
+            zod.literal("Needs Work"),
+            zod.literal("Not Yet Ready"),
+            zod.literal(null),
+          ])
+          .nullable(),
+        rationale: zod.string(),
+        source: zod.string(),
+        lastValidated: zod.string(),
+      }),
+    }),
+  }),
   keyMetrics: zod.array(
     zod.object({
       name: zod.string(),
@@ -4033,8 +4076,51 @@ export const PublicConsultantAnalysisResponse = zod.object({
       jumpToStep: zod.number().nullish(),
     }),
   ),
-  lenderReadiness: zod.enum(["Strong", "Needs Work", "Not Yet Ready"]),
+  lenderReadiness: zod.enum([
+    "Strong",
+    "Almost There",
+    "Needs Work",
+    "Not Yet Ready",
+  ]),
   lenderReadinessExplanation: zod.string(),
+  lenderReadinessResult: zod.object({
+    uncappedRating: zod.enum([
+      "Strong",
+      "Almost There",
+      "Needs Work",
+      "Not Yet Ready",
+    ]),
+    effectiveRating: zod.enum([
+      "Strong",
+      "Almost There",
+      "Needs Work",
+      "Not Yet Ready",
+    ]),
+    cap: zod.object({
+      applied: zod.boolean(),
+      reason: zod.string(),
+      pendingEvidenceCount: zod.number(),
+      totalAssumptionCount: zod.number(),
+      taggedCount: zod.number(),
+      taggedFraction: zod.number(),
+      capTier: zod.object({
+        taggedFractionMin: zod.number(),
+        taggedFractionMax: zod.number(),
+        capAt: zod
+          .union([
+            zod.literal("Strong"),
+            zod.literal("Almost There"),
+            zod.literal("Needs Work"),
+            zod.literal("Not Yet Ready"),
+            zod.literal(null),
+          ])
+          .nullable(),
+        rationale: zod.string(),
+        source: zod.string(),
+        lastValidated: zod.string(),
+      }),
+    }),
+  }),
   keyMetrics: zod.array(
     zod.object({
       name: zod.string(),

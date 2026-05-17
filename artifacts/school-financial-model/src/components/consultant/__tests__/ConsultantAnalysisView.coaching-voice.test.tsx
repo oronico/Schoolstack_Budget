@@ -10,10 +10,13 @@ import type { ConsultantOutput } from "@workspace/api-client-react";
 
 type Readiness = ConsultantOutput["lenderReadiness"];
 
-const READINESS_LEVELS: Readiness[] = ["Strong", "Needs Work", "Not Yet Ready"];
+const READINESS_LEVELS: Readiness[] = ["Strong", "Almost There", "Needs Work", "Not Yet Ready"];
 
 const COACHING_HEADLINE_BY_READINESS: Record<Readiness, RegExp> = {
   Strong: /ready to share/i,
+  // Task #929 — new mid-tier produced when the evidence-tagging cap
+  // bites at 25–50%. Shares "almost there" phrasing with "Needs Work".
+  "Almost There": /almost there/i,
   "Needs Work": /almost there/i,
   "Not Yet Ready": /worth another pass/i,
 };

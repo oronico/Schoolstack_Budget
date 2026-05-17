@@ -29,6 +29,40 @@ export const LENDER_READINESS_COACHING_HEADLINES: Record<LenderReadinessVerdict,
   "Not Yet Ready": "Worth another pass before you send it out.",
 };
 
+/**
+ * Task #929 — Render the confidence-gated cap callout from a
+ * structured `lenderReadinessResult`. Mirrors the api-server
+ * `formatCapCallout` helper so the in-app card matches the
+ * already-rendered `callout` string the API ships. Falls back to
+ * the pre-rendered string when present (preferred path); recomputes
+ * locally only if the API hasn't shipped it (cached older response).
+ */
+export interface LenderReadinessResultLike {
+  uncappedRating?: string;
+  effectiveRating?: string;
+  cap?: {
+    applied?: boolean;
+    reason?: string;
+    pendingEvidenceCount?: number;
+    totalAssumptionCount?: number;
+  };
+  callout?: string;
+}
+
+export function formatLenderReadinessCallout(
+  result: LenderReadinessResultLike | null | undefined,
+): string {
+  if (!result || !result.cap?.applied) return "";
+  if (result.callout && result.callout.length > 0) return result.callout;
+  // Local fallback for legacy cached payloads — keep wording in sync with
+  // api-server `formatCapCallout`.
+  const eff = result.effectiveRating ?? "";
+  const pending = result.cap.pendingEvidenceCount ?? 0;
+  const total = result.cap.totalAssumptionCount ?? 0;
+  const reason = result.cap.reason ?? "";
+  return `Rating capped at ${eff} pending evidence tagging on ${pending} of ${total} assumptions. ${reason}`.trim();
+}
+
 export function lenderReadinessCoachingHeadline(verdict: string | undefined | null): string {
   if (!verdict) return "";
   if (verdict in LENDER_READINESS_COACHING_HEADLINES) {

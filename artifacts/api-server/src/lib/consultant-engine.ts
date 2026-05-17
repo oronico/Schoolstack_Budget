@@ -24,7 +24,15 @@ import {
   type DecisionEngineModelData,
 } from "@workspace/finance";
 import { detectUnusualAssumptions } from "./assumption-flags";
-import { computeAssumptionConfidenceRollup, listAssumptionKeys } from "@workspace/finance";
+import {
+  applyConfidenceCap,
+  computeLenderReadiness,
+  formatCapCallout,
+  type LenderReadinessResult,
+} from "./lender-readiness-caps";
+// Re-exported so tests and downstream consumers have one import path.
+export { applyConfidenceCap, computeLenderReadiness, formatCapCallout };
+export type { LenderReadinessResult };
 
 interface SchoolProfile {
   schoolName?: string;
@@ -403,25 +411,23 @@ export interface ConsultantOutput {
   lenderReadiness: "Strong" | "Almost There" | "Needs Work" | "Not Yet Ready";
   lenderReadinessExplanation: string;
   /**
-   * Task #929 — Evidence-tagging coverage cap on the lender readiness rating.
-   * When the founder has tagged fewer than 50% of the registered assumptions
-   * with evidence, the rating is clamped:
-   *   • taggedFraction < 25%  → cap at "Needs Work"
-   *   • taggedFraction 25–50% → cap at "Almost There"
-   *   • taggedFraction ≥ 50%  → unconstrained (no cap)
-   * When the cap actually reduces the rating below what the model would
-   * otherwise earn, `lenderReadinessCap` carries the cap tier and the
-   * tag count so both the in-app card and the lender packet PDF can
-   * surface the same callout copy: "Rating capped at {tier} pending
-   * evidence tagging on N of M assumptions." Null when no cap bites.
+   * Task #929 — Confidence-Gated Rating Subsystem result.
+   *
+   * Carries both the rating the underlying metrics produced
+   * (`uncappedRating`) and the rating consumers must display
+   * (`effectiveRating`), plus the structured `cap` payload that
+   * drives the cap callout. Every surface — the in-app Lender
+   * Readiness card, the lender packet PDF cover, the
+   * narrative-commentary bundle — reads from this object via
+   * `formatCapCallout`. No surface re-evaluates the cap.
+   *
+   * `lenderReadiness` and `lenderReadinessExplanation` are kept as
+   * convenience mirrors of `lenderReadinessResult.effectiveRating`
+   * and the rendered explanation for backwards compatibility with
+   * existing consumers (Excel export, narrative commentary, share
+   * pages); new consumers should prefer the structured result.
    */
-  lenderReadinessCap: {
-    tier: "Almost There" | "Needs Work";
-    taggedKeys: number;
-    totalKeys: number;
-    taggedFraction: number;
-    message: string;
-  } | null;
+  lenderReadinessResult: LenderReadinessResult;
   keyMetrics: KeyMetric[];
   revenueComposition: RevenueComposition[];
   // Task #613 — per-year revenue quality rollup ($ + % per bucket) plus the
@@ -2912,42 +2918,20 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
       "Your model is a solid starting point, and now it's time to refine it. Focus on the high-priority recommendations first, and you'll see real progress. Every great school's financial story started as a first draft.";
   }
 
-  // Task #929 — Cap the lender readiness rating by evidence-tagging
-  // coverage. A model that hasn't anchored its assumptions to evidence
-  // shouldn't be allowed to read "Strong" to a reviewer regardless of how
-  // healthy the headline metrics are. Thresholds are taken directly from
-  // the task brief and use the unweighted tagged/total count
-  // (taggedFraction), not the high-impact-weighted `evidenceRatio`, so
-  // the callout text ("evidence tagging on N of 22 assumptions") matches
-  // the same count the wizard's Assumptions Confidence rollup prints.
-  const TIER_RANK: Record<ConsultantOutput["lenderReadiness"], number> = {
-    "Not Yet Ready": 0,
-    "Needs Work": 1,
-    "Almost There": 2,
-    "Strong": 3,
-  };
-  const confidenceRollup = computeAssumptionConfidenceRollup({
-    assumptionConfidence: (rawData as { assumptionConfidence?: Record<string, { confidence: string; evidenceNote?: string }> }).assumptionConfidence,
-  });
-  const taggedKeys = confidenceRollup.taggedKeys;
-  const totalKeys = confidenceRollup.totalKeys || listAssumptionKeys().length;
-  const taggedFraction = totalKeys > 0 ? taggedKeys / totalKeys : 0;
-  let lenderReadinessCap: ConsultantOutput["lenderReadinessCap"] = null;
-  let capCeiling: ConsultantOutput["lenderReadiness"] | null = null;
-  if (taggedFraction < 0.25) capCeiling = "Needs Work";
-  else if (taggedFraction < 0.5) capCeiling = "Almost There";
-  if (capCeiling && TIER_RANK[lenderReadiness] > TIER_RANK[capCeiling]) {
-    const untagged = Math.max(0, totalKeys - taggedKeys);
-    const capMessage = `Rating capped at ${capCeiling} pending evidence tagging on ${untagged} of ${totalKeys} assumptions.`;
-    lenderReadiness = capCeiling;
-    lenderReadinessExplanation = `${capMessage} ${lenderReadinessExplanation}`;
-    lenderReadinessCap = {
-      tier: capCeiling,
-      taggedKeys,
-      totalKeys,
-      taggedFraction,
-      message: capMessage,
-    };
+  // Task #929 — Apply the confidence-gated cap. All threshold logic,
+  // callout wording, and tier definitions live in
+  // `./lender-readiness-caps`; this site is the single computation
+  // path mandated by the addendum. The "Strong" floor is enforced
+  // intrinsically: the metric-only branch above can only assign
+  // "Strong" when underlying metrics support it, and the cap below
+  // forbids "Strong" whenever taggedFraction < 0.50 — so a
+  // 100%-tagged-but-weak model stays at "Not Yet Ready" / "Needs
+  // Work", and a strong-metrics-but-untagged model is held to
+  // "Needs Work" / "Almost There".
+  const lenderReadinessResult = computeLenderReadiness(lenderReadiness, rawData);
+  lenderReadiness = lenderReadinessResult.effectiveRating;
+  if (lenderReadinessResult.cap.applied) {
+    lenderReadinessExplanation = `${formatCapCallout(lenderReadinessResult)} ${lenderReadinessExplanation}`;
   }
 
   const schoolName = sp.schoolName || "Your school";
@@ -3302,7 +3286,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     recommendations: recommendations.slice(0, 5),
     lenderReadiness,
     lenderReadinessExplanation,
-    lenderReadinessCap,
+    lenderReadinessResult,
     keyMetrics,
     revenueComposition,
     revenueQuality: revenueQualityRollup,

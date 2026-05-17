@@ -7,6 +7,7 @@
  */
 import type { ConsultantKeyMetric } from "./consultantKeyMetric";
 import type { ConsultantOutputLenderReadiness } from "./consultantOutputLenderReadiness";
+import type { ConsultantOutputLenderReadinessResult } from "./consultantOutputLenderReadinessResult";
 import type { ConsultantOutputNarrativeCommentaries } from "./consultantOutputNarrativeCommentaries";
 import type { ConsultantRecommendation } from "./consultantRecommendation";
 import type { CostComposition } from "./costComposition";
@@ -29,6 +30,7 @@ export interface ConsultantOutput {
   recommendations: ConsultantRecommendation[];
   lenderReadiness: ConsultantOutputLenderReadiness;
   lenderReadinessExplanation: string;
+  lenderReadinessResult: ConsultantOutputLenderReadinessResult;
   keyMetrics: ConsultantKeyMetric[];
   revenueComposition: RevenueComposition[];
   revenueQuality: RevenueQualityYearRollup[];

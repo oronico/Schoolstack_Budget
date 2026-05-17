@@ -66,7 +66,7 @@ export interface LenderSummaryData {
   generatedAt: Date;
   /** Single-line "lender verdict" — readiness status + explanation. */
   verdict: {
-    status: "Strong" | "Needs Work" | "Not Yet Ready";
+    status: "Strong" | "Almost There" | "Needs Work" | "Not Yet Ready";
     line: string;
   };
   dscrByYear: LenderSummaryDscrYear[];

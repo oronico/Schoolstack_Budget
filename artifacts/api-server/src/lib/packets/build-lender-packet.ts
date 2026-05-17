@@ -1,4 +1,5 @@
 import type { ConsultantOutput } from "../consultant-engine";
+import { formatCapCallout } from "../lender-readiness-caps";
 import type { ModelData } from "../workbook-helpers";
 import type { AssumptionFlag } from "../assumption-flags";
 import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "../benchmark-thresholds";
@@ -126,19 +127,37 @@ export interface LenderPacket extends PacketData {
     status: "Strong" | "Almost There" | "Needs Work" | "Not Yet Ready";
     explanation: string;
     /**
-     * Task #929 — Evidence-tagging cap reason. Populated when the
-     * consultant engine's evidence-coverage cap reduced the rating
-     * (taggedFraction < 50%). Both the PDF cover and the in-app
-     * LenderPacketPreview surface the same `message` so a reviewer sees
-     * one verbatim callout end to end.
+     * Task #929 — Structured Confidence-Gated Rating result. Carries
+     * both the uncapped rating the metrics produced and the effective
+     * rating consumers must display, plus the cap payload that drives
+     * the cap callout. The PDF cover and the in-app preview both read
+     * this via `formatCapCallout` so a founder and a lender see one
+     * verbatim sentence end-to-end. Re-encoded as plain JSON
+     * (matching `LenderReadinessResult`) for transport.
      */
-    cap: {
-      tier: "Almost There" | "Needs Work";
-      taggedKeys: number;
-      totalKeys: number;
-      taggedFraction: number;
-      message: string;
-    } | null;
+    result: {
+      uncappedRating: "Strong" | "Almost There" | "Needs Work" | "Not Yet Ready";
+      effectiveRating: "Strong" | "Almost There" | "Needs Work" | "Not Yet Ready";
+      cap: {
+        applied: boolean;
+        reason: string;
+        pendingEvidenceCount: number;
+        totalAssumptionCount: number;
+        taggedCount: number;
+        taggedFraction: number;
+        capTier: {
+          taggedFractionMin: number;
+          taggedFractionMax: number;
+          capAt: "Strong" | "Almost There" | "Needs Work" | "Not Yet Ready" | null;
+          rationale: string;
+          source: string;
+          lastValidated: string;
+        };
+      };
+      // Canonical callout copy already formatted via `formatCapCallout`.
+      // Empty string when no cap bites; consumers render iff non-empty.
+      callout: string;
+    };
   };
   budgetNarrative: BudgetNarrativeData;
   /**
@@ -391,7 +410,13 @@ export function buildLenderPacket(
     lenderReadiness: {
       status: consultantOutput.lenderReadiness,
       explanation: consultantOutput.lenderReadinessExplanation,
-      cap: consultantOutput.lenderReadinessCap,
+      // Task #929 — Pass the full structured result through to render
+      // surfaces. `callout` is pre-rendered via `formatCapCallout` so
+      // every consumer prints the same sentence without re-formatting.
+      result: {
+        ...consultantOutput.lenderReadinessResult,
+        callout: formatCapCallout(consultantOutput.lenderReadinessResult),
+      },
     },
     budgetNarrative,
     assumptionConfidence,

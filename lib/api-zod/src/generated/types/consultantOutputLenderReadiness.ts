@@ -11,6 +11,7 @@ export type ConsultantOutputLenderReadiness =
 
 export const ConsultantOutputLenderReadiness = {
   Strong: "Strong",
+  Almost_There: "Almost There",
   Needs_Work: "Needs Work",
   Not_Yet_Ready: "Not Yet Ready",
 } as const;

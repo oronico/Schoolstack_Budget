@@ -101,15 +101,23 @@ interface LenderPacket {
   lenderReadiness: {
     status: "Strong" | "Almost There" | "Needs Work" | "Not Yet Ready";
     explanation: string;
-    // Task #929 — Evidence-tagging cap reason; non-null when the engine
-    // clamped the rating because <50% of assumptions were tagged.
-    cap: {
-      tier: "Almost There" | "Needs Work";
-      taggedKeys: number;
-      totalKeys: number;
-      taggedFraction: number;
-      message: string;
-    } | null;
+    // Task #929 — Structured Confidence-Gated Rating result. The
+    // `callout` field is pre-rendered by the api-server using the
+    // canonical template; this surface prints it verbatim so the
+    // PDF cover and the in-app card always agree.
+    result?: {
+      uncappedRating: "Strong" | "Almost There" | "Needs Work" | "Not Yet Ready";
+      effectiveRating: "Strong" | "Almost There" | "Needs Work" | "Not Yet Ready";
+      cap: {
+        applied: boolean;
+        reason: string;
+        pendingEvidenceCount: number;
+        totalAssumptionCount: number;
+        taggedCount: number;
+        taggedFraction: number;
+      };
+      callout: string;
+    };
   };
   cashRunway: CashRunwayView;
   // Task #617 - lender commentary block, surfaced as the lead block in
@@ -435,19 +443,33 @@ export function NarrativeHeader({
   readiness,
 }: {
   narrative: NarrativeSummary;
-  readiness: { status: string; explanation: string };
+  // Task #929 — accept the structured `result` so the in-app preview
+  // can render the same cap callout the PDF cover prints.
+  readiness: {
+    status: string;
+    explanation: string;
+    result?: {
+      cap?: { applied?: boolean };
+      callout?: string;
+    };
+  };
 }) {
+  // Task #929 — "Almost There" is the new mid-tier produced by the
+  // confidence-gated cap at 25–50% tagged evidence. It must share the
+  // amber treatment with "Needs Work" so the lender-packet preview
+  // and the in-app consultant card render the same banner colour for
+  // the same effective rating.
   const statusColor =
     readiness.status === "Strong"
       ? "bg-green-50 border-green-200 text-green-800"
-      : readiness.status === "Needs Work"
+      : readiness.status === "Needs Work" || readiness.status === "Almost There"
         ? "bg-amber-50 border-amber-200 text-amber-800"
         : "bg-red-50 border-red-200 text-red-800";
 
   const statusIcon =
     readiness.status === "Strong" ? (
       <CheckCircle className="h-5 w-5 text-green-600" />
-    ) : readiness.status === "Needs Work" ? (
+    ) : readiness.status === "Needs Work" || readiness.status === "Almost There" ? (
       <AlertTriangle className="h-5 w-5 text-amber-600" />
     ) : (
       <Shield className="h-5 w-5 text-red-600" />
@@ -463,6 +485,18 @@ export function NarrativeHeader({
           </span>
         </div>
         <p className="text-sm leading-relaxed">{readiness.explanation}</p>
+        {/* Task #929 — Cap callout. Same `callout` string the PDF cover
+            prints; rendering iff `cap.applied` keeps the two surfaces
+            consistent under all model states. */}
+        {readiness.result?.cap?.applied && readiness.result.callout && (
+          <div
+            data-testid="readiness-cap-callout-packet"
+            className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900"
+          >
+            <span className="font-semibold">Evidence-tagging cap applied: </span>
+            {readiness.result.callout}
+          </div>
+        )}
       </div>
 
       <div className="bg-[#FAF9F7] rounded-xl p-4">

@@ -188,6 +188,28 @@ async function runOne(c: DemoCase): Promise<void> {
   const consultant = await runConsultantEngine(data);
   check(`${tag} consultant produced executiveSummary`, !!consultant.executiveSummary?.length);
   check(`${tag} consultant emitted lenderReadiness`, !!consultant.lenderReadiness);
+  // Task #929 — confidence-gated rating subsystem.
+  // Every persona ships with 0 evidence tagged out of the canonical
+  // 22-assumption checklist, so the cap must bite at "Needs Work" for
+  // every demo and the structured `lenderReadinessResult` must agree
+  // with the rendered `lenderReadiness` enum on every surface.
+  const lr = consultant.lenderReadinessResult;
+  check(`${tag} lenderReadinessResult present`, !!lr);
+  check(
+    `${tag} lenderReadiness enum == lenderReadinessResult.effectiveRating`,
+    !!lr && consultant.lenderReadiness === lr.effectiveRating,
+    lr ? `enum=${consultant.lenderReadiness} effective=${lr.effectiveRating}` : "missing",
+  );
+  // At 0/22 the cap ceiling is "Needs Work" — so effectiveRating must
+  // never escape that ceiling. cap.applied is only true when the cap
+  // actually demoted the uncapped rating, so a model whose underlying
+  // rating already sits at or below the ceiling will have applied=false
+  // and that's still correct cap behaviour.
+  check(
+    `${tag} 0/22 tagged → effectiveRating ∈ {Needs Work, Not Yet Ready}`,
+    !!lr && (lr.effectiveRating === "Needs Work" || lr.effectiveRating === "Not Yet Ready"),
+    lr ? `applied=${lr.cap.applied} effective=${lr.effectiveRating} uncapped=${lr.uncappedRating}` : "missing",
+  );
 
   const years = computeYearFinancialsFromData(md);
   const y1 = years[0] ?? { totalRevenue: 0, tuitionRevenue: 0, publicRevenue: 0 } as (typeof years)[number];

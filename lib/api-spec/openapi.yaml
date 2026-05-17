@@ -2105,9 +2105,62 @@ components:
             $ref: "#/components/schemas/ConsultantRecommendation"
         lenderReadiness:
           type: string
-          enum: [Strong, Needs Work, Not Yet Ready]
+          enum: [Strong, "Almost There", Needs Work, Not Yet Ready]
         lenderReadinessExplanation:
           type: string
+        # Task #929 — Confidence-Gated Rating Subsystem structured result.
+        # Carries both the rating the underlying metrics produced
+        # (`uncappedRating`) and the rating consumers must display
+        # (`effectiveRating`), plus a structured `cap` payload that drives
+        # the cap callout. Every render surface (in-app Lender Readiness
+        # card, lender packet PDF cover, narrative-commentary bundle)
+        # reads from this object via the central `formatCapCallout`
+        # helper. No surface re-evaluates the cap; the threshold table
+        # (`LENDER_READINESS_CAPS`) is the only source of truth.
+        lenderReadinessResult:
+          type: object
+          properties:
+            uncappedRating:
+              type: string
+              enum: [Strong, "Almost There", Needs Work, Not Yet Ready]
+            effectiveRating:
+              type: string
+              enum: [Strong, "Almost There", Needs Work, Not Yet Ready]
+            cap:
+              type: object
+              properties:
+                applied:
+                  type: boolean
+                reason:
+                  type: string
+                pendingEvidenceCount:
+                  type: number
+                totalAssumptionCount:
+                  type: number
+                taggedCount:
+                  type: number
+                taggedFraction:
+                  type: number
+                capTier:
+                  type: object
+                  properties:
+                    taggedFractionMin:
+                      type: number
+                    taggedFractionMax:
+                      type: number
+                    capAt:
+                      type: string
+                      nullable: true
+                      enum: [Strong, "Almost There", Needs Work, Not Yet Ready, null]
+                    rationale:
+                      type: string
+                    source:
+                      type: string
+                    lastValidated:
+                      type: string
+                  required: [taggedFractionMin, taggedFractionMax, capAt, rationale, source, lastValidated]
+              required: [applied, reason, pendingEvidenceCount, totalAssumptionCount, taggedCount, taggedFraction, capTier]
+          required: [uncappedRating, effectiveRating, cap]
         keyMetrics:
           type: array
           items:
@@ -2185,6 +2238,7 @@ components:
         - recommendations
         - lenderReadiness
         - lenderReadinessExplanation
+        - lenderReadinessResult
         - keyMetrics
         - revenueComposition
         - revenueQuality
