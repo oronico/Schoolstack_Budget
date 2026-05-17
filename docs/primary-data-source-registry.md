@@ -12,6 +12,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** usd
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
+- **M5 tier:** `anchor-all`
 - **canonical:** `computeYearFinancialsFromData(modelData)[y].totalRevenue` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** #860, #912, #915, #925
 
@@ -33,6 +34,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** usd
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
+- **M5 tier:** `anchor-oakwood`
 - **canonical:** `driverVal(row.amounts, 0, row.driverType, students, row.escalationRate)` (in `artifacts/api-server/src/lib/workbook-helpers.ts`)
 - **related tasks:** #925, #927
 
@@ -52,6 +54,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** pct
 - **rounding:** 1 decimals (half_up)
 - **tolerance:** abs ≤ 0.1
+- **M5 tier:** `anchor-oakwood`
 - **canonical:** `ConsultantOutput.revenueQuality[y].pctByBucket.{contracted|projected|donor_dependent|policy_dependent}` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** #613, #927
 
@@ -72,6 +75,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** pct
 - **rounding:** 1 decimals (half_up)
 - **tolerance:** abs ≤ 0.1
+- **M5 tier:** `anchor-oakwood`
 - **canonical:** `ConsultantOutput.revenueComposition[y].{tuitionPct|publicPct|philanthropyPct}` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -91,6 +95,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** ratio
 - **rounding:** 2 decimals (half_up)
 - **tolerance:** abs ≤ 0.01
+- **M5 tier:** `anchor-oakwood`
 - **canonical:** `ConsultantOutput.revenueQuality[0].hardRevenueCoverage` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** #613
 
@@ -112,6 +117,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** months
 - **rounding:** 1 decimals (half_up)
 - **tolerance:** abs ≤ 0.1
+- **M5 tier:** `anchor-oakwood`
 - **canonical:** `ConsultantOutput.cashRunwayMonths` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** #937
 
@@ -133,6 +139,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** usd
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
+- **M5 tier:** `anchor-all`
 - **canonical:** `buildNarrativeBundle → troughEndingCash (= min(openingCash + cumulativeNetIncome[y]))` (in `artifacts/api-server/src/lib/packets/build-narrative-commentary.ts`)
 - **related tasks:** —
 
@@ -153,6 +160,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** usd
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
+- **M5 tier:** `anchor-all`
 - **canonical:** `findLowestCashMonthAcrossYears(computeYear1MonthlyCashFlow(...))` (in `@workspace/finance`)
 - **related tasks:** —
 
@@ -172,6 +180,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** months
 - **rounding:** 1 decimals (half_up)
 - **tolerance:** abs ≤ 0.1
+- **M5 tier:** `anchor-oakwood`
 - **canonical:** `ConsultantOutput.cumulativeFinancials[last].reserveMonths` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -193,6 +202,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** ratio
 - **rounding:** 2 decimals (half_up)
 - **tolerance:** abs ≤ 0.01
+- **M5 tier:** `anchor-all`
 - **canonical:** `ConsultantOutput.normalizedView.normalized.dscr[y]` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -213,6 +223,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** ratio
 - **rounding:** 2 decimals (half_up)
 - **tolerance:** abs ≤ 0.01
+- **M5 tier:** `anchor-oakwood`
 - **canonical:** `ConsultantOutput.normalizedView.reported.dscr[y]` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -231,6 +242,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** ratio
 - **rounding:** 2 decimals (half_up)
 - **tolerance:** abs ≤ 0.01
+- **M5 tier:** `anchor-oakwood`
 - **canonical:** `buildNarrativeBundle → dscrMinNormalized (filters 0 sentinels)` (in `artifacts/api-server/src/lib/packets/build-narrative-commentary.ts`)
 - **related tasks:** —
 
@@ -250,6 +262,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** usd
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
+- **M5 tier:** `anchor-oakwood`
 - **canonical:** `computeAnnualDebt(capitalAndDebtRows, year)` (in `@workspace/finance`)
 - **related tasks:** —
 
@@ -271,6 +284,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** usd
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
+- **M5 tier:** `anchor-oakwood`
 - **canonical:** `ConsultantOutput.keyMetrics[name='Revenue per student'].value` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -290,6 +304,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** usd
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
+- **M5 tier:** `anchor-oakwood`
 - **canonical:** `ConsultantOutput.keyMetrics[name='Cost per student'].value` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -310,6 +325,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** pct
 - **rounding:** 1 decimals (half_up)
 - **tolerance:** abs ≤ 0.1
+- **M5 tier:** `anchor-oakwood`
 - **canonical:** `ConsultantOutput.keyMetrics[name~='Capacity utilization'].value` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -329,6 +345,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** year
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 0
+- **M5 tier:** `anchor-oakwood`
 - **canonical:** `breakEvenYearFromAnnual(cumulativeFinancials)` (in `@workspace/finance`)
 - **related tasks:** —
 
@@ -348,6 +365,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** count
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 0
+- **M5 tier:** `anchor-oakwood`
 - **canonical:** `ConsultantOutput.lenderStressTests.base.breakEvenStudents[0]` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -369,6 +387,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** usd
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
+- **M5 tier:** `anchor-all`
 - **canonical:** `ConsultantOutput.lenderStressTests.base.netIncome[y]` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -387,6 +406,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** ratio
 - **rounding:** 2 decimals (half_up)
 - **tolerance:** abs ≤ 0.01
+- **M5 tier:** `anchor-oakwood`
 - **canonical:** `ConsultantOutput.lenderStressTests.scenarios[*].dscr[y]` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -406,6 +426,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** usd
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
+- **M5 tier:** `anchor-oakwood`
 - **canonical:** `ConsultantOutput.lenderStressTests.scenarios[*].endingCash[y]` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -425,6 +446,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** usd
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
+- **M5 tier:** `anchor-oakwood`
 - **canonical:** `ConsultantOutput.lenderStressTests.scenarios[*].netIncome[y]` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** #918
 
@@ -444,6 +466,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** text
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 0
+- **M5 tier:** `structural`
 - **canonical:** `buildNarrativeBundle → worstStress` (in `artifacts/api-server/src/lib/packets/build-narrative-commentary.ts`)
 - **related tasks:** #924
 
@@ -462,6 +485,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** count
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 0
+- **M5 tier:** `anchor-oakwood`
 - **canonical:** `buildNarrativeBundle → negativeY5StressScenarios[]` (in `artifacts/api-server/src/lib/packets/build-narrative-commentary.ts`)
 - **related tasks:** #918
 
@@ -483,6 +507,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** usd
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 1 OR rel ≤ 0.10%
+- **M5 tier:** `anchor-oakwood`
 - **canonical:** `ConsultantOutput.normalizedView.founderComp.{hasAdjustment, totalDelta, perYearDelta[]}` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -504,6 +529,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** enum
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 0
+- **M5 tier:** `structural`
 - **canonical:** `applyConfidenceCap(...).uncappedRating` (in `artifacts/api-server/src/lib/lender-readiness-caps.ts`)
 - **related tasks:** #929
 
@@ -522,6 +548,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** enum
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 0
+- **M5 tier:** `structural`
 - **canonical:** `applyConfidenceCap(...).effectiveRating` (in `artifacts/api-server/src/lib/lender-readiness-caps.ts`)
 - **related tasks:** #929
 
@@ -542,6 +569,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** text
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 0
+- **M5 tier:** `structural`
 - **canonical:** `applyConfidenceCap(...).cap.{applied, reason, pendingEvidenceCount, totalAssumptionCount, taggedCount, taggedFraction}` (in `artifacts/api-server/src/lib/lender-readiness-caps.ts`)
 - **related tasks:** #929, #966
 
@@ -562,6 +590,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** text
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 0
+- **M5 tier:** `structural`
 - **canonical:** `ConsultantOutput.biggestStrength` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -581,6 +610,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** text
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 0
+- **M5 tier:** `structural`
 - **canonical:** `ConsultantOutput.biggestRisk` (in `artifacts/api-server/src/lib/consultant-engine.ts`)
 - **related tasks:** —
 
@@ -602,6 +632,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** text
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 0
+- **M5 tier:** `structural`
 - **canonical:** `ASSUMPTION_REGISTRY` (in `@workspace/finance`)
 - **related tasks:** #929
 
@@ -624,6 +655,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **unit:** text
 - **rounding:** 0 decimals (half_up)
 - **tolerance:** abs ≤ 0
+- **M5 tier:** `structural`
 - **canonical:** `buildNarrativeBundle(modelData, consultantOutput)` (in `artifacts/api-server/src/lib/packets/build-narrative-commentary.ts`)
 - **related tasks:** #617, #918, #924, #937
 

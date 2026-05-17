@@ -69,6 +69,7 @@ function renderMetric(m: CanonicalMetric): string {
     `- **unit:** ${m.unit}`,
     `- **rounding:** ${renderRounding(m.rounding)}`,
     `- **tolerance:** ${renderTolerance(m.tolerance)}`,
+    `- **M5 tier:** \`${m.tier}\``,
     `- **canonical:** \`${m.canonical.accessor}\` (in \`${m.canonical.module}\`)`,
     `- **related tasks:** ${tasks}`,
     "",

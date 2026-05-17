@@ -98,6 +98,30 @@ export interface MetricTolerance {
   rel?: number;
 }
 
+/**
+ * Task #930 / M3 — how widely M5's cross-surface harness should anchor
+ * a metric against persona fixtures.
+ *
+ *   - `structural`     metric is engine-authored prose / enum / catalog
+ *                      whose value is not numerically comparable across
+ *                      personas (e.g. biggestStrength string,
+ *                      ASSUMPTION_REGISTRY table). M5 still asserts the
+ *                      surface reads from the canonical accessor, but
+ *                      does NOT pin a per-persona scalar.
+ *   - `anchor-oakwood` numeric metric anchored against the Oakwood
+ *                      (microschool) persona only. The Oakwood seed is
+ *                      the canonical "happy-path" — drift in this single
+ *                      value is enough to catch most regressions.
+ *   - `anchor-all`     core contract metric anchored against ALL three
+ *                      personas (Oakwood / Riverside / Liberty). Reserved
+ *                      for headline lender numbers (revenue total, DSCR,
+ *                      cash trough, monthly cash low, base-scenario NI)
+ *                      where personas exercise distinct revenue mixes
+ *                      and any one persona alone would let a regression
+ *                      slip through.
+ */
+export type MetricTier = "structural" | "anchor-oakwood" | "anchor-all";
+
 export interface CanonicalMetric {
   id: string;
   category: MetricCategory;
@@ -111,6 +135,13 @@ export interface CanonicalMetric {
   unit: MetricUnit;
   rounding: MetricRounding;
   tolerance: MetricTolerance;
+  /**
+   * Task #930 / M3 — M5 harness coverage tier. See {@link MetricTier}.
+   * Defaults via {@link defaultTier} from the metric's unit when not set
+   * explicitly: text/enum → `structural`; everything else → `anchor-oakwood`.
+   * Headline contract metrics override to `anchor-all`.
+   */
+  tier: MetricTier;
   canonical: {
     module: string;
     accessor: string;
@@ -128,11 +159,12 @@ export interface CanonicalMetric {
  */
 export type CanonicalMetricInput = Omit<
   CanonicalMetric,
-  "description" | "rounding" | "tolerance"
+  "description" | "rounding" | "tolerance" | "tier"
 > & {
   description?: string;
   rounding?: MetricRounding;
   tolerance?: MetricTolerance;
+  tier?: MetricTier;
 };
 
 /**
@@ -156,6 +188,25 @@ export function defaultRounding(unit: MetricUnit): MetricRounding {
     case "enum":
     case "text":
       return { decimals: 0 };
+  }
+}
+
+/**
+ * Default M5 anchor tier for a metric, derived from its unit. Text and
+ * enum metrics are not numerically comparable across personas (the
+ * persona name appears in the rendered string, the enum bands shift),
+ * so they default to `structural`. Every other unit defaults to
+ * `anchor-oakwood`; the small set of headline contract metrics
+ * (revenue total, DSCR, cash trough, monthly cash low, base NI)
+ * overrides this to `anchor-all` directly on the entry.
+ */
+export function defaultTier(unit: MetricUnit): MetricTier {
+  switch (unit) {
+    case "enum":
+    case "text":
+      return "structural";
+    default:
+      return "anchor-oakwood";
   }
 }
 
@@ -187,6 +238,7 @@ export function materializeMetric(m: CanonicalMetricInput): CanonicalMetric {
     description: m.description ?? m.label,
     rounding: m.rounding ?? defaultRounding(m.unit),
     tolerance: m.tolerance ?? defaultTolerance(m.unit),
+    tier: m.tier ?? defaultTier(m.unit),
   };
 }
 
@@ -209,6 +261,7 @@ const RAW_METRICS: readonly CanonicalMetricInput[] = [
     category: "revenue",
     label: "Total revenue by year (Y1–Y5)",
     unit: "usd",
+    tier: "anchor-all",
     canonical: {
       module: "artifacts/api-server/src/lib/consultant-engine.ts",
       accessor: "computeYearFinancialsFromData(modelData)[y].totalRevenue",
@@ -370,6 +423,7 @@ const RAW_METRICS: readonly CanonicalMetricInput[] = [
     category: "cash",
     label: "Trough ending cash (lowest year-end)",
     unit: "usd",
+    tier: "anchor-all",
     canonical: {
       module: "artifacts/api-server/src/lib/packets/build-narrative-commentary.ts",
       accessor: "buildNarrativeBundle → troughEndingCash (= min(openingCash + cumulativeNetIncome[y]))",
@@ -397,6 +451,7 @@ const RAW_METRICS: readonly CanonicalMetricInput[] = [
     category: "cash",
     label: "Lowest monthly ending cash (across all years)",
     unit: "usd",
+    tier: "anchor-all",
     canonical: {
       module: "@workspace/finance",
       accessor: "findLowestCashMonthAcrossYears(computeYear1MonthlyCashFlow(...))",
@@ -446,6 +501,7 @@ const RAW_METRICS: readonly CanonicalMetricInput[] = [
     category: "debt",
     label: "DSCR series (normalized, Y1–Y5)",
     unit: "ratio",
+    tier: "anchor-all",
     canonical: {
       module: "artifacts/api-server/src/lib/consultant-engine.ts",
       accessor: "ConsultantOutput.normalizedView.normalized.dscr[y]",
@@ -657,6 +713,7 @@ const RAW_METRICS: readonly CanonicalMetricInput[] = [
     category: "stress",
     label: "Base scenario net income (Y1–Y5)",
     unit: "usd",
+    tier: "anchor-all",
     canonical: {
       module: "artifacts/api-server/src/lib/consultant-engine.ts",
       accessor: "ConsultantOutput.lenderStressTests.base.netIncome[y]",
