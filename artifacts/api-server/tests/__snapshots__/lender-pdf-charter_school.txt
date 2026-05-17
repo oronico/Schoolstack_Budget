@@ -60,9 +60,9 @@ the founder is drawing $344,883 below a market salary for the role. On a planned
 Year 1 DSCR would read 30.84x; on the normalized basis it lands at 30.65x, which is the figure
 used throughout this packet. The lender-primary view in this packet underwrites the school at the
 market cost of running it, not the founder's voluntary discount.
-Under the toughest stress in the lender battery (ESA / Public Funding Delayed 3 Months), minimum
-DSCR holds at 14.23x and minimum ending cash at $1,118,711. Strong Year 5 net income The full
-risk and recommendation set follows in the body of the packet.
+Under the toughest stress in the lender battery (Public Funding Delayed 3 Months (public sources
+only)), minimum DSCR holds at 14.23x and minimum ending cash at $1,118,711. Strong Year 5 net
+income The full risk and recommendation set follows in the body of the packet.
 Every figure in this commentary is sourced from the same canonical engine that powers the rest of this packet.
 Executive Summary
 Liberty STEM Charter School projects $18,125,509 in Year 5 revenue with a 69.3% net margin.
@@ -1126,7 +1126,8 @@ Year 1
 71.5
 28.81x
 8.7
-Revenue Delayed 3 Months
+Revenue Delayed 3 Months (full
+revenue stack)
 $854K
 $8.2M
 Year 1
@@ -1451,7 +1452,7 @@ soft-launch.
   Min DSCR: 21.74x   ·   Min ending cash: $1,640,891   ·   Runway: 9.2 mo   ·   Break-even: Year 1
   Lowest monthly cash: Year 1 (Jul) $506,191
   Year-1 net income vs base: -$631,986
-ESA / Public Funding Delayed 3 Months
+Public Funding Delayed 3 Months (public sources only)
 Year-1 ESA, school-choice, and public-funding receipts reduced by 25% (≈ 3 months delayed) to simulate a slow first
 disbursement.
   Min DSCR: 14.23x   ·   Min ending cash: $1,118,711   ·   Runway: 5.5 mo   ·   Break-even: Year 1

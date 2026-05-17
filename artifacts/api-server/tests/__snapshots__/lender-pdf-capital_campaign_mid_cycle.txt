@@ -1118,7 +1118,8 @@ Year 2
 27.8
 0.50x
 -0.4
-Revenue Delayed 3 Months
+Revenue Delayed 3 Months (full
+revenue stack)
 $-48K
 $44K
 Year 2
@@ -1449,7 +1450,7 @@ soft-launch.
   Min DSCR: -0.01x   ·   Min ending cash: -$25,085   ·   Runway: -1.8 mo   ·   Break-even: Year 2
   Lowest monthly cash: Year 2 (Jul) -$29,657 — dips below zero mid-year
   Year-1 net income vs base: -$27,795
-ESA / Public Funding Delayed 3 Months
+Public Funding Delayed 3 Months (public sources only)
 Year-1 ESA, school-choice, and public-funding receipts reduced by 25% (≈ 3 months delayed) to simulate a slow first
 disbursement.
   Min DSCR: 0.75x   ·   Min ending cash: $2,710   ·   Runway: 0.2 mo   ·   Break-even: Year 2

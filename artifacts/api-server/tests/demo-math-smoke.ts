@@ -1710,31 +1710,46 @@ async function runStressNegativeY5Regression(): Promise<void> {
   }
 }
 
-// Task #924 — Reconcile stress-test label collision. Two stress-test
-// code paths used to ship nearly identical scenario names
-// ("Revenue Delayed 3 Months" in `consultantOutput.stressTests` vs
-// "ESA / Public Funding Delayed 3 Months" in
+// Task #924 — Stress-scenario subsystem coherence regression.
+//
+// Two stress-test code paths used to ship nearly identical scenario
+// names ("Revenue Delayed 3 Months" in `consultantOutput.stressTests`
+// vs "ESA / Public Funding Delayed 3 Months" in
 // `consultantOutput.lenderStressTests.scenarios`), producing different
 // numbers in two different tables of the same lender packet. The
 // Lender Commentary's "toughest stress" line cited the lender-battery
 // scenario, but a reviewer reading the similarly-named consultant row
 // couldn't tell which table the claim referred to.
 //
-// Post-fix invariants this regression locks in, per persona:
-//   1. No scenario name appears in BOTH stress-test code paths
-//      (cross-table uniqueness — labels are unambiguous).
-//   2. Within each code path, scenario names are unique.
-//   3. The Lender Commentary's "toughest stress" scenario name resolves
-//      to exactly ONE row in the lender stress-test battery
-//      (`lenderStressTests.scenarios`), and its cited min-DSCR equals
-//      that scenario's min DSCR (rounded to 2 decimals — the same
-//      precision the commentary's `ratio` formatter emits).
-//   4. The commentary's worst-stress label is the literal post-rename
-//      string ("…(public funding only)" / "…(full revenue stack)" /
-//      etc.), never the legacy collision pair.
+// This regression asserts subsystem-level invariants, NOT per-persona
+// strings. The assertions iterate over every persona in `CASES` and
+// every scenario in each engine output; adding a new persona fixture
+// (or a new scenario to either battery) does NOT require updating the
+// assertion logic — only adding the fixture.
+//
+// Subsystem invariants (per persona):
+//   (1) No scenario name appears in BOTH stress-test code paths
+//       (cross-table uniqueness — labels are unambiguous).
+//   (2) Within each code path, scenario names are unique.
+//   (3) The Lender Commentary's "toughest stress" scenario name resolves
+//       to exactly ONE row in the lender stress-test battery
+//       (`lenderStressTests.scenarios`), and the cited min-DSCR equals
+//       that row's min DSCR to four decimal places (the precision the
+//       commentary's `ratio` formatter emits).
+//   (4) The commentary's "toughest stress" pick obeys the canonical
+//       criterion documented at the worstStress reducer in
+//       `build-narrative-commentary.ts`: lowest min DSCR across the
+//       battery; ties broken by largest Y1 NI decline vs. base.
+//   (5) The legacy bare names that produced the collision ("Revenue
+//       Delayed 3 Months" / "ESA / Public Funding Delayed N Months")
+//       no longer appear anywhere in either battery.
+//
+// Coverage note: this loop runs for every entry in `CASES`. To extend
+// coverage, add a fixture to `CASES`; no changes to the assertion
+// logic are required.
 async function runStressLabelParityRegression(): Promise<void> {
   const tag = "[stress_label_parity_924]";
-  const { buildLenderCommentary, buildNarrativeSourceBundle } = await import(
+  const { buildLenderCommentary, buildNarrativeBundle } = await import(
     "../src/lib/packets/build-narrative-commentary.js"
   );
 
@@ -1773,27 +1788,33 @@ async function runStressLabelParityRegression(): Promise<void> {
       consultantNames.some((n) => n === "Revenue Delayed 3 Months (full revenue stack)"),
       `names=${JSON.stringify(consultantNames)}`,
     );
-    const lenderEsaScenario = lenderNames.find((n) => /ESA \/ Public Funding Delayed/.test(n));
+    const lenderPublicDelay = lenderNames.find((n) => /Public Funding Delayed/.test(n));
     check(
-      `${tag} ${c.label} lender battery uses disambiguated ESA delay label "(public funding only)"`,
-      typeof lenderEsaScenario === "string" && /\(public funding only\)$/.test(lenderEsaScenario),
-      `lenderEsaScenario="${lenderEsaScenario}"`,
+      `${tag} ${c.label} lender battery uses disambiguated public-funding delay label "(public sources only)"`,
+      typeof lenderPublicDelay === "string" && /\(public sources only\)$/.test(lenderPublicDelay),
+      `lenderPublicDelay="${lenderPublicDelay}"`,
     );
-    check(
-      `${tag} ${c.label} legacy bare "Revenue Delayed 3 Months" no longer present in either battery`,
-      !consultantNames.includes("Revenue Delayed 3 Months") &&
-        !lenderNames.includes("Revenue Delayed 3 Months"),
-      `consultant=${JSON.stringify(consultantNames)}, lender=${JSON.stringify(lenderNames)}`,
-    );
+    // Legacy bare names that produced the original collision must not
+    // appear anywhere in either battery after Task #924.
+    const legacyBareNames = [
+      "Revenue Delayed 3 Months",
+      "ESA / Public Funding Delayed 3 Months",
+    ];
+    for (const legacy of legacyBareNames) {
+      check(
+        `${tag} ${c.label} legacy bare "${legacy}" no longer present in either battery`,
+        !consultantNames.includes(legacy) && !lenderNames.includes(legacy),
+        `consultant=${JSON.stringify(consultantNames)}, lender=${JSON.stringify(lenderNames)}`,
+      );
+    }
 
     // (3) Commentary-to-table parity: the "toughest stress" claim in the
     // Lender Commentary must resolve to exactly one row in the lender
     // stress-test battery, and the cited min DSCR must equal that row's
     // min DSCR to the precision the commentary formatter emits.
-    const bundle = buildNarrativeSourceBundle(
-      data as unknown as Parameters<typeof buildNarrativeSourceBundle>[0],
+    const bundle = buildNarrativeBundle(
+      data as unknown as Parameters<typeof buildNarrativeBundle>[0],
       consultant,
-      0,
     );
     if (!bundle.worstStress) {
       console.log(`${tag} ${c.label}: no worstStress on bundle (no debt service modeled?) — skipping parity check`);
@@ -1810,11 +1831,36 @@ async function runStressLabelParityRegression(): Promise<void> {
     if (matches.length === 1 && ws.minDscr !== null) {
       const finite = matches[0].dscr.filter((d) => d !== 0 && Number.isFinite(d));
       const tableMinDscr = finite.length > 0 ? Math.min(...finite) : null;
+      // Addendum requires equality "to four decimal places".
+      const round4 = (n: number) => Math.round(n * 10_000) / 10_000;
       check(
-        `${tag} ${c.label} commentary worstStress.minDscr (${ws.minDscr}) === lender battery row min DSCR (${tableMinDscr})`,
-        tableMinDscr !== null && Math.abs((tableMinDscr ?? 0) - ws.minDscr) < 1e-9,
+        `${tag} ${c.label} commentary worstStress.minDscr (${ws.minDscr}) === lender battery row min DSCR (${tableMinDscr}) to 4 decimals`,
+        tableMinDscr !== null && round4(tableMinDscr) === round4(ws.minDscr),
         `bundle.minDscr=${ws.minDscr}, table.minDscr=${tableMinDscr}, scenario="${ws.name}"`,
       );
+
+      // (4) Canonical "toughest stress" pick: verify the chosen
+      // scenario actually beats every other lender battery scenario by
+      // the documented criterion (lowest min DSCR; tiebreak = largest
+      // Y1 NI decline vs. base).
+      const baseY1 = consultant.lenderStressTests?.base?.netIncome?.[0] ?? 0;
+      const wsY1Delta =
+        (matches[0].netIncome?.[0] ?? 0) - baseY1;
+      for (const other of consultant.lenderStressTests?.scenarios ?? []) {
+        if (other.name === ws.name) continue;
+        const oFinite = other.dscr.filter((d) => d !== 0 && Number.isFinite(d));
+        const oMin = oFinite.length > 0 ? Math.min(...oFinite) : null;
+        if (oMin === null) continue;
+        const oY1Delta = (other.netIncome?.[0] ?? 0) - baseY1;
+        const beatsPrimary = oMin < ws.minDscr - 1e-9;
+        const tiesPrimary = Math.abs(oMin - ws.minDscr) <= 1e-9;
+        const beatsTiebreak = tiesPrimary && oY1Delta < wsY1Delta - 1e-9;
+        check(
+          `${tag} ${c.label} no lender scenario "${other.name}" beats picked "${ws.name}" on (minDSCR, Y1NIΔ)`,
+          !beatsPrimary && !beatsTiebreak,
+          `picked=(${ws.minDscr}, Δ=${wsY1Delta}); other=(${oMin}, Δ=${oY1Delta})`,
+        );
+      }
     }
 
     // (3b) Render the commentary and verify the printed prose carries

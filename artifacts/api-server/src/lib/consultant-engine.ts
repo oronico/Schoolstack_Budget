@@ -1862,10 +1862,14 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
         tuitionTiers,
       }, stressCostInflation, sp, ceRR, stressStartCash),
       // Task #924 — name disambiguates this from the lender battery's
-      // "ESA / Public Funding Delayed 3 Months (public funding only)"
-      // scenario, which stresses just the public-funding rows. This
-      // scenario reduces ALL revenue rows (tuition + ESA + donations + …)
-      // by 25% in Year 1 to simulate a school-wide first-quarter slip.
+      // "Public Funding Delayed 3 Months (public sources only)"
+      // scenario, which stresses just the public-funding rows.
+      // INPUT TRANSFORMATION: every revenue row's Year-1 amount is
+      // multiplied by 0.75 (rows in Years 2-5 are untouched), modelling
+      // a 25% first-year shortfall across the FULL revenue stack
+      // (tuition + ESA + donations + fees + …). This is intentionally
+      // broader than the lender battery's public-funding-only delay
+      // and answers a different lender-facing risk question.
       runStressScenarioFromRows("Revenue Delayed 3 Months (full revenue stack)", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
         modifyRevenueRows: rows => rows.map(r => ({
           ...r,

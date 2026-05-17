@@ -245,6 +245,7 @@ Y1
 16.1636019
 87473285
 Revenue Delayed 3 Months
+(full revenue stack)
 $1,360,657
 $4,761,518
 Y1

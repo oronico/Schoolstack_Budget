@@ -260,24 +260,55 @@ export function buildNarrativeBundle(
     mitigant: iss.recommendedAction,
   }));
 
-  // Worst-case stress (lowest min DSCR across the battery)
+  // Worst-case stress (the "toughest stress" the closing paragraph
+  // names).
+  //
+  // Task #924 — Canonical "toughest stress" criterion (deterministic,
+  // documented so the Commentary's claim is reproducible from the
+  // packet's own Lender Stress Tests table):
+  //
+  //   PRIMARY:   lowest minimum DSCR across the scenario's 5 years
+  //              (DSCR readings of 0 / non-finite are ignored — they
+  //              represent years with no debt service modeled).
+  //   TIEBREAK:  largest Year-1 net income decline vs. base
+  //              (i.e. most negative `Y1NI_scenario - Y1NI_base`).
+  //
+  // Scenarios with no finite DSCR reading at all (no debt service
+  // anywhere in the 5-year window) are only selected as the fallback
+  // worst stress when nothing better exists.
   let worstStress: NarrativeSourceBundle["worstStress"] = null;
+  let worstY1NiDelta: number | null = null;
   const stressScenarios = co.lenderStressTests?.scenarios ?? [];
+  const baseY1Ni = co.lenderStressTests?.base?.netIncome?.[0] ?? 0;
   for (const s of stressScenarios) {
     const minD = s.dscr.filter((d) => d !== 0 && Number.isFinite(d));
     const minDscr = minD.length > 0 ? Math.min(...minD) : null;
     const minEndingCash =
       s.endingCash.length > 0 ? Math.min(...s.endingCash) : null;
-    // Prefer scenarios with a defined minDscr; among those, pick the lowest.
-    // Only fall back to a null-DSCR scenario when nothing better is available.
-    const replace =
-      worstStress === null ||
-      (minDscr !== null && worstStress.minDscr === null) ||
-      (minDscr !== null &&
-        worstStress.minDscr !== null &&
-        minDscr < worstStress.minDscr);
+    const y1NiDelta = (s.netIncome?.[0] ?? 0) - baseY1Ni;
+
+    let replace = false;
+    if (worstStress === null) {
+      replace = true;
+    } else if (minDscr !== null && worstStress.minDscr === null) {
+      // Promote: any finite DSCR beats a null DSCR.
+      replace = true;
+    } else if (minDscr !== null && worstStress.minDscr !== null) {
+      if (minDscr < worstStress.minDscr) {
+        replace = true;
+      } else if (
+        // Tie on primary key — pick the scenario with the larger
+        // Y1 NI decline (i.e. more negative delta).
+        minDscr === worstStress.minDscr &&
+        worstY1NiDelta !== null &&
+        y1NiDelta < worstY1NiDelta
+      ) {
+        replace = true;
+      }
+    }
     if (replace) {
       worstStress = { name: s.name, minDscr, minEndingCash };
+      worstY1NiDelta = y1NiDelta;
     }
   }
 

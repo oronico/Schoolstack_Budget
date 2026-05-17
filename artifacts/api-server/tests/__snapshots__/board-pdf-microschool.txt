@@ -305,7 +305,7 @@ soft-launch.
   Min DSCR: -0.06x   ·   Min ending cash: $5,200   ·   Runway: 0.6 mo   ·   Break-even: Year 3 (+2y vs base)
   Lowest monthly cash: Year 3 (Jul) $1,371
   Year-1 net income vs base: -$27,795
-ESA / Public Funding Delayed 3 Months
+Public Funding Delayed 3 Months (public sources only)
 Year-1 ESA, school-choice, and public-funding receipts reduced by 25% (≈ 3 months delayed) to simulate a slow first
 disbursement.
   Min DSCR: 5.86x   ·   Min ending cash: $34,826   ·   Runway: 3.1 mo   ·   Break-even: Year 1

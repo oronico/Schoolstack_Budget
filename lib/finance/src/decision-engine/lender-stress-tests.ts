@@ -77,8 +77,15 @@ function buildScenarioCatalog(opts: Required<LenderStressTestOptions>): readonly
       // Task #924 — name explicitly scopes this scenario to the
       // public-funding row set so it does not collide with the
       // consultant battery's "Revenue Delayed 3 Months (full revenue
-      // stack)" scenario, which delays ALL revenue rows.
-      name: `ESA / Public Funding Delayed ${opts.esaDelayMonths} Month${opts.esaDelayMonths === 1 ? "" : "s"} (public funding only)`,
+      // stack)" scenario, which delays ALL revenue rows. Per task
+      // addendum the "ESA /" prefix is dropped; the scope qualifier
+      // "(public sources only)" is the canonical disambiguator.
+      // INPUT TRANSFORMATION: per-year amounts on every revenue row
+      // whose category is `public_funding` or `school_choice` (i.e.
+      // ESA / voucher / tax-credit / per-pupil) are scaled down by
+      // `esaDelayMonths / 12` in Year 1 only — see `mutateEsaDelay`
+      // below. Tuition, donations, and fees are NOT touched.
+      name: `Public Funding Delayed ${opts.esaDelayMonths} Month${opts.esaDelayMonths === 1 ? "" : "s"} (public sources only)`,
       description: `Year-1 ESA, school-choice, and public-funding receipts reduced by ${esaPct}% (≈ ${opts.esaDelayMonths} months delayed) to simulate a slow first disbursement.`,
     },
     {

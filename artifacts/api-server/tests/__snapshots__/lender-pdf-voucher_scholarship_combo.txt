@@ -1111,7 +1111,8 @@ Year 1
 126.3
 56.42x
 21.5
-Revenue Delayed 3 Months
+Revenue Delayed 3 Months (full
+revenue stack)
 $174K
 $738K
 Year 1
@@ -1425,7 +1426,7 @@ soft-launch.
 SchoolStack Budget - Generated <DATE>
 Page 19 of 20
 --- PAGE 20 ---
-ESA / Public Funding Delayed 3 Months
+Public Funding Delayed 3 Months (public sources only)
 Year-1 ESA, school-choice, and public-funding receipts reduced by 25% (≈ 3 months delayed) to simulate a slow first
 disbursement.
   Min DSCR: 44.20x   ·   Min ending cash: $214,852   ·   Runway: 19.1 mo   ·   Break-even: Year 1
