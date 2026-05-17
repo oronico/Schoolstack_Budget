@@ -161,7 +161,7 @@ function normalizeEscalationOverrideRows(data: Record<string, unknown>): Record<
 // can scroll/highlight a specific section on mount (e.g. the saved-scenario
 // "Replace export" link sets `focus=accounting-export` on the School Profile
 // step). Steps that don't recognise the value simply ignore it.
-type StepProps = { jumpToStep?: (s: number) => void; modelId: number | null; focus?: string; revenueStepNumber?: number };
+type StepProps = { jumpToStep?: (s: number) => void; modelId: number | null; focus?: string; revenueStepNumber?: number; assumptionsStepNumber?: number };
 
 type StepDef = { id: number; title: string; component: ComponentType<StepProps> };
 
@@ -1799,6 +1799,7 @@ export function ModelWizardPage() {
                 jumpToStep={setCurrentStep}
                 modelId={modelId}
                 revenueStepNumber={stepIdByTitle("Revenue")}
+                assumptionsStepNumber={stepIdByTitle("Assumptions & Sensitivity")}
                 focus={
                   // Only forward the deep-link focus hint while we're still
                   // on the originally-targeted step. Once the founder

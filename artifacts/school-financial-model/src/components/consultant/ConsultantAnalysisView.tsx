@@ -192,6 +192,15 @@ interface ConsultantAnalysisViewProps {
    *  `visibleSteps` rather than relying on a hardcoded constant.
    *  Defaults to `4` for legacy callers / tests. */
   revenueStepNumber?: number;
+  /** Resolved 1-based wizard index of the Assumptions & Sensitivity step,
+   *  where founders tag each assumption with supporting evidence. Used by
+   *  the readiness card's "preview rating after evidence tagging" CTA
+   *  (Task #966) so a founder can jump straight from the cap callout to
+   *  the place where they'd clear it. Wizard step indices are dynamic
+   *  (Actuals Intake / Chesterton paths insert extra steps), so the
+   *  caller must resolve this from `visibleSteps` rather than relying on
+   *  a hardcoded constant. Defaults to `8` for legacy callers / tests. */
+  assumptionsStepNumber?: number;
   lendingLabIntent?: SchoolProfileLendingLabIntent;
   hasLoan?: boolean;
   /** Raw model data, used by the per-metric "Why this number?" popover so
@@ -504,7 +513,7 @@ function CustomStressTestForm({ modelData }: { modelData?: FullModelData }) {
   );
 }
 
-export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jumpToStep, exportStepNumber = 9, revenueStepNumber = 4, lendingLabIntent, hasLoan, modelData }: ConsultantAnalysisViewProps) {
+export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jumpToStep, exportStepNumber = 9, revenueStepNumber = 4, assumptionsStepNumber = 8, lendingLabIntent, hasLoan, modelData }: ConsultantAnalysisViewProps) {
   const [openKpi, setOpenKpi] = useState<string | null>(null);
   const [sensitivityTab, setSensitivityTab] = useState<"revenue" | "expense">("revenue");
   const lendingRelevant = lendingLabIntent === SchoolProfileLendingLabIntent.plan_to_apply || lendingLabIntent === SchoolProfileLendingLabIntent.want_to_understand || hasLoan;
@@ -2019,6 +2028,42 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
           >
             <span className="font-semibold">Evidence-tagging cap applied: </span>
             {formatLenderReadinessCallout(data.lenderReadinessResult)}
+
+            {/* Task #966 — Preview the rating once evidence tagging is
+                complete. Only render when the cap actually lifts the
+                rating (uncapped > effective); if they match, the preview
+                would just repeat the current rating and the CTA wouldn't
+                be motivating. Copy stays coaching, not verdict-style
+                (see docs/FOUNDER_VOICE.md). */}
+            {data.lenderReadinessResult.uncappedRating &&
+              data.lenderReadinessResult.uncappedRating !==
+                data.lenderReadinessResult.effectiveRating && (
+                <div
+                  data-testid="readiness-cap-preview"
+                  className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2"
+                >
+                  <p className="text-xs text-amber-900/80">
+                    <span className="font-semibold">Currently:</span>{" "}
+                    {data.lenderReadinessResult.effectiveRating}
+                    <span className="mx-1.5 text-amber-900/50">·</span>
+                    <span className="font-semibold">After evidence tagging:</span>{" "}
+                    {data.lenderReadinessResult.uncappedRating}
+                  </p>
+                  {jumpToStep && (
+                    <button
+                      type="button"
+                      onClick={() => jumpToStep(assumptionsStepNumber)}
+                      data-testid="readiness-cap-preview-cta"
+                      className="inline-flex items-center gap-1 rounded-lg bg-amber-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm hover:bg-amber-700 transition-colors"
+                    >
+                      Tag the remaining{" "}
+                      {data.lenderReadinessResult.cap.pendingEvidenceCount ?? 0} to
+                      preview {data.lenderReadinessResult.uncappedRating}
+                      <ArrowUpRight className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              )}
           </div>
         )}
       </div>

@@ -12,9 +12,10 @@ interface ConsultantStepProps {
   jumpToStep?: (step: number) => void;
   modelId: number | null;
   revenueStepNumber?: number;
+  assumptionsStepNumber?: number;
 }
 
-export function ConsultantStep({ jumpToStep, modelId, revenueStepNumber }: ConsultantStepProps) {
+export function ConsultantStep({ jumpToStep, modelId, revenueStepNumber, assumptionsStepNumber }: ConsultantStepProps) {
   const { watch, getValues } = useFormContext();
   const entityType = watch("schoolProfile.entityType");
   const schoolType = watch("schoolProfile.schoolType");
@@ -102,6 +103,7 @@ export function ConsultantStep({ jumpToStep, modelId, revenueStepNumber }: Consu
         modelId={modelId ?? undefined}
         jumpToStep={jumpToStep}
         revenueStepNumber={revenueStepNumber}
+        assumptionsStepNumber={assumptionsStepNumber}
         lendingLabIntent={lendingLabIntent}
         hasLoan={hasLoan}
         modelData={getValues()}
