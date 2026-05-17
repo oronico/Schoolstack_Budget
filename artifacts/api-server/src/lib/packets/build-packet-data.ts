@@ -332,7 +332,7 @@ function buildExecutiveSummary(s: PacketSection, co: ConsultantOutput): PacketSe
     ...s,
     narrative: co.executiveSummary,
     linkedMetrics: [
-      { label: "Lender Readiness", value: co.lenderReadiness, sourceEngine: "consultant" },
+      { label: "Readiness Level", value: co.lenderReadiness, sourceEngine: "consultant" },
       { label: "Biggest Strength", value: co.biggestStrength, sourceEngine: "consultant" },
       { label: "Biggest Risk", value: co.biggestRisk, sourceEngine: "consultant" },
       { label: "Cash Runway", value: formatRunwayMonths(co.cashRunwayMonths), sourceEngine: "consultant" },
@@ -1573,7 +1573,7 @@ function buildKeyStrengths(s: PacketSection, co: ConsultantOutput): PacketSectio
 function buildLenderReadiness(s: PacketSection, co: ConsultantOutput): PacketSection {
   return {
     ...s,
-    narrative: `Lender Readiness: ${co.lenderReadiness}. ${co.lenderReadinessExplanation}`,
+    narrative: co.lenderReadinessExplanation,
     linkedMetrics: [
       { label: "Readiness Level", value: co.lenderReadiness, status: co.lenderReadiness === "Strong" ? "good" : co.lenderReadiness === "Needs Work" ? "warning" : "danger", sourceEngine: "consultant" },
     ],

@@ -1,89 +1,52 @@
 --- PAGE 1 ---
-Sc
-hoolStac
-k Budg
-et
-b
-y SchoolStac
-k.ai
+SchoolStack Budget
+by SchoolStack.ai
 Decision Comparison
-Pr
-iv
-ate School Demo  board-ready scenar
-io compar
-ison
-A
-EV
-ALU
-A
-TE A SITE
-Lease the anne
-x on Bir
-c
-h St.
-B
-ADJUST B
-UDGET
-Def
-er e
-xpansion,
- trim ope
-x.
+Private School Demo — board-ready scenario comparison
+A EVALUATE A SITE
+Lease the annex on Birch St.
+B ADJUST BUDGET
+Defer expansion, trim opex.
 Headline outcomes
-The better n
-umber on each metr
-ic is highlighted.
- Use this as the at-a-glance summar
-y y
-ou'd present to the board.
-Y5 NET INCOME 
-VS B
-ASE
+The better number on each metric is highlighted. Use this as the at-a-glance summary you'd
+present to the board.
+Y5 NET INCOME VS BASE
 A
 BEST
-+
-$414.0k
++$414.
+0k
 to $6.29M
 B
--$135.6k
+-$135.
+6k
 to $5.74M
-Y5 REVENUE 
-VS B
-ASE
+Y5 REVENUE VS BASE
 A
 BEST
-+
-$439.0k
++$439.
+0k
 to $9.22M
 B
--$175.6k
+-$175.
+6k
 to $8.60M
 BREAK-EVEN SHIFT
 A
 Same
-to 
-Y1
+to Y1
 B
 Same
-to 
-Y1
-CASH R
-UNW
+to Y1
+CASH RUNWAY VS BASE
 A
-Y 
-VS B
-ASE
-A
--2.0 mo
+-2.0
+mo
 to 58 mo
 B
 BEST
 0 mo
 to 60+ mo
-5-y
-ear impact,
- side-b
-y-side
+5-year impact, side-by-side
 Metric
 Side
 Y1
@@ -104,10 +67,7 @@ B
 -$85.2k
 -$109.7k
 -$135.6k
-Re
-v
-en
-ue vs base
+Revenue vs base
 A
 +$197.6k
 +$252.1k
@@ -146,87 +106,22 @@ B
 62.7%
 65.0%
 66.7%
-Wh
-y eac
-h decision
-A  Lease the anne
-x on Bir
-c
-h St.
-Adds the anne
-x classroom b
-loc
-k in 
-Y1;
- assumes 5% 
-enrollment lift offset b
-y $25k/yr in rent + utilities
-.
-B  Def
-er e
-xpansion,
- trim ope
-x.
-Holds enrollment flat (-2%) and remo
-v
-es one classified 
-position;
- sa
-v
-es ~$40k/yr in pa
-yroll & benefits
-.
-Fla
-gs & n
-udg
-es
-A  Lease the anne
-x on Bir
-c
-h St.
-[W
-atch] Lease co
-v
-enant:
- Confir
-m landlord allo
-ws mid-y
-ear 
-occupancy bef
-ore signing.
-B  Def
-er e
-xpansion,
- trim ope
-x.
-[OK] Health
-y r
-unw
-a
-y:
- Cuts e
-xtend reser
-v
-e co
-v
-er
-age past 24 
-months in 
-Y1.
-[Risk] Capacity r
-isk:
- 
-Without the anne
-x, w
-aitlist con
-v
-ersions 
-drop belo
-w target b
-y 
-Y3.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 1 of 1
+Why each decision
+A — Lease the annex on Birch St.
+Adds the annex classroom block in Y1; assumes 5%
+enrollment lift offset by $25k/yr in rent + utilities.
+B — Defer expansion, trim opex.
+Holds enrollment flat (-2%) and removes one
+classified position; saves ~$40k/yr in payroll &
+benefits.
+Flags & nudges
+A — Lease the annex on Birch St.
+[Watch] Lease covenant: Confirm landlord allows mid-
+year occupancy before signing.
+B — Defer expansion, trim opex.
+[OK] Healthy runway: Cuts extend reserve coverage
+past 24 months in Y1.
+[Risk] Capacity risk: Without the annex, waitlist
+conversions drop below target by Y3.
+SchoolStack Budget - Generated <DATE>
+Page 1 of 1

@@ -1,1099 +1,268 @@
 --- PAGE 1 ---
-Sc
-hoolStac
-k Budg
-et
-Board and Funder Summar
-y
-Liber
-ty STEM Char
-ter Sc
-hool
-5-Y
-ear Financial Ov
-er
-vie
-w f
-or Board Re
-vie
-w
+SchoolStack Budget
+Board and Funder Summary
+Liberty STEM Charter School
+5-Year Financial Overview for Board Review
 Prepared <DATE>
 Built from assumptions
-Financial Outlook:
- 
-The sc
-hool's financial outlook is str
-ong.
+Financial Outlook: The school's financial outlook is strong.
 8 health dimensions are in good standing, 1 should be monitored.
-In 
-This Repor
-t
-1.
-  Financial Ov
-er
-vie
-w & K
-e
-y Metr
-ics
-2.
-  5-Y
-ear Projection
-3.
-  
-What to 
-W
-atch (T
-op Risks)
-4.
-  Cash & Runw
-a
-y P
-osition
-5.
-  Scenar
-io Compar
-ison
-6.
-  Recommended Ne
-xt Steps
-This summar
-y is gener
-ated from the school's financial model f
-or board discussion pur
-poses
-.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 1 of 7
+In This Report
+1.  Financial Overview & Key Metrics
+2.  5-Year Projection
+3.  What to Watch (Top Risks)
+4.  Cash & Runway Position
+5.  Scenario Comparison
+6.  Recommended Next Steps
+This summary is generated from the school's financial model for board discussion purposes.
+SchoolStack Budget - Generated <DATE>
+Page 1 of 10
 --- PAGE 2 ---
-Boar
-d Commentar
-y
-T
-r
-ustees
-, this update is a snapshot of where Liber
-ty STEM Char
-ter School stands financially as of toda
-y
-, dr
-a
-wn 
-directly from the canonical model that the dashboard and lender pac
-k
-et share
-.
- 
-W
-e are planning f
-or 200 students 
-in 
-Y
-ear 1, g
-ro
-wing to 600 b
-y 
-Y
-ear 5 within a b
-uilding capacity of 600 seats
-, holding a 88% y
-ear-o
-v
-er-y
-ear 
-retention assumption.
- Gro
-wth funds the mission;
- the rest of this commentar
-y fr
-ames ho
-w the financial picture 
-suppor
-ts it.
-Oper
-ating cash carr
-ies the school f
-or 11.1 months from open bef
-ore another funding e
-v
-ent is needed, with the 
-tightest y
-ear landing at $2,258,592 of cash on hand in 
-Y
-ear 1.
- Oper
-ating break-e
-v
-en is reached in 
-Y
-ear 1.
-On the same basis a lender will use
-, 
-Y
-ear 1 debt ser
-vice co
-v
-er
-age is 30.65x.
- 
-The pac
-k
-et currently reads as:
- 
-Almost there - a f
-e
-w targeted edits will tighten the stor
-y
-.
- 
-Y
-our model has real promise
-, and there are just a f
-e
-w 
-areas to strengthen.
- 
-The recommendations abo
-v
-e will help y
-ou b
-uild a more resilient financial plan, and e
-v
-er
-y 
-impro
-v
-ement mak
-es y
-our projections more achie
-v
-ab
-le
-.
-Three matters mer
-it board attention this per
-iod.
- Let's e
-xtend y
-our cash r
-unw
-a
-y
-.
- Suggested response:
- Build a cash 
-b
-uff
-er through star
-tup fundr
-aising, a line of credit, or b
-y reducing ear
-ly e
-xpenses
-.
- 
-T
-arget at least 18 months of 
-r
-unw
-a
-y bef
-ore opening..
- Let's bac
-k the enrollment r
-amp with e
-vidence
-.
- Suggested response:
- Bac
-k e
-v
-er
-y 
-enrollment target with documented demand - signed letters of intent, w
-aitlist depth, comm
-unity sur
-v
-e
-y results
-, or 
-recr
-uitment pipeline data.
- Gro
-wth o
-v
-er 25% per y
-ear typically requires an e
-xceptional recr
-uitment engine or 
-f
-acility e
-xpansion..
- Let's tie ne
-w hires to enrollment milestones
-.
- Suggested response:
- Align staffing additions to 
-enrollment milestones
-.
- Hire when students are enrolled, not when y
-ou hope the
-y will be
-.
- Use par
-t-time or contr
-act 
-roles to br
-idge gaps
-..
-Strong 
-Y
-ear 5 net income No urgent board ask this per
-iod;
- the team will contin
-ue e
-x
-ecuting the plan.
-Ev
-er
-y figure in this commentar
-y is sourced from the same canonical engine that po
-w
-ers the rest of this pac
-k
-et.
+Board Commentary
+Trustees, this update is a snapshot of where Liberty STEM Charter School stands financially as of
+today, drawn directly from the canonical model that the dashboard and lender packet share. We
+are planning for 200 students in Year 1, growing to 600 by Year 5 within a building capacity of 600
+seats, holding a 88% year-over-year retention assumption. Growth funds the mission; the rest of
+this commentary frames how the financial picture supports it.
+Operating cash carries the school for 11.1 months from open before another funding event is
+needed, with the tightest year landing at $2,258,592 of cash on hand in Year 1. Operating break-
+even is reached in Year 1.
+On the same basis a lender will use, Year 1 debt service coverage is 30.65x. The packet currently
+reads as: Almost there - a few targeted edits will tighten the story. Your model has real promise,
+and there are just a few areas to strengthen. The recommendations above will help you build a
+more resilient financial plan, and every improvement makes your projections more achievable.
+Three matters merit board attention this period. Let's extend your cash runway. Suggested
+response: Build a cash buffer through startup fundraising, a line of credit, or by reducing early
+expenses. Target at least 18 months of runway before opening.. Let's back the enrollment ramp
+with evidence. Suggested response: Back every enrollment target with documented demand -
+signed letters of intent, waitlist depth, community survey results, or recruitment pipeline data.
+Growth over 25% per year typically requires an exceptional recruitment engine or facility
+expansion.. Let's tie new hires to enrollment milestones. Suggested response: Align staffing
+additions to enrollment milestones. Hire when students are enrolled, not when you hope they will
+be. Use part-time or contract roles to bridge gaps..
+Strong Year 5 net income No urgent board ask this period; the team will continue executing the
+plan.
+Every figure in this commentary is sourced from the same canonical engine that powers the rest of this packet.
 Financial Outlook at a Glance
-Financial Outlook:
- 
-The sc
-hool's financial outlook is str
-ong.
-PR
-OJECTED
+Financial Outlook: The school's financial outlook is strong.
+PROJECTED
 8 health dimensions are in good standing, 1 should be monitored.
-Cash P
-osition:
- Cash runwa
-y is appr
-o
-ximatel
-y 11.1 months
+Cash Position: Cash runway is approximately 11.1 months
 Founder's Narrative
-Fla
-g
-g
-ed Assumptions
-[W
-arning] 
-50% g
-ro
-wth (Y
-ear 1 ! 2)
+Flagged Assumptions
+[Warning] 50% growth (Year 1 → 2)
 Assumptions Confidence
-Overall:
- Needs Suppor
-t
-   0% w
-eighted e
-vidence  ·  0 of 22 tagged   
-PR
-OJECTED
-This does not mean y
-our plan is w
-eak.
- It means this par
-t needs more clar
-ity
-.
-Each major assumption belo
-w is tagged b
-y the f
-ounder with the source the
-y leaned on.
- Higher-
-confidence sources (actuals
-, signed ag
-reements
-, wr
-itten quotes) are stronger e
-vidence than research 
-benchmar
-ks or estimates
-.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 2 of 7
+SchoolStack Budget - Generated <DATE>
+Page 2 of 10
 --- PAGE 3 ---
-0 of 22 assumptions tagged y
-et  the f
-ounder has not anchored an
-y inputs to e
-vidence
-.
- P
-osture def
-aults to "Needs Suppor
-t" 
-until at least some k
-e
-ys are tagged.
-Financial Over
-vie
-w
-Liber
-ty STEM Char
-ter School projects $18,125,509 in 
-Y
-ear 5 re
-v
-en
-ue with a 69.3% net margin.
- 
-There is 1 area to 
-strengthen, and the recommendations belo
-w will help y
-ou b
-uild a more compelling financial stor
-y
-.
- 
-The school has 
-appro
-ximately 11.1 months of cash r
-unw
-a
-y
-.
-[~] 
-Lender Readiness:
- Needs 
-W
-or
-k
-[~] 
-Biggest Strength:
- Strong 
-Y
-ear 5 net income
-[~] 
-Biggest Risk:
- Pub
-lic funding is the pr
-imar
-y re
-v
-en
-ue source  model disb
-ursement timing carefully and maintain cash 
-reser
-v
-es f
-or funding gaps
-[~] 
-Cash Runw
-a
-y:
- 11.1 months
-Sc
-hool Over
-vie
-w
-Liber
-ty STEM Char
-ter School is a Star
-tup / Pre-Opening Char
-ter School organiz
-ed as a 501(c)(3) Nonprofit with 
-a Pub
-lic Funded (Char
-ter) funding profile
-.
-5-Y
-ear Financial Pr
-ojection
-The model reaches break-e
-v
-en in 
-Y
-ear 1.
- 
-Y
-ear 5 change in net assets is projected at $12.6M (69.3% margin).
- Breake
-ven enr
-ollment
-Break
-e
-v
-en enrollment is 97 students (106% abo
-v
-e 
-Y
-ear 1 enrollment).
- Accounting basis
-All projections are prepared on an accr
-ual basis;
- the school currently k
-eeps books on a undeter
-mined basis
-.
-[+] 
-Re
-v
-en
-ue per Student (Y
-ear 1):
- $24,375
-[+] 
-Cost per Student (Y
-ear 1):
- $14,082
-[+] 
-Staffing Cost (% of Re
-v
-en
-ue):
- 35.3%
-[+] 
-Oper
-ating Cost (% of Re
-v
-en
-ue):
- 22.2%
-[+] 
-Net margin (Y
-ear 1):
- 42.2%
-[+] 
-Net margin (Y
-ear 5):
- 69.3%
-5-Y
-ear Chang
-e in Net Assets Pr
-ojection
-Y
-ear
+Overall: Needs Support   0% weighted evidence  ·  0 of 22 tagged
+PROJECTED
+This does not mean your plan is weak. It means this part needs more clarity.
+Each major assumption below is tagged by the founder with the source they leaned on.
+Higher-confidence sources (actuals, signed agreements, written quotes) are stronger
+evidence than research benchmarks or estimates.
+0 of 22 assumptions tagged yet — the founder has not anchored any inputs to evidence. Posture defaults to
+"Needs Support" until at least some keys are tagged.
+Financial Overview
+Liberty STEM Charter School projects $18,125,509 in Year 5 revenue with a 69.3% net margin.
+There is 1 area to strengthen, and the recommendations below will help you build a more
+compelling financial story. The school has approximately 11.1 months of cash runway.
+[~] Readiness Level: Needs Work
+[~] Biggest Strength: Strong Year 5 net income
+[~] Biggest Risk: Public funding is the primary revenue source — model disbursement timing carefully and
+maintain cash reserves for funding gaps
+[~] Cash Runway: 11.1 months
+School Overview
+Liberty STEM Charter School is a Startup / Pre-Opening Charter School organized as a 501(c)(3)
+Nonprofit with a Public Funded (Charter) funding profile.
+5-Year Financial Projection
+The model reaches break-even in Year 1. Year 5 change in net assets is projected at $12.6M (69.3%
+margin).
+• Breakeven enrollment
+Breakeven enrollment is 97 students (106% above Year 1 enrollment).
+• Accounting basis
+All projections are prepared on an accrual basis; the school currently keeps books on a undetermined basis.
+[+] Revenue per Student (Year 1): $24,375
+[+] Cost per Student (Year 1): $14,082
+[+] Staffing Cost (% of Revenue): 35.3%
+[+] Operating Cost (% of Revenue): 22.2%
+[+] Net margin (Year 1): 42.2%
+[+] Net margin (Year 5): 69.3%
+5-Year Change in Net Assets Projection
+SchoolStack Budget - Generated <DATE>
+Page 3 of 10
+--- PAGE 4 ---
+Year
 Students
-Re
-ven
-ue
+Revenue
 Expenses
-Chang
-e in Net 
-Assets
-Mar
-gin
-Y
-ear 1
+Change in
+Net Assets
+Margin
+Year 1
 200
 $4.9M
 $2.8M
 $2.1M
 42.2%
-Y
-ear 2
+Year 2
 300
 $8.7M
 $3.9M
 $4.8M
 55.0%
-Y
-ear 3
+Year 3
 400
 $11.6M
 $4.7M
 $7.0M
 59.8%
-Y
-ear 4
+Year 4
 500
 $14.8M
 $5.2M
 $9.7M
 65.1%
-Y
-ear 5
+Year 5
 600
 $18.1M
 $5.6M
 $12.6M
 69.3%
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 3 of 7
---- PAGE 4 ---
 Staffing Plan
-Staffing costs are $1.7M in 
-Y
-ear 1, representing 35.3% of re
-v
-en
-ue
-.
- 
-This lea
-v
-es health
-y room f
-or other oper
-ating 
-costs
-.
-[+] 
-Staffing % of Re
-v
-en
-ue:
- 35.3%
-Suppor
-ting Assumptions
-Ex
-ecutiv
-e Director
-  $110,000,
- 1 FTE
-Pr
-incipal
-  $90,000,
- 1 FTE
-Dean of Students
-  $75,000,
- 1 FTE
-STEM 
-T
-eachers
-  $55,000,
- 8 FTE
-Gener
-al 
-T
-eachers
-  $48,000,
- 4 FTE
-Special Education Staff
-  $52,000,
- 2 FTE
-Office & Finance Staff
-  $45,000,
- 3 FTE
-Custodial / Maintenance
-  $35,000,
- 2 FTE
+Staffing costs are $1.7M in Year 1, representing 35.3% of revenue. This leaves healthy room for
+other operating costs.
+[+] Staffing % of Revenue: 35.3%
+Supporting Assumptions
+Executive Director  $110,000, 1 FTE
+Principal  $90,000, 1 FTE
+Dean of Students  $75,000, 1 FTE
+STEM Teachers  $55,000, 8 FTE
+General Teachers  $48,000, 4 FTE
+Special Education Staff  $52,000, 2 FTE
+Office & Finance Staff  $45,000, 3 FTE
+Custodial / Maintenance  $35,000, 2 FTE
 Financial Health Assessment
-Across 9 health dimensions:
- 8 health
-y
-, 1 on w
-atch, 0 at r
-isk.
-[+] 
-viability:
- Health
-y
-[+] 
-liquidity:
- Health
-y
-[+] 
-cash flo
-w timing:
- Health
-y
-[+] 
-staffing b
-urden:
- Health
-y
-[+] 
-f
-acility b
-urden:
- Health
-y
-[+] 
-debt aff
-ordability:
- Health
-y
+Across 9 health dimensions: 8 healthy, 1 on watch, 0 at risk.
+[+] viability: Healthy
+[+] liquidity: Healthy
+[+] cash flow timing: Healthy
+[+] staffing burden: Healthy
+[+] facility burden: Healthy
+[+] debt affordability: Healthy
 Health Dimensions
 Dimension
 Status
 Details
 Viability
-Health
-y
-The model reaches net income ear
-ly and 
-sustains strong margins through 
-Y
-ear 5.
+Healthy
+The model reaches net income early and
+sustains strong margins through Year 5.
 Liquidity
-Health
-y
-Cash sta
-ys positiv
-e throughout the projection 
-and reser
-v
-es e
-xceed 3 months of e
-xpenses
-.
-Cash Flo
-w 
-Timing
-Health
-y
-Ev
-er
-y month gener
-ates at least as m
-uch cash 
-as it consumes  no timing gaps to br
-idge
-.
+Healthy
+Cash stays positive throughout the
+projection and reserves exceed 3 months
+of expenses.
+Cash Flow Timing
+Healthy
+Every month generates at least as much
+cash as it consumes — no timing gaps to
+bridge.
 Staffing Burden
-Health
-y
-Staffing at 35% of re
-v
-en
-ue lea
-v
-es room f
-or 
-f
-acilities
-, prog
-r
-ams
-, and reser
-v
-es
-.
-F
-acility Burden
-Health
-y
-F
-acility costs at 5% of re
-v
-en
-ue are w
-ell-
-managed and lea
-v
-e b
-udget f
-or prog
-r
-ams
-.
-Debt Aff
-ordability
-Health
-y
-DSCR of 30.64x pro
-vides comf
-or
-tab
-le co
-v
-er
-age 
-of debt pa
-yments with room to spare
-.
-Re
-v
-en
-ue Concentr
-ation
-W
-atch closely
-95% of re
-v
-en
-ue comes from pub
-lic funding.
- 
-This 
-is typical f
-or char
-ter schools
-, b
-ut disb
-ursement 
-timing and policy changes can create cash flo
-w 
-gaps
-.
-Da
-ys Cash
-Health
-y
-267 da
-ys of cash on hand e
-xceeds the 90-da
-y 
-benchmar
-k, pro
-viding a strong liquidity cushion.
-Reser
-v
-e Strength
-Health
-y
-77.7 months of reser
-v
-es b
-y 
-Y
-ear 5  a strong 
-b
-uff
-er f
-or une
-xpected costs
-.
-K
-e
-y Strengths
-The model demonstr
-ates 5 notab
-le strengths
-.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 4 of 7
+Healthy
+Staffing at 35% of revenue leaves room
+for facilities, programs, and reserves.
+Facility Burden
+Healthy
+Facility costs at 5% of revenue are well-
+managed and leave budget for programs.
+Debt Affordability
+Healthy
+DSCR of 30.64x provides comfortable
+coverage of debt payments with room to
+spare.
+SchoolStack Budget - Generated <DATE>
+Page 4 of 10
 --- PAGE 5 ---
-[+] 
-Re
-v
-en
-ue per Student (Y
-ear 1):
- $24,375
-[+] 
-Cost per Student (Y
-ear 1):
- $14,082
-[+] 
-Staffing Cost (% of Re
-v
-en
-ue):
- 35.3%
-[+] 
-Oper
-ating Cost (% of Re
-v
-en
-ue):
- 22.2%
-[+] 
-Net margin (Y
-ear 1):
- 42.2%
-[+] 
-Net margin (Y
-ear 5):
- 69.3%
-What to 
-W
-atc
-h
-The board should be a
-w
-are of 3 k
-e
-y areas:
-1.
- Let's e
-xtend y
-our cash runwa
-y
-An 18-month r
-unw
-a
-y means a single late tuition cycle or dela
-y
-ed state disb
-ursement isn't an emergency
-.
- Building the 
-cushion no
-w is f
-ar easier than reb
-uilding it after opening da
-y
-.
-Action:
- 
-Build a cash b
-uff
-er through star
-tup fundr
-aising, a line of credit, or b
-y reducing ear
-ly e
-xpenses
-.
- 
-T
-arget at least 18 months of r
-unw
-a
-y 
-bef
-ore opening.
- Ne
-xt step:
- Open Step 2:
- School Details and r
-aise opening cash, or tr
-im 
-Y
-ear 1 e
-xpenses in Step 7, until projected cash 
-r
-unw
-a
-y clears 18 months
-.
-2.
- Let's bac
-k the enr
-ollment ramp with e
-vidence
-Enrollment is the engine of e
-v
-er
-y re
-v
-en
-ue and staffing assumption do
-wnstream.
- 
-The more e
-vidence w
-e can attach to each 
-y
-ear's n
-umber
-, the more confident the rest of the model becomes
-.
-Action:
- 
-Bac
-k e
-v
-er
-y enrollment target with documented demand  signed letters of intent, w
-aitlist depth, comm
-unity sur
-v
-e
-y results
-, or 
-recr
-uitment pipeline data.
- Gro
-wth o
-v
-er 25% per y
-ear typically requires an e
-xceptional recr
-uitment engine or f
-acility e
-xpansion.
- Ne
-xt step:
- 
-Open Step 4:
- Enrollment and either soften the steepest y
-ear to a 15-25% jump
-, or paste y
-our w
-aitlist count, signed letters of intent, and 
-recr
-uitment plan into the Stor
-y step so re
-vie
-w
-ers see the e
-vidence
-.
-3.
- Let's tie ne
-w hires to enr
-ollment milestones
-Hir
-ing slightly behind enrollment, r
-ather than ahead of it, k
-eeps fix
-ed costs aligned with the re
-v
-en
-ue actually arr
-iving.
- It also 
-giv
-es y
-ou a clean ans
-w
-er to 'what tr
-iggers each ne
-w role'.
-Action:
- 
-Align staffing additions to enrollment milestones
-.
- Hire when students are enrolled, not when y
-ou hope the
-y will be
-.
- Use par
-t-time 
-or contr
-act roles to br
-idge gaps
-.
- Ne
-xt step:
- Open Step 6:
- Staffing and tie each ne
-w role's star
-t date to a specific enrollment milestone (e
-.g.
- 
-'add when 
-Y2 enrollment hits 60'), or push the role into a later y
-ear
-.
-Recommended Ne
-xt Steps
-1.
- Char
-ter Funding 
-Timing & Cash Flo
-w Risk
-94.7% of re
-v
-en
-ue comes from pub
-lic per-pupil funding  this is enrollment-dr
-iv
-en income and a strong f
-oundation.
- 
-The 
-pr
-imar
-y r
-isk is disb
-ursement timing:
- char
-ter funding f
-ollo
-ws a state-defined schedule
-, so ensure y
-ou ha
-v
-e cash reser
-v
-es or 
-a line of credit to co
-v
-er gaps betw
-een enrollment counts and pa
-yment receipt.
-This strengthens the model and reduces future r
-isk.
-2.
- Stress-T
-est 
-Y
-our Enr
-ollment Assumptions
-Model what happens if enrollment comes in 20% belo
-w plan.
- Understanding y
-our do
-wnside scenar
-io helps y
-ou prepare 
-contingency plans
-.
-This strengthens the model and reduces future r
-isk.
-3.
- Document 
-Y
-our Gr
-o
-wth Strategy
-Great projections are bac
-k
-ed b
-y a clear plan.
- Document y
-our mar
-k
-eting str
-ategy
-, enrollment pipeline
-, and comm
-unity 
-outreach, as this is the roadmap that tur
-ns y
-our n
-umbers into reality
-.
-This strengthens the model and reduces future r
-isk.
-Scenario Comparison
-The model includes 3 scenar
-ios sho
-wing ho
-w changes in k
-e
-y assumptions aff
-ect 
-Y
-ear 5 outcomes
-.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 5 of 7
+Revenue Concentration
+Watch closely
+95% of revenue comes from public
+funding. This is typical for charter schools,
+but disbursement timing and policy
+changes can create cash flow gaps.
+SchoolStack Budget - Generated <DATE>
+Page 5 of 10
 --- PAGE 6 ---
+Days Cash
+Healthy
+267 days of cash on hand exceeds the 90-
+day benchmark, providing a strong
+liquidity cushion.
+SchoolStack Budget - Generated <DATE>
+Page 6 of 10
+--- PAGE 7 ---
+Reserve Strength
+Healthy
+77.7 months of reserves by Year 5 — a
+strong buffer for unexpected costs.
+SchoolStack Budget - Generated <DATE>
+Page 7 of 10
+--- PAGE 8 ---
+Key Strengths
+The model demonstrates 5 notable strengths.
+[+] Revenue per Student (Year 1): $24,375
+[+] Cost per Student (Year 1): $14,082
+[+] Staffing Cost (% of Revenue): 35.3%
+[+] Operating Cost (% of Revenue): 22.2%
+[+] Net margin (Year 1): 42.2%
+[+] Net margin (Year 5): 69.3%
+What to Watch
+The board should be aware of 3 key areas:
+1. Let's extend your cash runway
+An 18-month runway means a single late tuition cycle or delayed state disbursement isn't an emergency.
+Building the cushion now is far easier than rebuilding it after opening day.
+Action: Build a cash buffer through startup fundraising, a line of credit, or by reducing early expenses. Target at least 18
+months of runway before opening. Next step: Open Step 2: School Details and raise opening cash, or trim Year 1
+expenses in Step 7, until projected cash runway clears 18 months.
+2. Let's back the enrollment ramp with evidence
+Enrollment is the engine of every revenue and staffing assumption downstream. The more evidence we can
+attach to each year's number, the more confident the rest of the model becomes.
+Action: Back every enrollment target with documented demand — signed letters of intent, waitlist depth, community
+survey results, or recruitment pipeline data. Growth over 25% per year typically requires an exceptional recruitment
+engine or facility expansion. Next step: Open Step 4: Enrollment and either soften the steepest year to a 15-25% jump,
+or paste your waitlist count, signed letters of intent, and recruitment plan into the Story step so reviewers see the
+evidence.
+3. Let's tie new hires to enrollment milestones
+Hiring slightly behind enrollment, rather than ahead of it, keeps fixed costs aligned with the revenue
+actually arriving. It also gives you a clean answer to 'what triggers each new role'.
+Action: Align staffing additions to enrollment milestones. Hire when students are enrolled, not when you hope they will
+be. Use part-time or contract roles to bridge gaps. Next step: Open Step 6: Staffing and tie each new role's start date to a
+specific enrollment milestone (e.g. 'add when Y2 enrollment hits 60'), or push the role into a later year.
+Recommended Next Steps
+1. Charter Funding Timing & Cash Flow Risk
+94.7% of revenue comes from public per-pupil funding — this is enrollment-driven income and a strong
+foundation. The primary risk is disbursement timing: charter funding follows a state-defined schedule, so
+ensure you have cash reserves or a line of credit to cover gaps between enrollment counts and payment
+receipt.
+This strengthens the model and reduces future risk.
+2. Stress-Test Your Enrollment Assumptions
+Model what happens if enrollment comes in 20% below plan. Understanding your downside scenario helps
+you prepare contingency plans.
+This strengthens the model and reduces future risk.
+3. Document Your Growth Strategy
+Great projections are backed by a clear plan. Document your marketing strategy, enrollment pipeline, and
+community outreach, as this is the roadmap that turns your numbers into reality.
+This strengthens the model and reduces future risk.
+Scenario Comparison
+The model includes 3 scenarios showing how changes in key assumptions affect Year 5 outcomes.
+SchoolStack Budget - Generated <DATE>
+Page 8 of 10
+--- PAGE 9 ---
 Scenario
-Y5 Re
-ven
-ue
+Y5 Revenue
 Y5 Net Income
-Y5 Mar
-gin
-Conser
-v
-ativ
-e (25% f
-e
-w
-er students)
+Y5 Margin
+Conservative (25% fewer students)
 $13.9M
 $9.1M
 65.5%
@@ -1105,540 +274,119 @@ State funding cut (-10% per pupil)
 $16.6M
 $11.1M
 66.7%
-Grant 
-V
-er
-sion
-Thank y
-ou f
-or consider
-ing Liber
-ty STEM Char
-ter School.
- 
-This narr
-ativ
-e is dr
-a
-wn directly from the same canonical 
-financial model the board and an
-y lender w
-ould see
-, so the n
-umbers that f
-ollo
-w tie bac
-k line f
-or line to our 
-b
-udget.
- Ov
-er the g
-r
-ant hor
-iz
-on w
-e are planning f
-or 200 students in 
-Y
-ear 1, g
-ro
-wing to 600 b
-y 
-Y
-ear 5 while holding 
-a 88% y
-ear-o
-v
-er-y
-ear retention assumption.
- Each additional seat funded b
-y this g
-r
-ant tr
-anslates directly into 
-students ser
-v
-ed against that mission.
-Philanthropic and other donor-dependent suppor
-t currently represents about 4% of our 
-Y
-ear 1 re
-v
-en
-ue mix.
- Gr
-ant 
-funding is what br
-idges the gap betw
-een our enrollment r
-amp and oper
-ating sustainability - without it the model 
-w
-ould not reach the tr
-ajector
-y descr
-ibed abo
-v
-e
-.
- 
-The plan does not assume an
-y single funder closes that gap on 
-their o
-wn;
- instead, it relies on a por
-tf
-olio of g
-r
-ants and ear
-ned re
-v
-en
-ue that g
-ro
-ws y
-ear o
-v
-er y
-ear
-.
-Oper
-ating cash carr
-ies the school f
-or 11.1 months from open bef
-ore the ne
-xt funding milestone is needed, with 
-the tightest y
-ear landing at $2,258,592 of cash on hand in 
-Y
-ear 1.
- Oper
-ating break-e
-v
-en is reached in 
-Y
-ear 1, 
-which is the point at which ear
-ned re
-v
-en
-ue alone w
-ould co
-v
-er oper
-ating e
-xpenses
-.
-T
-w
-o ste
-w
-ardship matters w
-e w
-ant to surf
-ace up front f
-or our funders
-.
- Let's e
-xtend y
-our cash r
-unw
-a
-y
-.
- Our planned 
-response is to Build a cash b
-uff
-er through star
-tup fundr
-aising, a line of credit, or b
-y reducing ear
-ly e
-xpenses
-.
- 
-T
-arget at least 18 months of r
-unw
-a
-y bef
-ore opening..
- Let's bac
-k the enrollment r
-amp with e
-vidence
-.
- Our planned 
-response is to Bac
-k e
-v
-er
-y enrollment target with documented demand - signed letters of intent, w
-aitlist depth, 
-comm
-unity sur
-v
-e
-y results
-, or recr
-uitment pipeline data.
- Gro
-wth o
-v
-er 25% per y
-ear typically requires an 
-e
-xceptional recr
-uitment engine or f
-acility e
-xpansion..
-Strong 
-Y
-ear 5 net income Gr
-ant funding will be applied directly to enrollment r
-amp e
-xpenses descr
-ibed in the 
-b
-udget.
- 
-W
-e are happ
-y to w
-alk through an
-y line of the model in detail with the funder
-.
-Ev
-er
-y figure in this commentar
-y is sourced from the same canonical engine that po
-w
-ers the rest of this pac
-k
-et.
-Standar
-d Lender Stress 
-T
-ests
-Fiv
-e fix
-ed do
-wnside scenar
-ios re-r
-un against the canonical model.
- Each ro
-w sho
-ws the w
-orst-y
-ear DSCR, ending-
-cash trough, and 
-Y
-ear-1 net-income delta vs base
-.
- Identical figures appear on the f
-ounder dashboard and in the 
-lender pro-f
-or
-ma w
-or
-kbook.
-Base case:
-  Min DSCR 30.84x · Min ending 
-cash $2,272,877 · Runwa
-y 11.1 mo · Lo
-west 
-monthl
-y cash 
-Y1 J
-ul $554,001
-Enr
-ollment -10%
-All fiv
-e enrollment y
-ears scaled do
-wn b
-y 10%  the standard lender enrollment-miss sensitivity
-.
-  Min DSCR:
- 26.32x
-   ·   Min ending cash:
- $1,958,775   ·   Runw
-a
-y:
- 10.2 mo   ·   Break-e
-v
-en:
- 
-Y
-ear 1
-  Lo
-w
-est monthly cash:
- 
-Y
-ear 1 (J
-ul) $530,285
-  
-Y
-ear-1 net income vs base:
- -$314,102
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 6 of 7
---- PAGE 7 ---
-Enr
-ollment -20%
-All fiv
-e enrollment y
-ears scaled do
-wn b
-y 20%  the stretch do
-wnside lenders use to confir
-m the school can sur
-viv
-e a soft-launch.
-  Min DSCR:
- 21.74x
-   ·   Min ending cash:
- $1,640,891   ·   Runw
-a
-y:
- 9.2 mo   ·   Break-e
-v
-en:
- 
-Y
-ear 1
-  Lo
-w
-est monthly cash:
- 
-Y
-ear 1 (J
-ul) $506,191
-  
-Y
-ear-1 net income vs base:
- -$631,986
-ESA / Pub
-lic Funding Dela
-y
-ed 3 Months
-Y
-ear-1 ESA, school-choice
-, and pub
-lic-funding receipts reduced b
-y 25% ("H 3 months dela
-y
-ed) to sim
-ulate a slo
-w first disb
-ursement.
-  Min DSCR:
- 14.23x
-   ·   Min ending cash:
- $1,118,711   ·   Runw
-a
-y:
- 5.5 mo   ·   Break-e
-v
-en:
- 
-Y
-ear 1
-  Lo
-w
-est monthly cash:
- 
-Y
-ear 1 (J
-ul) $457,820
-  
-Y
-ear-1 net income vs base:
- -$1,154,167
-Rent Shoc
-k +25%
-Occupancy & f
-acility e
-xpense ro
-ws escalated b
-y 25%  co
-v
-ers a lease rene
-w
-al, mar
-k
-et-r
-ate reset, or unb
-udgeted CAM/utilities 
-sur
-pr
-ise
-.
-  Min DSCR:
- 30.05x
-   ·   Min ending cash:
- $2,217,877   ·   Runw
-a
-y:
- 10.6 mo   ·   Break-e
-v
-en:
- 
-Y
-ear 1
-  Lo
-w
-est monthly cash:
- 
-Y
-ear 1 (J
-ul) $548,501
-  
-Y
-ear-1 net income vs base:
- -$55,000
-Founder Comp Normaliz
-ed to Market
-F
-ounder compensation re-cast at the mar
-k
-et-r
-ate benchmar
-k (with benefits + pa
-yroll tax).
- 
-The lender / board vie
-w of tr
-ue oper
-ating cost.
-  Min DSCR:
- 30.65x
-   ·   Min ending cash:
- $2,272,877   ·   Runw
-a
-y:
- 11.1 mo   ·   Break-e
-v
-en:
- 
-Y
-ear 1
-  Lo
-w
-est monthly cash:
- 
-Y
-ear 1 (J
-ul) $554,001
-  
-Y
-ear-1 net income vs base:
- -$13,265
+Grant Version
+Thank you for considering Liberty STEM Charter School. This narrative is drawn directly from the
+same canonical financial model the board and any lender would see, so the numbers that follow tie
+back line for line to our budget. Over the grant horizon we are planning for 200 students in Year 1,
+growing to 600 by Year 5 while holding a 88% year-over-year retention assumption. Each additional
+seat funded by this grant translates directly into students served against that mission.
+Philanthropic and other donor-dependent support currently represents about 4% of our Year 1
+revenue mix. Grant funding is what bridges the gap between our enrollment ramp and operating
+sustainability - without it the model would not reach the trajectory described above. The plan does
+not assume any single funder closes that gap on their own; instead, it relies on a portfolio of grants
+and earned revenue that grows year over year.
+Operating cash carries the school for 11.1 months from open before the next funding milestone is
+needed, with the tightest year landing at $2,258,592 of cash on hand in Year 1. Operating break-
+even is reached in Year 1, which is the point at which earned revenue alone would cover operating
+expenses.
+Two stewardship matters we want to surface up front for our funders. Let's extend your cash
+runway. Our planned response is to Build a cash buffer through startup fundraising, a line of credit,
+or by reducing early expenses. Target at least 18 months of runway before opening.. Let's back the
+enrollment ramp with evidence. Our planned response is to Back every enrollment target with
+documented demand - signed letters of intent, waitlist depth, community survey results, or
+recruitment pipeline data. Growth over 25% per year typically requires an exceptional recruitment
+engine or facility expansion..
+Strong Year 5 net income Grant funding will be applied directly to enrollment ramp expenses
+described in the budget. We are happy to walk through any line of the model in detail with the
+funder.
+Every figure in this commentary is sourced from the same canonical engine that powers the rest of this packet.
+Standard Lender Stress Tests
+Five fixed downside scenarios re-run against the canonical model. Each row shows the worst-year
+DSCR, ending-cash trough, and Year-1 net-income delta vs base. Identical figures appear on the
+founder dashboard and in the lender pro-forma workbook.
+Base case:  Min DSCR 30.84x · Min
+ending cash $2,272,877 · Runway 11.1
+mo · Lowest monthly cash Y1 Jul
+$554,001
+SchoolStack Budget - Generated <DATE>
+Page 9 of 10
+--- PAGE 10 ---
+Enrollment -10%
+All five enrollment years scaled down by 10% — the standard lender enrollment-miss sensitivity.
+  Min DSCR: 26.32x   ·   Min ending cash: $1,958,775   ·   Runway: 10.2 mo   ·   Break-even: Year 1
+  Lowest monthly cash: Year 1 (Jul) $530,285
+  Year-1 net income vs base: -$314,102
+Enrollment -20%
+All five enrollment years scaled down by 20% — the stretch downside lenders use to confirm the school can survive a
+soft-launch.
+  Min DSCR: 21.74x   ·   Min ending cash: $1,640,891   ·   Runway: 9.2 mo   ·   Break-even: Year 1
+  Lowest monthly cash: Year 1 (Jul) $506,191
+  Year-1 net income vs base: -$631,986
+ESA / Public Funding Delayed 3 Months
+Year-1 ESA, school-choice, and public-funding receipts reduced by 25% (≈ 3 months delayed) to simulate a slow first
+disbursement.
+  Min DSCR: 14.23x   ·   Min ending cash: $1,118,711   ·   Runway: 5.5 mo   ·   Break-even: Year 1
+  Lowest monthly cash: Year 1 (Jul) $457,820
+  Year-1 net income vs base: -$1,154,167
+Rent Shock +25%
+Occupancy & facility expense rows escalated by 25% — covers a lease renewal, market-rate reset, or unbudgeted CAM/
+utilities surprise.
+  Min DSCR: 30.05x   ·   Min ending cash: $2,217,877   ·   Runway: 10.6 mo   ·   Break-even: Year 1
+  Lowest monthly cash: Year 1 (Jul) $548,501
+  Year-1 net income vs base: -$55,000
+Founder Comp Normalized to Market
+Founder compensation re-cast at the market-rate benchmark (with benefits + payroll tax). The lender / board view of
+true operating cost.
+  Min DSCR: 30.65x   ·   Min ending cash: $2,272,877   ·   Runway: 11.1 mo   ·   Break-even: Year 1
+  Lowest monthly cash: Year 1 (Jul) $554,001
+  Year-1 net income vs base: -$13,265
 Founder Compensation
-P
-er-y
-ear f
-ounder pa
-y sho
-wn tw
-o w
-a
-ys:
- as planned (what the f
-ounder dr
-a
-ws) and at mar
-k
-et r
-ate (what a 
-compar
-ab
-le hire w
-ould cost).
- 
-The lender adjustment is the gap underwr
-iters apply to staffing cost and DSCR.
+Per-year founder pay shown two ways: as planned (what the founder draws) and at market rate
+(what a comparable hire would cost). The lender adjustment is the gap underwriters apply to
+staffing cost and DSCR.
 Line
 Y1
 Y2
 Y3
 Y4
 Y5
-5-Yr 
-T
-otal
-As planned (repor
-ted)
+5-Y
+As planned (reported)
 $110,000
 $113,300
 $116,699
 $120,200
 $123,806
-$584,005
-  Fully-loaded (incl.
- benefits + pa
-yroll tax)
+$
+  Fully-loaded (incl. benefits + payroll tax)
 $145,915
 $150,292
 $154,801
 $159,445
 $164,229
-$774,683
-Mar
-k
-et r
-ate (nor
-maliz
-ed)
+$
+Market rate (normalized)
 $120,000
 $155,000
 $159,000
 $202,000
 $208,000
-$844,000
-  Fully-loaded (incl.
- benefits + pa
-yroll tax)
+$
+  Fully-loaded (incl. benefits + payroll tax)
 $159,180
 $205,608
 $210,914
 $267,953
 $275,912
-$1,119,566
+$1,
 Lender adjustment (market - planned)
 $13,265
 $55,315
 $56,112
 $108,508
 $111,683
-$344,883
-Note:
- F
-ounder is pa
-ying themselv
-es belo
-w mar
-k
-et r
-ate (s
-w
-eat equity).
- Lenders and boards underwr
-ite to the mar
-k
-et-r
-ate line;
- the adjustment 
-sho
-ws the gap
-.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 7 of 7
+$3
+Note: Founder is paying themselves below market rate (“sweat equity”). Lenders and boards underwrite to the market-rate
+line; the adjustment shows the gap.
+SchoolStack Budget - Generated <DATE>
+Page 10 of 10

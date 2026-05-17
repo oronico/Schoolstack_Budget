@@ -1,4 +1,3 @@
-import zlib from "node:zlib";
 import { generateLenderPacketPDF } from "../src/lib/packets/lender-packet-pdf.js";
 import { generateBoardPacketPDF } from "../src/lib/packets/board-packet-pdf.js";
 import { buildLenderPacket } from "../src/lib/packets/build-lender-packet.js";
@@ -7,6 +6,7 @@ import { runConsultantEngine } from "../src/lib/consultant-engine.js";
 import type { ModelData } from "../src/lib/workbook-helpers.js";
 import { microschoolStartup } from "./sample-payloads.js";
 
+import { extractPdfText } from "./_pdf-text-snapshot-util.js";
 let passed = 0;
 let failed = 0;
 const failures: string[] = [];
@@ -36,112 +36,6 @@ function notContains(label: string, haystack: string, needle: string) {
 // We handle PDF string escapes including 3-digit octal codes used by WinAnsi
 // for high-bit chars like `·` (\267) and `•` (\225).
 // ---------------------------------------------------------------------------
-function extractPDFText(pdf: Buffer): string {
-  const out: string[] = [];
-  let cursor = 0;
-  while (cursor < pdf.length) {
-    const sIdx = pdf.indexOf("stream", cursor);
-    if (sIdx === -1) break;
-    let dataStart = sIdx + "stream".length;
-    if (pdf[dataStart] === 0x0d) dataStart++;
-    if (pdf[dataStart] === 0x0a) dataStart++;
-    const eIdx = pdf.indexOf("endstream", dataStart);
-    if (eIdx === -1) break;
-    let dataEnd = eIdx;
-    if (pdf[dataEnd - 1] === 0x0a) dataEnd--;
-    if (pdf[dataEnd - 1] === 0x0d) dataEnd--;
-    const raw = pdf.subarray(dataStart, dataEnd);
-
-    let body: string;
-    try {
-      body = zlib.inflateSync(raw).toString("binary");
-    } catch {
-      body = raw.toString("binary");
-    }
-    out.push(extractStringLiterals(body));
-    cursor = eIdx + "endstream".length;
-  }
-  return out.join("\n");
-}
-
-function extractStringLiterals(content: string): string {
-  let result = "";
-  let i = 0;
-  while (i < content.length) {
-    const ch = content[i];
-    if (ch === "(") {
-      // PDF literal string with balanced parens + escapes.
-      i++;
-      let depth = 1;
-      let str = "";
-      while (i < content.length && depth > 0) {
-        const c = content[i];
-        if (c === "\\") {
-          const n = content[i + 1];
-          if (n === undefined) { i++; break; }
-          if (n === "n") { str += "\n"; i += 2; continue; }
-          if (n === "r") { str += "\r"; i += 2; continue; }
-          if (n === "t") { str += "\t"; i += 2; continue; }
-          if (n === "b" || n === "f") { i += 2; continue; }
-          if (n === "(" || n === ")" || n === "\\") { str += n; i += 2; continue; }
-          if (n >= "0" && n <= "7") {
-            let oct = "";
-            i++;
-            while (oct.length < 3 && i < content.length && content[i] >= "0" && content[i] <= "7") {
-              oct += content[i];
-              i++;
-            }
-            str += String.fromCharCode(parseInt(oct, 8));
-            continue;
-          }
-          str += n;
-          i += 2;
-          continue;
-        }
-        if (c === "(") { depth++; str += c; i++; continue; }
-        if (c === ")") {
-          depth--;
-          if (depth === 0) { i++; break; }
-          str += c;
-          i++;
-          continue;
-        }
-        str += c;
-        i++;
-      }
-      result += str;
-      continue;
-    }
-
-    if (ch === "<" && content[i + 1] !== "<") {
-      // PDF hex string. Two-hex-digit pairs map directly to byte values.
-      // For PDFKit + Helvetica/standard fonts this is WinAnsi (≈ ISO-8859-1)
-      // so byte → charCode mapping recovers ASCII text.
-      i++;
-      let hex = "";
-      while (i < content.length && content[i] !== ">") {
-        const c = content[i];
-        if ((c >= "0" && c <= "9") || (c >= "a" && c <= "f") || (c >= "A" && c <= "F")) {
-          hex += c;
-        }
-        i++;
-      }
-      if (content[i] === ">") i++;
-      // Pad odd-length per PDF spec.
-      if (hex.length % 2 === 1) hex += "0";
-      let str = "";
-      for (let h = 0; h < hex.length; h += 2) {
-        str += String.fromCharCode(parseInt(hex.substr(h, 2), 16));
-      }
-      result += str;
-      continue;
-    }
-
-    i++;
-  }
-  return result;
-}
-
 // ---------------------------------------------------------------------------
 // Build a model with a representative mix of decision outcomes.
 // ---------------------------------------------------------------------------
@@ -250,7 +144,7 @@ async function makeLenderPDF(scenarios: unknown[] | null): Promise<string> {
   const packet = buildLenderPacket(input as unknown as ModelData, consultant, 1);
   const pdf = await generateLenderPacketPDF(packet);
   check(`lender PDF (${scenarios ? "populated" : "empty"}): non-zero buffer`, pdf.length > 0);
-  return extractPDFText(pdf);
+  return extractPdfText(pdf);
 }
 
 async function makeBoardPDF(scenarios: unknown[] | null): Promise<string> {
@@ -264,7 +158,7 @@ async function makeBoardPDF(scenarios: unknown[] | null): Promise<string> {
   const packet = buildBoardPacket(input as unknown as ModelData, consultant, 1);
   const pdf = await generateBoardPacketPDF(packet);
   check(`board PDF (${scenarios ? "populated" : "empty"}): non-zero buffer`, pdf.length > 0);
-  return extractPDFText(pdf);
+  return extractPdfText(pdf);
 }
 
 // ---------------------------------------------------------------------------
@@ -352,9 +246,17 @@ async function testLenderEmpty() {
   console.log("\n— Lender PDF: empty decision history —");
   const text = await makeLenderPDF(null);
 
-  contains("lender (empty): narrative empty-state", text, "No decisions have been tracked");
-  contains(
-    "lender (empty): hint copy",
+  // Task #920 — the whole Decision History section (heading AND body) is
+  // suppressed when no decisions with an outcome exist. The dedicated
+  // `decision-history-suppression-920.ts` test asserts the suppression
+  // contract end-to-end. Here we just re-confirm the empty-state copy
+  // never leaks through the suppression gate. These two assertions were
+  // pre-#920 expectations that asserted the empty copy; they were left
+  // in place when #920 inverted the renderer behaviour and are now
+  // corrected to match the supported product behaviour.
+  notContains("lender (empty): empty-state copy suppressed", text, "No decisions have been tracked");
+  notContains(
+    "lender (empty): empty-state hint suppressed",
     text,
     "Once decisions are saved with a Pursued / Declined / On hold outcome inside the planner, they will be summarized here.",
   );
@@ -472,9 +374,11 @@ async function testBoardEmpty() {
   console.log("\n— Board PDF: empty decision history —");
   const text = await makeBoardPDF(null);
 
-  contains("board (empty): narrative empty-state", text, "No decisions have been tracked");
-  contains(
-    "board (empty): hint copy",
+  // Task #920 — see testLenderEmpty above. The board packet uses the
+  // same suppression gate; we re-confirm the empty copy never leaks.
+  notContains("board (empty): empty-state copy suppressed", text, "No decisions have been tracked");
+  notContains(
+    "board (empty): empty-state hint suppressed",
     text,
     "Once decisions are saved with a Pursued / Declined / On hold outcome inside the planner, they will be summarized here for the board.",
   );

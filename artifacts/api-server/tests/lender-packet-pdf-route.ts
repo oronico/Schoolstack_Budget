@@ -29,7 +29,6 @@
 // real handler emits 422. We assert against the real handler.
 
 import type { AddressInfo } from "node:net";
-import zlib from "node:zlib";
 import bcrypt from "bcryptjs";
 import { db, usersTable, financialModelsTable, exportsTable, eventsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
@@ -37,6 +36,7 @@ import app from "../src/app.js";
 import { generateToken } from "../src/middlewares/auth.js";
 import { microschoolStartup } from "./sample-payloads.js";
 
+import { extractPdfText } from "./_pdf-text-snapshot-util.js";
 // --- Minimal PDF text extractor -----------------------------------------
 // Same technique used in tests/board-packet-pdf-route.ts. pdfkit emits
 // FlateDecode-compressed content streams; rendered text lives inside PDF
@@ -45,135 +45,6 @@ import { microschoolStartup } from "./sample-payloads.js";
 // Commentary section actually ships in the rendered bytes (founder draft
 // sentinel + canonical-engine fallback prose) and a future renderer
 // change can't silently drop the section.
-
-function extractStringLiterals(content: string): string {
-  let result = "";
-  let i = 0;
-  while (i < content.length) {
-    const ch = content[i];
-    if (ch === "(") {
-      i++;
-      let depth = 1;
-      let str = "";
-      while (i < content.length && depth > 0) {
-        const c = content[i];
-        if (c === "\\") {
-          const n = content[i + 1];
-          if (n === undefined) { i++; break; }
-          if (n === "n") { str += "\n"; i += 2; continue; }
-          if (n === "r") { str += "\r"; i += 2; continue; }
-          if (n === "t") { str += "\t"; i += 2; continue; }
-          if (n === "b" || n === "f") { i += 2; continue; }
-          if (n === "(" || n === ")" || n === "\\") { str += n; i += 2; continue; }
-          if (n >= "0" && n <= "7") {
-            let oct = "";
-            i++;
-            while (oct.length < 3 && i < content.length && content[i] >= "0" && content[i] <= "7") {
-              oct += content[i];
-              i++;
-            }
-            str += String.fromCharCode(parseInt(oct, 8));
-            continue;
-          }
-          str += n;
-          i += 2;
-          continue;
-        }
-        if (c === "(") { depth++; str += c; i++; continue; }
-        if (c === ")") {
-          depth--;
-          if (depth === 0) { i++; break; }
-          str += c;
-          i++;
-          continue;
-        }
-        str += c;
-        i++;
-      }
-      result += str;
-      continue;
-    }
-    if (ch === "<" && content[i + 1] !== "<") {
-      i++;
-      let hex = "";
-      while (i < content.length && content[i] !== ">") {
-        const c = content[i];
-        if ((c >= "0" && c <= "9") || (c >= "a" && c <= "f") || (c >= "A" && c <= "F")) {
-          hex += c;
-        }
-        i++;
-      }
-      if (content[i] === ">") i++;
-      if (hex.length % 2 === 1) hex += "0";
-      let str = "";
-      for (let h = 0; h < hex.length; h += 2) {
-        str += String.fromCharCode(parseInt(hex.substr(h, 2), 16));
-      }
-      result += str;
-      continue;
-    }
-    i++;
-  }
-  return result;
-}
-
-function extractPDFText(pdf: Buffer): string {
-  // Walk the PDF stream-by-stream. Compressed stream bodies can contain byte
-  // sequences that look like the literal "stream"/"endstream" markers, so we
-  // cannot rely on `Buffer.indexOf("endstream")` to find the real end of a
-  // stream. Instead, parse the `/Length N` entry in the stream's dictionary
-  // (always present in pdfkit output) and use it to skip exactly N bytes of
-  // the encoded body, then resume scanning past `endstream`.
-  const STREAM = "stream";
-  const ENDSTREAM = "endstream";
-  const out: string[] = [];
-  let cursor = 0;
-  while (cursor < pdf.length) {
-    const sIdx = pdf.indexOf(STREAM, cursor);
-    if (sIdx === -1) break;
-    // Reject `endstream` matches that the indexOf scan landed on.
-    if (sIdx >= 3 && pdf.slice(sIdx - 3, sIdx).toString("latin1") === "end") {
-      cursor = sIdx + STREAM.length;
-      continue;
-    }
-    // Look back to the start of the preceding dictionary `<<` for /Length.
-    const dictStart = pdf.lastIndexOf("<<", sIdx);
-    let length: number | null = null;
-    if (dictStart !== -1) {
-      const dict = pdf.subarray(dictStart, sIdx).toString("latin1");
-      const m = /\/Length\s+(\d+)/.exec(dict);
-      if (m) length = parseInt(m[1], 10);
-    }
-    let dataStart = sIdx + STREAM.length;
-    if (pdf[dataStart] === 0x0d) dataStart++;
-    if (pdf[dataStart] === 0x0a) dataStart++;
-    let dataEnd: number;
-    let nextCursor: number;
-    if (length !== null) {
-      dataEnd = dataStart + length;
-      const tailIdx = pdf.indexOf(ENDSTREAM, dataEnd);
-      nextCursor = tailIdx === -1 ? pdf.length : tailIdx + ENDSTREAM.length;
-    } else {
-      // Fallback: best-effort marker scan.
-      const eIdx = pdf.indexOf(ENDSTREAM, dataStart);
-      if (eIdx === -1) break;
-      dataEnd = eIdx;
-      if (pdf[dataEnd - 1] === 0x0a) dataEnd--;
-      if (pdf[dataEnd - 1] === 0x0d) dataEnd--;
-      nextCursor = eIdx + ENDSTREAM.length;
-    }
-    const raw = pdf.subarray(dataStart, dataEnd);
-    let body: string;
-    try {
-      body = zlib.inflateSync(raw).toString("binary");
-    } catch {
-      body = raw.toString("binary");
-    }
-    out.push(extractStringLiterals(body));
-    cursor = nextCursor;
-  }
-  return out.join("\n");
-}
 
 let passed = 0;
 let failed = 0;
@@ -439,7 +310,7 @@ async function testLenderSectionFounderDraft(server: BootedServer) {
     const buf = Buffer.from(await res.arrayBuffer());
     check("response body looks like a PDF", buf.subarray(0, 5).toString() === "%PDF-");
 
-    const text = extractPDFText(buf);
+    const text = extractPdfText(buf);
     check(
       "Lender Commentary section header is rendered",
       text.includes("Lender Commentary"),
@@ -476,7 +347,7 @@ async function testLenderSectionCanonicalFallback(server: BootedServer) {
     const buf = Buffer.from(await res.arrayBuffer());
     check("response body looks like a PDF", buf.subarray(0, 5).toString() === "%PDF-");
 
-    const text = extractPDFText(buf);
+    const text = extractPdfText(buf);
     check(
       "Lender Commentary section header is rendered",
       text.includes("Lender Commentary"),

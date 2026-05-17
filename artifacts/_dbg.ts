@@ -1,0 +1,18 @@
+import { generateLenderPacketPDF } from "../api-server/src/lib/packets/lender-packet-pdf.js";
+import { buildLenderPacket } from "../api-server/src/lib/packets/build-lender-packet.js";
+import { runConsultantEngine } from "../api-server/src/lib/consultant-engine.js";
+import { microschoolStartup } from "../api-server/tests/sample-payloads.js";
+import { extractPdfText } from "../api-server/tests/_pdf-text-snapshot-util.js";
+const data: any = microschoolStartup();
+data.decisionHistory = [];
+const c = await runConsultantEngine(data);
+const p = buildLenderPacket(data, c, 0);
+const pdf = await generateLenderPacketPDF(p);
+const text = extractPdfText(pdf);
+console.log("LEN", text.length);
+console.log("contains 'No decisions'?", text.includes("No decisions"));
+console.log("contains 'tracked'?", text.includes("tracked"));
+const idx = text.indexOf("Decision");
+console.log("snippet around Decision:", JSON.stringify(text.slice(idx, idx + 500)));
+const idx2 = text.indexOf("decisions");
+console.log("snippet around 'decisions':", JSON.stringify(text.slice(idx2, idx2 + 400)));

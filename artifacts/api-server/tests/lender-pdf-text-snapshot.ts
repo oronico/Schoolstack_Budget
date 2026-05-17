@@ -27,7 +27,6 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import zlib from "node:zlib";
 
 import { runConsultantEngine } from "../src/lib/consultant-engine.js";
 import { buildLenderPacket } from "../src/lib/packets/build-lender-packet.js";
@@ -39,6 +38,7 @@ import {
 } from "../src/lib/seed-preview-data.js";
 import { LENDER_PDF_FIXTURES } from "./fixtures/lender-pdf-fixtures.js";
 
+import { extractPdfFragments } from "./_pdf-text-snapshot-util.js";
 const UPDATE = process.env.UPDATE_SNAPSHOTS === "1";
 const SNAP_DIR = path.join(import.meta.dirname ?? __dirname, "__snapshots__");
 
@@ -61,73 +61,6 @@ function check(label: string, cond: boolean, detail = ""): void {
 // than per-page concatenation) makes the resulting snapshot a stable,
 // human-readable record where each label / dollar figure is its own
 // line, so a diff points at the exact regressed token.
-function extractStringLiterals(content: string, out: string[]): void {
-  let i = 0;
-  while (i < content.length) {
-    const ch = content[i];
-    if (ch === "(") {
-      i++;
-      let depth = 1;
-      let str = "";
-      while (i < content.length && depth > 0) {
-        const c = content[i];
-        if (c === "\\") {
-          const n = content[i + 1];
-          if (n === undefined) { i++; break; }
-          if (n === "n") { str += "\n"; i += 2; continue; }
-          if (n === "r") { str += "\r"; i += 2; continue; }
-          if (n === "t") { str += "\t"; i += 2; continue; }
-          if (n === "b" || n === "f") { i += 2; continue; }
-          if (n === "(" || n === ")" || n === "\\") { str += n; i += 2; continue; }
-          if (n >= "0" && n <= "7") {
-            let oct = "";
-            i++;
-            while (oct.length < 3 && i < content.length && content[i] >= "0" && content[i] <= "7") {
-              oct += content[i];
-              i++;
-            }
-            str += String.fromCharCode(parseInt(oct, 8));
-            continue;
-          }
-          str += n;
-          i += 2;
-          continue;
-        }
-        if (c === "(") { depth++; str += c; i++; continue; }
-        if (c === ")") {
-          depth--;
-          if (depth === 0) { i++; break; }
-          str += c; i++; continue;
-        }
-        str += c;
-        i++;
-      }
-      if (str.length > 0) out.push(str);
-      continue;
-    }
-    if (ch === "<" && content[i + 1] !== "<") {
-      i++;
-      let hex = "";
-      while (i < content.length && content[i] !== ">") {
-        const c = content[i];
-        if ((c >= "0" && c <= "9") || (c >= "a" && c <= "f") || (c >= "A" && c <= "F")) {
-          hex += c;
-        }
-        i++;
-      }
-      if (content[i] === ">") i++;
-      if (hex.length % 2 === 1) hex += "0";
-      let str = "";
-      for (let h = 0; h < hex.length; h += 2) {
-        str += String.fromCharCode(parseInt(hex.substr(h, 2), 16));
-      }
-      if (str.length > 0) out.push(str);
-      continue;
-    }
-    i++;
-  }
-}
-
 // Redact non-deterministic tokens so re-running the test on a different
 // day produces the same snapshot. The lender PDF renders a long-form
 // `Month DD, YYYY` date in two places:
@@ -188,40 +121,6 @@ function redactDatesAcrossFragments(fragments: string[]): string[] {
   // Drop any fragments that were emptied by the redaction, but keep
   // page markers (which are added later, not present here yet).
   return out.filter((s) => s.length > 0);
-}
-
-function extractPdfFragments(pdf: Buffer): string[] {
-  const out: string[] = [];
-  let cursor = 0;
-  let page = 0;
-  while (cursor < pdf.length) {
-    const sIdx = pdf.indexOf("stream", cursor);
-    if (sIdx === -1) break;
-    let dataStart = sIdx + "stream".length;
-    if (pdf[dataStart] === 0x0d) dataStart++;
-    if (pdf[dataStart] === 0x0a) dataStart++;
-    const eIdx = pdf.indexOf("endstream", dataStart);
-    if (eIdx === -1) break;
-    let dataEnd = eIdx;
-    if (pdf[dataEnd - 1] === 0x0a) dataEnd--;
-    if (pdf[dataEnd - 1] === 0x0d) dataEnd--;
-    const raw = pdf.subarray(dataStart, dataEnd);
-    let body: string;
-    try {
-      body = zlib.inflateSync(raw).toString("binary");
-    } catch {
-      body = raw.toString("binary");
-    }
-    const pageFragments: string[] = [];
-    extractStringLiterals(body, pageFragments);
-    if (pageFragments.length > 0) {
-      page++;
-      const redacted = redactDatesAcrossFragments(pageFragments);
-      out.push(`--- PAGE ${page} ---`, ...redacted);
-    }
-    cursor = eIdx + "endstream".length;
-  }
-  return out;
 }
 
 interface SnapshotCase {

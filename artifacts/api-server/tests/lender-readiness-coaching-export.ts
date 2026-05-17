@@ -57,6 +57,7 @@ import { generateBoardPacketPDF } from "../src/lib/packets/board-packet-pdf.js";
 import { buildLenderSummarySheet } from "../src/lib/packets/lender-summary-sheet.js";
 import type { ModelData } from "../src/lib/workbook-helpers.js";
 
+import { extractPdfText } from "./_pdf-text-snapshot-util.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 let passed = 0;
@@ -509,110 +510,6 @@ async function testTask751NarrativeBuilders(): Promise<void> {
  * dependency — PDFKit's own uncompressed output is enough to prove the
  * headline reaches the page.
  */
-function extractPdfText(buf: Buffer): string {
-  const raw = buf.toString("latin1");
-  const out: string[] = [];
-  let i = 0;
-  const n = raw.length;
-  while (i < n) {
-    const ch = raw.charCodeAt(i);
-    if (ch === 0x28 /* '(' */) {
-      // Walk to the matching ')' tracking nested parens and escapes.
-      let depth = 1;
-      let j = i + 1;
-      let s = "";
-      while (j < n && depth > 0) {
-        const c = raw[j];
-        if (c === "\\") {
-          const next = raw[j + 1];
-          if (next === undefined) break;
-          if (next >= "0" && next <= "7") {
-            // Octal escape, 1-3 digits.
-            let k = j + 1;
-            let oct = "";
-            while (k < n && k < j + 4 && raw[k] >= "0" && raw[k] <= "7") {
-              oct += raw[k];
-              k++;
-            }
-            s += String.fromCharCode(parseInt(oct, 8));
-            j = k;
-            continue;
-          }
-          switch (next) {
-            case "n": s += "\n"; break;
-            case "r": s += "\r"; break;
-            case "t": s += "\t"; break;
-            case "b": s += "\b"; break;
-            case "f": s += "\f"; break;
-            case "(": s += "("; break;
-            case ")": s += ")"; break;
-            case "\\": s += "\\"; break;
-            default: s += next; break;
-          }
-          j += 2;
-          continue;
-        }
-        if (c === "(") {
-          depth++;
-          s += c;
-          j++;
-          continue;
-        }
-        if (c === ")") {
-          depth--;
-          if (depth === 0) {
-            j++;
-            break;
-          }
-          s += c;
-          j++;
-          continue;
-        }
-        s += c;
-        j++;
-      }
-      // Only collect strings that look like plain text (skip binary
-      // glyph-id strings PDFKit also embeds for embedded fonts; for
-      // standard Type 1 Helvetica there are none of those).
-      if (s.length > 0) out.push(s);
-      i = j;
-      continue;
-    }
-    if (ch === 0x3c /* '<' */) {
-      // Hex string: <ABCD...>. PDFKit's TJ arrays for standard Type 1
-      // Helvetica contain hex-encoded WinAnsi byte sequences. Decode
-      // pairs of hex digits (skipping whitespace) into latin1 chars.
-      let j = i + 1;
-      let s = "";
-      let nibble = "";
-      while (j < n) {
-        const c = raw[j];
-        if (c === ">") {
-          j++;
-          break;
-        }
-        if (/[0-9a-fA-F]/.test(c)) {
-          nibble += c;
-          if (nibble.length === 2) {
-            s += String.fromCharCode(parseInt(nibble, 16));
-            nibble = "";
-          }
-        }
-        j++;
-      }
-      if (nibble.length === 1) {
-        // Odd nibble count → pad with trailing 0 per PDF spec.
-        s += String.fromCharCode(parseInt(nibble + "0", 16));
-      }
-      if (s.length > 0) out.push(s);
-      i = j;
-      continue;
-    }
-    i++;
-  }
-  return out.join(" ");
-}
-
 async function testTask754LenderPacketPdfRender(): Promise<void> {
   console.log(
     "\n— Task #754 lender packet PDF: decoded text contains coaching headline for every verdict —",

@@ -18,6 +18,7 @@ import { generateLenderPacketPDF } from "../src/lib/packets/lender-packet-pdf.js
 import { generateBoardPacketPDF } from "../src/lib/packets/board-packet-pdf.js";
 import type { ModelData } from "../src/lib/workbook-helpers.js";
 
+import { extractPdfText } from "./_pdf-text-snapshot-util.js";
 let passed = 0;
 let failed = 0;
 const failures: string[] = [];
@@ -37,20 +38,6 @@ function check(label: string, cond: boolean, detail = "") {
 // PDFKit subsets fonts and emits hex-encoded CID strings rather than
 // literal `(...)` strings, so we shell out to poppler's pdftotext (which
 // reads the embedded ToUnicode CMap) instead of a homegrown extractor.
-function extractPDFText(pdf: Buffer): string {
-  const dir = mkdtempSync(join(tmpdir(), "founder-pdf-"));
-  const path = join(dir, "doc.pdf");
-  writeFileSync(path, pdf);
-  try {
-    return execFileSync("pdftotext", ["-layout", path, "-"], {
-      encoding: "utf-8",
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-}
-
 function buildModel(opts: {
   reportedFounderComp: number[];
   normalizedFounderComp: number[];
@@ -181,8 +168,8 @@ async function main(): Promise<void> {
 
   const lenderPdf = await generateLenderPacketPDF(lenderPacket);
   const boardPdf = await generateBoardPacketPDF(boardPacket);
-  const lenderText = extractPDFText(lenderPdf);
-  const boardText = extractPDFText(boardPdf);
+  const lenderText = extractPdfText(lenderPdf);
+  const boardText = extractPdfText(boardPdf);
 
   check(
     "lender PDF includes the Founder Compensation section title",
@@ -254,8 +241,8 @@ async function main(): Promise<void> {
   const npBoardPacket = buildBoardPacket(notPayingModel as unknown as ModelData, notPayingCO, 1);
   const npLenderPdf = await generateLenderPacketPDF(npLenderPacket);
   const npBoardPdf = await generateBoardPacketPDF(npBoardPacket);
-  const npLenderText = extractPDFText(npLenderPdf);
-  const npBoardText = extractPDFText(npBoardPdf);
+  const npLenderText = extractPdfText(npLenderPdf);
+  const npBoardText = extractPdfText(npBoardPdf);
 
   check(
     "lender PDF includes the not-paying-yet note",

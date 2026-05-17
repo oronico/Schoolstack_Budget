@@ -18,7 +18,6 @@
 // duplicated from `decision-history-pdf.ts` to keep each test file
 // self-contained and easy to run in isolation.
 
-import zlib from "node:zlib";
 import { generateLenderPacketPDF } from "../src/lib/packets/lender-packet-pdf.js";
 import { generateBoardPacketPDF } from "../src/lib/packets/board-packet-pdf.js";
 import { buildLenderPacket } from "../src/lib/packets/build-lender-packet.js";
@@ -27,6 +26,7 @@ import { runConsultantEngine } from "../src/lib/consultant-engine.js";
 import type { ModelData } from "../src/lib/workbook-helpers.js";
 import { microschoolStartup } from "./sample-payloads.js";
 
+import { extractPdfText } from "./_pdf-text-snapshot-util.js";
 let passed = 0;
 let failed = 0;
 const failures: string[] = [];
@@ -40,12 +40,29 @@ function check(label: string, cond: boolean, detail = "") {
   }
 }
 
+// Task #922 — the MuPDF-backed extractor preserves PDFKit's soft line
+// breaks, so a long phrase rendered inside a narrow callout column
+// surfaces as e.g. "with \nlogged actuals" instead of the one-line
+// "with logged actuals" the legacy WinAnsi parser concatenated. Make
+// the content-level assertions whitespace-tolerant so they match
+// regardless of where MuPDF wrapped the line.
+function normalizeWs(s: string): string {
+  return s.replace(/\s+/g, " ");
+}
 function contains(label: string, haystack: string, needle: string) {
-  check(label, haystack.includes(needle), `expected to find ${JSON.stringify(needle)}`);
+  check(
+    label,
+    normalizeWs(haystack).includes(normalizeWs(needle)),
+    `expected to find ${JSON.stringify(needle)}`,
+  );
 }
 
 function notContains(label: string, haystack: string, needle: string) {
-  check(label, !haystack.includes(needle), `expected NOT to find ${JSON.stringify(needle)}`);
+  check(
+    label,
+    !normalizeWs(haystack).includes(normalizeWs(needle)),
+    `expected NOT to find ${JSON.stringify(needle)}`,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -54,107 +71,6 @@ function notContains(label: string, haystack: string, needle: string) {
 // and harvest both literal `(...)` strings and `<...>` hex strings, since
 // PDFKit may use either depending on glyph/font situation.
 // ---------------------------------------------------------------------------
-function extractPDFText(pdf: Buffer): string {
-  const out: string[] = [];
-  let cursor = 0;
-  while (cursor < pdf.length) {
-    const sIdx = pdf.indexOf("stream", cursor);
-    if (sIdx === -1) break;
-    let dataStart = sIdx + "stream".length;
-    if (pdf[dataStart] === 0x0d) dataStart++;
-    if (pdf[dataStart] === 0x0a) dataStart++;
-    const eIdx = pdf.indexOf("endstream", dataStart);
-    if (eIdx === -1) break;
-    let dataEnd = eIdx;
-    if (pdf[dataEnd - 1] === 0x0a) dataEnd--;
-    if (pdf[dataEnd - 1] === 0x0d) dataEnd--;
-    const raw = pdf.subarray(dataStart, dataEnd);
-
-    let body: string;
-    try {
-      body = zlib.inflateSync(raw).toString("binary");
-    } catch {
-      body = raw.toString("binary");
-    }
-    out.push(extractStringLiterals(body));
-    cursor = eIdx + "endstream".length;
-  }
-  return out.join("\n");
-}
-
-function extractStringLiterals(content: string): string {
-  let result = "";
-  let i = 0;
-  while (i < content.length) {
-    const ch = content[i];
-    if (ch === "(") {
-      i++;
-      let depth = 1;
-      let str = "";
-      while (i < content.length && depth > 0) {
-        const c = content[i];
-        if (c === "\\") {
-          const n = content[i + 1];
-          if (n === undefined) { i++; break; }
-          if (n === "n") { str += "\n"; i += 2; continue; }
-          if (n === "r") { str += "\r"; i += 2; continue; }
-          if (n === "t") { str += "\t"; i += 2; continue; }
-          if (n === "b" || n === "f") { i += 2; continue; }
-          if (n === "(" || n === ")" || n === "\\") { str += n; i += 2; continue; }
-          if (n >= "0" && n <= "7") {
-            let oct = "";
-            i++;
-            while (oct.length < 3 && i < content.length && content[i] >= "0" && content[i] <= "7") {
-              oct += content[i];
-              i++;
-            }
-            str += String.fromCharCode(parseInt(oct, 8));
-            continue;
-          }
-          str += n;
-          i += 2;
-          continue;
-        }
-        if (c === "(") { depth++; str += c; i++; continue; }
-        if (c === ")") {
-          depth--;
-          if (depth === 0) { i++; break; }
-          str += c;
-          i++;
-          continue;
-        }
-        str += c;
-        i++;
-      }
-      result += str;
-      continue;
-    }
-
-    if (ch === "<" && content[i + 1] !== "<") {
-      i++;
-      let hex = "";
-      while (i < content.length && content[i] !== ">") {
-        const c = content[i];
-        if ((c >= "0" && c <= "9") || (c >= "a" && c <= "f") || (c >= "A" && c <= "F")) {
-          hex += c;
-        }
-        i++;
-      }
-      if (content[i] === ">") i++;
-      if (hex.length % 2 === 1) hex += "0";
-      let str = "";
-      for (let h = 0; h < hex.length; h += 2) {
-        str += String.fromCharCode(parseInt(hex.substr(h, 2), 16));
-      }
-      result += str;
-      continue;
-    }
-
-    i++;
-  }
-  return result;
-}
-
 // ---------------------------------------------------------------------------
 // Scenario fixtures
 // ---------------------------------------------------------------------------
@@ -282,7 +198,7 @@ async function makeLenderPDF(
   );
   const pdf = await generateLenderPacketPDF(packet);
   check(`lender PDF (${scenarios ? "scenarios" : "none"}): non-zero buffer`, pdf.length > 0);
-  return extractPDFText(pdf);
+  return extractPdfText(pdf);
 }
 
 async function makeBoardPDF(
@@ -305,7 +221,7 @@ async function makeBoardPDF(
   );
   const pdf = await generateBoardPacketPDF(packet);
   check(`board PDF (${scenarios ? "scenarios" : "none"}): non-zero buffer`, pdf.length > 0);
-  return extractPDFText(pdf);
+  return extractPdfText(pdf);
 }
 
 // Returns the substring starting at the Forecast Accuracy section title,

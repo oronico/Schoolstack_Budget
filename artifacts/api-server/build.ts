@@ -88,6 +88,17 @@ async function buildAll() {
   const migrationsDest = path.resolve(distDir, "drizzle");
   console.log(`copying migrations: ${migrationsSrc} -> ${migrationsDest}`);
   await cp(migrationsSrc, migrationsDest, { recursive: true });
+
+  // Task #922 — ship the vendored Unicode-capable DejaVu Sans TTFs
+  // alongside the bundle so `pdf-utils.ts:resolveFontPath` finds them
+  // at runtime under `dist/assets/fonts/`. Without this, the production
+  // build silently falls back to PDFKit's built-in WinAnsi Helvetica and
+  // re-introduces the corruption tokens (`"H`, `!"`, `!'`, `"d`)
+  // covered by `tests/pdf-encoding-corruption-922.ts`.
+  const fontsSrc = path.resolve(__dirname, "assets", "fonts");
+  const fontsDest = path.resolve(distDir, "assets", "fonts");
+  console.log(`copying fonts: ${fontsSrc} -> ${fontsDest}`);
+  await cp(fontsSrc, fontsDest, { recursive: true });
 }
 
 buildAll().catch((err) => {

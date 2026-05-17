@@ -6,10 +6,26 @@
  * Task #896 can reuse the exact same extractor + date-redaction logic
  * without copy-paste drift between the four scripts.
  *
- * The lender script intentionally keeps its inline copies for now (it's
- * the original template). New snapshot scripts should import from here.
+ * Task #922 — switched the extractor backend from a hand-rolled
+ * WinAnsi `(...)` literal parser to MuPDF (`mupdf` npm package). The
+ * old parser worked only because every PDFKit Standard 14 font
+ * emitted text as 1-byte WinAnsi-encoded literal strings, which made
+ * the raw stream bytes match the source text. Once `pdf-utils.ts`
+ * registers a Unicode-capable TTF under the Helvetica* names
+ * (DejaVu Sans, see the header comment in pdf-utils.ts), PDFKit
+ * emits text as 2-byte CID glyph indices that the legacy parser
+ * cannot decode back to Unicode without honouring the ToUnicode
+ * CMap embedded in the PDF. MuPDF handles the CMap correctly and
+ * yields the same human-readable Unicode text that a PDF reader
+ * would show the user, which is exactly what every downstream
+ * snapshot/assertion test wants.
  */
-import zlib from "node:zlib";
+import * as mupdf from "mupdf";
+
+// `zlib` is retained as a transitive concern only: callers that still
+// hand-parse content streams (legacy inline extractors, removed during
+// the #922 sweep) imported it via this file. The new MuPDF-based path
+// does not need it.
 
 // ── PDF text extractor ─────────────────────────────────────────────────
 // Yields one entry per `(...)` literal / `<...>` hex string inside each
@@ -137,38 +153,61 @@ export function redactDatesAcrossFragments(fragments: string[]): string[] {
   return out.filter((s) => s.length > 0);
 }
 
-export function extractPdfFragments(pdf: Buffer): string[] {
-  const out: string[] = [];
-  let cursor = 0;
-  let page = 0;
-  while (cursor < pdf.length) {
-    const sIdx = pdf.indexOf("stream", cursor);
-    if (sIdx === -1) break;
-    let dataStart = sIdx + "stream".length;
-    if (pdf[dataStart] === 0x0d) dataStart++;
-    if (pdf[dataStart] === 0x0a) dataStart++;
-    const eIdx = pdf.indexOf("endstream", dataStart);
-    if (eIdx === -1) break;
-    let dataEnd = eIdx;
-    if (pdf[dataEnd - 1] === 0x0a) dataEnd--;
-    if (pdf[dataEnd - 1] === 0x0d) dataEnd--;
-    const raw = pdf.subarray(dataStart, dataEnd);
-    let body: string;
-    try {
-      body = zlib.inflateSync(raw).toString("binary");
-    } catch {
-      body = raw.toString("binary");
+/**
+ * Task #922 — MuPDF-backed full-text extractor. Used by both the
+ * snapshot tests (via extractPdfFragments below) and the inline
+ * assertion tests across the suite. Returns the concatenated
+ * page-by-page Unicode text rendered by every TJ/Tj operator,
+ * decoded through whatever ToUnicode CMap each font carries.
+ *
+ * Throws if MuPDF cannot open the PDF — corruption / malformed
+ * output is itself a regression worth surfacing loudly.
+ */
+export function extractPdfText(pdf: Buffer): string {
+  const doc = mupdf.Document.openDocument(pdf, "application/pdf") as mupdf.Document;
+  try {
+    const pages: string[] = [];
+    const n = doc.countPages();
+    for (let i = 0; i < n; i++) {
+      const page = doc.loadPage(i);
+      const stext = page.toStructuredText("preserve-whitespace");
+      pages.push(stext.asText());
+      stext.destroy();
+      page.destroy();
     }
-    const pageFragments: string[] = [];
-    extractStringLiterals(body, pageFragments);
-    if (pageFragments.length > 0) {
-      page++;
-      const redacted = redactDatesAcrossFragments(pageFragments);
-      out.push(`--- PAGE ${page} ---`, ...redacted);
-    }
-    cursor = eIdx + "endstream".length;
+    return pages.join("\n");
+  } finally {
+    doc.destroy();
   }
-  return out;
+}
+
+/**
+ * Per-page text fragments. Returns one entry per non-empty line on
+ * each page, prefixed with `--- PAGE N ---` markers (kept for diff
+ * symmetry with the original WinAnsi-era fragment extractor). The
+ * order of lines is rendering order as MuPDF walks the page's
+ * StructuredText.
+ */
+export function extractPdfFragments(pdf: Buffer): string[] {
+  const doc = mupdf.Document.openDocument(pdf, "application/pdf") as mupdf.Document;
+  try {
+    const out: string[] = [];
+    const n = doc.countPages();
+    for (let i = 0; i < n; i++) {
+      const page = doc.loadPage(i);
+      const stext = page.toStructuredText("preserve-whitespace");
+      const text = stext.asText();
+      stext.destroy();
+      page.destroy();
+      const lines = text.split("\n").map((s) => s.trimEnd()).filter((s) => s.length > 0);
+      if (lines.length === 0) continue;
+      const redacted = redactDatesAcrossFragments(lines);
+      out.push(`--- PAGE ${i + 1} ---`, ...redacted);
+    }
+    return out;
+  } finally {
+    doc.destroy();
+  }
 }
 
 export function diffLines(actual: string[], expected: string[], maxShown = 25): string {

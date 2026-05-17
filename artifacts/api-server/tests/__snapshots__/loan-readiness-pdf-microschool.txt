@@ -1,620 +1,273 @@
 --- PAGE 1 ---
-Sc
-hoolStac
-k Budg
-et
-b
-y SchoolStac
-k.ai
-Oakw
-ood Learning Studio - Loan Readiness Repor
-t
-SchoolStac
-k Budget Consultant Analysis
-Ex
-ecutive Summar
-y
-Oakw
-ood Lear
-ning Studio projects $400,145 in 
-Y
-ear 5 re
-v
-en
-ue with a 37.6% profit margin.
- 
-The model tells a 
-strong financial stor
-y with 8 of 13 k
-e
-y metr
-ics in health
-y r
-ange
-, a g
-reat f
-oundation f
-or y
-our mission.
+SchoolStack Budget
+by SchoolStack.ai
+Oakwood Learning Studio - Loan Readiness
+Report
+SchoolStack Budget Consultant Analysis
+Executive Summary
+Oakwood Learning Studio projects $400,145 in Year 5 revenue with a 37.6% profit margin. The
+model tells a strong financial story with 8 of 13 key metrics in healthy range, a great foundation for
+your mission.
 Lender Readiness Assessment
-Read
-y to share  keep polishing the narrative
-.
-This model demonstr
-ates strong financial fundamentals:
- a clear path to profit, controlled costs
-, a sustainab
-le 
-re
-v
-en
-ue mix, and adequate debt co
-v
-er
-age
-.
- 
-Y
-our projections are g
-rounded and achie
-v
-ab
-le
-.
-K
-e
-y Financial Metrics
+Ready to share — keep polishing the narrative.
+This model demonstrates strong financial fundamentals: a clear path to profit, controlled costs, a
+sustainable revenue mix, and adequate debt coverage. Your projections are grounded and
+achievable.
+Key Financial Metrics
 Metric
-V
-alue
+Value
 Status
 Interpretation
-Re
-v
-en
-ue per Student (Y
-ear 1)
+Revenue per Student (Year 1)
 $8,282
-&  
-W
-ar
-ning
-P
-er-student re
-v
-en
-ue is moder
-ate
-, so 
-consider whether tuition or supplemental 
-funding can increase
-.
-Cost per Student (Y
-ear 1)
+⚠ Warning
+Per-student revenue is moderate, so
+consider whether tuition or
+supplemental funding can increase.
+Cost per Student (Year 1)
 $7,162
-&  
-W
-ar
-ning
-Cost per student ($7,162) is approaching 
-re
-v
-en
-ue per student ($8,282).
- Monitor 
-e
-xpenses closely to maintain a sustainab
-le 
-margin.
-Staffing Cost (% of Re
-v
-en
-ue)
+⚠ Warning
+Cost per student ($7,162) is
+approaching revenue per student
+($8,282). Monitor expenses closely to
+maintain a sustainable margin.
+Staffing Cost (% of Revenue)
 52.0%
-' Good
-Staffing costs are w
-ell-controlled, giving y
-ou 
-room f
-or other pr
-ior
-ities
-.
-Oper
-ating Cost (% of Re
-v
-en
-ue)
+✓ Good
+Staffing costs are well-controlled,
+giving you room for other priorities.
+Operating Cost (% of Revenue)
 34.2%
-&  
-W
-ar
-ning
-Oper
-ating costs are moder
-ate
-, so w
-atch rent 
-escalation and ser
-vice costs o
-v
-er the 5-y
-ear 
-per
-iod.
-Profit margin (Y
-ear 1)
+⚠ Warning
+Operating costs are moderate, so
+watch rent escalation and service costs
+over the 5-year period.
+Profit margin (Year 1)
 13.5%
-' Good
-Y
-ear 1 sho
-ws a health
-y sur
-plus
-, a strong 
-star
-t f
-or a ne
-w school.
-Profit margin (Y
-ear 5)
+✓ Good
+Year 1 shows a healthy surplus, a
+strong start for a new school.
+Profit margin (Year 5)
 37.6%
-' Good
-By 
-Y
-ear 5 the model sho
-ws strong profit, and 
-y
-our school is on tr
-ac
-k f
-or financial 
-sustainability
-.
-5-Y
-ear Re
-v
-en
-ue Gro
-wth
+✓ Good
+By Year 5 the model shows strong
+profit, and your school is on track for
+financial sustainability.
+5-Year Revenue Growth
 141.6%
-' Good
-Strong projected re
-v
-en
-ue g
-ro
-wth o
-v
-er the 5-
-y
-ear per
-iod.
-Capacity Utilization (Y
-ear 5)
+✓ Good
+Strong projected revenue growth over
+the 5-year period.
+Capacity Utilization (Year 5)
 88.9%
-' Good
-Y
-ear 5 enrollment approaches f
-acility 
-capacity
-, an efficient use of space
-.
-Da
-ys Cash on Hand (Y
-ear 1)
-57 da
-ys
-&  
-W
-ar
-ning
-57 da
-ys of cash on hand is abo
-v
-e the 
-minim
-um b
-ut belo
-w the 90-da
-y target.
- Build 
-reser
-v
-es to create a larger b
-uff
-er
-.
-Cash 
-T
-rough (Minim
-um Cash Month)
-Month 1:
- $647
-&  
-W
-ar
-ning
-Y
-our lo
-w
-est cash point is Month 1 at $647.
- 
-Lenders look at this to mak
-e sure y
-ou w
-on't 
-r
-un out of mone
-y bef
-ore tuition collections 
-star
-t.
- Consider b
-uilding reser
-v
-es
-.
-Debt Ser
-vice Co
-v
-er
-age Ratio (Y
-ear 1)
-5.77x
-' Good
-DSCR is abo
-v
-e 1.25x, and y
-our oper
-ating 
-income comf
-or
-tab
-ly co
-v
-ers debt pa
-yments
-.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 1 of 5
+✓ Good
+Year 5 enrollment approaches facility
+capacity, an efficient use of space.
+Days Cash on Hand (Year 1)
+57 days
+⚠ Warning
+57 days of cash on hand is above the
+minimum but below the 90-day target.
+Build reserves to create a larger buffer.
+SchoolStack Budget - Generated <DATE>
+Page 1 of 7
 --- PAGE 2 ---
-Philanthrop
-y (% of Re
-v
-en
-ue)
-11.6%
-' Good
-Philanthrop
-y supplements ear
-ned re
-v
-en
-ue 
- a health
-y mix.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 2 of 5
+Cash Trough (Minimum Cash Month)
+Month 1: $647
+⚠ Warning
+Your lowest cash point is Month 1 at
+$647. Lenders look at this to make sure
+you won't run out of money before
+tuition collections start. Consider
+building reserves.
+SchoolStack Budget - Generated <DATE>
+Page 2 of 7
 --- PAGE 3 ---
-Oper
-ating Reser
-v
-e (Y
-ear 5)
-18.9 months
-' Good
-By 
-Y
-ear 5, the school has b
-uilt a health
-y 
-oper
-ating reser
-v
-e of 3+ months
-, a strong 
-f
-oundation f
-or long-ter
-m stability
-.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 3 of 5
+Debt Service Coverage Ratio (Year 1)
+5.77x
+✓ Good
+DSCR is above 1.25x, and your
+operating income comfortably covers
+debt payments.
+SchoolStack Budget - Generated <DATE>
+Page 3 of 7
 --- PAGE 4 ---
+Philanthropy (% of Revenue)
+11.6%
+✓ Good
+Philanthropy supplements earned
+revenue — a healthy mix.
+SchoolStack Budget - Generated <DATE>
+Page 4 of 7
+--- PAGE 5 ---
+Operating Reserve (Year 5)
+18.9 months
+✓ Good
+By Year 5, the school has built a
+healthy operating reserve of 3+
+months, a strong foundation for long-
+term stability.
+SchoolStack Budget - Generated <DATE>
+Page 5 of 7
+--- PAGE 6 ---
 Strengths & Risks
-Big
-g
-est Strength
-Strong 
-Y
-ear 5 profit
-Big
-g
-est Risk
-No major red flags detected, so contin
-ue refining assumptions as y
-ou gather real data.
+Biggest Strength
+Strong Year 5 profit
+Biggest Risk
+No major red flags detected, so continue refining assumptions as you gather real data.
 Recommendations
 Priority
 Recommendation
 Details
-LO
-W
-Plan f
-or 
-T
-uition Collection & Discount Risk
-Pr
-iv
-ate schools f
-ace collection r
-isk from late pa
-yments
-, withdr
-a
-w
-als
-, and 
-financial aid shor
-tf
-alls
-.
- 
-With 88.6% of re
-v
-en
-ue from tuition, b
-uild a 510% 
-bad debt reser
-v
-e into y
-our b
-udget.
- F
-actor in tuition discount r
-ates f
-or mer
-it/
-need-based aid and maintain clear enrollment contr
-acts with pa
-yment ter
-ms
-.
+LOW
+Plan for Tuition Collection & Discount
+Risk
+Private schools face collection risk from late payments,
+withdrawals, and financial aid shortfalls. With 88.6% of revenue
+from tuition, build a 5–10% bad debt reserve into your budget.
+Factor in tuition discount rates for merit/need-based aid and
+maintain clear enrollment contracts with payment terms.
 MEDIUM
-Stress-T
-est 
-Y
-our Enrollment Assumptions
-Model what happens if enrollment comes in 20% belo
-w plan.
- Understanding 
-y
-our do
-wnside scenar
-io helps y
-ou prepare contingency plans
-.
-LO
-W
-Document 
-Y
-our Gro
-wth Str
-ategy
-Great projections are bac
-k
-ed b
-y a clear plan.
- Document y
-our mar
-k
-eting 
-str
-ategy
-, enrollment pipeline
-, and comm
-unity outreach, as this is the 
-roadmap that tur
-ns y
-our n
-umbers into reality
-.
-Re
-ven
-ue Composition
-Y
-ear
-T
-uition & Fees
-Pub
-lic Funding
-Philanthr
-op
-y
-Y
-ear 1
+Stress-Test Your Enrollment
+Assumptions
+Model what happens if enrollment comes in 20% below plan.
+Understanding your downside scenario helps you prepare
+contingency plans.
+LOW
+Document Your Growth Strategy
+Great projections are backed by a clear plan. Document your
+marketing strategy, enrollment pipeline, and community outreach,
+as this is the roadmap that turns your numbers into reality.
+Revenue Composition
+Year
+Tuition & Fees
+Public Funding
+Philanthropy
+Year 1
 88.6%
 0.0%
 11.6%
-Y
-ear 2
+Year 2
 93.4%
 0.0%
 6.8%
-Y
-ear 3
+Year 3
 96.9%
 0.0%
 3.2%
-Y
-ear 4
+Year 4
 99.1%
 0.0%
 1.1%
-Y
-ear 5
+Year 5
 99.4%
 0.0%
 0.7%
 Cost Structure
-Y
-ear
-Staffing % of Re
-v
-F
-acility % of Re
-v
-T
-otal OpEx % of Re
-v
-Y
-ear 1
+Year
+Staffing % of Rev
+Facility % of Rev
+Total OpEx % of Rev
+Year 1
 52.0%
 16.8%
 34.2%
-Y
-ear 2
+Year 2
 63.6%
 13.7%
 25.5%
-Y
-ear 3
+Year 3
 53.4%
 11.5%
 22.1%
-Y
-ear 4
+Year 4
 47.0%
 10.1%
 19.9%
-Y
-ear 5
+Year 5
 43.6%
 9.4%
 18.7%
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 4 of 5
---- PAGE 5 ---
-Cum
-ulative Financial 
-T
-rajector
-y
-Y
-ear
-Cum
-ulative Pr
-ofit
-Reser
-ve (Months)
-Y
-ear 1
+SchoolStack Budget - Generated <DATE>
+Page 6 of 7
+--- PAGE 7 ---
+Cumulative Financial Trajectory
+Year
+Cumulative Profit
+Reserve (Months)
+Year 1
 $22,397
 1.9 months
-Y
-ear 2
+Year 2
 $49,352
 2.6 months
-Y
-ear 3
+Year 3
 $124,332
 6.4 months
-Y
-ear 4
+Year 4
 $243,249
 12.1 months
-Y
-ear 5
+Year 5
 $393,742
 18.9 months
-Stress 
-T
-est Scenarios
+Stress Test Scenarios
 Scenario
-Y1 Pr
-ofit
-Final Pr
-ofit
+Y1 Profit
+Final Profit
 Break-Even
-Reser
-ve (mo)
+Reserve
+(mo)
 Y1 DSCR
-Runwa
-y (mo)
-Enrollment 20% Belo
-w Plan
+Runway
+(mo)
+Enrollment 20% Below Plan
 -$4,969
 $75,544
 Y3
 7.2
 -0.06x
-0.5970277068
-182642
-Loss of Philanthrop
-y
+0.59702770
+68182642
+Loss of Philanthropy
 $3,659
 $147,921
 Y1
 16.5
 1.78x
-1.3157465329
-173204
-Hard re
-v
-en
-ue only
+1.31574653
+29173204
+Hard revenue only
 $3,659
 $147,921
 Y1
 16.5
 1.78x
-1.3157465329
-173204
-Occupancy +15%, P
-ersonnel +5%
+1.31574653
+29173204
+Occupancy +15%, Personnel
++5%
 $13,536
 $134,960
 Y1
 14.8
 3.88x
-2.0146416768
-65805
-Re
-v
-en
-ue Dela
-y
-ed 3 Months
+2.01464167
+6865805
+Revenue Delayed 3 Months
 -$16,260
 $51,635
 Y3
 1.7
 -2.46x
--0.357911938
-46647446
+-0.35791193
+846647446
 Interest Rate +2%
 $22,598
 $150,693
 Y1
 19.0
 5.59x
-2.9024110347
-36015
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 5 of 5
+2.90241103
+4736015
+SchoolStack Budget - Generated <DATE>
+Page 7 of 7

@@ -1,67 +1,24 @@
 --- PAGE 1 ---
-Sc
-hoolStac
-k Budg
-et
-b
-y SchoolStac
-k.ai
-Oakw
-ood Learning Studio - Pr
-o Forma Financial 
-Model
-Multi-Y
-ear Financial Projections  Accr
-ual basis (school currently on undeter
-mined basis)
-Sc
-hool Pr
-ofile
-School Name
-  Oakw
-ood Learning Studio
-School 
-T
-ype
-  Micr
-osc
-hool
-Entity 
-T
-ype
-  LLC - Single Member
-State
-  AZ
-Opening 
-Y
-ear
-  2026
-Max Capacity
-  45
-Fiscal 
-Y
-ear Star
-t
-  J
-ul
-y
-Y
-ear 1 Oper
-ating Months
-  10
-Enr
-ollment Pr
-ojections
-Y
-ear 1
-Y
-ear 2
-Y
-ear 3
-Y
-ear 4
-Y
-ear 5
+SchoolStack Budget
+by SchoolStack.ai
+Oakwood Learning Studio - Pro Forma
+Financial Model
+Multi-Year Financial Projections — Accrual basis (school currently on undetermined basis)
+School Profile
+School Name  Oakwood Learning Studio
+School Type  Microschool
+Entity Type  LLC - Single Member
+State  AZ
+Opening Year  2026
+Max Capacity  45
+Fiscal Year Start  July
+Year 1 Operating Months  10
+Enrollment Projections
+Year 1
+Year 2
+Year 3
+Year 4
+Year 5
 Students
 20
 26
@@ -80,198 +37,119 @@ Utilization
 71.1%
 82.2%
 88.9%
-Pr
-iv
-ate P
-a
-y / 
-T
-uition  Collection
-  A
-utopa
-y / 
-A
-CH @ 100%
-Registr
-ation / Enrollment F
-ees  Collection
-  
-A
-utopa
-y / A
-CH @ 100%
-Scholarships / Financial Aid / Discount Rate  
-Collection
-  A
-utopa
-y / A
-CH @ 100%
-Re
-ven
-ue Sc
-hedule
-Categor
-y
-Y
-ear 1
-Y
-ear 2
-Y
-ear 3
-Y
-ear 4
-Y
-ear 5
-T
-uition & Student F
-ees
+Private Pay / Tuition — Collection
+Autopay / ACH @ 100%
+Registration / Enrollment Fees — Collection
+  Autopay / ACH @ 100%
+Scholarships / Financial Aid / Discount Rate
+— Collection  Autopay / ACH @ 100%
+Revenue Schedule
+Category
+Year 1
+Year 2
+Year 3
+Year 4
+Year 5
+Tuition & Student Fees
 $191,000
 $254,215
 $323,618
 $387,324
 $431,500
-T
-uition Offsets
+Tuition Offsets
 -$14,880
 -$19,817
 -$25,249
 -$30,246
 -$33,720
-Philanthrop
-y
+Philanthropy
 $23,000
 $17,000
 $10,000
 $4,000
 $3,000
-T
-O
-T
-AL REVENUE
+TOTAL REVENUE
 $199,120
 $251,398
 $308,368
 $361,078
 $400,780
-Staffing & P
-er
-sonnel
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 1 of 7
+Staffing & Personnel
+SchoolStack Budget - Generated <DATE>
+Page 1 of 7
 --- PAGE 2 ---
 Function
-P
-ositions
+Positions
 FTE
-Y
-ear 1 Cost
+Year 1 Cost
 School Leadership
 1
 1.0
 $52,031
-Instr
-uctional
+Instructional
 2
 1.5
 $44,854
-T
-O
-T
-AL
+TOTAL
 3
 2.5
 $96,885
 Operating Expenses
-Categor
-y
-Y
-ear 1
-Y
-ear 2
-Y
-ear 3
-Y
-ear 4
-Y
-ear 5
-Instr
-uctional / Prog
-r
-am
+Category
+Year 1
+Year 2
+Year 3
+Year 4
+Year 5
+Instructional / Program
 $9,000
 $11,700
 $14,400
 $16,650
 $18,000
-T
-echnology
+Technology
 $2,400
 $2,472
 $2,546
 $2,622
 $2,701
-Occupancy / F
-acility
+Occupancy / Facility
 $33,400
 $34,402
 $35,435
 $36,498
 $37,592
-Administr
-ativ
-e / Gener
-al
+Administrative / General
 $8,000
 $7,635
 $7,274
 $6,917
 $6,865
-T
-O
-T
-AL OPERA
-TING EXPENSES
+TOTAL OPERATING EXPENSES
 $52,800
 $56,209
 $59,655
 $62,687
 $65,158
-5-Y
-ear Pr
-ofit & Loss Statement
-Y
-ear 1
-Y
-ear 2
-Y
-ear 3
-Y
-ear 4
-Y
-ear 5
-T
-otal Re
-v
-en
-ue
+5-Year Profit & Loss Statement
+Year 1
+Year 2
+Year 3
+Year 4
+Year 5
+Total Revenue
 $199,120
 $251,398
 $308,368
 $361,078
 $400,780
-T
-otal Staffing
+Total Staffing
 ($96,885)
 ($119,750)
 ($123,342)
 ($127,043)
 ($130,854)
-T
-otal Oper
-ating Expenses
+Total Operating Expenses
 ($52,800)
 ($56,209)
 ($59,655)
@@ -283,9 +161,7 @@ Interest Expense
 ($713)
 ($446)
 ($161)
-Pr
-incipal & Capital Outla
-ys
+Principal & Capital Outlays
 ($11,499)
 ($5,733)
 ($5,483)
@@ -303,94 +179,53 @@ Profit Margin %
 38.6%
 45.9%
 49.8%
-Cum
-ulativ
-e Profit
+Cumulative Profit
 $36,739
 $105,482
 $224,657
 $390,310
 $589,882
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 2 of 7
+SchoolStack Budget - Generated <DATE>
+Page 2 of 7
 --- PAGE 3 ---
 Opening Balance Sheet
 Amount
 ASSETS
-  Cash & Cash Equiv
-alents
+  Cash & Cash Equivalents
 $12,000
-  Fix
-ed Assets (Net)
+  Fixed Assets (Net)
 $3,000
-T
-otal Assets
+Total Assets
 $15,000
 LIABILITIES
-T
-otal Liabilities
+Total Liabilities
 $0
-Net P
-osition
+Net Position
 $15,000
-K
-e
-y Financial Indicator
-s
-Re
-v
-en
-ue per Student
-  $9,956
-V
-ar
-iab
-le Cost per Student
-  $450
-Fix
-ed Costs
-  $153,381
-Break
-e
-v
-en Enrollment
-  17 students
-Enrollment Cushion
-  18% abo
-ve breake
-ven
-F
-acility Cost / Student
-  $1,670
-Rene
-w
-al Option
-  No
-Y
-ear 1 Monthl
-y Cash Flo
-w
+Key Financial Indicators
+Revenue per Student  $9,956
+Variable Cost per Student  $450
+Fixed Costs  $153,381
+Breakeven Enrollment  17 students
+Enrollment Cushion  18% above
+breakeven
+Facility Cost / Student  $1,670
+Renewal Option  No
+Year 1 Monthly Cash Flow
 Month
 Beginning
-Inflo
-ws
-Outflo
-ws
-Net Cash Flo
-w
+Inflows
+Outflows
+Net Cash
+Flow
 Ending
-J
-ul
+Jul
 $12,000
 $8,417
 ($16,026)
 -$7,610
 $4,390
-A
-ug
+Aug
 $4,390
 $18,817
 ($16,026)
@@ -408,8 +243,7 @@ $33,817
 ($16,026)
 $17,790
 $27,761
-No
-v
+Nov
 $27,761
 $18,817
 ($16,026)
@@ -421,15 +255,13 @@ $18,817
 ($16,026)
 $2,790
 $33,341
-J
-an
+Jan
 $33,341
 $18,817
 ($16,026)
 $2,790
 $36,131
-F
-eb
+Feb
 $36,131
 $18,817
 ($16,026)
@@ -447,54 +279,39 @@ $18,817
 ($16,026)
 $2,790
 $44,502
-Ma
-y
+May
 $44,502
 $18,817
 ($1,058)
 $17,759
 $62,260
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 3 of 7
+SchoolStack Budget - Generated <DATE>
+Page 3 of 7
 --- PAGE 4 ---
-J
-un
+Jun
 $62,260
 $417
 ($1,058)
 -$641
 $61,619
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 4 of 7
+SchoolStack Budget - Generated <DATE>
+Page 4 of 7
 --- PAGE 5 ---
-Y
-ear 2 Monthl
-y Cash Flo
-w
+Year 2 Monthly Cash Flow
 Month
 Beginning
-Inflo
-ws
-Outflo
-ws
-Net Cash Flo
-w
+Inflows
+Outflows
+Net Cash
+Flow
 Ending
-J
-ul
+Jul
 $61,619
 $7,542
 ($15,221)
 -$7,680
 $53,940
-A
-ug
+Aug
 $53,940
 $25,179
 ($15,221)
@@ -512,8 +329,7 @@ $35,179
 ($15,221)
 $19,958
 $93,814
-No
-v
+Nov
 $93,814
 $25,179
 ($15,221)
@@ -525,15 +341,13 @@ $25,179
 ($15,221)
 $9,958
 $113,730
-J
-an
+Jan
 $113,730
 $25,179
 ($15,221)
 $9,958
 $123,688
-F
-eb
+Feb
 $123,688
 $25,179
 ($15,221)
@@ -551,42 +365,33 @@ $25,179
 ($15,221)
 $9,958
 $153,562
-Ma
-y
+May
 $153,562
 $25,179
 ($15,221)
 $9,958
 $163,520
-J
-un
+Jun
 $163,520
 $542
 ($15,221)
 -$14,680
 $148,840
-Y
-ear 3 Monthl
-y Cash Flo
-w
+Year 3 Monthly Cash Flow
 Month
 Beginning
-Inflo
-ws
-Outflo
-ws
-Net Cash Flo
-w
+Inflows
+Outflows
+Net Cash
+Flow
 Ending
-J
-ul
+Jul
 $148,840
 $5,667
 ($15,766)
 -$10,099
 $138,741
-A
-ug
+Aug
 $138,741
 $31,900
 ($15,766)
@@ -604,8 +409,7 @@ $36,900
 ($15,766)
 $21,133
 $192,141
-No
-v
+Nov
 $192,141
 $31,900
 ($15,766)
@@ -617,15 +421,13 @@ $31,900
 ($15,766)
 $16,133
 $224,408
-J
-an
+Jan
 $224,408
 $31,900
 ($15,766)
 $16,133
 $240,542
-F
-eb
+Feb
 $240,542
 $31,900
 ($15,766)
@@ -643,48 +445,36 @@ $31,900
 ($15,766)
 $16,133
 $288,942
-Ma
-y
+May
 $288,942
 $31,900
 ($15,766)
 $16,133
 $305,076
-J
-un
+Jun
 $305,076
 $667
 ($15,766)
 -$15,099
 $289,976
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 5 of 7
+SchoolStack Budget - Generated <DATE>
+Page 5 of 7
 --- PAGE 6 ---
-Y
-ear 4 Monthl
-y Cash Flo
-w
+Year 4 Monthly Cash Flow
 Month
 Beginning
-Inflo
-ws
-Outflo
-ws
-Net Cash Flo
-w
+Inflows
+Outflows
+Net Cash
+Flow
 Ending
-J
-ul
+Jul
 $289,976
 $4,771
 ($16,285)
 -$11,515
 $278,461
-A
-ug
+Aug
 $278,461
 $37,966
 ($16,285)
@@ -702,8 +492,7 @@ $37,966
 ($16,285)
 $21,681
 $343,504
-No
-v
+Nov
 $343,504
 $37,966
 ($16,285)
@@ -715,15 +504,13 @@ $37,966
 ($16,285)
 $21,681
 $386,866
-J
-an
+Jan
 $386,866
 $37,966
 ($16,285)
 $21,681
 $408,547
-F
-eb
+Feb
 $408,547
 $37,966
 ($16,285)
@@ -741,42 +528,33 @@ $37,966
 ($16,285)
 $21,681
 $473,589
-Ma
-y
+May
 $473,589
 $37,966
 ($16,285)
 $21,681
 $495,270
-J
-un
+Jun
 $495,270
 $771
 ($16,285)
 -$15,515
 $479,756
-Y
-ear 5 Monthl
-y Cash Flo
-w
+Year 5 Monthly Cash Flow
 Month
 Beginning
-Inflo
-ws
-Outflo
-ws
-Net Cash Flo
-w
+Inflows
+Outflows
+Net Cash
+Flow
 Ending
-J
-ul
+Jul
 $479,756
 $3,833
 ($16,767)
 -$12,934
 $466,822
-A
-ug
+Aug
 $466,822
 $42,252
 ($16,767)
@@ -794,8 +572,7 @@ $42,252
 ($16,767)
 $25,484
 $543,275
-No
-v
+Nov
 $543,275
 $42,252
 ($16,767)
@@ -807,15 +584,13 @@ $42,252
 ($16,767)
 $25,484
 $594,244
-J
-an
+Jan
 $594,244
 $42,252
 ($16,767)
 $25,484
 $619,728
-F
-eb
+Feb
 $619,728
 $42,252
 ($16,767)
@@ -833,73 +608,42 @@ $42,252
 ($16,767)
 $25,484
 $696,181
-Ma
-y
+May
 $696,181
 $42,252
 ($16,767)
 $25,484
 $721,666
-J
-un
+Jun
 $721,666
 $833
 ($16,767)
 -$15,934
 $705,732
-Lo
-w
-est cash month across the 5-
-y
-ear f
-orecast:
- 
-Y
-ear 1  J
-ul at 
+Lowest cash month across the 5-
+year forecast: Year 1 — Jul at
 $4,390.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 6 of 7
+SchoolStack Budget - Generated <DATE>
+Page 6 of 7
 --- PAGE 7 ---
-Lo
-west Cash Month b
-y 
-Y
-ear
-Y
-ear
+Lowest Cash Month by Year
+Year
 Month
 Ending Cash
-Y
-ear 1
-J
-ul
+Year 1
+Jul
 $4,390
-Y
-ear 2
-J
-ul
+Year 2
+Jul
 $53,940
-Y
-ear 3
-J
-ul
+Year 3
+Jul
 $138,741
-Y
-ear 4
-J
-ul
+Year 4
+Jul
 $278,461
-Y
-ear 5
-J
-ul
+Year 5
+Jul
 $466,822
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 7 of 7
+SchoolStack Budget - Generated <DATE>
+Page 7 of 7

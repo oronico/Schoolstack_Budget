@@ -32,7 +32,6 @@
  *
  * Hermetic: no DB, no network, no env vars.
  */
-import zlib from "node:zlib";
 
 import { runConsultantEngine } from "../src/lib/consultant-engine.js";
 import { buildLenderPacket } from "../src/lib/packets/build-lender-packet.js";
@@ -41,6 +40,7 @@ import { generateLenderPacketPDF } from "../src/lib/packets/lender-packet-pdf.js
 import { generateBoardPacketPDF } from "../src/lib/packets/board-packet-pdf.js";
 import { MICROSCHOOL_MODEL } from "../src/lib/seed-preview-data.js";
 
+import { extractPdfFragments } from "./_pdf-text-snapshot-util.js";
 let passed = 0;
 let failed = 0;
 const failures: string[] = [];
@@ -54,89 +54,6 @@ function check(label: string, cond: boolean, detail = ""): void {
 // both `(literal)` strings AND `<hex>` strings (PDFKit emits the latter
 // for kerned runs in body text). Returns one fragment-array per page
 // (each PDF page is a separate FlateDecoded content stream).
-function extractStringLiterals(content: string, out: string[]): void {
-  let i = 0;
-  while (i < content.length) {
-    const ch = content[i];
-    if (ch === "(") {
-      i++;
-      let depth = 1;
-      let str = "";
-      while (i < content.length && depth > 0) {
-        const c = content[i];
-        if (c === "\\") {
-          const n = content[i + 1];
-          if (n === undefined) { i++; break; }
-          if (n === "n") { str += "\n"; i += 2; continue; }
-          if (n === "r") { str += "\r"; i += 2; continue; }
-          if (n === "t") { str += "\t"; i += 2; continue; }
-          if (n === "b" || n === "f") { i += 2; continue; }
-          if (n === "(" || n === ")" || n === "\\") { str += n; i += 2; continue; }
-          if (n >= "0" && n <= "7") {
-            let oct = "";
-            i++;
-            while (oct.length < 3 && i < content.length && content[i] >= "0" && content[i] <= "7") {
-              oct += content[i]; i++;
-            }
-            str += String.fromCharCode(parseInt(oct, 8));
-            continue;
-          }
-          str += n; i += 2; continue;
-        }
-        if (c === "(") { depth++; str += c; i++; continue; }
-        if (c === ")") { depth--; if (depth === 0) { i++; break; } str += c; i++; continue; }
-        str += c; i++;
-      }
-      if (str.length > 0) out.push(str);
-      continue;
-    }
-    if (ch === "<" && content[i + 1] !== "<") {
-      i++;
-      let hex = "";
-      while (i < content.length && content[i] !== ">") {
-        const c = content[i];
-        if ((c >= "0" && c <= "9") || (c >= "a" && c <= "f") || (c >= "A" && c <= "F")) hex += c;
-        i++;
-      }
-      if (content[i] === ">") i++;
-      if (hex.length % 2 === 1) hex += "0";
-      let str = "";
-      for (let h = 0; h < hex.length; h += 2) {
-        str += String.fromCharCode(parseInt(hex.substr(h, 2), 16));
-      }
-      if (str.length > 0) out.push(str);
-      continue;
-    }
-    i++;
-  }
-}
-
-function extractPagesText(pdf: Buffer): string[] {
-  const pages: string[] = [];
-  let cursor = 0;
-  while (cursor < pdf.length) {
-    const sIdx = pdf.indexOf("stream", cursor);
-    if (sIdx === -1) break;
-    let dataStart = sIdx + "stream".length;
-    if (pdf[dataStart] === 0x0d) dataStart++;
-    if (pdf[dataStart] === 0x0a) dataStart++;
-    const eIdx = pdf.indexOf("endstream", dataStart);
-    if (eIdx === -1) break;
-    let dataEnd = eIdx;
-    if (pdf[dataEnd - 1] === 0x0a) dataEnd--;
-    if (pdf[dataEnd - 1] === 0x0d) dataEnd--;
-    const raw = pdf.subarray(dataStart, dataEnd);
-    let body: string;
-    try { body = zlib.inflateSync(raw).toString("binary"); }
-    catch { body = raw.toString("binary"); }
-    const frags: string[] = [];
-    extractStringLiterals(body, frags);
-    if (frags.length > 0) pages.push(frags.join(""));
-    cursor = eIdx + "endstream".length;
-  }
-  return pages;
-}
-
 const EMPTY_HINT = "Once decisions are saved";
 
 // PDFKit Helvetica-Bold kerns the section heading "Decision History" as
@@ -159,10 +76,16 @@ async function runFor(
   const packetA = (build as any)(base, consultantA, 0);
   check(`${label} branch A: decisionHistory empty`, packetA.decisionHistory.length === 0);
   const pdfA = await render(packetA);
-  const pagesA = extractPagesText(pdfA);
-  // Cover/TOC is page 1 — it legitimately lists "Decision History" as a
-  // numbered TOC entry. Body pages start at page 2.
-  const bodyA = pagesA.slice(1).join("\n");
+  const pagesA = extractPdfFragments(pdfA);
+  // Cover page lists "Decision History" as a numbered TOC entry. Body
+  // pages start after the TOC. Task #922 — the MuPDF-backed
+  // `extractPdfFragments` returns a flat `string[]` with `--- PAGE N ---`
+  // markers (the legacy WinAnsi extractor concatenated the cover + TOC
+  // into a single content stream, but MuPDF surfaces them as separate
+  // pages). Slice past the `--- PAGE 3 ---` marker so the assertion
+  // ignores BOTH the cover (page 1) and the TOC (page 2).
+  const tocEndIdx = pagesA.indexOf("--- PAGE 3 ---");
+  const bodyA = (tocEndIdx >= 0 ? pagesA.slice(tocEndIdx) : pagesA.slice(1)).join("\n");
   check(
     `${label} branch A: body has no "Decision History" heading`,
     !hasDecisionHistoryHeading(bodyA),
@@ -192,7 +115,7 @@ async function runFor(
   const packetB = (build as any)(withDecision, consultantB, 0);
   check(`${label} branch B: decisionHistory has 1 item`, packetB.decisionHistory.length === 1);
   const pdfB = await render(packetB);
-  const pagesB = extractPagesText(pdfB);
+  const pagesB = extractPdfFragments(pdfB);
   const bodyB = pagesB.slice(1).join("\n");
   check(
     `${label} branch B: body contains "Decision History" heading`,
