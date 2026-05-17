@@ -92,11 +92,11 @@ API redeploy that contains the dropped readers.
 |---|---|
 | **What** | Walk every `financial_models` row, find any `data.assumptionConfidence[*].evidenceFiles[*].dataBase64` payload, upload the bytes to App Storage via the Replit sidecar signed-PUT flow, and replace the inline payload with an `/objects/uploads/<uuid>` `objectPath`. Task #729 then dropped the back-compat reader from the lender packet, the wizard schema, the OpenAPI, and the assumption registry — so leaving inline payloads in place after the redeploy means those files become invisible. |
 | **Script** | `scripts/src/migrate-inline-evidence.ts`, runnable as `pnpm --filter @workspace/scripts run migrate:inline-evidence`. |
-| **Affected records** | `SELECT count(*) FROM financial_models WHERE data::text LIKE '%"dataBase64":%';` (rough — uses the JSON marker rather than a structured path). For a precise count, the script itself prints `scanned/migrated/skipped` totals in dry-run mode. |
-| **Approach** | `one-shot script`. The script is idempotent: rows with no inline payloads are skipped, rows already carrying both `objectPath` and a redundant inline copy just get the inline copy stripped, rows with only inline payloads get the bytes uploaded and the path swapped in. |
+| **Affected records** | The script has **no dry-run mode** (see "Coordination" below), so size the blast radius before invoking it with a read-only query against the prod read-replica: `SELECT count(*) FROM financial_models WHERE data::text LIKE '%"dataBase64":%';` (rough — uses the JSON marker rather than a structured path). The script itself only emits `scanned / migrated / skipped` totals at the end of a real execute run; there is no preview pass. |
+| **Approach** | `one-shot script`. The script is idempotent on retries: rows with no inline payloads are skipped, rows already carrying both `objectPath` and a redundant inline copy just get the inline copy stripped, rows with only inline payloads get the bytes uploaded and the path swapped in. A failed individual file upload leaves that file untouched and the rest of the row continues. |
 | **Rollback** | Two options. (a) If the redeploy has not yet happened, just don't run the script — the pre-redeploy code still reads inline. (b) If the redeploy is live and the script has run but evidence is now mis-rendering, restore the `financial_models` table from the most recent daily Railway snapshot per `docs/RUNBOOK_DB_RESTORE.md` (estimated 40–65 min RTO, ≤24h RPO). There is no in-place "re-inline" reverse migration — the bytes now live in the bucket. |
 | **Window** | `pre-cutover` — run against prod within the cutover window but BEFORE the API redeploy that removes the inline readers. The script is safe to run live: it reads + writes one row at a time and never holds a long lock. Estimated runtime on prod is bounded by the bucket upload latency × number of evidence files; expect single-digit minutes for the current beta population. |
-| **Coordination** | Operator must have App Storage write access (the Replit sidecar token) and a fresh `DATABASE_URL` against prod. Do the dry-run first (`-- --dry-run`), confirm the counts, then re-run with `-- --execute`. The orphan-uploads sweeper (`docs/operations/orphan-uploads-sweeper.md`) will pick up any uploads from a failed mid-script crash on its next 24h tick — no manual cleanup needed. |
+| **Coordination** | Operator must have App Storage write access (the Replit sidecar token, i.e. run from a Replit shell where `http://127.0.0.1:1106` is reachable and `PRIVATE_OBJECT_DIR` is set) and a `DATABASE_URL` pointing at prod. **The script writes immediately on every row that needs migrating — there are no `--dry-run` / `--execute` flags.** Verify the row count with the SQL query in "Affected records" first; if the count is wildly off expectations, stop and investigate before invoking the script. The orphan-uploads sweeper (`docs/operations/orphan-uploads-sweeper.md`) will pick up any uploads from a failed mid-script crash on its next 24h tick — no manual cleanup needed. If true dry-run behaviour is wanted before M7, add it as a follow-up to the script (a `--dry-run` flag that short-circuits the `db.update(...)` calls and just logs counters); this plan does not assume it exists. |
 
 ---
 
@@ -166,13 +166,22 @@ step has an explicit "stop and roll back" condition.
 1. **Take a fresh Railway snapshot** of the prod Postgres add-on.
    This is the rollback floor — keep it for ≥7 days. RTO 40–65 min,
    RPO ≤24h, per `docs/RUNBOOK_DB_RESTORE.md`.
-2. **Run §2 (inline-evidence migration) in dry-run.** Confirm the
-   reported `scanned/migrated/skipped` counts are non-zero and match
-   expectations. Stop if the count is wildly off — that's a sign the
-   marker query in §2 misclassified rows.
-3. **Run §2 with `--execute`.** Watch for non-zero `failed` counts;
-   any failure here means the sidecar token expired or the bucket is
-   misconfigured. Re-run after fixing — the script is idempotent.
+2. **Size §2's blast radius with the read-only count query**
+   (`SELECT count(*) FROM financial_models WHERE data::text LIKE
+   '%"dataBase64":%';` against the prod read-replica). The
+   `migrate-inline-evidence.ts` script has no dry-run mode — every
+   invocation writes — so this query is the only safe preview. Stop
+   if the count is wildly different from the beta-era expectation;
+   that's a sign the marker query misclassified rows or someone
+   already ran the migration.
+3. **Run §2 for real:** `pnpm --filter @workspace/scripts run
+   migrate:inline-evidence` from a Replit shell with `DATABASE_URL`
+   pointing at prod and `PRIVATE_OBJECT_DIR` set. Watch the final
+   `scanned / migrated / skipped` summary line and any per-file
+   upload error logs; failures leave the offending file untouched
+   and the script continues, so a non-zero failure count means
+   either the sidecar token expired or the bucket is misconfigured.
+   Fix and re-run — the script is idempotent.
 4. **Redeploy the API server.** §1 (Drizzle migrations 0003–0007)
    runs inline on boot before the server accepts traffic. The boot
    log will show each `IF NOT EXISTS` no-op or apply line; abort the
