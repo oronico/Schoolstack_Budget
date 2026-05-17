@@ -1,23 +1,12 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { z } from "zod";
 import { PublicExportUnderwritingBody } from "@workspace/api-zod";
 
-// Task #472 — strict email validation for review-request handlers.
-const reviewRequestEmailSchema = z.string().trim().min(1).max(254).email();
 import { generateSingleYearBudget } from "../lib/underwriting-export";
 import { generateFormulaWorkbook } from "../lib/formula-export";
-import { runConsultantEngine, computeYearFinancialsFromData } from "../lib/consultant-engine";
-import { computeDaysCashOnHand } from "../lib/workbook-helpers.js";
+import { runConsultantEngine } from "../lib/consultant-engine";
 import { createRateLimiter } from "../lib/rate-limiter";
 import { trackEvent } from "../lib/track-event";
-import { isEmailConfigured, sendReviewRequestToTeam, sendReviewConfirmation } from "../lib/mailer";
-import { schoolTypeDisplay, entityTypeDisplay } from "../lib/pdf-utils";
-import {
-  computeAnnualDscr,
-  parseAccountingExportCsv,
-  mapAccountingExportToSnapshot,
-  MAX_ACCOUNTING_EXPORT_BYTES,
-} from "@workspace/finance";
+import { logRetiredPublicRouteHit } from "../lib/retired-route-telemetry";
 
 const router: IRouter = Router();
 
@@ -67,7 +56,24 @@ async function handleBudgetExport(req: Request, res: Response) {
 }
 
 router.post("/public/export-budget", rateLimiter, handleBudgetExport);
-router.post("/public/export-underwriting", rateLimiter, handleBudgetExport);
+
+// Task #950 — RETIRED. The generated `exportUnderwriting` client in
+// lib/api-client-react existed but was never imported anywhere in the
+// school-financial-model UI; /api/public/export-budget covers the same
+// flow for the unauthenticated wizard. 14 days of hit telemetry on the
+// pre-retirement handler showed no legitimate caller fingerprints, so
+// the handler is replaced with a 410 Gone stub. Route stays mounted
+// (with telemetry) for at least one more deploy cycle so any straggler
+// integration sees the 410 and the supported alternative, not a 404.
+// Removing the stub itself is a separate future task.
+router.post("/public/export-underwriting", rateLimiter, (req: Request, res: Response) => {
+  void logRetiredPublicRouteHit(req, "/api/public/export-underwriting");
+  res.status(410).json({
+    error: "This endpoint has been retired.",
+    code: "route_retired",
+    alternative: "/api/public/export-budget",
+  });
+});
 
 router.post("/public/export-single-year", rateLimiter, async (req: Request, res: Response) => {
   try {
@@ -144,163 +150,22 @@ router.post("/public/consultant", rateLimiter, async (req: Request, res: Respons
   }
 });
 
-router.post("/public/request-review", rateLimiter, async (req: Request, res: Response) => {
-  try {
-    // Task #472 — email-service config gate moved BELOW input validation
-    // so a malformed payload always returns 400, not 503.
-    const contentLength = parseInt(req.headers["content-length"] || "0", 10);
-    if (contentLength > MAX_PAYLOAD_SIZE) {
-      res.status(413).json({ error: "Payload too large." });
-      return;
-    }
-
-    const { name, email, message, modelData } = req.body || {};
-    if (!name || typeof name !== "string" || !email || typeof email !== "string" || !modelData || typeof modelData !== "object") {
-      res.status(400).json({ error: "Name, email, and model data are required." });
-      return;
-    }
-
-    const trimmedName = name.trim().slice(0, 200);
-    const trimmedEmail = email.trim().slice(0, 254);
-    const trimmedMessage = typeof message === "string" ? message.trim().slice(0, 2000) : undefined;
-
-    if (!trimmedName || !trimmedEmail) {
-      res.status(400).json({ error: "Name and email are required." });
-      return;
-    }
-
-    // Task #472 — Zod email so a bad address surfaces a clean 400
-    // rather than 500ing out of the mailer when Resend rejects it.
-    const emailParse = reviewRequestEmailSchema.safeParse(trimmedEmail);
-    if (!emailParse.success) {
-      res.status(400).json({
-        error: "Please provide a valid email address.",
-        code: "invalid_email",
-      });
-      return;
-    }
-
-    if (!isEmailConfigured()) {
-      res.status(503).json({ error: "Email service is not configured." });
-      return;
-    }
-
-    const parsed = PublicExportUnderwritingBody.safeParse(modelData);
-    if (!parsed.success) {
-      res.status(400).json({ error: "Invalid model data." });
-      return;
-    }
-
-    const data = parsed.data as Record<string, unknown>;
-    const consultantOutput = await runConsultantEngine(data);
-
-    const profile = data.schoolProfile as Record<string, unknown> | undefined;
-    const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "Unnamed School";
-    const state = (typeof profile?.state === "string" ? profile.state : "") || "N/A";
-    const schoolType = schoolTypeDisplay(profile?.schoolType as string);
-    const entityType = entityTypeDisplay(profile?.entityType as string);
-
-    const stageMap: Record<string, string> = { pre_launch: "Pre-Launch", year_one: "Year 1", operating: "Operating (2+ years)" };
-    const ownerMap: Record<string, string> = { own: "Owned", rent: "Leased", donated: "Donated / Shared", home_based: "Home-Based" };
-    const intentMap: Record<string, string> = { plan_to_apply: "Planning to apply for financing", want_to_understand: "Want to understand lending readiness", budget_only: "Budget planning only" };
-
-    const schoolStage = stageMap[profile?.schoolStage as string] || undefined;
-    const openingYear = typeof profile?.openingYear === "number" ? profile.openingYear : undefined;
-    const maxCapacity = typeof profile?.maxCapacity === "number" ? profile.maxCapacity : undefined;
-    const facilityCity = typeof profile?.facilityCity === "string" && profile.facilityCity ? profile.facilityCity : undefined;
-    const ownershipType = ownerMap[profile?.ownershipType as string] || undefined;
-    const monthlyRent = typeof profile?.monthlyRent === "number" && profile.monthlyRent > 0 ? profile.monthlyRent : undefined;
-    const isFaithAffiliated = profile?.isFaithAffiliated === true;
-    const faithAffiliation = typeof profile?.faithAffiliation === "string" ? profile.faithAffiliation : undefined;
-    const hasLoan = profile?.hasLoan === true;
-    const loanAmount = typeof profile?.loanAmount === "number" && profile.loanAmount > 0 ? profile.loanAmount : undefined;
-    const lendingLabIntent = intentMap[profile?.lendingLabIntent as string] || undefined;
-
-    const staffingRows = Array.isArray(data.staffingRows) ? data.staffingRows : [];
-    const staffCount = staffingRows.length;
-
-    const yearFinancials = computeYearFinancialsFromData(data);
-    const enrollment = yearFinancials.map(yf => yf.students);
-    const revenue = yearFinancials.map(yf => yf.totalRevenue);
-    const expenses = yearFinancials.map(yf => yf.totalExpenses);
-    const netIncome = yearFinancials.map(yf => yf.netIncome);
-    const dscr = yearFinancials.map(yf => computeAnnualDscr(yf) ?? 0);
-
-    const cf = consultantOutput.cumulativeFinancials || [];
-    const reserveMonths = cf.length > 0 ? cf[cf.length - 1].reserveMonths : 0;
-    const cashRunwayMonths = consultantOutput.cashRunwayMonths || 0;
-
-    const priorSnapshot = (data as Record<string, unknown>).priorYearSnapshot as Record<string, number> | undefined;
-    const y1StartingCash = priorSnapshot?.endingCash || 0;
-    const y1EndingCash = y1StartingCash + (yearFinancials[0]?.netIncome || 0);
-    const daysCashOnHand = computeDaysCashOnHand(y1EndingCash, yearFinancials[0]?.totalExpenses || 0);
-
-    const findings: { title: string; severity: "critical" | "high" | "medium" }[] = [];
-    let criticalSeverityCount = 0;
-    for (const issue of consultantOutput.topIssues.slice(0, 5)) {
-      findings.push({ title: issue.title, severity: issue.severity });
-      if (issue.severity === "critical") criticalSeverityCount++;
-    }
-
-    const y1Rev = revenue[0] || 0;
-    const y1StaffingCost = staffingRows.reduce((sum: number, r: Record<string, unknown>) => {
-      const salary = typeof r.salary === "number" ? r.salary : 0;
-      const count = typeof r.count === "number" ? r.count : 1;
-      return sum + salary * count;
-    }, 0);
-    const staffingCostPercent = y1Rev > 0 ? (y1StaffingCost / y1Rev) * 100 : 0;
-    const isSingleYear = (profile?.modelDuration as string | undefined) === "single_year";
-
-    const [teamResult, confirmResult] = await Promise.all([
-      sendReviewRequestToTeam({
-        requesterName: trimmedName,
-        requesterEmail: trimmedEmail,
-        message: trimmedMessage,
-        schoolName,
-        state,
-        schoolType,
-        entityType,
-        schoolStage,
-        openingYear,
-        maxCapacity,
-        facilityCity,
-        ownershipType,
-        monthlyRent,
-        isFaithAffiliated,
-        faithAffiliation,
-        hasLoan,
-        loanAmount,
-        lendingLabIntent,
-        staffCount,
-        staffingCostPercent,
-        enrollment,
-        revenue,
-        expenses,
-        netIncome,
-        dscr,
-        reserveMonths,
-        cashRunwayMonths,
-        daysCashOnHand,
-        criticalFindings: findings,
-        criticalSeverityCount,
-        source: "public",
-        isSingleYear,
-      }),
-      sendReviewConfirmation(trimmedEmail, trimmedName, schoolName),
-    ]);
-
-    if (!teamResult.success || !confirmResult.success) {
-      res.status(500).json({ error: "Failed to send review request. Please try again." });
-      return;
-    }
-
-    await trackEvent("requested_model_review", null, { schoolName, source: "public" });
-    res.json({ success: true });
-  } catch (err) {
-    console.error("Public review request error:", err);
-    res.status(500).json({ error: "Something went wrong submitting the review request." });
-  }
+// Task #950 — RETIRED. The model-scoped POST /api/models/:id/request-review
+// is the supported path for review requests; this anonymous variant had
+// zero UI callers in the school-financial-model app and 14 days of hit
+// telemetry showed no legitimate external integrations. Replaced with a
+// 410 Gone stub. Route stays mounted (with telemetry) for at least one
+// more deploy cycle so any straggler caller sees the 410 + the supported
+// alternative, not a 404.
+router.post("/public/request-review", rateLimiter, (req: Request, res: Response) => {
+  void logRetiredPublicRouteHit(req, "/api/public/request-review");
+  res.status(410).json({
+    error: "This endpoint has been retired.",
+    code: "route_retired",
+    alternative: "/api/models/:id/request-review",
+  });
 });
+
 
 const CTA_EVENT_NAMES = new Set([
   "capability_cta_click",
@@ -424,50 +289,22 @@ const TIMING_FIELD_MAX_LEN = 64;
 const TIMING_STEP_MAX = 100;
 const TIMING_DURATION_MAX_SECONDS = 24 * 60 * 60; // 24h is well past any sane wizard session
 
-// Task #708 — Server-side P&L import. Lets the wizard's "Import from
-// QuickBooks" / CSV-fallback affordances post a raw QuickBooks (or
-// generic) Profit & Loss export and get back the same parsed totals +
-// snapshot field mapping the client-side parser would produce. The UI
-// still parses client-side by default (so the founder's books never
-// leave their browser), but routing through this endpoint is what lets
-// a future QuickBooks-OAuth importer land its server-fetched CSV here
-// without re-implementing the mapping. Source is tracked so we can see
-// how often founders pick the QuickBooks path vs. the generic CSV
-// fallback.
-router.post("/public/import-actuals", rateLimiter, async (req: Request, res: Response) => {
-  try {
-    const { csv, source } = req.body ?? {};
-    if (typeof csv !== "string" || csv.length === 0) {
-      res.status(400).json({ error: "Missing csv body." });
-      return;
-    }
-    if (csv.length > MAX_ACCOUNTING_EXPORT_BYTES) {
-      res.status(413).json({
-        error: `CSV is larger than ${Math.round(MAX_ACCOUNTING_EXPORT_BYTES / 1000)} KB. Trim it to a single P&L summary and re-upload.`,
-      });
-      return;
-    }
-    const normalizedSource = source === "quickbooks" ? "quickbooks" : "csv";
-    const parsed = parseAccountingExportCsv(csv);
-    const mappings = mapAccountingExportToSnapshot(parsed);
-    const snapshot: Record<string, number> = {};
-    for (const [key, value] of mappings) snapshot[key] = value;
-    await trackEvent("actuals_import", null, {
-      source: normalizedSource,
-      recognizedRowCount: parsed.recognizedRowCount,
-      mappedFieldCount: mappings.length,
-    });
-    res.json({
-      source: normalizedSource,
-      totals: parsed.totals,
-      snapshot,
-      parseWarnings: parsed.parseWarnings,
-      recognizedRowCount: parsed.recognizedRowCount,
-    });
-  } catch (err) {
-    console.error("Public actuals import error:", err);
-    res.status(500).json({ error: "Something went wrong importing the P&L." });
-  }
+// Task #950 — RETIRED. Originally added in Task #708 as a server-side
+// P&L import path for a planned QuickBooks-OAuth importer. The wizard
+// only ever parses actuals client-side (so the founder's books never
+// leave their browser), the QuickBooks-OAuth importer never shipped,
+// and 14 days of hit telemetry showed no legitimate callers. Replaced
+// with a 410 Gone stub. Route stays mounted (with telemetry) for at
+// least one more deploy cycle so any straggler caller sees the 410,
+// not a 404. No supported server-side alternative — the client-side
+// parser in @workspace/finance is the only path now.
+router.post("/public/import-actuals", rateLimiter, (req: Request, res: Response) => {
+  void logRetiredPublicRouteHit(req, "/api/public/import-actuals");
+  res.status(410).json({
+    error: "This endpoint has been retired.",
+    code: "route_retired",
+    alternative: null,
+  });
 });
 
 router.post("/public/timing", rateLimiter, async (req: Request, res: Response) => {

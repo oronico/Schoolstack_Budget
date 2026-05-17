@@ -308,19 +308,26 @@ async function main(): Promise<void> {
     check("auth review-request 400 body has code=invalid_email",
       badEmailAuthBody.code === "invalid_email", `code=${badEmailAuthBody.code}`);
 
-    // === 3. Public request-review email validation. ===
-    const badEmailPublic = await fetch(`${baseUrl}/api/public/request-review`, {
+    // === 3. Public request-review is RETIRED (Task #950). ===
+    // The model-scoped variant covered above is now the only supported
+    // path; the unauthenticated /api/public/request-review handler was
+    // replaced with a 410 Gone stub after a 14-day telemetry watch
+    // showed no legitimate callers. The dedicated retirement test in
+    // tests/retired-public-routes-410.ts owns the 410 contract; here
+    // we just guard against the route silently re-emerging with old
+    // 400-on-bad-email semantics.
+    const retiredPublic = await fetch(`${baseUrl}/api/public/request-review`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: "Test", email: "still-not-an-email",
         modelData: { schoolProfile: { schoolName: "T" } },
       }),
     });
-    check("POST /public/request-review with bad email → 400 (validation runs before email-config gate)",
-      badEmailPublic.status === 400, `got ${badEmailPublic.status}`);
-    const badEmailPublicBody = (await badEmailPublic.json()) as { code?: string };
-    check("public review-request 400 body has code=invalid_email",
-      badEmailPublicBody.code === "invalid_email", `code=${badEmailPublicBody.code}`);
+    check("POST /public/request-review → 410 (retired in Task #950)",
+      retiredPublic.status === 410, `got ${retiredPublic.status}`);
+    const retiredPublicBody = (await retiredPublic.json()) as { code?: string };
+    check("retired public review-request body has code=route_retired",
+      retiredPublicBody.code === "route_retired", `code=${retiredPublicBody.code}`);
 
     // === 5. /public/export-single-year gated by modelDuration. ===
     const wrongDuration = await fetch(`${baseUrl}/api/public/export-single-year`, {
