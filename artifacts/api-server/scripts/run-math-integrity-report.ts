@@ -1720,10 +1720,41 @@ interface UnmappedLabelSummary {
   samplePaths: string[];
 }
 
+/**
+ * One row per *individual* unmapped numeric leaf (not aggregated by
+ * label). Carries the full `(surface, value, location, label)` payload
+ * required by the M5 per-VALUE orphan-value gate in
+ * `artifacts/api-server/tests/math-integrity-harness.ts`. A leaf is
+ * considered an orphan VALUE here iff its label has no entry in
+ * `M2_LABEL_TO_METRIC`, OR the mapping exists but its `pathFilter`
+ * rejected this specific leaf location (same predicate runM2Mapping
+ * uses internally before counting an `unmappedLeafCount`).
+ */
+export interface OrphanLeaf {
+  surface: string; // "m2:lender-packet" | "m2:board-packet" | "m2:narrative-bundle"
+  producer: "lender-packet" | "board-packet" | "narrative-bundle";
+  persona: string;
+  location: string;
+  value: number;
+  rawToken: string | undefined;
+  label: string | null;
+  /** Why this leaf is unmapped — auditable rationale (or the UNCLASSIFIED marker). */
+  rationale: string;
+  /** True iff the label has no rationale AND no mapping — a hard orphan the registry must absorb. */
+  unclassified: boolean;
+}
+
 interface M2MappingResult {
   mapped: Finding[];
   unmapped: UnmappedLabelSummary[];
   unmappedLeafCount: number;
+  /**
+   * Every individual orphan leaf (per-VALUE granularity) discovered
+   * during M2 → registry mapping. Used by the M5 harness to fail with
+   * an explicit `(surface, value, location)` payload per orphan rather
+   * than the aggregated label list.
+   */
+  orphanLeaves: OrphanLeaf[];
 }
 
 function runM2Mapping(
@@ -1735,7 +1766,39 @@ function runM2Mapping(
   const metricsById = new Map(CANONICAL_METRICS.map((m) => [m.id, m]));
   const mapped: Finding[] = [];
   const unmappedAgg = new Map<string, { count: number; samplePaths: Set<string> }>();
+  const orphanLeaves: OrphanLeaf[] = [];
   let unmappedLeafCount = 0;
+
+  function recordOrphan(
+    producer: "lender-packet" | "board-packet" | "narrative-bundle",
+    persona: string,
+    leaf: { location: string; value: number; rawToken?: string; label?: string },
+    label: string | null,
+  ): void {
+    const rationaleKey = label ?? "(no-label)";
+    const rationale = label
+      ? renderUnmappedRationale(label)
+      : UNCLASSIFIED_MARKER;
+    orphanLeaves.push({
+      surface: `m2:${producer}`,
+      producer,
+      persona,
+      location: leaf.location,
+      value: leaf.value,
+      rawToken: leaf.rawToken,
+      label,
+      rationale,
+      unclassified: rationale === UNCLASSIFIED_MARKER,
+    });
+    const agg = unmappedAgg.get(rationaleKey) ?? {
+      count: 0,
+      samplePaths: new Set<string>(),
+    };
+    agg.count += 1;
+    if (agg.samplePaths.size < 3) agg.samplePaths.add(`${producer}:${leaf.location}`);
+    unmappedAgg.set(rationaleKey, agg);
+    unmappedLeafCount += 1;
+  }
 
   for (const { ctx, canonical } of personaCtxs) {
     for (const [producer, payload] of [
@@ -1748,24 +1811,14 @@ function runM2Mapping(
         const label = leaf.label;
         const mapping = label ? M2_LABEL_TO_METRIC[label] : undefined;
         if (!mapping) {
-          const key = label ?? "(no-label)";
-          const agg = unmappedAgg.get(key) ?? { count: 0, samplePaths: new Set<string>() };
-          agg.count += 1;
-          if (agg.samplePaths.size < 3) agg.samplePaths.add(`${producer}:${leaf.location}`);
-          unmappedAgg.set(key, agg);
-          unmappedLeafCount += 1;
+          recordOrphan(producer, ctx.persona.slug, leaf, label ?? null);
           continue;
         }
         if (mapping.pathFilter && !mapping.pathFilter(leaf.location)) {
-          // Treat scenario/aux leaves as classified (counted as
-          // non-metric) rather than mapped — register them under the
-          // label so the unclassified-label assertion still holds.
-          const key = label!;
-          const agg = unmappedAgg.get(key) ?? { count: 0, samplePaths: new Set<string>() };
-          agg.count += 1;
-          if (agg.samplePaths.size < 3) agg.samplePaths.add(`${producer}:${leaf.location}`);
-          unmappedAgg.set(key, agg);
-          unmappedLeafCount += 1;
+          // pathFilter-rejected leaves are still orphans at the
+          // per-VALUE level — they exit the mapped pipeline and need a
+          // rationale to remain classified.
+          recordOrphan(producer, ctx.persona.slug, leaf, label!);
           continue;
         }
         const metric = metricsById.get(mapping.metricId);
@@ -1832,7 +1885,7 @@ function runM2Mapping(
     }))
     .sort((a, b) => b.count - a.count);
 
-  return { mapped, unmapped, unmappedLeafCount };
+  return { mapped, unmapped, unmappedLeafCount, orphanLeaves };
 }
 
 /**
@@ -1963,6 +2016,13 @@ export interface MathIntegrityComposition {
   m2Coverage: readonly ExtractorCoverage[];
   m2Mapping: M2MappingResult;
   unclassifiedLabels: readonly string[];
+  /**
+   * Per-VALUE orphan leaves (one row per individual unmapped numeric
+   * leaf whose label has no rationale entry). Carries the full
+   * `(surface, value, location, label)` payload the M5 harness
+   * surfaces in its orphan-value failure message.
+   */
+  unclassifiedOrphanLeaves: readonly OrphanLeaf[];
   allFindings: readonly Finding[];
   invalidTriage: readonly Finding[];
   blankTriage: readonly Finding[];
@@ -1999,6 +2059,13 @@ export async function composeMathIntegrity(): Promise<MathIntegrityComposition> 
   const unclassifiedLabels = m2Mapping.unmapped
     .map((u) => u.label)
     .filter((label) => renderUnmappedRationale(label) === UNCLASSIFIED_MARKER);
+  // Per-VALUE orphan leaves whose label has no rationale (and no
+  // mapping). These are HARD orphans — the M5 harness fails per leaf
+  // with the full (surface, value, location, label) payload so the
+  // registry author sees exactly which numeric escaped the wire.
+  const unclassifiedOrphanLeaves = m2Mapping.orphanLeaves.filter(
+    (o) => o.unclassified,
+  );
   const allFindings = [
     ...registryFindings,
     ...supplementalFindings,
@@ -2020,6 +2087,7 @@ export async function composeMathIntegrity(): Promise<MathIntegrityComposition> 
     m2Coverage,
     m2Mapping,
     unclassifiedLabels,
+    unclassifiedOrphanLeaves,
     allFindings,
     invalidTriage,
     blankTriage,

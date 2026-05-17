@@ -177,11 +177,42 @@ async function main(): Promise<void> {
     `blank=${c.blankTriage.length}`,
   );
 
+  // M2 orphan-value gate — PER-VALUE granularity.
+  //
+  // Failure mode the architect explicitly called out for M5: an
+  // aggregated-by-label check (M4's behaviour) can mask a regression
+  // where a known-classified label leaks a NEW numeric leaf at a new
+  // location. We assert on every individual orphan leaf and emit
+  // each as `<surface> | value=<value> | <location> | label=<label>`
+  // so the failure message names the exact wire-payload coordinate
+  // the registry author has to absorb.
+  //
+  // `unclassifiedOrphanLeaves` is the set of orphan leaves whose
+  // label is neither mapped via M2_LABEL_TO_METRIC nor covered by
+  // an M2_UNMAPPED_RATIONALE rationale entry — the same UNCLASSIFIED
+  // predicate the M4 markdown table uses, applied per VALUE.
+  const orphanReport = c.unclassifiedOrphanLeaves
+    .slice(0, 20)
+    .map(
+      (o) =>
+        `${o.surface} | value=${o.value}${o.rawToken !== undefined ? ` (raw="${o.rawToken}")` : ""} | persona=${o.persona} | ${o.location} | label=${o.label ?? "(no-label)"}`,
+    )
+    .join("\n      ");
   check(
-    "M2 orphan-value: every unmapped label is classified (mapped or rationale)",
+    "M2 orphan-value: every numeric leaf is mapped to a registry metric or carries an auditable rationale",
+    c.unclassifiedOrphanLeaves.length === 0,
+    c.unclassifiedOrphanLeaves.length > 0
+      ? `${c.unclassifiedOrphanLeaves.length} orphan leaf value(s):\n      ${orphanReport}${c.unclassifiedOrphanLeaves.length > 20 ? `\n      …(+${c.unclassifiedOrphanLeaves.length - 20} more)` : ""}`
+      : "",
+  );
+  // Defence-in-depth: also keep the label-level gate so a regression
+  // that flips an entire label class to unclassified is reported with
+  // its own dedicated failure (label-aggregated diagnostic).
+  check(
+    "M2 orphan-value (label-aggregated): every unmapped label is classified",
     c.unclassifiedLabels.length === 0,
     c.unclassifiedLabels.length > 0
-      ? `unclassified: ${c.unclassifiedLabels.join(", ")}`
+      ? `unclassified labels: ${c.unclassifiedLabels.join(", ")}`
       : "",
   );
 
