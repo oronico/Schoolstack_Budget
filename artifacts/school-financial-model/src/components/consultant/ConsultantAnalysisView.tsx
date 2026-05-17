@@ -519,24 +519,28 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
     });
   }, [modelId]);
 
+  // Task #929 — "Almost There" is a new mid-tier between "Needs Work" and
+  // "Strong" produced when the evidence-tagging cap clamps a 25–50% tagged
+  // model. It shares the amber treatment with "Needs Work" so the wizard's
+  // colour grammar stays binary (good/work-to-do/danger).
   const lenderColor =
     data.lenderReadiness === "Strong"
       ? "text-green-700"
-      : data.lenderReadiness === "Needs Work"
+      : (data.lenderReadiness === "Needs Work" || data.lenderReadiness === "Almost There")
         ? "text-amber-700"
         : "text-rose-700";
 
   const lenderBg =
     data.lenderReadiness === "Strong"
       ? "bg-gradient-to-br from-green-50 to-emerald-50/50 border-green-200"
-      : data.lenderReadiness === "Needs Work"
+      : (data.lenderReadiness === "Needs Work" || data.lenderReadiness === "Almost There")
         ? "bg-gradient-to-br from-amber-50 to-yellow-50/50 border-amber-200"
         : "bg-gradient-to-br from-rose-50 to-red-50/50 border-rose-200";
 
   const LenderIcon =
     data.lenderReadiness === "Strong"
       ? ShieldCheck
-      : data.lenderReadiness === "Needs Work"
+      : (data.lenderReadiness === "Needs Work" || data.lenderReadiness === "Almost There")
         ? Shield
         : ShieldAlert;
 
@@ -1980,7 +1984,7 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
         <div className="flex items-center gap-4 mb-3">
           <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center",
             data.lenderReadiness === "Strong" ? "bg-green-100" :
-            data.lenderReadiness === "Needs Work" ? "bg-amber-100" : "bg-rose-100"
+            (data.lenderReadiness === "Needs Work" || data.lenderReadiness === "Almost There") ? "bg-amber-100" : "bg-rose-100"
           )}>
             <LenderIcon className={cn("h-6 w-6", lenderColor)} />
           </div>
@@ -1999,6 +2003,21 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
         <p className="text-foreground/70 leading-relaxed text-[15px]">
           {data.lenderReadinessExplanation}
         </p>
+
+        {/* Task #929 — Evidence-tagging cap callout. Renders the same verbatim
+            sentence that the lender packet PDF cover prints when the engine
+            clamps the rating because fewer than 50% of assumptions are tagged
+            with evidence. The wording is shared with the API output's
+            `lenderReadinessCap.message` so on-screen and PDF copy stay in lockstep. */}
+        {data.lenderReadinessCap && (
+          <div
+            data-testid="readiness-cap-callout"
+            className="mt-4 rounded-xl border border-amber-300 bg-amber-50/80 p-3 text-sm text-amber-900"
+          >
+            <span className="font-semibold">Evidence-tagging cap applied: </span>
+            {data.lenderReadinessCap.message}
+          </div>
+        )}
       </div>
 
       <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50/60 via-white to-amber-50/60 p-6 flex items-start gap-4">

@@ -123,8 +123,22 @@ export interface LenderPacket extends PacketData {
   riskMitigants: RiskMitigant[];
   dscrSummary: DSCRSummary | null;
   lenderReadiness: {
-    status: "Strong" | "Needs Work" | "Not Yet Ready";
+    status: "Strong" | "Almost There" | "Needs Work" | "Not Yet Ready";
     explanation: string;
+    /**
+     * Task #929 — Evidence-tagging cap reason. Populated when the
+     * consultant engine's evidence-coverage cap reduced the rating
+     * (taggedFraction < 50%). Both the PDF cover and the in-app
+     * LenderPacketPreview surface the same `message` so a reviewer sees
+     * one verbatim callout end to end.
+     */
+    cap: {
+      tier: "Almost There" | "Needs Work";
+      taggedKeys: number;
+      totalKeys: number;
+      taggedFraction: number;
+      message: string;
+    } | null;
   };
   budgetNarrative: BudgetNarrativeData;
   /**
@@ -377,6 +391,7 @@ export function buildLenderPacket(
     lenderReadiness: {
       status: consultantOutput.lenderReadiness,
       explanation: consultantOutput.lenderReadinessExplanation,
+      cap: consultantOutput.lenderReadinessCap,
     },
     budgetNarrative,
     assumptionConfidence,

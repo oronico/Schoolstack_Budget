@@ -45,7 +45,7 @@ export interface NarrativeSourceBundle {
   schoolStage: string | null;
 
   // Headline verdict
-  lenderReadiness: "Strong" | "Needs Work" | "Not Yet Ready";
+  lenderReadiness: "Strong" | "Almost There" | "Needs Work" | "Not Yet Ready";
   lenderReadinessExplanation: string;
   biggestStrength: string;
   biggestRisk: string;

@@ -17,10 +17,14 @@
  * `components/consultant/ConsultantAnalysisView.tsx` (Section 7).
  */
 
-export type LenderReadinessVerdict = "Strong" | "Needs Work" | "Not Yet Ready";
+export type LenderReadinessVerdict = "Strong" | "Almost There" | "Needs Work" | "Not Yet Ready";
 
 export const LENDER_READINESS_COACHING_HEADLINES: Record<LenderReadinessVerdict, string> = {
   Strong: "Ready to share — keep polishing the narrative.",
+  // Task #929 — "Almost There" is the cap tier applied when 25–50% of
+  // assumptions are tagged with evidence (between "Needs Work" and
+  // "Strong"). Keep this list in sync with the api-server copy.
+  "Almost There": "Almost there — anchor a few more assumptions to evidence and this is ready to share.",
   "Needs Work": "Almost there — a few targeted edits will tighten the story.",
   "Not Yet Ready": "Worth another pass before you send it out.",
 };

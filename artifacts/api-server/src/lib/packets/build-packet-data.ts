@@ -1623,7 +1623,9 @@ function buildLenderReadiness(s: PacketSection, co: ConsultantOutput): PacketSec
     ...s,
     narrative: co.lenderReadinessExplanation,
     linkedMetrics: [
-      { label: "Readiness Level", value: co.lenderReadiness, status: co.lenderReadiness === "Strong" ? "good" : co.lenderReadiness === "Needs Work" ? "warning" : "danger", sourceEngine: "consultant" },
+      // Task #929 — "Almost There" is a new mid-tier (cap at 25–50% evidence
+      // tagging) that maps to the same amber warning treatment as "Needs Work".
+      { label: "Readiness Level", value: co.lenderReadiness, status: co.lenderReadiness === "Strong" ? "good" : (co.lenderReadiness === "Needs Work" || co.lenderReadiness === "Almost There") ? "warning" : "danger", sourceEngine: "consultant" },
     ],
   };
 }

@@ -24,6 +24,7 @@ import {
   type DecisionEngineModelData,
 } from "@workspace/finance";
 import { detectUnusualAssumptions } from "./assumption-flags";
+import { computeAssumptionConfidenceRollup, listAssumptionKeys } from "@workspace/finance";
 
 interface SchoolProfile {
   schoolName?: string;
@@ -399,8 +400,28 @@ export interface ConsultantOutput {
   biggestStrength: string;
   biggestRisk: string;
   recommendations: Recommendation[];
-  lenderReadiness: "Strong" | "Needs Work" | "Not Yet Ready";
+  lenderReadiness: "Strong" | "Almost There" | "Needs Work" | "Not Yet Ready";
   lenderReadinessExplanation: string;
+  /**
+   * Task #929 — Evidence-tagging coverage cap on the lender readiness rating.
+   * When the founder has tagged fewer than 50% of the registered assumptions
+   * with evidence, the rating is clamped:
+   *   • taggedFraction < 25%  → cap at "Needs Work"
+   *   • taggedFraction 25–50% → cap at "Almost There"
+   *   • taggedFraction ≥ 50%  → unconstrained (no cap)
+   * When the cap actually reduces the rating below what the model would
+   * otherwise earn, `lenderReadinessCap` carries the cap tier and the
+   * tag count so both the in-app card and the lender packet PDF can
+   * surface the same callout copy: "Rating capped at {tier} pending
+   * evidence tagging on N of M assumptions." Null when no cap bites.
+   */
+  lenderReadinessCap: {
+    tier: "Almost There" | "Needs Work";
+    taggedKeys: number;
+    totalKeys: number;
+    taggedFraction: number;
+    message: string;
+  } | null;
   keyMetrics: KeyMetric[];
   revenueComposition: RevenueComposition[];
   // Task #613 — per-year revenue quality rollup ($ + % per bucket) plus the
@@ -2891,6 +2912,44 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
       "Your model is a solid starting point, and now it's time to refine it. Focus on the high-priority recommendations first, and you'll see real progress. Every great school's financial story started as a first draft.";
   }
 
+  // Task #929 — Cap the lender readiness rating by evidence-tagging
+  // coverage. A model that hasn't anchored its assumptions to evidence
+  // shouldn't be allowed to read "Strong" to a reviewer regardless of how
+  // healthy the headline metrics are. Thresholds are taken directly from
+  // the task brief and use the unweighted tagged/total count
+  // (taggedFraction), not the high-impact-weighted `evidenceRatio`, so
+  // the callout text ("evidence tagging on N of 22 assumptions") matches
+  // the same count the wizard's Assumptions Confidence rollup prints.
+  const TIER_RANK: Record<ConsultantOutput["lenderReadiness"], number> = {
+    "Not Yet Ready": 0,
+    "Needs Work": 1,
+    "Almost There": 2,
+    "Strong": 3,
+  };
+  const confidenceRollup = computeAssumptionConfidenceRollup({
+    assumptionConfidence: (rawData as { assumptionConfidence?: Record<string, { confidence: string; evidenceNote?: string }> }).assumptionConfidence,
+  });
+  const taggedKeys = confidenceRollup.taggedKeys;
+  const totalKeys = confidenceRollup.totalKeys || listAssumptionKeys().length;
+  const taggedFraction = totalKeys > 0 ? taggedKeys / totalKeys : 0;
+  let lenderReadinessCap: ConsultantOutput["lenderReadinessCap"] = null;
+  let capCeiling: ConsultantOutput["lenderReadiness"] | null = null;
+  if (taggedFraction < 0.25) capCeiling = "Needs Work";
+  else if (taggedFraction < 0.5) capCeiling = "Almost There";
+  if (capCeiling && TIER_RANK[lenderReadiness] > TIER_RANK[capCeiling]) {
+    const untagged = Math.max(0, totalKeys - taggedKeys);
+    const capMessage = `Rating capped at ${capCeiling} pending evidence tagging on ${untagged} of ${totalKeys} assumptions.`;
+    lenderReadiness = capCeiling;
+    lenderReadinessExplanation = `${capMessage} ${lenderReadinessExplanation}`;
+    lenderReadinessCap = {
+      tier: capCeiling,
+      taggedKeys,
+      totalKeys,
+      taggedFraction,
+      message: capMessage,
+    };
+  }
+
   const schoolName = sp.schoolName || "Your school";
   let executiveSummary: string;
 
@@ -3243,6 +3302,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     recommendations: recommendations.slice(0, 5),
     lenderReadiness,
     lenderReadinessExplanation,
+    lenderReadinessCap,
     keyMetrics,
     revenueComposition,
     revenueQuality: revenueQualityRollup,

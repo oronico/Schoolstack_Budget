@@ -11,10 +11,15 @@
  * `artifacts/school-financial-model/src/components/consultant/ConsultantAnalysisView.tsx`.
  */
 
-export type LenderReadinessVerdict = "Strong" | "Needs Work" | "Not Yet Ready";
+export type LenderReadinessVerdict = "Strong" | "Almost There" | "Needs Work" | "Not Yet Ready";
 
 export const LENDER_READINESS_COACHING_HEADLINES: Record<LenderReadinessVerdict, string> = {
   Strong: "Ready to share — keep polishing the narrative.",
+  // Task #929 — "Almost There" is the cap tier applied when 25–50% of
+  // assumptions are tagged with evidence. It sits between "Needs Work"
+  // and "Strong" so a model with healthy headline metrics but mid-range
+  // evidence coverage doesn't read as fully ready.
+  "Almost There": "Almost there — anchor a few more assumptions to evidence and this is ready to share.",
   "Needs Work": "Almost there — a few targeted edits will tighten the story.",
   "Not Yet Ready": "Worth another pass before you send it out.",
 };

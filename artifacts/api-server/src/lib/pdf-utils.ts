@@ -388,10 +388,15 @@ export function drawInsightCallout(
   doc.y = startY + totalH + 6;
 }
 
-export function statusBadge(doc: PDFDoc, label: string, status: "good" | "warning" | "danger" | "Strong" | "Needs Work" | "Not Yet Ready") {
+export function statusBadge(doc: PDFDoc, label: string, status: "good" | "warning" | "danger" | "Strong" | "Almost There" | "Needs Work" | "Not Yet Ready") {
   const colors: Record<string, string> = {
     good: BRAND.green,
     Strong: BRAND.green,
+    // Task #929 — new intermediate tier between "Needs Work" and "Strong"
+    // produced when the lender-readiness cap bites at 25–50% evidence
+    // tagging. Renders amber alongside "Needs Work" since both indicate
+    // the model still needs work before a reviewer would call it ready.
+    "Almost There": BRAND.amber,
     warning: BRAND.amber,
     "Needs Work": BRAND.amber,
     danger: BRAND.red,

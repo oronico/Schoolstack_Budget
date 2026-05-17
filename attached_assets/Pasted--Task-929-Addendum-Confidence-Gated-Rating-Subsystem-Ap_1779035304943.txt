@@ -1,0 +1,489 @@
+# Task #929 Addendum — Confidence-Gated Rating Subsystem
+
+**Apply to:** Task #929 — Evidence-tag cap on Lender Readiness
+**Base task spec:** Use the existing #929 spec as-is, with the additions below
+**Effective:** Before kickoff
+
+**Framing reminder:** This task improves the confidence-gated rating subsystem. The Riverside/Oakwood `Lender Readiness: Strong` at `0% weighted evidence` is evidence the subsystem does not gate ratings on confidence — not the deliverable. The deliverable is a rating subsystem where confidence and underlying-metric quality both gate the final rating, for any current or future persona.
+
+The three persona fixtures test the subsystem. They are not the targets of the fix.
+
+---
+
+## Architectural lessons from #925, #926, #927, #928
+
+Before starting:
+
+1. **From #925 (unit-bearing fields):** Check whether `confidenceScore` already carries enough structure to drive a cap, or whether new fields need to be introduced. If the existing shape works, extend it. Surface the question if you find a conflict.
+
+2. **From #926 (benchmark validation):** Threshold tables with multiple boundaries (the 25% / 50% cap thresholds here) belong in structured metadata, not magic numbers in the engine. Each threshold deserves a documented rationale.
+
+3. **From #927 (taxonomy):** Rating-cap states are a small typed taxonomy. Prefer a discriminated union over magic strings.
+
+4. **From #928 (validation enforcement):** Confidence-gating is a parallel pattern to required-field validation. Both gate output generation on input quality. Look for shared primitives — the "reason" surfacing pattern from #928 (reason in tooltip AND in error response AND in lender packet) is directly reusable here.
+
+Apply all four lessons. The cap delivered here should be reusable for other ratings that may benefit from confidence gating.
+
+---
+
+## Pinned decisions
+
+### Cap thresholds with documented rationale
+
+The base spec's three-tier cap is correct. Store it as a typed table with rationale:
+
+```typescript
+type RatingCapTier = {
+  taggedFractionMin: number;        // inclusive lower bound (0.0 to 1.0)
+  taggedFractionMax: number;        // exclusive upper bound  
+  capAt: LenderReadinessRating;      // 'Needs Work' | 'Almost There' | null (no cap)
+  rationale: string;
+  source: string;
+  lastValidated: string;
+};
+
+export const LENDER_READINESS_CAPS: RatingCapTier[] = [
+  {
+    taggedFractionMin: 0.0,
+    taggedFractionMax: 0.25,
+    capAt: 'Needs Work',
+    rationale: 'Below 25% evidence tagging, the model has not 
+      demonstrated assumption rigor to a lender-credible threshold. 
+      Underlying metrics may be strong but unverified inputs 
+      undermine the analysis.',
+    source: '[citation pending — internal heuristic, calibrate against 
+      Lending Lab Cycle 1 outcomes]',
+    lastValidated: '2026-05-17'
+  },
+  {
+    taggedFractionMin: 0.25,
+    taggedFractionMax: 0.50,
+    capAt: 'Almost There',
+    rationale: 'Between 25% and 50% evidence tagging, the founder has 
+      begun demonstrating rigor but has not reached the level where a 
+      lender can reasonably trust the full input set.',
+    source: '[citation pending]',
+    lastValidated: '2026-05-17'
+  },
+  {
+    taggedFractionMin: 0.50,
+    taggedFractionMax: 1.01,  // 1.01 to safely include 100%
+    capAt: null,
+    rationale: 'At 50%+ evidence tagging, the cap is removed; the 
+      underlying metric quality drives the rating without confidence 
+      override.',
+    source: '[citation pending]',
+    lastValidated: '2026-05-17'
+  }
+];
+```
+
+Same citation discipline as #926 and #927 — `[citation pending]` markers acknowledged in completion summary, covered by the architectural follow-up for calibration.
+
+### Rating cap as a structured result, not a string
+
+The rating computation should return a structured object capturing both the uncapped rating and the cap applied:
+
+```typescript
+type LenderReadinessResult = {
+  uncappedRating: LenderReadinessRating;       // what the metrics alone would say
+  effectiveRating: LenderReadinessRating;       // what gets displayed after cap
+  cap: {
+    applied: boolean;
+    capTier?: RatingCapTier;
+    reason: string;                              // surfaces in callout
+    pendingEvidenceCount: number;                // N of 22 untagged
+    totalAssumptionCount: number;
+  };
+};
+```
+
+This structure flows through the engine to the packet builder to the renderer. Consumers display whichever fields they need (the in-app card might show both the uncapped and effective rating with the cap explanation; the lender packet might show only the effective rating with a callout). No consumer recomputes the cap.
+
+### Callout copy template
+
+The cap callout in both surfaces uses a canonical template:
+
+```
+"Rating capped at {effectiveRating} pending evidence tagging on 
+ {pendingEvidenceCount} of {totalAssumptionCount} assumptions. 
+ {capTier.rationale}"
+```
+
+Storing the copy template centrally (in the same module as the cap tiers) means future copy changes happen in one place. Don't hand-write the callout in `lender-packet-pdf.ts` or `LenderReadinessCard.tsx`.
+
+### "Strong" floor for lender-grade output
+
+Apply a related rule that the base spec doesn't explicitly call out but is implied:
+
+> The `effectiveRating` value `'Strong'` is the highest tier. It can only be reached when (a) underlying metrics support it AND (b) `taggedFraction >= 0.50`.
+
+This prevents a 100%-tagged model with weak metrics from being labeled "Strong" — the underlying-metric assessment still applies. The cap subsystem produces a ceiling, not a floor.
+
+### Bidirectional consistency requirement
+
+The in-app `LenderReadinessCard` and the lender packet PDF must always render the same `effectiveRating` for the same model state. The components share a data source (the `LenderReadinessResult` object); they should also share rendering primitives where practical. The regression test should assert this consistency explicitly.
+
+---
+
+## Required protocol addendum fields
+
+### Canonical source reference
+
+```
+Canonical source:
+  - Cap tier table: LENDER_READINESS_CAPS in lib/finance/src/confidence/
+    rating-caps.ts (or wherever the existing rating logic lives — 
+    extend, don't parallel)
+  - Cap evaluation: applyConfidenceCap(uncappedRating, confidenceScore) 
+    in same module
+  - Combined rating: computeLenderReadiness(metrics, confidenceScore) 
+    in consultant-engine.ts — returns LenderReadinessResult
+  - Callout copy: formatCapCallout(result) helper that reads the 
+    canonical template
+  - Display: both LenderReadinessCard.tsx and lender-packet-pdf.ts 
+    consume LenderReadinessResult; neither recomputes the cap nor 
+    hand-writes the callout copy
+
+Every consumer reads from this canonical chain.
+```
+
+### Sibling bug search step
+
+```
+Step: Identify other ratings or summary metrics that may benefit from 
+  confidence gating, or that currently produce overconfident output 
+  from underconfident inputs.
+
+Pattern (1): Rating fields that summarize multiple underlying signals 
+  into a single tier label.
+
+Pattern (2): Summary scores that ignore the confidence/evidence dimension 
+  when rolling up.
+
+Pattern (3): Existing cap or gate logic that the new RatingCapTier 
+  type would duplicate.
+
+Search scope:
+  artifacts/api-server/src/lib/consultant-engine.ts
+  artifacts/api-server/src/lib/packets/
+  lib/finance/src/
+
+Discovery commands:
+  # Find rating/score/grade outputs
+  grep -rnP "rating|grade|score|tier|level|readiness|health(Score)?" \
+    --include="*.ts" --include="*.tsx" \
+    artifacts/ lib/finance/
+
+  # Find existing cap or gate logic
+  grep -rnP "cap|gate|threshold|maxRating|floor|ceiling" \
+    --include="*.ts" lib/finance/ artifacts/api-server/src/lib/
+
+  # Find tagged-fraction or confidence consumers
+  grep -rnP "taggedFraction|confidenceScore|evidenceWeight" \
+    --include="*.ts" lib/finance/ artifacts/api-server/src/lib/
+
+Action:
+  1. List every rating/summary metric in the packet and in-app outputs.
+  2. For each, decide:
+     a. Confidence-independent — explicitly document and leave alone 
+        (e.g., "Y1 net income" is a number, not a rating; confidence 
+        doesn't gate it)
+     b. Already confidence-gated — verify the gating is consistent with 
+        the new pattern; consolidate if duplicative
+     c. Would benefit from confidence gating — flag for follow-up task
+  3. If existing cap/gate logic conflicts with the new RatingCapTier 
+     type, STOP and surface the question (apply the #925 lesson).
+
+Expected candidates for category (c) based on prior packet review:
+  - Health Dimensions summary (8 dimensions today rated Healthy/Watch/
+    Risk independent of evidence tagging)
+  - Financial Health Assessment overall rating
+  - Stress Test "biggest risk" determination
+  - Risk severity classifications (critical/medium/etc) — these may 
+    benefit from a confidence component
+```
+
+### Explicit regression assertion (Patterns A + B + E + new pattern for rating-cap)
+
+```
+Assertion target: Confidence-gated rating subsystem coherence
+
+Subsystem-level assertions:
+
+  For every model state:
+    Assert: LenderReadinessResult includes uncappedRating, effectiveRating, 
+      and cap object
+    Assert: cap.applied is true if and only if effectiveRating differs 
+      from uncappedRating
+    Assert: cap.reason is non-empty when cap.applied is true
+    Assert: cap.pendingEvidenceCount equals (totalAssumptionCount - 
+      taggedCount)
+
+  For the cap logic itself:
+    Assert: taggedFraction in [0, 0.25) → effectiveRating capped at 
+      'Needs Work' regardless of underlying metrics
+    Assert: taggedFraction in [0.25, 0.50) → effectiveRating capped at 
+      'Almost There'
+    Assert: taggedFraction in [0.50, 1.0] → no cap; effectiveRating 
+      equals uncappedRating
+    Assert: 'Strong' rating requires both strong underlying metrics 
+      AND taggedFraction >= 0.50
+
+Persona-specific expectations (current fixtures, all at 0/22 = 0%):
+
+  Riverside Christian, Liberty STEM, Oakwood:
+    Pre-fix: Lender Readiness 'Strong' / 'Needs Work' / 'Strong' 
+      respectively (or whatever the metrics produce)
+    Post-fix: All three render 'Needs Work' with cap callout
+    Callout text matches template: "Rating capped at Needs Work pending 
+      evidence tagging on 22 of 22 assumptions. {rationale}"
+
+Cross-surface consistency:
+
+  For each persona fixture:
+    Assert: in-app LenderReadinessCard effectiveRating equals 
+      lender packet effectiveRating
+    Assert: in-app callout text equals packet callout text 
+      (modulo formatting)
+    Assert: both surfaces render or omit the callout consistently 
+      (cap applied → both show; cap not applied → neither shows)
+
+Threshold-boundary assertions:
+
+  Synthesize test models at the threshold boundaries:
+    taggedFraction = 0.24 → cap at 'Needs Work'
+    taggedFraction = 0.25 → cap at 'Almost There'
+    taggedFraction = 0.49 → cap at 'Almost There'
+    taggedFraction = 0.50 → no cap
+    taggedFraction = 0.99 → no cap
+    taggedFraction = 1.00 → no cap
+
+Failure reporting:
+  "Confidence-gated rating regression: {persona} — taggedFraction 
+   {fraction}, uncappedRating {uncapped}, expected effectiveRating 
+   {expected}, got {actual}; callout {expected_callout_state}, got 
+   {actual_callout_state}"
+```
+
+---
+
+## Prevention mechanism
+
+Once #929 lands, the following prevent the original "overconfident rating despite no evidence" pattern from returning:
+
+1. **Typed cap tier table:** `RatingCapTier` carries threshold boundaries and rationale at the type level. Adding a new tier or changing thresholds is a single edit in one location; consumers automatically reflect it.
+
+2. **Structured rating result:** `LenderReadinessResult` carries both uncapped and effective ratings explicitly. Consumers reading only `effectiveRating` cannot accidentally claim the underlying metrics are weak — the cap shape makes the distinction explicit.
+
+3. **Single computation path:** `computeLenderReadiness` is the only function that produces the rating result. No surface recomputes; consumers display from the shared object.
+
+4. **Cross-surface consistency test:** A unit test asserts that any rendering of `effectiveRating` in the packet matches the rendering in the in-app card for the same model state. Catches divergence at the test layer.
+
+5. **Citation discipline at type level:** Each `RatingCapTier` requires `source` and `lastValidated`. Threshold changes without citation are a compile-time error.
+
+---
+
+## Architectural follow-up
+
+```
+Follow-up task 1: Calibrate cap thresholds against Lending Lab outcomes
+
+Rationale: The 25% / 50% thresholds are seeded with internal 
+  heuristics. Lender-grade rigor benefits from calibration against 
+  actual loan outcomes — which evidence-tagging levels in Lending 
+  Lab Cycle 1 correlated with successful underwriting? The thresholds 
+  may need refinement once that data exists.
+
+Scope: Pull Lending Lab Cycle 1 evidence-tagging data; analyze 
+  correlation with approval/denial; revise thresholds with citation.
+
+Tracked at: file before closing #929
+
+---
+
+Follow-up task 2: Roll out confidence gating to other ratings 
+  surfaced by sibling search
+
+Rationale: Lender Readiness is the most visible rating in the packet, 
+  but other summary metrics may benefit from the same gating pattern:
+  Health Dimensions overall, Financial Health Assessment, Risk 
+  severity classifications. Each could be enriched by a confidence 
+  component without disrupting current consumers.
+
+Scope: For each category (c) rating identified by the sibling search:
+  1. Add a confidence-gated wrapper around the current rating
+  2. Define cap tiers appropriate to that rating's range
+  3. Surface the cap callout in the consuming UI
+  4. Add per-rating regression assertion
+
+Per-rating rollout, not big-bang.
+
+Tracked at: file before closing #929
+
+---
+
+Follow-up task 3: Surface "confidence-adjusted" view in lender packet
+
+Rationale: With cap logic in place, the packet could explicitly show 
+  lenders both the uncapped rating ("if assumptions were verified, 
+  this model would read Strong") and the capped rating ("currently 
+  Needs Work pending evidence"). This is transparency about the 
+  evidence gap, not just gating output on it.
+
+Scope: Add a "Confidence Adjustment" subsection to the Assumptions 
+  Confidence section showing the uncapped rating, the cap applied, 
+  and the path to removing the cap (tag X more assumptions).
+
+Tracked at: file before closing #929
+```
+
+---
+
+## Light vs full completion template
+
+This task touches engine, packet builder, two render surfaces (in-app card + PDF), and cross-surface consistency. **Use the full five-section completion template.**
+
+```
+Section A — What changed
+  Files modified, RatingCapTier table created, LenderReadinessResult 
+  type defined, applyConfidenceCap function added, cross-surface 
+  consumers updated
+
+Section B — Re-rendered evidence
+  For each persona fixture at current 0% evidence:
+    Quote the Lender Readiness display before / after (pre-fix shows 
+      Strong or whatever; post-fix shows Needs Work with callout)
+    Quote the cap callout copy
+    Confirm in-app card and PDF show identical effectiveRating
+  For at least one synthesized model at taggedFraction = 0.50:
+    Confirm cap removed; rating reflects underlying metrics
+  For at least one synthesized model at taggedFraction = 0.30:
+    Confirm cap at 'Almost There'
+
+Section C — Source-of-truth trace
+  Cap tier table location (file:line)
+  Rating computation function (file:line)
+  Callout template location (file:line)
+  In-app card consumption point (file:line)
+  PDF render consumption point (file:line)
+  All consumers route through the canonical chain — no parallel cap 
+    logic, no hand-written callout text
+
+Section D — Cross-section consistency check
+  In-app card effectiveRating === PDF effectiveRating for every persona
+  In-app card callout === PDF callout (modulo formatting)
+  Cap application logic produces identical results in all consumers
+  No surface displays uncapped rating as final output
+
+Section E — Side-effect check
+  Did the rating computation refactor affect other consumers? List which.
+  Did the LenderReadinessResult shape break any in-flight uses of 
+    LenderReadinessRating? Document migration of stale references.
+  Were there other rating outputs in the packet that should consume 
+    the same cap pattern? (i.e., sibling search results)
+  Were there existing cap/gate primitives in the codebase that should 
+    have been extended rather than paralleled? (#925 lesson)
+  Does the threshold-boundary assertion cover all edge cases 
+    (exact-equals on 0.25 and 0.50, very small fractions, 1.0)?
+```
+
+---
+
+## Quick checklist for the agent
+
+Before claiming #929 complete:
+
+- [ ] `RatingCapTier` type defined with threshold boundaries, capAt, rationale, source, lastValidated
+- [ ] `LENDER_READINESS_CAPS` table seeded with three tiers; `[citation pending]` markers acknowledged
+- [ ] `LenderReadinessResult` structured type defined with uncapped + effective + cap object
+- [ ] `applyConfidenceCap` function evaluates the tier table; no inline thresholds
+- [ ] `computeLenderReadiness` is the single source returning the structured result
+- [ ] Callout copy template centralized; no hand-written callout in render code
+- [ ] "Strong" rating requires both strong metrics AND taggedFraction >= 0.50
+- [ ] In-app card consumes LenderReadinessResult, displays effectiveRating + callout
+- [ ] PDF builder consumes LenderReadinessResult, displays effectiveRating + callout
+- [ ] Cross-surface consistency verified for all three persona fixtures
+- [ ] Threshold-boundary tests cover 0.24/0.25/0.49/0.50 transitions
+- [ ] Sibling bug search has been run; output is in the completion summary
+- [ ] Lessons from #925, #926, #927, #928 explicitly checked
+- [ ] Regression test added with subsystem-level + persona-specific + boundary + cross-surface assertions
+- [ ] Regression test passes for all current persona fixtures
+- [ ] Test architecture supports adding a new persona fixture without modifying assertion logic
+- [ ] Three architectural follow-ups filed (threshold calibration, rollout to other ratings, surface confidence-adjusted view)
+- [ ] Full five-section completion template (A–E) filled in completely
+
+If any checklist item is incomplete, the task is not done.
+
+---
+
+## What to paste to Replit
+
+```
+Apply Task #929 Addendum before starting work.
+
+Framing: this task improves the confidence-gated rating subsystem. 
+The current state (Lender Readiness 'Strong' at 0% evidence) is 
+evidence the rating subsystem does not gate on confidence — it is 
+not the deliverable. The deliverable is a subsystem where confidence 
+and underlying-metric quality both gate the final rating, for any 
+current or future persona.
+
+Lessons to apply:
+- From #925: Check whether confidenceScore already carries the 
+  structure to drive a cap. Extend rather than parallel if it does.
+- From #926: Threshold tables with multiple boundaries belong in 
+  structured metadata with documented rationale.
+- From #927: Prefer typed unions over magic strings for rating tier 
+  taxonomies.
+- From #928: Reuse the "reason surfaces everywhere" primitive from 
+  the required-input validation work — the callout text here should 
+  flow through the same plumbing.
+
+Specifically:
+
+1. Cap tier table (LENDER_READINESS_CAPS) with three tiers at 
+   25% and 50% thresholds. Each tier carries threshold boundaries, 
+   capAt value, rationale, source, lastValidated. Citation markers 
+   '[citation pending]' acknowledged for the calibration follow-up.
+
+2. Structured rating result (LenderReadinessResult) with uncappedRating, 
+   effectiveRating, and cap object. No surface recomputes the cap. 
+   No surface displays uncapped rating as final.
+
+3. 'Strong' rating floor: requires both strong underlying metrics 
+   AND taggedFraction >= 0.50. A 100%-tagged model with weak metrics 
+   does not get 'Strong' just because tagging is complete.
+
+4. Cross-surface consistency: in-app LenderReadinessCard and PDF 
+   builder both consume the same LenderReadinessResult. Regression 
+   test asserts identical output across surfaces.
+
+5. Callout copy template centralized in the cap-tier module. Future 
+   copy changes happen in one place.
+
+6. Add the three required addendum fields to your task spec:
+   - Canonical source: cap tier table → result type → consumers chain
+   - Sibling bug search: other ratings that may benefit from gating; 
+     existing cap/gate primitives
+   - Explicit regression assertion: subsystem-level + persona-specific 
+     + threshold-boundary + cross-surface (Patterns A + B + E + new 
+     rating-cap pattern)
+
+7. Prevention mechanism: typed cap tier table, structured result 
+   type, single computation path, citation discipline at type level.
+
+8. Use the full five-section completion template (A–E).
+
+9. Run the quick checklist before claiming complete.
+
+10. File three architectural follow-ups before closing #929:
+    - Calibrate cap thresholds against Lending Lab Cycle 1 outcomes
+    - Roll out confidence gating to other ratings (Health Dimensions, 
+      Financial Health Assessment, Risk severity)
+    - Surface confidence-adjusted view in lender packet 
+      (uncapped + cap + path-to-remove-cap)
+
+Reference the full addendum for type signatures, full assertion 
+specifications, threshold-boundary edge cases, and follow-up templates.
+```

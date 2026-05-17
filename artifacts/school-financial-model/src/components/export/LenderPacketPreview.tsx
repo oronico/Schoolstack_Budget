@@ -99,8 +99,17 @@ interface LenderPacket {
     trendDescription: string;
   } | null;
   lenderReadiness: {
-    status: "Strong" | "Needs Work" | "Not Yet Ready";
+    status: "Strong" | "Almost There" | "Needs Work" | "Not Yet Ready";
     explanation: string;
+    // Task #929 — Evidence-tagging cap reason; non-null when the engine
+    // clamped the rating because <50% of assumptions were tagged.
+    cap: {
+      tier: "Almost There" | "Needs Work";
+      taggedKeys: number;
+      totalKeys: number;
+      taggedFraction: number;
+      message: string;
+    } | null;
   };
   cashRunway: CashRunwayView;
   // Task #617 - lender commentary block, surfaced as the lead block in

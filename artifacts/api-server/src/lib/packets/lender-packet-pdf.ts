@@ -272,6 +272,25 @@ function drawCoverPage(doc: PDFDoc, packet: LenderPacket) {
   doc.moveDown(0.5);
   bodyText(doc, packet.lenderReadiness.explanation);
 
+  // Task #929 — Evidence-tagging cap callout. Renders the same verbatim
+  // message string the in-app LenderPacketPreview prints so a founder
+  // and a lender reviewing the PDF see one identical sentence about why
+  // the rating was clamped. Skipped silently when no cap bites.
+  if (packet.lenderReadiness.cap) {
+    doc.moveDown(0.4);
+    doc.save();
+    const margin = doc.page.margins.left;
+    const innerW = doc.page.width - margin * 2;
+    const startY = doc.y;
+    doc.font("Helvetica-Bold").fontSize(9).fillColor(BRAND.amber);
+    doc.text("Evidence-tagging cap applied", margin, startY, { width: innerW });
+    doc.font("Helvetica").fontSize(9).fillColor(BRAND.darkGray);
+    doc.text(packet.lenderReadiness.cap.message, margin, doc.y, { width: innerW });
+    doc.restore();
+    doc.font("Helvetica").fillColor(BRAND.black);
+    doc.moveDown(0.3);
+  }
+
   doc.moveDown(1.5);
 
   doc.font("Helvetica-Bold").fontSize(11).fillColor(BRAND.navy);
