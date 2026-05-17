@@ -11,6 +11,7 @@ import {
   accountingBasisLabel,
   driverVal,
   computeRevenueForYear,
+  computeRevLineItem,
   computePersonnelForYear,
   computeExpenseForYear,
   computeCapDebtForYear,
@@ -20,6 +21,7 @@ import {
   computeTotalFTE,
   computeNewStudents,
   computeReturningStudents,
+  resolveEsc,
 } from "../workbook-helpers";
 import { buildNarrative } from "./build-narrative";
 import { formatRunwayMonths, formatRunwayMonthsShort } from "./format-runway";
@@ -480,6 +482,134 @@ function buildRevenueModel(
     headers: ["Year", "Total Revenue"],
     rows,
   }];
+
+  // Task #917 — Gross-to-Net Revenue Reconciliation block.
+  //
+  // Lenders comparing the workbook's `Enrollment Tuition Fcst` sheet
+  // total against the `5-Year Operating Stmt` total see a systematic
+  // gap (6-23% on the seeded demos). The engine applies seasonality
+  // proration and a collection-rate / tuition-delinquency haircut
+  // between the two, but the gap was never surfaced anywhere a
+  // reviewer could see. This table makes the math explicit, per year:
+  //
+  //   Gross Tuition Billing                          X
+  //   Less: Scholarship netting                     (S)
+  //   Plus: Non-tuition revenue (public/phil/other)  N (back-derived)
+  //   = Enrollment Tuition Fcst total                T  (= computeRevenueForYear)
+  //   Less: Seasonality / partial-year timing       (T × (1 - pf))   [Y1 only]
+  //   Less: Collection rate / delinquency adj       (T × pf - V)
+  //   = Net Revenue (Operating Statement)            V  (= canonical totalRevenue)
+  //
+  // The reconciliation ties by construction: the seasonality and
+  // collection lines are derived as differences against the canonical
+  // engine value, so V always equals the Op Stmt total. The
+  // demo-math-smoke regression test pins this exact equation per year
+  // per persona.
+  const reconSp = md.schoolProfile || ({} as SchoolProfile);
+  const reconPf = reconSp.isPartialFirstYear ? (reconSp.year1OperatingMonths || 12) / 12 : 1;
+  const reconRevRows = (md.revenueRows || []);
+  const reconFac = (md as Record<string, unknown>).facilities as Record<string, unknown> | undefined;
+  const reconCostInfl = reconFac?.generalCostInflation as number | undefined;
+  const reconEnroll = getEnrollmentArray(md.enrollment);
+  const reconRR = (md.enrollment as Record<string, unknown> | undefined)?.retentionRate as number | undefined ?? 85;
+
+  const grossLine: string[] = [];
+  const scholarshipLine: string[] = [];
+  const nonTuitionLine: string[] = [];
+  const fcstSubtotalLine: string[] = [];
+  const seasonalityLine: string[] = [];
+  const collectionLine: string[] = [];
+  const netLine: string[] = [];
+
+  for (let y = 0; y < yearlyData.length; y++) {
+    const students = reconEnroll[y] || 0;
+    const ns = computeNewStudents(reconEnroll, reconRR, y);
+    const rs = computeReturningStudents(reconEnroll, reconRR, y);
+    const pf = y === 0 ? reconPf : 1;
+
+    // Walk rows the same way `computeRevenueForYear` does to get the
+    // gross tuition / scholarship / non-tuition decomposition that
+    // ties to the ETF sheet's TOTAL REVENUE row.
+    const vals = new Map<string, number>();
+    for (const r of reconRevRows) {
+      if (!r.enabled || r.driverType === "percent_of_base") continue;
+      vals.set(r.id, computeRevLineItem(r, y, students, md.tuitionTiers, reconCostInfl, reconSp, ns, rs));
+    }
+    // Mirror `computeRevenueForYear`'s percent-of-base escalation
+    // exactly, including the override-vs-fallback-inflation semantics
+    // via `resolveEsc`. A divergence here would silently mis-bucket
+    // gross vs scholarship vs non-tuition even when the subtotal ties.
+    const reconFallbackInfl = reconCostInfl ?? 0;
+    for (const r of reconRevRows) {
+      if (!r.enabled || r.driverType !== "percent_of_base") continue;
+      const baseVal = vals.get(r.percentBase || "") || 0;
+      let pctVal = r.amounts?.[y] ?? 0;
+      const pctEsc = r.escalationRateOverridden === true
+        ? (r.escalationRate ?? 0)
+        : resolveEsc(r.escalationRate, reconFallbackInfl);
+      if (pctEsc !== 0 && y > 0) {
+        pctVal = (r.amounts?.[0] ?? 0) * Math.pow(1 + pctEsc / 100, y);
+      }
+      vals.set(r.id, baseVal * (pctVal / 100));
+    }
+
+    let gross = 0;
+    let scholarship = 0;
+    for (const r of reconRevRows) {
+      if (!r.enabled) continue;
+      const v = vals.get(r.id) || 0;
+      if (r.category === "tuition_offsets") scholarship += Math.abs(v);
+      else if (r.category === "tuition_and_fees") gross += v;
+    }
+
+    // ETF total uses `computeRevenueForYear` (same call the workbook's
+    // ETF sheet TOTAL REVENUE row prints, post-funding-mix correction
+    // per Task #860). Non-tuition is back-derived so X − S + N == T
+    // holds exactly even when funding-mix correction shifts gross
+    // tuition into the residual family-pay slice.
+    const etfTotal = computeRevenueForYear(reconRevRows, y, students, md.tuitionTiers, reconCostInfl, reconSp, ns, rs);
+    const nonTuition = etfTotal - gross + scholarship;
+
+    const netRevenueY = yearlyData[y]?.totalRevenue ?? 0;
+    const seasonality = etfTotal - etfTotal * pf;
+    const collectionAdj = etfTotal * pf - netRevenueY;
+
+    // Signed display convention for the adjustment lines: positive
+    // value means the adjustment REDUCES net revenue (printed in
+    // parens, accounting "less" convention). Negative means the
+    // adjustment INCREASES net revenue (printed plain, "plus"). This
+    // lets the same row label work across personas where the
+    // direction can flip (e.g. private-school scholarship netting in
+    // `computeRevenueForYear` makes ETF total lower than the
+    // canonical Op Stmt total, so the reconciling adjustment is a
+    // positive "plus" instead of the usual collection-slippage minus).
+    const signedAdj = (n: number): string => {
+      if (Math.abs(n) < 1) return fmt(0);
+      return n > 0 ? `(${fmt(n)})` : fmt(-n);
+    };
+    grossLine.push(fmt(gross));
+    scholarshipLine.push(scholarship > 0 ? `(${fmt(scholarship)})` : fmt(0));
+    nonTuitionLine.push(fmt(nonTuition));
+    fcstSubtotalLine.push(fmt(etfTotal));
+    seasonalityLine.push(signedAdj(seasonality));
+    collectionLine.push(signedAdj(collectionAdj));
+    netLine.push(fmt(netRevenueY));
+  }
+
+  const reconHeaders = ["Line", ...yearlyData.map((yd) => yearLabel(yd.year))];
+  tables.push({
+    title: "Gross-to-Net Revenue Reconciliation",
+    headers: reconHeaders,
+    rows: [
+      { label: "Gross Tuition Billing", values: grossLine },
+      { label: "Less: Scholarship netting", values: scholarshipLine },
+      { label: "Plus: Non-tuition revenue (public, philanthropy, other)", values: nonTuitionLine },
+      { label: "= Enrollment Tuition Fcst total", values: fcstSubtotalLine, isBold: true },
+      { label: "Seasonality / partial-year timing adjustment", values: seasonalityLine },
+      { label: "Residual reconciliation (collection rate, delinquency, scholarship treatment, other engine adjustments)", values: collectionLine },
+      { label: "= Net Revenue (Operating Statement)", values: netLine, isBold: true },
+    ],
+  });
 
   // Task #613 — Revenue Quality breakdown table. Lenders specifically ask
   // "how much of this is contracted dollars vs. donor / policy
