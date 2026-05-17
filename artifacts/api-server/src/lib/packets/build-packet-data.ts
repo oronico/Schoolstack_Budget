@@ -70,6 +70,28 @@ function fmt(n: number): string {
   return `$${n.toFixed(0)}`;
 }
 
+// Task #925 — Revenue rows with `driverType: "percent_of_base"` (e.g. the
+// `scholarships_aid` row that stores a discount RATE like 12, meaning "12%
+// of gross tuition") were previously USD-formatted as "$12" anywhere the
+// per-line revenue table or appendix printed them. The engine has always
+// resolved these correctly against the base (see Gross-to-Net
+// Reconciliation), but the renderer ignored the driverType and treated
+// the raw amount as dollars. This helper renders such rows as their true
+// unit ("12.0% of gross tuition") so reviewers don't read a percent rate
+// as a dollar value. For all other driver types, falls through to the
+// canonical `driverVal × fmt` path the renderer always used.
+function formatRevenueRowY1Value(
+  row: { amounts?: number[]; driverType?: string; percentBase?: string; escalationRate?: number },
+  students: number,
+): string {
+  if (row.driverType === "percent_of_base") {
+    const pct = row.amounts?.[0] ?? 0;
+    const baseLabel = row.percentBase === "gross_tuition" ? "gross tuition" : (row.percentBase || "base");
+    return `${pct.toFixed(1)}% of ${baseLabel}`;
+  }
+  return fmt(driverVal(row.amounts, 0, row.driverType || "annual", students, row.escalationRate));
+}
+
 function pct(n: number): string {
   return `${(n * 100).toFixed(1)}%`;
 }
@@ -467,7 +489,7 @@ function buildRevenueModel(
   const fragileRows = (md.revenueRows || []).filter((r) => r.enabled !== false);
   const lineRows: PacketTableRow[] = fragileRows.map((r) => {
     const note = fragilityByRowId.get(r.id);
-    const value = fmt(driverVal(r.amounts, 0, r.driverType || "annual", yearlyData[0]?.students || 0, r.escalationRate));
+    const value = formatRevenueRowY1Value(r, yearlyData[0]?.students || 0);
     return {
       label: r.lineItem || "Revenue Line",
       // Render the note in the Y1 cell only when the table has a Note
@@ -683,7 +705,7 @@ function buildRevenueModel(
         const note = fragilityByRowId.get(r.id);
         return {
           label: r.lineItem || "Revenue Line",
-          value: fmt(driverVal(r.amounts, 0, r.driverType || "annual", yearlyData[0]?.students || 0, r.escalationRate)),
+          value: formatRevenueRowY1Value(r, yearlyData[0]?.students || 0),
           sourceField: `revenueRows[${r.id}]`,
           ...(note ? { note: note.full } : {}),
         };
@@ -1627,7 +1649,7 @@ function buildAppendixAssumptions(
   for (const row of (md.revenueRows || []).filter((r) => r.enabled !== false)) {
     assumptions.push({
       label: `Revenue: ${row.lineItem || "Line Item"}`,
-      value: `${row.driverType || "annual"}, Y1: ${fmt(driverVal(row.amounts, 0, row.driverType || "annual", enrollment[0] || 0, row.escalationRate))}`,
+      value: `${row.driverType || "annual"}, Y1: ${formatRevenueRowY1Value(row, enrollment[0] || 0)}`,
       sourceField: `revenueRows[${row.id}]`,
     });
     // Task #456: include collection method + rate next to each tuition-flavored

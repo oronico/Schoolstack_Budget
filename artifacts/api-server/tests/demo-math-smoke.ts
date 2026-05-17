@@ -974,6 +974,67 @@ async function runOne(c: DemoCase): Promise<void> {
       );
     }
   }
+
+  // ── Task #925 — Scholarship rate must render as a PERCENTAGE ────────
+  //
+  // Scholarship / financial-aid rows are stored as
+  //   { driverType: "percent_of_base", percentBase: "gross_tuition",
+  //     amounts: [12, 12, 12, 12, 12] }   // 12 means 12%
+  // The engine resolves them correctly against the base (Gross-to-Net
+  // Reconciliation prints "$272K" scholarship netting on Riverside, =
+  // 12% × $2.27M gross), but pre-fix the per-line "Revenue Lines"
+  // table and the appendix `linkedAssumptions` ran the raw amount
+  // through `fmt()` → reviewers saw "Scholarships / Financial Aid $12"
+  // and read 12 as twelve DOLLARS instead of twelve percent.
+  //
+  // Two assertions, both scoped to demos that actually carry a
+  // tuition_offsets scholarship row (microschool + private_school):
+  //   (i)  the bare USD shorthand "$N" / "$N.0" for the seeded rate
+  //        must be absent next to the scholarship label
+  //   (ii) the "N.0% of gross tuition" rendering must be present
+  if (c.expectsScholarshipRow) {
+    const offsets = (data as { revenueRows?: RevRowLike[] }).revenueRows?.filter(
+      (r) => r.enabled && r.category === "tuition_offsets" && r.driverType === "percent_of_base",
+    ) ?? [];
+    for (const row of offsets) {
+      const pct = row.amounts?.[0] ?? 0;
+      const label = (row as { lineItem?: string }).lineItem || "";
+      const labelPrefix = label.split(/[\/]/)[0].trim().replace(/\s+/g, "");
+      const haystack = normText;
+      const lblIdx = haystack.search(new RegExp(labelPrefix, "i"));
+      check(
+        `${tag} scholarship row "${label}" appears in lender PDF text`,
+        lblIdx >= 0,
+        `searched prefix="${labelPrefix}" in normalized PDF`,
+      );
+      if (lblIdx >= 0) {
+        // Look in a window starting at the label. Renderer prints the
+        // value on the same line / next few lines depending on column
+        // wrap, so 200 chars is generous.
+        const win = haystack.slice(lblIdx, lblIdx + 240);
+        // Forbidden: raw "$N" or "$N.0" matching the percent rate as
+        // if it were dollars. We allow "$N" later in the window only
+        // if it's clearly a different number (denomination suffix K/M),
+        // so we anchor on \b and disallow K/M/B suffixes here.
+        const forbid = new RegExp(`\\$${pct}(?:\\.0)?(?![0-9KMB])`);
+        check(
+          `${tag} scholarship "${label}" NOT rendered as raw "$${pct}" (would mis-read a ${pct}% rate as dollars)`,
+          !forbid.test(win),
+          `window="${win.slice(0, 200)}"`,
+        );
+        // Required: percentage rendering. Match either the short
+        // "N.0%" or the full "N.0% of gross tuition" form. PDFKit may
+        // split "%" off the digits with whitespace, so the
+        // normalizePdf pass collapsed those.
+        const requirePct = new RegExp(`${pct}\\.0%`);
+        check(
+          `${tag} scholarship "${label}" rendered as "${pct}.0%" percentage`,
+          requirePct.test(win),
+          `window="${win.slice(0, 200)}"`,
+        );
+      }
+    }
+  }
   // Negative assertion — known pre-fix stale Y1 shorthands must be
   // absent from the "Revenue by Year" table window. Scoped to the
   // table window (not the full PDF) because Task #917's Gross-to-Net

@@ -1,0 +1,330 @@
+# Task #925 Addendum — Scholarship / Discount Unit Validation System
+
+**Apply to:** Task #925 — Validate scholarship/discount as percentage, not raw value
+**Base task spec:** Use the existing #925 spec as-is, with the additions below
+**Effective:** Before kickoff
+
+**Framing reminder:** This task improves the input-validation subsystem for unit-bearing financial fields. The Riverside `$12` and Oakwood `$8` renders are symptoms — evidence that the subsystem accepts ambiguous input. The deliverable is a subsystem that makes this class of confusion impossible, not three corrected PDFs.
+
+---
+
+## Pinned decisions
+
+### Scope of the unit-toggle pattern
+
+The unit toggle (PCT vs USD) introduced here is not specific to the scholarship field. Other financial inputs across the wizard likely have the same ambiguity:
+
+- Scholarship / Financial Aid (this task)
+- Discount Rate (this task)
+- Collection rate adjustments
+- Fee waivers
+- Annual fund / grant flow rates
+
+Apply the unit-toggle pattern as a **reusable input component** (e.g., `UnitInput`), not a one-off control on `RevenueStep.tsx`. The sibling bug search step (below) identifies other fields that should adopt the pattern.
+
+If full rollout to all candidate fields is larger than #925's scope, file the rollout as a follow-up. But the component itself must be reusable, not field-specific.
+
+### Storage shape
+
+Adopt this canonical storage shape for any unit-bearing financial field:
+
+```typescript
+type UnitBearingValue = {
+  value: number;        // raw numeric value as entered
+  unit: 'PCT' | 'USD';  // explicit, no default
+  // Optional: enteredAs preserves the original string for audit
+  enteredAs?: string;
+};
+```
+
+A field stored as `-8` with no `unit` is invalid going forward. Migration of existing data is out of scope per the base spec, but the schema must reject ambiguous values on any new write.
+
+### Render contract
+
+The renderer reads `unit` and formats accordingly:
+
+```
+unit === 'PCT' && value < 0  →  "(8.0%)"
+unit === 'PCT' && value > 0  →  "8.0%"
+unit === 'USD' && value < 0  →  "$(8,000)" or "-$8,000" (pick one, document)
+unit === 'USD' && value > 0  →  "$8,000"
+unit missing                 →  render error, do not silently format
+```
+
+The "render error" case is critical. Today the renderer silently prefixes `$` to whatever is stored. Going forward, missing unit data should produce a visible error in the rendered output (e.g., `[unit missing — field needs revision]`), not a silently wrong number. A lender seeing `[unit missing]` is recoverable; a lender seeing `$8` and trusting it is not.
+
+### Negative-USD convention
+
+Pick one and document in the renderer helper:
+
+- **Accounting convention:** `$(8,000)` for negatives
+- **Standard convention:** `-$8,000` for negatives
+
+Recommendation: accounting convention `$(8,000)` for financial discount/scholarship fields. Matches how lenders read financial statements.
+
+---
+
+## Required protocol addendum fields
+
+### Canonical source reference
+
+```
+Canonical source: 
+  - Input component: <UnitInput> in artifacts/school-financial-model/
+    src/components/ (new shared component)
+  - Storage schema: UnitBearingValue type in lib/finance/src/types.ts 
+    (or wherever shared types live)
+  - Engine logic: apply(value, unit) helper in lib/finance/src/
+    revenue-quality.ts — replaces the implicit raw-integer handling
+  - Render helper: formatUnitBearingValue(value, unit) in 
+    artifacts/api-server/src/lib/packets/pdf-utils.ts
+
+Every consumer of a unit-bearing field reads from this canonical chain. 
+No consumer applies its own formatting or sign interpretation.
+```
+
+### Sibling bug search step
+
+```
+Step: Identify all unit-bearing financial fields that may have the 
+  same ambiguity as the scholarship/discount fields.
+
+Pattern (1): Fields stored as raw numbers that the renderer prefixes 
+  with $ without checking unit.
+Pattern (2): Fields where a founder might reasonably enter either 
+  a percentage or a dollar amount (collection rates, fee waivers, 
+  discount rates, grant pass-through rates).
+
+Search scope:
+  lib/finance/src/
+  artifacts/school-financial-model/src/pages/model-wizard/steps/
+
+Discovery commands:
+  # Find every field that gets $-prefixed at render time
+  grep -rnP "\\\$\\\$?\{?\s*\w+" --include="*.ts" --include="*.tsx" \
+    artifacts/api-server/src/lib/packets/
+
+  # Find every input field that accepts a raw number where the 
+  # unit may be ambiguous
+  grep -rnP "type=['\"]number['\"]" --include="*.tsx" \
+    artifacts/school-financial-model/src/pages/model-wizard/
+
+Action:
+  1. List every field surfaced by the commands above.
+  2. For each, decide:
+     a. Unit is unambiguous (always USD, e.g., facility cost) — no change
+     b. Unit is ambiguous (could be PCT or USD) — adopt UnitInput component
+     c. Unit is always PCT (e.g., tax rate) — store with implicit 
+        unit='PCT' and render as percentage; no toggle needed
+  3. Apply the UnitInput component to category (b) fields in scope, 
+     or file follow-up for fields out of scope.
+  4. Document the per-field decision in code comments at the field 
+     definition.
+
+Expected ambiguous fields (verify):
+  - Scholarship / Financial Aid (base spec)
+  - Discount Rate (base spec)
+  - Tuition Collection Rate
+  - Fee Waivers
+  - Grant flow rates / pass-through percentages
+  - Per-student supplemental funding adjustments
+```
+
+### Explicit regression assertion (Patterns A + C + new pattern)
+
+```
+Assertion target: Unit-bearing field input/storage/render coherence
+
+Subsystem-level assertions (run on every render):
+
+  For each unit-bearing field defined in the schema:
+    Assert: stored value carries an explicit unit ('PCT' or 'USD'), 
+      not null or undefined
+    Assert: rendered output matches the unit-specific format contract:
+      - PCT → contains "%" symbol, no "$" prefix
+      - USD → contains "$" prefix, no "%" symbol
+      - missing unit → renders explicit error token, not a number
+    Assert: no rendered field shows a raw single-digit dollar value 
+      that traces to a percentage stored without unit metadata 
+      (regression guard against the original bug)
+
+Phrase guard (Pattern C — prevent the symptom):
+
+  For each PDF in [persona fixtures]:
+    Assert: no scholarship/discount line in the rendered PDF matches 
+      the pattern $\\d{1,2}\\b (i.e., a bare 1-2 digit dollar value 
+      with no comma/decimal — the original bug signature)
+    Assert: scholarship/discount lines match one of:
+      - "(X.X%)" or "X.X%"   (percentage)
+      - "$X,XXX" or "$(X,XXX)" or "-$X,XXX"  (dollar amount with 
+        proper formatting)
+      - explicit error token  (missing unit)
+
+Input validation assertion (new):
+
+  For the wizard input component:
+    Assert: submitting without selecting a unit returns a validation 
+      error
+    Assert: submitting with unit='PCT' and value outside reasonable 
+      range (e.g., -100 to 100) returns a warning
+    Assert: submitting with unit='USD' and value of magnitude consistent 
+      with PCT (e.g., -50 to 50 dollars on a $2M tuition line) returns 
+      a warning suggesting the founder may have meant PCT
+
+Failure reporting:
+  "Unit-bearing field regression: {field} in {persona} — 
+   stored as {value, unit}, rendered as '{rendered}' — 
+   expected format: {expected}"
+```
+
+---
+
+## Prevention mechanism
+
+Once #925 lands, the following prevent recurrence at the class level:
+
+1. **Schema-enforced unit field:** Any field typed as `UnitBearingValue` must have both `value` and `unit` at write time. A field stored without `unit` is a schema validation error, not a silent default.
+
+2. **Render contract enforcement:** The render helper does not format a unit-bearing value when unit is missing — output is an explicit error token, never a guessed number.
+
+3. **Reusable UnitInput component:** Any new wizard field accepting a unit-bearing value uses the component. Field-by-field reinvention is prevented by code review.
+
+4. **Lint rule (optional, file as follow-up):** Warn on any new `$\\${value}` template-string usage in the renderer that doesn't go through `formatUnitBearingValue`.
+
+---
+
+## Architectural follow-up
+
+```
+Follow-up task: Roll out UnitInput component + UnitBearingValue type to 
+  all ambiguous-unit fields identified by the sibling search
+
+Rationale: The unit-ambiguity pattern surfaced in #925 likely affects 
+  multiple wizard fields beyond scholarship/discount. The reusable 
+  component is built in #925; rolling it out across all candidate fields 
+  is a separate effort that hardens the wizard against this class of 
+  founder confusion.
+
+Scope: For each field surfaced by #925's sibling search in category (b) 
+  ambiguous-unit:
+    1. Migrate field to UnitInput component
+    2. Update schema to require UnitBearingValue
+    3. Update engine consumers to honor unit
+    4. Update render consumers to use formatUnitBearingValue
+    5. Add per-field regression assertion
+
+Per-field rollout, not big-bang. Each field gets its own follow-up task 
+referencing the patterns established in #925.
+
+Tracked at: file before closing #925
+```
+
+---
+
+## Light vs full completion template
+
+This task touches input, schema, engine, and render — four subsystems. **Use the full five-section template**, not the light template.
+
+```
+Section A — What changed
+  Files modified, type definitions added, helper functions created, 
+  schema migrations applied
+
+Section B — Re-rendered evidence
+  For each persona fixture:
+    Quote the scholarship/discount line before / after
+    Quote any other field migrated to UnitInput before / after
+    Confirm no $\\d{1,2}\\b patterns remain in any rendered PDF
+
+Section C — Source-of-truth trace
+  For each unit-bearing field touched:
+    Definition site (schema)
+    Input component (wizard)
+    Engine consumer
+    Renderer consumer
+    All routed through canonical source chain — no field-specific 
+    formatting outside the chain
+
+Section D — Cross-section consistency check
+  Field value in wizard === stored value === engine input === rendered 
+    output (within unit-specific formatting)
+  Missing-unit case renders explicit error, not silent default
+  Reusable UnitInput component handles all category (b) fields in scope
+
+Section E — Side-effect check
+  Did the schema change touch other field definitions? List which.
+  Did the engine helper change affect other revenue/expense computations? 
+    List with verification.
+  Are there in-flight founder records with unit-bearing fields stored 
+    in the old shape? Document migration plan or out-of-scope deferral.
+  Are there other places the render contract is enforced/bypassed? 
+    (i.e., the sibling search results)
+```
+
+---
+
+## Quick checklist for the agent
+
+Before claiming #925 complete:
+
+- [ ] `UnitBearingValue` type defined in canonical types location
+- [ ] `UnitInput` reusable component built and used for in-scope fields
+- [ ] Schema rejects writes without explicit unit
+- [ ] Engine applies `unit === 'PCT'` as `-(rate * gross_tuition)`; never raw integer
+- [ ] Render helper produces unit-specific format; missing unit renders error token
+- [ ] Sibling bug search has been run; output is in the completion summary
+- [ ] Per-field decisions (a/b/c) documented in code comments
+- [ ] Wizard input shows validation warnings for likely-wrong-unit values
+- [ ] Negative-USD convention pinned ($(X,XXX) or -$X,XXX) and documented
+- [ ] Regression test added with subsystem-level assertions, including phrase guard
+- [ ] Regression test passes for all current persona fixtures
+- [ ] Test architecture supports adding a new persona fixture without modifying assertion logic
+- [ ] Architectural follow-up task filed for per-field rollout
+- [ ] Full five-section completion template (A–E) filled in completely
+
+If any checklist item is incomplete, the task is not done.
+
+---
+
+## What to paste to Replit
+
+```
+Apply Task #925 Addendum before starting work.
+
+Framing: this task improves the input-validation subsystem for 
+unit-bearing financial fields. The Riverside "$12" and Oakwood "$8" 
+renders are symptoms; the deliverable is a subsystem that makes this 
+class of confusion impossible across any current or future persona 
+fixture.
+
+Specifically:
+
+1. Build a reusable UnitInput component and UnitBearingValue type. 
+   This task delivers the pattern; the per-field rollout to other 
+   ambiguous fields is a follow-up.
+
+2. Render contract: missing unit renders an explicit error token, 
+   never a silently $-prefixed number. A lender seeing 
+   "[unit missing]" is recoverable; a lender seeing "$8" is not.
+
+3. Negative-USD convention: use accounting convention $(X,XXX) for 
+   discount/scholarship fields. Document at the render helper.
+
+4. Add the three required addendum fields to your task spec:
+   - Canonical source: input → schema → engine → render chain
+   - Sibling bug search: identify all candidate unit-bearing fields
+   - Explicit regression assertion: subsystem-level + phrase guard 
+     against the original bug signature
+
+5. Prevention mechanism: schema enforces unit, renderer emits error on missing unit, reusable component prevents reinvention.
+
+6. Use the full five-section completion template (A–E).
+
+7. Run the quick checklist before claiming complete.
+
+8. File the architectural follow-up for per-field rollout before 
+   closing #925.
+
+Reference the full addendum for command syntax, full assertion 
+specifications, and the architectural follow-up template.
+```
