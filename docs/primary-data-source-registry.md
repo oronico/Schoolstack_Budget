@@ -525,7 +525,7 @@ This document lists every canonical value the SchoolStack Budget product renders
 - **canonical:** `applyConfidenceCap(...).effectiveRating` (in `artifacts/api-server/src/lib/lender-readiness-caps.ts`)
 - **related tasks:** #929
 
-**Notes.** #929: capped form. One of 'Strong' | 'Almost There' | 'Needs Work' | 'Not Yet Ready'. 'Almost There' is the new mid-tier produced by the confidence cap at 25–50% tagged evidence; UI must share amber treatment with 'Needs Work'.
+**Notes.** #929 + #964 calibration: capped form. One of 'Strong' | 'Almost There' | 'Needs Work' | 'Not Yet Ready'. 'Almost There' is the mid-tier produced by the confidence cap at 30–60% tagged evidence (taggedFractionMin/Max in lender-readiness-caps.ts CAP_BANDS); UI must share amber treatment with 'Needs Work'.
 
 **Surfaces:**
 
