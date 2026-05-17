@@ -144,6 +144,42 @@ async function main(): Promise<void> {
     }
   }
 
+  console.log("\n— Section 4b: annual-debt-service unit guard —");
+  // Targeted assertion against the scenario-engine's own debt
+  // service per year (which is independently computed inside the
+  // engine using the correct decimal-rate code path). If the
+  // canonical resolver ever drifts on the rate-unit convention
+  // again (loanRate stored as percent, helper expects decimal),
+  // this diff blows up immediately rather than silently anchoring
+  // a ~16x wrong number for M4/M5.
+  for (const fixture of fixtures) {
+    const canonical = valuesByPersonaMetric
+      .get(fixture.slug)
+      ?.get("annual-debt-service") as number[] | undefined;
+    const engineConsultant = await import(
+      "../src/lib/consultant-engine.js"
+    ).then((m) => m.runConsultantEngine(fixture.data));
+    const enginePerYear =
+      (engineConsultant.normalizedView.reported as {
+        loanDebtService?: number[];
+      }).loanDebtService ?? [];
+    const matches =
+      Array.isArray(canonical) &&
+      canonical.length === 5 &&
+      canonical.every(
+        (v, i) => Math.abs(v - (enginePerYear[i] ?? 0)) < 1,
+      );
+    check(
+      `[${fixture.slug}] annual-debt-service matches engine loanDebtService (rate-unit guard)`,
+      matches,
+      matches
+        ? ""
+        : `canonical=${JSON.stringify(canonical)} engine=${JSON.stringify(
+            enginePerYear,
+          )}`,
+    );
+  }
+
   console.log("\n— Section 5: anchor-oakwood coverage —");
   // Oakwood is the single fixture every `anchor-oakwood` metric must
   // surface a concrete value for. A short allow-list captures metrics

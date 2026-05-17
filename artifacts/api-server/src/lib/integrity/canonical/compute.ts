@@ -304,10 +304,14 @@ const RESOLVERS: Record<string, CanonicalResolver> = {
     for (const row of rows) {
       if (!row.isLoan) continue;
       const principal = safeNumber(row.loanPrincipal) ?? 0;
-      const rate = safeNumber(row.loanRate) ?? 0;
+      // `loanRate` is stored as percent points (e.g. 6.5 = 6.5%);
+      // `computeAnnualDebt` expects a decimal rate. Matches every
+      // other caller in this codebase (pdf-proforma.ts,
+      // excel-export.ts).
+      const ratePct = safeNumber(row.loanRate) ?? 0;
       const term = safeNumber(row.loanTermYears) ?? 0;
       if (principal <= 0 || term <= 0) continue;
-      const annual = computeAnnualDebt(principal, rate, term);
+      const annual = computeAnnualDebt(principal, ratePct / 100, term);
       for (let y = 0; y < 5; y++) {
         if (y < term) perYear[y] += annual;
       }
