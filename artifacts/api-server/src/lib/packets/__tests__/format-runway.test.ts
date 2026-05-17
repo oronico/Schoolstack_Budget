@@ -93,6 +93,7 @@ function mkBundle(months: number): NarrativeSourceBundle {
     },
     topRisks: [],
     worstStress: null,
+    negativeY5StressScenarios: [],
     highPriorityActions: [],
   };
 }
@@ -127,6 +128,43 @@ test("buildBoardCommentary renders runway via the 1-decimal contract", () => {
     text.includes(EXPECTED_UGLY_RENDER),
     `Board commentary should render runway as "${EXPECTED_UGLY_RENDER}". Got:\n${text}`,
   );
+});
+
+// Task #918 — when ≥1 lender stress scenario produces negative Y5
+// net income, the closing paragraph must lead with the named
+// scenario(s) and Y5 dollar amount(s); when none, the failing-stress
+// clause must not appear. This locks in both directions deterministically
+// — the demo-math-smoke integration assertion only fires the positive
+// branch when a real demo seed produces a failure, so this synthetic
+// test covers the gap. Asserts on substring matches, not exact copy,
+// so a tone tweak doesn't break the test.
+test("buildLenderCommentary names failing stress scenarios when ≥1 negative-Y5 stress (Task #918)", () => {
+  const bundle = mkBundle(24);
+  bundle.negativeY5StressScenarios = [
+    { name: "Hard revenue only", y5NetIncome: -5_400_000 },
+    { name: "Loss of Philanthropy", y5NetIncome: -120_000 },
+  ];
+  const text = buildLenderCommentary(bundle).paragraphs.join("\n");
+  assert.ok(
+    /loss-of-funding risk/i.test(text),
+    `closing clause missing "loss-of-funding risk": ${text}`,
+  );
+  assert.ok(text.includes("Hard revenue only"),
+    `failing scenario name missing: ${text}`);
+  assert.ok(text.includes("Loss of Philanthropy"),
+    `second failing scenario name missing: ${text}`);
+  // Y5 dollar magnitudes must appear (formatter renders -$5_400_000 as
+  // "-$5.4M" and -$120_000 as "-$120K" via signedCurrency's short form).
+  assert.ok(/\$5\.4\s*M/.test(text) || /5,400,000/.test(text),
+    `Y5 amount (-$5.4M) missing: ${text}`);
+});
+
+test("buildLenderCommentary omits failing-stress clause when no negative-Y5 stress (Task #918)", () => {
+  const bundle = mkBundle(24);
+  bundle.negativeY5StressScenarios = [];
+  const text = buildLenderCommentary(bundle).paragraphs.join("\n");
+  assert.equal(/loss-of-funding risk/i.test(text), false,
+    `closing clause unexpectedly emitted "loss-of-funding risk": ${text}`);
 });
 
 test("buildLenderCommentary applies the 60+ cap consistently", () => {

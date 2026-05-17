@@ -3134,6 +3134,44 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
   const lowestCashMonth = lenderStressTests.base.lowestCashMonth ?? null;
   const firstNegativeCashMonth = lenderStressTests.base.firstNegativeCashMonth ?? null;
 
+  // Task #918 — propagate the lender stress battery's negative-Y5 signal
+  // into the Executive Summary "Biggest Risk" cell. The Stress Tests
+  // section already prints "N of M stress scenarios result in negative
+  // Year 5 net income"; before this, the Biggest Risk line on the same
+  // packet could still read "No major red flags detected" because the
+  // top-level risk aggregator never consumed the stress signal. Now we
+  // override `biggestRisk` (computed earlier from facility/margin/etc.
+  // rules) when any scenario fails Y5 NI, naming every failing scenario
+  // so the Lender Commentary and Biggest Risk row tell the same story.
+  const negativeY5StressScenarios = lenderStressTests.scenarios
+    .map((s) => ({ name: s.name, y5: s.netIncome?.[4] ?? null }))
+    .filter((s): s is { name: string; y5: number } =>
+      typeof s.y5 === "number" && Number.isFinite(s.y5) && s.y5 < 0,
+    );
+  // Task #918 — when the stress battery flags negative Y5 NI, lead the
+  // Biggest Risk cell with the named scenario(s) AND the Y5 dollar
+  // figure so the line reads as analysis (e.g. "under the Hard revenue
+  // only stress, Year 5 net income falls to -$5.4M") instead of a data
+  // dump. Per-task spec we trigger on Y5 only (Y1 transient deficits
+  // are surfaced via cumulative-cash issues, not this aggregator).
+  const fmtUSDShort = (n: number): string => {
+    const a = Math.abs(n);
+    const sign = n < 0 ? "-" : "";
+    if (a >= 1_000_000) return `${sign}$${(a / 1_000_000).toFixed(1)}M`;
+    if (a >= 1_000) return `${sign}$${(a / 1_000).toFixed(0)}K`;
+    return `${sign}$${a.toFixed(0)}`;
+  };
+  const biggestRiskFinal =
+    negativeY5StressScenarios.length > 0
+      ? (() => {
+          const total = lenderStressTests.scenarios.length;
+          const phrases = negativeY5StressScenarios
+            .map((s) => `under the ${s.name} stress, Year 5 net income falls to ${fmtUSDShort(s.y5)}`)
+            .join("; ");
+          return `Lender stress battery flags loss-of-funding risk — ${phrases} (${negativeY5StressScenarios.length} of ${total} scenarios). The model carries limited cushion against the modeled downside${negativeY5StressScenarios.length === 1 ? "" : "s"}.`;
+        })()
+      : biggestRisk;
+
   const topIssues = generateTopIssues({
     yearFinancials,
     cumulativeFinancials,
@@ -3192,7 +3230,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
   return {
     executiveSummary,
     biggestStrength,
-    biggestRisk,
+    biggestRisk: biggestRiskFinal,
     recommendations: recommendations.slice(0, 5),
     lenderReadiness,
     lenderReadinessExplanation,

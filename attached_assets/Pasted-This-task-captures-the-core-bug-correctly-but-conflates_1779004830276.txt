@@ -1,0 +1,42 @@
+This task captures the core bug correctly but conflates two different scenarios into the same fix. Worth separating before kickoff.
+
+What’s good:
+
+	•	Skeptical posture — “Prior task work shaped the code but the output regression remains” reflects the right wariness about prior subagent claims
+	•	Specific evidence — cites the May 16 render explicitly
+	•	Three-demo scope — all packets verified
+	•	Coordination with Task 3.6 — acknowledges the stress-test naming hygiene dependency
+	•	Pipeline-level fix — wiring the aggregator to consume the same source as the Stress Testing section is the right architectural pattern
+
+The Riverside vs Liberty distinction needs sharpening:
+
+These are two different scenarios the task spec treats as parallel:
+
+	•	Liberty: Engine produces failure count = 1 (“Hard revenue only” → -$5.4M Y5). Commentary says “no major red flags.” Bug: aggregator ignoring the signal.
+	•	Riverside: Engine produces failure count = 0 (per the packet, all 6 stress scenarios maintain positive Y5 NI). Commentary says “no major red flags.” Not necessarily a bug — that may be accurate.
+
+The fix is identical in both cases (wire the aggregator to consume the count), but the regression test needs to verify both directions:
+
+	•	When count > 0, the message references failing scenarios
+	•	When count = 0, the message correctly says no flags
+
+The task should make this explicit: Riverside’s “no major red flags” should remain only if the engine truly reports zero failures. If the engine reports failures Riverside is hiding, that’s a Liberty-style bug. If the engine reports zero failures, the current message is correct.
+
+Y1 vs Y5 trigger question: The task spec triggers on negative Y5 NI only. But Oakwood’s “Enrollment 20% Below Plan” scenario shows Y1 NI = -$5K, Y5 = $76K — negative in Y1, positive in Y5. Should that trigger the flag? Lender perspective says probably yes — short-term cash deficiency is a “biggest risk” even if Y5 recovers. Decide the trigger logic before coding.
+
+Tone matters in the failure message. When commentary names “Hard revenue only” for Liberty, the language should foreground the named risk (public-funding concentration), not just the scenario name. Something like:
+
+“Liberty’s largest risk is public funding concentration — under the Hard revenue only scenario, Year 5 net income falls to -$5.4M”
+
+That reads as analysis. Just naming the scenario reads as data dump. The 43/54 insight is about giving founders visibility — visibility means naming the risk, not just the test.
+
+One sequencing note with Task 3.6: That task may rename “Hard revenue only” or split it into two scenarios. The regression test in this task needs to be flexible enough to track renames, or sequence this task to land after 3.6. Otherwise the regression breaks when 3.6 lands.
+
+Recommendation: Approve as written with these adjustments:
+
+	1.	Distinguish Riverside (count=0, message may be correct) from Liberty (count=1, aggregator broken) in the task framing
+	2.	Decide whether negative Y1 NI also triggers the flag, not just Y5
+	3.	Specify the tone/content of the failure message — named risk, not just scenario name
+	4.	Either sequence after 3.6 or design the regression test to tolerate scenario renames
+
+The core fix is small — wire the aggregator to consume the count signal. Most of the value comes from the editorial choices around tone and trigger conditions.

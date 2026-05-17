@@ -1730,11 +1730,91 @@ async function runDebtExcludedRegression(): Promise<void> {
   );
 }
 
+// Task #918 — propagate the lender stress battery's negative-Y5 signal
+// into both the Lender Commentary (PDF closing paragraph) and the
+// Executive Summary "Biggest Risk" cell. Pre-fix, the public-funding
+// (charter) persona ran the "Hard revenue only" scenario into a
+// negative Y5 net income and the Stress Tests section flagged it, but
+// the Biggest Risk row still read "No major red flags detected" and
+// the Lender Commentary closing paragraph never mentioned the failing
+// scenario. This regression re-renders all three demos and asserts:
+//   - For any demo where ≥1 stress scenario lands Y5 NI < 0, the
+//     consultant's `biggestRisk` field names every failing scenario
+//     and does NOT contain the "No major red flags" fallback copy.
+//   - The same demo's lender packet PDF includes the closing-paragraph
+//     "loss-of-funding risk" sentence naming each failing scenario.
+// Demos with no negative-Y5 scenarios are exempt (the override only
+// fires when there's a real failure to surface).
+async function runStressNegativeY5Regression(): Promise<void> {
+  const tag = "[stress_negative_y5_regression]";
+  for (const c of CASES) {
+    const data = c.model.data as unknown as Record<string, unknown>;
+    const consultant = await runConsultantEngine(data);
+    const failing = (consultant.lenderStressTests?.scenarios ?? []).filter((s) => {
+      const y5 = s.netIncome?.[4];
+      return typeof y5 === "number" && Number.isFinite(y5) && y5 < 0;
+    });
+    if (failing.length === 0) {
+      console.log(`${tag} ${c.label}: no negative-Y5 stress scenarios (exempt)`);
+      continue;
+    }
+    const failingNames = failing.map((s) => s.name);
+
+    // (a) Biggest Risk must name every failing scenario AND must not
+    // fall through to the "No major red flags" template.
+    const biggestRisk = consultant.biggestRisk ?? "";
+    check(
+      `${tag} ${c.label} biggestRisk does NOT contain "No major red flags" fallback`,
+      !/no\s+major\s+red\s+flags/i.test(biggestRisk),
+      `biggestRisk="${biggestRisk}"`,
+    );
+    for (const name of failingNames) {
+      check(
+        `${tag} ${c.label} biggestRisk names failing scenario "${name}"`,
+        biggestRisk.includes(name),
+        `biggestRisk="${biggestRisk}"`,
+      );
+    }
+    check(
+      `${tag} ${c.label} biggestRisk mentions "negative Year 5 net income"`,
+      /negative\s+Year\s+5\s+net\s+income/i.test(biggestRisk),
+      `biggestRisk="${biggestRisk}"`,
+    );
+
+    // (b) Render the lender packet PDF and confirm the Lender
+    // Commentary closing paragraph names every failing scenario via
+    // the "loss-of-funding risk" sentence. We compare on a normalized
+    // copy (PDFKit emits per-char TJ chunks) to avoid spurious failures
+    // from inter-glyph whitespace.
+    const md = data as unknown as ModelData;
+    const packet = buildLenderPacket(md as unknown as Parameters<typeof buildLenderPacket>[0], consultant, 0);
+    const pdfBytes = await generateLenderPacketPDF(packet);
+    const rawText = extractPdfText(pdfBytes);
+    const norm = rawText
+      .replace(/([A-Za-z])\s(?=[A-Za-z]\b|[A-Za-z][a-z])/g, "$1")
+      .replace(/\s+/g, " ");
+    check(
+      `${tag} ${c.label} lender PDF Lender Commentary includes "loss-of-funding risk" sentence`,
+      /loss-of-funding risk/i.test(norm),
+      `(searched normalized PDF text length=${norm.length})`,
+    );
+    for (const name of failingNames) {
+      const normName = name.replace(/\s+/g, " ");
+      check(
+        `${tag} ${c.label} lender PDF Lender Commentary names failing scenario "${name}"`,
+        norm.includes(normName),
+        `scenario name "${normName}" not found in normalized Lender Commentary PDF`,
+      );
+    }
+  }
+}
+
 async function main(): Promise<void> {
   for (const c of CASES) {
     await runOne(c);
   }
   await runDebtExcludedRegression();
+  await runStressNegativeY5Regression();
   console.log(`demo-math-smoke: ${passed} passed, ${failed} failed`);
   if (failed > 0) {
     console.error(failures.join("\n"));

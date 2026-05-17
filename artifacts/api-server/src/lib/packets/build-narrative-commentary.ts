@@ -97,6 +97,15 @@ export interface NarrativeSourceBundle {
     minEndingCash: number | null;
   } | null;
 
+  // Task #918 — every stress scenario whose Year-5 net income lands
+  // negative. Drives the Lender Commentary closing paragraph so the
+  // narrative names the failing scenarios (e.g. "Hard revenue only")
+  // instead of telling the reader "no major red flags" while the Stress
+  // Testing table on the same packet shows N of M scenarios in the red.
+  // Pulled from `co.lenderStressTests.scenarios[*].netIncome[4]`, the
+  // same source the Stress Tests section reads from.
+  negativeY5StressScenarios: Array<{ name: string; y5NetIncome: number }>;
+
   // High-priority recommended actions for the board / founder
   highPriorityActions: Array<{ title: string; description: string }>;
 }
@@ -272,6 +281,18 @@ export function buildNarrativeBundle(
     }
   }
 
+  // Task #918 — collect every stress scenario whose Y5 net income is
+  // negative. Uses `netIncome[4]` (5-year horizon) — the same source the
+  // Stress Tests section's "N of M stress scenarios result in negative
+  // Year 5 net income" headline reads from in `buildStressTests`.
+  const negativeY5StressScenarios: NarrativeSourceBundle["negativeY5StressScenarios"] = [];
+  for (const s of stressScenarios) {
+    const y5 = s.netIncome?.[4];
+    if (typeof y5 === "number" && Number.isFinite(y5) && y5 < 0) {
+      negativeY5StressScenarios.push({ name: s.name, y5NetIncome: y5 });
+    }
+  }
+
   // High-priority recommended actions
   const highPriorityActions = co.recommendations
     .filter((r) => r.priority === "high")
@@ -308,6 +329,7 @@ export function buildNarrativeBundle(
     revenueQualityY1,
     topRisks,
     worstStress,
+    negativeY5StressScenarios,
     highPriorityActions,
   };
 }
@@ -587,7 +609,33 @@ export function buildLenderCommentary(
     );
   }
 
-  // Paragraph 5 - closing with strongest stress test + highest-priority action
+  // Paragraph 5 - closing with strongest stress test + highest-priority action.
+  // Task #918 — when any stress scenario lands negative-Y5 net income,
+  // lead the paragraph with that explicit failure list so the Lender
+  // Commentary cannot tell the reader the model has "no major red flags"
+  // while the Stress Testing table on the same packet shows scenarios in
+  // the red. We name every failing scenario (e.g. "Hard revenue only"
+  // for the public-funding persona) and frame the loss-of-funding risk,
+  // matching the canonical signal `buildStressTests` already reports.
+  const failingStressClause =
+    bundle.negativeY5StressScenarios.length > 0
+      ? (() => {
+          const phrases = bundle.negativeY5StressScenarios
+            .map(
+              (s) =>
+                `under the ${f.absorb(s.name)} stress, ${f.yearLabel(
+                  5,
+                )} net income falls to ${f.signedCurrency(s.y5NetIncome)}`,
+            )
+            .join("; ");
+          const countWord = f.num(bundle.negativeY5StressScenarios.length);
+          return `Lender stress battery flags loss-of-funding risk: ${phrases} (${countWord} scenario${
+            bundle.negativeY5StressScenarios.length === 1 ? "" : "s"
+          }). The model carries limited cushion against the modeled downside${
+            bundle.negativeY5StressScenarios.length === 1 ? "" : "s"
+          }.`;
+        })()
+      : null;
   const stressClause =
     bundle.worstStress && bundle.worstStress.minDscr !== null
       ? `Under the toughest stress in the lender battery (${f.absorb(
@@ -607,6 +655,7 @@ export function buildLenderCommentary(
     : `The full risk and recommendation set follows in the body of the packet.`;
   paragraphs.push(
     [
+      failingStressClause,
       stressClause,
       `${f.absorb(bundle.biggestStrength || "Key strengths are documented below.")}`,
       closingAction,
