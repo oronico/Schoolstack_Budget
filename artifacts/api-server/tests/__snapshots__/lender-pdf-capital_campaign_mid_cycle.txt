@@ -123,7 +123,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 1 of 22
+age 1 of 24
 --- PAGE 2 ---
 Lender Commentar
 y
@@ -484,7 +484,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 2 of 22
+age 2 of 24
 --- PAGE 3 ---
 end r
 unw
@@ -642,7 +642,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 3 of 22
+age 3 of 24
 --- PAGE 4 ---
 Y
 ear 5 Enrollment
@@ -862,7 +862,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 4 of 22
+age 4 of 24
 --- PAGE 5 ---
 Donor-Dependent
 $19K (11.6%)
@@ -874,7 +874,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 5 of 22
+age 5 of 24
 --- PAGE 6 ---
 Hard re
 v
@@ -893,7 +893,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 6 of 22
+age 6 of 24
 --- PAGE 7 ---
 Re
 ven
@@ -1082,7 +1082,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 7 of 22
+age 7 of 24
 --- PAGE 8 ---
 Y
 ear
@@ -1250,7 +1250,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 8 of 22
+age 8 of 24
 --- PAGE 9 ---
 Expense Summar
 y
@@ -1449,7 +1449,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 9 of 22
+age 9 of 24
 --- PAGE 10 ---
 Y
 ear
@@ -1587,7 +1587,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 10 of 22
+age 10 of 24
 --- PAGE 11 ---
 Metric
 V
@@ -1771,7 +1771,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 11 of 22
+age 11 of 24
 --- PAGE 12 ---
 Y
 ear 2 Monthl
@@ -1974,7 +1974,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 12 of 22
+age 12 of 24
 --- PAGE 13 ---
 Month
 Beginning
@@ -2170,7 +2170,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 13 of 22
+age 13 of 24
 --- PAGE 14 ---
 Y
 ear
@@ -2413,7 +2413,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 14 of 22
+age 14 of 24
 --- PAGE 15 ---
 Stress 
 T
@@ -2680,7 +2680,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 15 of 22
+age 15 of 24
 --- PAGE 16 ---
 Da
 ys Cash
@@ -2701,7 +2701,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 16 of 22
+age 16 of 24
 --- PAGE 17 ---
 Reser
 v
@@ -2724,7 +2724,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 17 of 22
+age 17 of 24
 --- PAGE 18 ---
 K
 e
@@ -3096,7 +3096,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 18 of 22
+age 18 of 24
 --- PAGE 19 ---
 Suppor
 ting Assumptions
@@ -3441,7 +3441,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 19 of 22
+age 19 of 24
 --- PAGE 20 ---
 Y
 ear 3 (planned 32):
@@ -3642,7 +3642,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 20 of 22
+age 20 of 24
 --- PAGE 21 ---
 Base case:
   Min DSCR 0.75x · Min ending cash 
@@ -3847,23 +3847,17 @@ ear
 Y
 ear-1 net income vs base:
  -$12,918
-Reading the 
-T
-w
-o 
-W
-orkbooks
+Reading the 5-Y
+ear Financial Model
 This pac
 k
-et ships tw
-o Excel w
+et ships one Excel w
 or
-kbooks
-.
- 
-The 5-Y
+kbook:
+ the 5-Y
 ear Financial Model (underwr
-iting) is the canonical bottom line 
+iting).
+ It is the canonical bottom line 
 and uses the full dr
 iv
 er engine;
@@ -3877,46 +3871,37 @@ interest, pr
 incipal & capital outla
 ys
 , and depreciation.
- 
-The Lender Pro-F
+ Ev
+er
+y figure cited in this PDF narr
+ativ
+e sources from that 
+w
 or
-ma is a simplified compar
-ator b
-uilt from 
-per-student / per-ro
+kbook.
+ A simplified Lender Pro-F
+or
+ma compar
+ator  b
+uilt from per-student / per-ro
 w a
 v
 er
 ages so a re
 vie
 w
-er can re-r
+er 
+can re-r
 un sensitivities b
-y editing one assumption;
- its 5-Y
-ear P&L 
-Net Income is GAAP-style (NOI min
-us interest only  pr
-incipal and depreciation are not on that P&L).
- Because 
-the tw
-o sheets use diff
-erent dr
-iv
-er models AND diff
-erent bottom-line definitions
-, their 
-Y1 Net Income figures will 
-not tie on the same pa
-yload, and the
-y are not meant to
-.
- 
-The figures cited in this PDF narr
-ativ
-e source from the 
-underwr
-iting model.
+y editing one assumption  is a
+v
+ailab
+le on request pending QA, and will be re-included 
+in this pac
+k
+et once v
+er
+ified.
 Founder Compensation
 P
 er-y
@@ -3941,12 +3926,6 @@ ould cost).
  
 The lender adjustment is the gap underwr
 iters apply to staffing cost and DSCR.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 21 of 22
---- PAGE 22 ---
 Line
 Y1
 Y2
@@ -3985,6 +3964,12 @@ $74,000
 $76,000
 $79,000
 $371,000
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 21 of 24
+--- PAGE 22 ---
   Fully-loaded (incl.
  benefits + pa
 yroll tax)
@@ -3994,6 +3979,12 @@ $79,661
 $81,814
 $85,044
 $399,382
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 22 of 24
+--- PAGE 23 ---
 Lender adjustment (market - planned)
 $12,918
 $13,198
@@ -4001,6 +3992,12 @@ $13,422
 $13,588
 $14,770
 $67,895
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 23 of 24
+--- PAGE 24 ---
 Note:
  F
 ounder is pa
@@ -4025,4 +4022,4 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 22 of 22
+age 24 of 24

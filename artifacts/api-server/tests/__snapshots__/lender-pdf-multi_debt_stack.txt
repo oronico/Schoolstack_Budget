@@ -3952,23 +3952,17 @@ ear
 Y
 ear-1 net income vs base:
  -$12,918
-Reading the 
-T
-w
-o 
-W
-orkbooks
+Reading the 5-Y
+ear Financial Model
 This pac
 k
-et ships tw
-o Excel w
+et ships one Excel w
 or
-kbooks
-.
- 
-The 5-Y
+kbook:
+ the 5-Y
 ear Financial Model (underwr
-iting) is the canonical bottom line 
+iting).
+ It is the canonical bottom line 
 and uses the full dr
 iv
 er engine;
@@ -3982,46 +3976,37 @@ interest, pr
 incipal & capital outla
 ys
 , and depreciation.
- 
-The Lender Pro-F
+ Ev
+er
+y figure cited in this PDF narr
+ativ
+e sources from that 
+w
 or
-ma is a simplified compar
-ator b
-uilt from 
-per-student / per-ro
+kbook.
+ A simplified Lender Pro-F
+or
+ma compar
+ator  b
+uilt from per-student / per-ro
 w a
 v
 er
 ages so a re
 vie
 w
-er can re-r
+er 
+can re-r
 un sensitivities b
-y editing one assumption;
- its 5-Y
-ear P&L 
-Net Income is GAAP-style (NOI min
-us interest only  pr
-incipal and depreciation are not on that P&L).
- Because 
-the tw
-o sheets use diff
-erent dr
-iv
-er models AND diff
-erent bottom-line definitions
-, their 
-Y1 Net Income figures will 
-not tie on the same pa
-yload, and the
-y are not meant to
-.
- 
-The figures cited in this PDF narr
-ativ
-e source from the 
-underwr
-iting model.
+y editing one assumption  is a
+v
+ailab
+le on request pending QA, and will be re-included 
+in this pac
+k
+et once v
+er
+ified.
 Founder Compensation
 P
 er-y
