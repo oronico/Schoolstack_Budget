@@ -705,6 +705,129 @@ async function runOne(c: DemoCase): Promise<void> {
 
   // ── 4. Lender packet PDF ────────────────────────────────────────────
   const packet = buildLenderPacket(md as unknown as Parameters<typeof buildLenderPacket>[0], consultant, 0);
+
+  // ── Task #916 — Capital Stack ↔ narrative loan-row parity sweep ─────
+  // `Capital Stack!D:D` (rate column) is the single source of truth for
+  // loan rate, principal, term, and annual payment. The packet's
+  // capital_debt section recomputes annual payment from the *same*
+  // canonical fields via the *same* `computeAnnualDebt` the workbook
+  // tab uses, so the narrative and the workbook tab cannot drift. This
+  // sweep walks every loan row in every demo and pins:
+  //   (a) workbook Capital Stack row D (rate)        == seed loanRate/100
+  //   (b) workbook Capital Stack row C (principal)   == seed loanPrincipal
+  //   (c) workbook Capital Stack row E (term yrs)    == seed loanTermYears
+  //   (d) workbook Capital Stack row F (annual pmt)  == computeAnnualDebt(...)
+  //   (e) packet capital_debt linkedAssumption value contains the exact
+  //       same rate%, principal, term, AND annual payment (formatted
+  //       with the renderer's fmt() so byte-for-byte equality holds)
+  //   (f) seed `amounts[]` on every isLoan row is all zeros — i.e. the
+  //       prior duplicate "founder-typed annual payment" store has been
+  //       fully removed and cannot resurface as a parallel source.
+  {
+    type LoanRow = {
+      id: string; lineItem?: string; enabled?: boolean; isLoan?: boolean;
+      loanPrincipal?: number; loanRate?: number; loanTermYears?: number;
+      amounts?: number[];
+    };
+    const debtRows = ((md as unknown as { capitalAndDebtRows?: LoanRow[] }).capitalAndDebtRows ?? [])
+      .filter((r) => r.enabled !== false);
+    const loanRows = debtRows.filter((r) => r.isLoan);
+    check(`${tag} demo carries at least one loan row (precondition)`, loanRows.length > 0);
+
+    // Mirror build-packet-data.fmt() exactly so equality comparisons hold.
+    function fmtLikeRenderer(n: number): string {
+      if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+      if (Math.abs(n) >= 1_000) return `$${Math.round(n / 1_000)}K`;
+      return `$${Math.round(n).toLocaleString("en-US")}`;
+    }
+    // Mirror lib/finance/src/amortization.computeAnnualDebt exactly —
+    // monthly compounding, multiplied by 12. This is the same function
+    // the Capital Stack tab and the packet narrative both call, so the
+    // reference must match it bit-for-bit.
+    function annualPmt(principal: number, ratePct: number, termYrs: number): number {
+      const r = ratePct / 100;
+      if (principal <= 0 || termYrs <= 0) return 0;
+      if (r <= 0) return principal / termYrs;
+      const mr = r / 12;
+      const m = termYrs * 12;
+      return (principal * (mr * Math.pow(1 + mr, m)) / (Math.pow(1 + mr, m) - 1)) * 12;
+    }
+
+    const cs = wb.getWorksheet("Capital Stack");
+    check(`${tag} Capital Stack tab present`, !!cs);
+
+    const capitalSection = packet.sections.find((s) => s.id === "capital_debt");
+    check(`${tag} packet capital_debt section present`, !!capitalSection);
+    const linked = capitalSection?.linkedAssumptions ?? [];
+    check(`${tag} packet capital_debt linkedAssumptions covers every enabled loan row`,
+      linked.length === loanRows.length,
+      `linked=${linked.length}, loanRows=${loanRows.length}`);
+
+    if (cs) {
+      // Locate the data-row range under the "Instrument | Type | Principal
+      // | Rate | Term (Yrs) | Annual Payment" header. Header is written
+      // at the row whose col-A label is exactly "Instrument".
+      let hdrRow = 0;
+      for (let r = 1; r <= cs.rowCount; r++) {
+        if (String(cs.getCell(r, 1).value ?? "").trim() === "Instrument") { hdrRow = r; break; }
+      }
+      check(`${tag} Capital Stack header row found`, hdrRow > 0);
+
+      for (const lr of loanRows) {
+        const wantName = lr.lineItem || "Loan";
+        let foundRow = 0;
+        for (let r = hdrRow + 1; r <= cs.rowCount; r++) {
+          const lbl = String(cs.getCell(r, 1).value ?? "").trim();
+          if (lbl === wantName) { foundRow = r; break; }
+          if (lbl.startsWith("Total ")) break;
+        }
+        check(`${tag} Capital Stack row found for "${wantName}"`, foundRow > 0);
+        if (foundRow === 0) continue;
+
+        const principal = lr.loanPrincipal || 0;
+        const rate = lr.loanRate || 0;
+        const term = lr.loanTermYears || 0;
+        const expectedAnnual = Math.round(annualPmt(principal, rate, term));
+
+        const cellPrincipal = cellNumber(cs, foundRow, 3);
+        const cellRate = cellNumber(cs, foundRow, 4);
+        const cellTerm = cellNumber(cs, foundRow, 5);
+        const cellAnnual = cellNumber(cs, foundRow, 6);
+
+        check(`${tag} "${wantName}" Capital Stack principal (C) == seed loanPrincipal`,
+          Math.abs(cellPrincipal - principal) < 0.5,
+          `cell=${cellPrincipal}, seed=${principal}`);
+        check(`${tag} "${wantName}" Capital Stack rate (D) == seed loanRate/100`,
+          Math.abs(cellRate - rate / 100) < 1e-9,
+          `cell=${cellRate}, seed=${rate / 100}`);
+        check(`${tag} "${wantName}" Capital Stack term (E) == seed loanTermYears`,
+          Math.abs(cellTerm - term) < 0.5,
+          `cell=${cellTerm}, seed=${term}`);
+        check(`${tag} "${wantName}" Capital Stack annual pmt (F) == computeAnnualDebt(p,r,t) ±$1`,
+          Math.abs(cellAnnual - expectedAnnual) <= 1,
+          `cell=${cellAnnual}, expected=${expectedAnnual}`);
+
+        // (e) Narrative linkedAssumption byte-for-byte parity.
+        const la = linked.find((a) => a.label === wantName);
+        check(`${tag} packet linkedAssumption present for "${wantName}"`, !!la);
+        if (la) {
+          const expectedValue =
+            `${fmtLikeRenderer(principal)} at ${rate.toFixed(1)}% for ${term} years (${fmtLikeRenderer(expectedAnnual)}/yr)`;
+          check(`${tag} "${wantName}" narrative value matches Capital Stack tab row exactly`,
+            la.value === expectedValue,
+            `narrative="${la.value}" expected="${expectedValue}"`);
+        }
+
+        // (f) No stale parallel annual-payment store on loan rows.
+        const amts = lr.amounts ?? [];
+        const nonZero = amts.find((v) => Math.abs(v) > 0.5);
+        check(`${tag} "${wantName}" seed amounts[] is all zeros (duplicate store removed)`,
+          nonZero === undefined,
+          `amounts=${JSON.stringify(amts)}`);
+      }
+    }
+  }
+
   const pdfBytes = await generateLenderPacketPDF(packet);
   const pdfPath = path.join(TMP_DIR, `${safe}_Lender_Conversation_Snapshot.pdf`);
   fs.writeFileSync(pdfPath, pdfBytes);

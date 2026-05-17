@@ -83,7 +83,11 @@ export const PRIVATE_SCHOOL_DEMO = {
       { id: "e7", category: "administrative_general", lineItem: "Accounting & Legal", enabled: true, driverType: "annual_fixed", amounts: [12000, 12500, 13000, 13500, 14000] },
     ],
     capitalAndDebtRows: [
-      { id: "d1", lineItem: "Building Mortgage", enabled: true, driverType: "annual_fixed", amounts: [102000, 102000, 102000, 102000, 102000], isLoan: true, loanPrincipal: 1200000, loanRate: 5.5, loanTermYears: 25 },
+      // Task #916 — `amounts` zeroed for isLoan rows. Capital Stack!D
+      // (loanRate/loanPrincipal/loanTermYears) is the single source of
+      // truth for annual payment; the prior [102000,...] was a stale
+      // founder-typed duplicate that implied ~7.0% on a 5.5%/25yr loan.
+      { id: "d1", lineItem: "Building Mortgage", enabled: true, driverType: "annual_fixed", amounts: [0, 0, 0, 0, 0], isLoan: true, loanPrincipal: 1200000, loanRate: 5.5, loanTermYears: 25 },
       { id: "d2", lineItem: "Renovation Loan", enabled: true, driverType: "annual_fixed", amounts: [0, 0, 0, 0, 0], isLoan: true, loanPrincipal: 150000, loanRate: 7, loanTermYears: 10 },
     ],
     openingBalances: { cash: 120000, fixedAssets: 850000, longTermDebt: 1200000 },

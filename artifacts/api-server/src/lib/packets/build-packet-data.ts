@@ -40,6 +40,7 @@ import {
   type RevenueQuality,
   type MonthlyRevenueRowLike,
   ASSUMPTION_REGISTRY,
+  computeAnnualDebt,
   computeMetricDrivers,
   type DecisionEngineModelData as FullModelData,
   type HeadlineMetricKey,
@@ -733,11 +734,24 @@ function buildCapitalDebt(
   return {
     ...s,
     narrative,
-    linkedAssumptions: loanRows.map((r) => ({
-      label: r.lineItem || "Loan",
-      value: `${fmt(r.loanPrincipal || 0)} at ${((r.loanRate || 0)).toFixed(1)}% for ${r.loanTermYears || 0} years`,
-      sourceField: `capitalAndDebtRows[${r.id}]`,
-    })),
+    // Task #916 — Capital Stack!D is the single source of truth for
+    // loan rate, principal, term, and annual payment. The narrative
+    // recomputes annual payment via the same `computeAnnualDebt` the
+    // Capital Stack tab uses (underwriting-workbook.ts:1284), so the
+    // packet narrative and the workbook tab cannot drift. A regression
+    // sweep in tests/demo-math-smoke.ts pins this parity for every
+    // loan row across all three demos.
+    linkedAssumptions: loanRows.map((r) => {
+      const principal = r.loanPrincipal || 0;
+      const rate = r.loanRate || 0;
+      const term = r.loanTermYears || 0;
+      const annual = computeAnnualDebt(principal, rate / 100, term);
+      return {
+        label: r.lineItem || "Loan",
+        value: `${fmt(principal)} at ${rate.toFixed(1)}% for ${term} years (${fmt(Math.round(annual))}/yr)`,
+        sourceField: `capitalAndDebtRows[${r.id}]`,
+      };
+    }),
   };
 }
 
