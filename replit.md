@@ -6,6 +6,10 @@ SchoolStack Budget is a full-stack web application designed to help school found
 
 I prefer iterative development with clear communication on significant changes. Please ask before making major architectural decisions or implementing new features that might diverge from the current design patterns. I appreciate concise explanations and a focus on functional programming principles where applicable.
 
+## Phase 2 shape-mismatch surfacing (standing preference)
+
+For Phase 2 work, surface any shape mismatch you notice while doing the requested work — without being prompted. Examples: a new type widens a union but existing consumers narrow it; an engine field is added but a downstream surface still reads the old shape; a registry/schema/openapi change leaves stale fixtures. Flag it, fix it in scope when trivial, otherwise file a follow-up. Do not silently leave a known shape gap for the next task to trip over.
+
 ## Revenue terminology contract (do not conflate)
 
 The founder thinks about money in three distinct layers. Code, copy, and audits must keep them separate:
