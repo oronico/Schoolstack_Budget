@@ -457,6 +457,18 @@ export {
   PRO_FORMA_METHODOLOGY_NOTE_BODY,
 } from "./lender-packet-copy.js";
 
+// Task #930 / M1 — Primary Data Source Registry.
+export {
+  CANONICAL_METRICS,
+  getCanonicalMetric,
+  listCanonicalMetricIds,
+  metricsByCategory,
+  type CanonicalMetric,
+  type MetricCategory,
+  type MetricUnit,
+  type MetricSurface,
+} from "./registry/canonical-metrics.js";
+
 export function computeProjectedAR(
   annualTuitionRevenue: number,
   collectionDelayDays: number,
