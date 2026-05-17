@@ -14,7 +14,9 @@
  */
 import { runConsultantEngine } from "../src/lib/consultant-engine.js";
 import { buildLenderPacket } from "../src/lib/packets/build-lender-packet.js";
+import { buildBoardPacket } from "../src/lib/packets/build-board-packet.js";
 import { generateLenderPacketPDF } from "../src/lib/packets/lender-packet-pdf.js";
+import { generateBoardPacketPDF } from "../src/lib/packets/board-packet-pdf.js";
 import { generateLenderProFormaWorkbook } from "../src/lib/lender-proforma-export.js";
 import {
   extractWorkbook,
@@ -196,29 +198,76 @@ async function smokeComponentState(): Promise<void> {
   );
 }
 
+async function smokeBoardPdf(): Promise<void> {
+  console.log("\n— pdf extractor [board packet] —");
+  const data = OAKWOOD_CEO_SEED;
+  const consultant = await runConsultantEngine(data);
+  const packet = buildBoardPacket(
+    data as unknown as Parameters<typeof buildBoardPacket>[0],
+    consultant,
+    0,
+  );
+  const pdf = await generateBoardPacketPDF(packet);
+  const records = extractPdf(pdf, { producer: "board-packet-pdf" });
+  check("[board-pdf] returns a non-empty list", records.length > 0, `got ${records.length}`);
+  assertWellShaped(records, "pdf");
+  const hasCurrency = records.some((r) => /\$/.test(r.rawToken ?? ""));
+  check("[board-pdf] surfaces at least one currency token", hasCurrency);
+  const locs = records.map((r) => r.location);
+  check(
+    `[board-pdf] locations are unique within the document`,
+    new Set(locs).size === locs.length,
+  );
+}
+
 async function smokeJsonExport(): Promise<void> {
   console.log("\n— json-export extractor —");
   const data = OAKWOOD_CEO_SEED;
   const consultant = await runConsultantEngine(data);
-  const packet = buildLenderPacket(
-    data as unknown as Parameters<typeof buildLenderPacket>[0],
-    consultant,
-    0,
-  );
-  // The export endpoint serializes the packet via JSON.stringify before
-  // shipping it, so we round-trip here too: that drops Date instances
-  // and other non-JSON-safe fields, matching exactly what the HTTP
-  // client deserializes.
-  const wireShape = JSON.parse(JSON.stringify(packet)) as unknown;
-  const records = extractJsonExport(wireShape, { producer: "export/lender-packet" });
-  check("[json-export] returns a non-empty list", records.length > 0, `got ${records.length}`);
-  assertWellShaped(records, "json-export");
+  // Cover all three primary export endpoints' wire shapes — every
+  // payload the `/api/models/:id/export/*` routes ship MUST round-
+  // trip through JSON.stringify before the HTTP client deserializes
+  // it, so we do the same here to match exactly what the founder /
+  // lender / board reviewer receives.
+  const endpoints: { producer: string; payload: unknown }[] = [
+    {
+      producer: "export/lender-packet",
+      payload: buildLenderPacket(
+        data as unknown as Parameters<typeof buildLenderPacket>[0],
+        consultant,
+        0,
+      ),
+    },
+    {
+      producer: "export/board-packet",
+      payload: buildBoardPacket(
+        data as unknown as Parameters<typeof buildBoardPacket>[0],
+        consultant,
+        0,
+      ),
+    },
+    {
+      producer: "consultant",
+      payload: consultant,
+    },
+  ];
+  for (const ep of endpoints) {
+    const wireShape = JSON.parse(JSON.stringify(ep.payload)) as unknown;
+    const records = extractJsonExport(wireShape, { producer: ep.producer });
+    check(
+      `[json-export:${ep.producer}] returns a non-empty list`,
+      records.length > 0,
+      `got ${records.length}`,
+    );
+    assertWellShaped(records, "json-export");
+  }
 }
 
 async function main(): Promise<void> {
   console.log("=== Integrity extractor smoke tests (Oakwood persona) ===");
   await smokeWorkbook();
   await smokePdf();
+  await smokeBoardPdf();
   await smokeComponentState();
   await smokeJsonExport();
   console.log(`\nResults: ${passed} passed, ${failed} failed`);
