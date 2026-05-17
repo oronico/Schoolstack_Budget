@@ -18,6 +18,61 @@ export const BRAND = {
 
 export type PDFDoc = InstanceType<typeof PDFDocument>;
 
+// Task #922 — PDFKit's built-in Standard 14 fonts (Helvetica family used
+// throughout the packet renderers) are Type1 fonts with WinAnsiEncoding,
+// which only covers the legacy Windows-1252 codepage. When a string
+// containing a non-WinAnsi codepoint (≤, ≥, ≈, →, ↓, ↑) is passed to
+// `doc.text()`, PDFKit silently maps each unsupported codepoint to a
+// substitute byte that renders as gibberish in every reader. The
+// canonical case study: `Target: ≤ 85% of revenue` from
+// `consultant-engine.ts:1941` rendered as `Target: "d 85% of revenue`
+// throughout the lender PDF; `(≈ 3 months delay)` rendered as
+// `("H 3 months delay)`. See task-922.md and the corruption tokens
+// asserted by `pdf-encoding-corruption-922.ts`.
+//
+// Two repair paths exist: (a) register a Unicode-capable TTF
+// (DejaVu / Inter) and switch every `doc.font("Helvetica…")` call to
+// the new family, or (b) replace the unsupported codepoints with
+// ASCII equivalents at render time. Approach (b) is implemented here
+// because it is minimum-blast-radius (one chokepoint, no vendored
+// fonts, no font-metrics churn, no snapshot drift outside the
+// affected literals) and because the four corrupting symbols all
+// have unambiguous ASCII renderings already used elsewhere in the
+// product copy (`<=`, `>=`, `~`, `->`, etc.). Source strings in
+// consultant-engine, narrative builders, etc. are NOT modified —
+// the sanitizer runs at the render boundary, so the in-app preview
+// and any non-PDF surface continues to display the true Unicode
+// glyphs.
+//
+// Regression assertion (Pattern D, per Verification Protocol
+// Addendum from #919): the four extracted-PDF tokens `"H`, `!"`,
+// `!'`, `"d` MUST NOT appear in any rendered packet. Enforced by
+// `tests/pdf-encoding-corruption-922.ts` across every demo persona
+// and founder-shaped fixture.
+const PDF_UNICODE_REPLACEMENTS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/\u2264/g, "<="],   // ≤
+  [/\u2265/g, ">="],   // ≥
+  [/\u2248/g, "~"],    // ≈
+  [/\u2192/g, "->"],   // →
+  [/\u2190/g, "<-"],   // ←
+  [/\u2193/g, "v"],    // ↓ (down)
+  [/\u2191/g, "^"],    // ↑ (up)
+];
+
+/**
+ * Task #922 — Replace non-WinAnsi codepoints PDFKit's default Helvetica
+ * cannot render with ASCII fallbacks. Exported so route handlers /
+ * tests that bypass the `doc.text` chokepoint (e.g. raw stream writers
+ * or future renderers) can normalize their own strings.
+ */
+export function sanitizePdfText(text: string): string {
+  let out = text;
+  for (const [re, replacement] of PDF_UNICODE_REPLACEMENTS) {
+    out = out.replace(re, replacement);
+  }
+  return out;
+}
+
 export function createDoc(): PDFDoc {
   // Test hook: when SCHOOLSTACK_PDF_TEST_UNCOMPRESSED=1, disable PDF
   // content-stream deflate compression so render-time tests can grep the
@@ -34,6 +89,20 @@ export function createDoc(): PDFDoc {
     bufferPages: true,
     compress: !testUncompressed,
   });
+  // Task #922 — wrap `text` so every call site (helpers in this file,
+  // packet renderers, route handlers, future additions) is sanitized
+  // without per-call-site edits. PDFKit's `text` overloads all take
+  // the string as the first positional argument; if it is not a
+  // string (e.g. number coerced upstream) we pass it through
+  // unchanged so we never alter semantics.
+  const originalText = doc.text.bind(doc);
+  type TextFn = typeof doc.text;
+  doc.text = ((arg: unknown, ...rest: unknown[]) => {
+    if (typeof arg === "string") {
+      return (originalText as (...a: unknown[]) => PDFDoc)(sanitizePdfText(arg), ...rest);
+    }
+    return (originalText as (...a: unknown[]) => PDFDoc)(arg, ...rest);
+  }) as TextFn;
   return doc;
 }
 

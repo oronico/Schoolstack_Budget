@@ -1,0 +1,61 @@
+Solid task spec. Three things to tighten before kickoff.
+
+What’s good:
+
+	•	Concrete font recommendations — DejaVu Sans / Inter with fallback chain are both reasonable; DejaVu has broader glyph coverage, Inter is more modern
+	•	Both options preserved — (a) font registration vs (b) text replacement
+	•	Extended test coverage — 3 demos + 4 fixtures is better than demos alone
+	•	Documentation requirement — header comment in lender-packet-pdf.ts captures the decision for future developers
+	•	Snapshot refresh explicit — lender-pdf-text-snapshot and board-packet-text-snapshot named
+
+Recommend choosing option (a) explicitly. Both options work, but (a) is the right long-term answer:
+
+	•	(b) creates ongoing maintenance — every future special character needs the text-equivalent workaround
+	•	(a) is a one-time fix — proper Unicode-capable font means future characters work without per-instance handling
+	•	Lender-grade output benefits from typographic polish (≤ reads more professional than <=)
+
+The task spec lists both as options. Pin (a) as the choice and document the rationale.
+
+Apply the three required addendum fields:
+
+Canonical source reference: “Source: PDFKit font configuration in lender-packet-pdf.ts. After fix: registered Unicode-capable font with fallback chain.”
+
+Sibling bug search (critical for this task): The four named corruption tokens are likely not the complete set. The search step should be:
+
+Pattern: Any non-ASCII character appearing in source templates that may
+  render as corruption tokens
+Search scope: artifacts/api-server/src/lib/packets/templates/
+Action: List all non-ASCII characters in source templates; verify each
+  renders correctly after the fix
+
+
+Likely candidates beyond the named four: em dash, en dash, curly quotes, copyright/trademark, degree sign, mathematical operators (×, ÷, ±), currency symbols beyond $, fractions, ellipsis. Without this sweep, you fix four characters and learn about the fifth from the next packet review.
+
+Explicit regression assertion (Pattern C from the addendum):
+
+Assertion target: rendered PDF text contents
+For each demo in {Riverside, Liberty, Oakwood} + 4 founder fixtures:
+  Assert: rendered text does NOT contain any of ["H, !", !', "d, 
+    <full set identified by sibling search>]
+  Assert: rendered text DOES contain expected Unicode characters
+    (≈, ↓, →, ≤, et al.)
+
+
+Brand typography question — worth a deliberate decision:
+
+Per the brand guide, the typeface is Quicksand. The current PDF renderer apparently uses something else. This task is a natural opportunity to also address brand typography in the lender packet — but doing so expands scope significantly.
+
+	•	Stay in scope: register a Unicode-capable utility font (DejaVu Sans), keep Quicksand as a separate brand-typography task
+	•	Expand scope: register Quicksand with Unicode fallback (more complex font stack, but brand-aligned)
+
+Recommendation: stay in scope for #922. File a follow-up task for brand typography integration. Don’t mix concerns — typography is a brand decision; encoding is a rendering decision.
+
+One small note: “4 founder fixtures” — worth listing them in the task spec. If a future contributor doesn’t know what those are, the regression test loses traceability.
+
+Recommendation: Approve with three modifications:
+
+	1.	Pin option (a) as the chosen approach, with rationale in header comment
+	2.	Add the comprehensive sibling search (full non-ASCII character audit, not just the named four)
+	3.	Apply Pattern C assertion structure from the addendum
+
+Should be a clean task once the comprehensive character set is identified upfront. The risk of skipping the sibling search is shipping a fix that catches four characters and misses ten others — which is exactly the “fix the symptom, miss the class” pattern the addendum is built to prevent.
