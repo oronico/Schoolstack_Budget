@@ -86,6 +86,11 @@ export async function generateBoardPacketPDF(
       continue;
     }
     if (section.id === "decision_history") {
+      // Task #920 — suppress the entire section (heading AND body) when no
+      // decisions with an outcome exist. The "no decisions tracked yet"
+      // placeholder telegraphs an unbuilt feature; better to hide the
+      // section entirely until at least one outcome is recorded.
+      if (packet.decisionHistory.length === 0) continue;
       renderDecisionHistorySection(doc, section, packet.decisionHistory, {
         emptyStateHint:
           "Once decisions are saved with a Pursued / Declined / On hold outcome inside the planner, they will be summarized here for the board.",

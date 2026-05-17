@@ -1038,37 +1038,6 @@ Addressing this will mater
 ially impro
 v
 e financial position.
-Decision Histor
-y
-No decisions ha
-v
-e been tr
-ac
-k
-ed with an outcome y
-et.
- As the team mar
-ks sa
-v
-ed scenar
-ios as Pursued, Declined, 
-or On hold, those outcomes (and an
-y retrospectiv
-e notes) will appear here so re
-vie
-w
-ers can see what actually 
-happened v
-ersus what w
-as modeled.
-Once decisions are sa
-v
-ed with a Pursued / Declined / On hold outcome inside the planner
-, the
-y will be summar
-iz
-ed here f
-or the board.
 Scenario Comparison
 The model includes 2 scenar
 ios sho
@@ -1290,12 +1259,6 @@ w
 ers the rest of this pac
 k
 et.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 6 of 7
---- PAGE 7 ---
 Standar
 d Lender Stress 
 T
@@ -1322,6 +1285,12 @@ or
 ma w
 or
 kbook.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 6 of 7
+--- PAGE 7 ---
 Base case:
   Min DSCR 22.02x · Min ending 
 cash $2,417,688 · Runwa

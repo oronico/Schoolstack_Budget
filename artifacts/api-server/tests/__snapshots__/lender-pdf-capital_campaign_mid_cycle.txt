@@ -3083,43 +3083,6 @@ itical
 See Appendix f
 or complete assumption details
 .
-Decision Histor
-y
-No decisions ha
-v
-e been tr
-ac
-k
-ed with an outcome y
-et.
- As the team mar
-ks sa
-v
-ed scenar
-ios as Pursued, Declined, 
-or On hold, those outcomes (and an
-y retrospectiv
-e notes) will appear here so re
-vie
-w
-ers can see what actually 
-happened v
-ersus what w
-as modeled.
-Once decisions are sa
-v
-ed with a Pursued / Declined / On hold outcome inside the planner
-, the
-y will be summar
-iz
-ed here
-.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 18 of 22
---- PAGE 19 ---
 Appendix:
  K
 e
@@ -3129,6 +3092,12 @@ ic tied to its dr
 iving 
 assumptions
 .
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 18 of 22
+--- PAGE 19 ---
 Suppor
 ting Assumptions
  Assumption sources b
@@ -3443,12 +3412,6 @@ ue
 .
   ...
  and 24 more (see Appendix)
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 19 of 22
---- PAGE 20 ---
 Break-Even & Do
 wnside Sensitivity
 Break-e
@@ -3474,6 +3437,12 @@ Y
 ear 2 (planned 26):
   10 students · 22% of 
 capacity
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 19 of 22
+--- PAGE 20 ---
 Y
 ear 3 (planned 32):
   14 students · 31% of 
@@ -3547,12 +3516,6 @@ Y
 ear 5 (32 students):
   DSCR 2.86x · Ending 
 cash $525,901
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 20 of 22
---- PAGE 21 ---
 Enr
 ollment × 
 T
@@ -3675,6 +3638,12 @@ or
 ma w
 or
 kbook.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 20 of 22
+--- PAGE 21 ---
 Base case:
   Min DSCR 0.75x · Min ending cash 
 $2,710 · Runwa
@@ -3838,12 +3807,6 @@ ear
 Y
 ear-1 net income vs base:
  -$6,958
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 21 of 22
---- PAGE 22 ---
 Founder Comp Normaliz
 ed to Market
 F
@@ -3978,6 +3941,12 @@ ould cost).
  
 The lender adjustment is the gap underwr
 iters apply to staffing cost and DSCR.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 21 of 22
+--- PAGE 22 ---
 Line
 Y1
 Y2

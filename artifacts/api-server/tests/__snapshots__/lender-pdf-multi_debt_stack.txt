@@ -3187,37 +3187,6 @@ ated <DATE>
 P
 age 17 of 21
 --- PAGE 18 ---
-Decision Histor
-y
-No decisions ha
-v
-e been tr
-ac
-k
-ed with an outcome y
-et.
- As the team mar
-ks sa
-v
-ed scenar
-ios as Pursued, Declined, 
-or On hold, those outcomes (and an
-y retrospectiv
-e notes) will appear here so re
-vie
-w
-ers can see what actually 
-happened v
-ersus what w
-as modeled.
-Once decisions are sa
-v
-ed with a Pursued / Declined / On hold outcome inside the planner
-, the
-y will be summar
-iz
-ed here
-.
 Appendix:
  K
 e
@@ -3501,12 +3470,6 @@ v
 en
 ue
 , Staffing.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 18 of 21
---- PAGE 19 ---
 Break-e
 v
 en y
@@ -3547,6 +3510,12 @@ ue
 .
   ...
  and 21 more (see Appendix)
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 18 of 21
+--- PAGE 19 ---
 Break-Even & Do
 wnside Sensitivity
 Break-e

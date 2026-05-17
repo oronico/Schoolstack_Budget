@@ -1063,43 +1063,6 @@ umbers into reality
 .
 This strengthens the model and reduces future r
 isk.
-Decision Histor
-y
-No decisions ha
-v
-e been tr
-ac
-k
-ed with an outcome y
-et.
- As the team mar
-ks sa
-v
-ed scenar
-ios as Pursued, Declined, 
-or On hold, those outcomes (and an
-y retrospectiv
-e notes) will appear here so re
-vie
-w
-ers can see what actually 
-happened v
-ersus what w
-as modeled.
-Once decisions are sa
-v
-ed with a Pursued / Declined / On hold outcome inside the planner
-, the
-y will be summar
-iz
-ed here f
-or the board.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 5 of 7
---- PAGE 6 ---
 Scenario Comparison
 The model includes 3 scenar
 ios sho
@@ -1111,6 +1074,12 @@ ect
 Y
 ear 5 outcomes
 .
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 5 of 7
+--- PAGE 6 ---
 Scenario
 Y5 Re
 ven
@@ -1383,12 +1352,6 @@ monthl
 y cash 
 Y1 J
 ul $554,001
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 6 of 7
---- PAGE 7 ---
 Enr
 ollment -10%
 All fiv
@@ -1420,6 +1383,12 @@ ul) $530,285
 Y
 ear-1 net income vs base:
  -$314,102
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 6 of 7
+--- PAGE 7 ---
 Enr
 ollment -20%
 All fiv

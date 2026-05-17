@@ -1058,37 +1058,6 @@ umbers into reality
 .
 This strengthens the model and reduces future r
 isk.
-Decision Histor
-y
-No decisions ha
-v
-e been tr
-ac
-k
-ed with an outcome y
-et.
- As the team mar
-ks sa
-v
-ed scenar
-ios as Pursued, Declined, 
-or On hold, those outcomes (and an
-y retrospectiv
-e notes) will appear here so re
-vie
-w
-ers can see what actually 
-happened v
-ersus what w
-as modeled.
-Once decisions are sa
-v
-ed with a Pursued / Declined / On hold outcome inside the planner
-, the
-y will be summar
-iz
-ed here f
-or the board.
 Scenario Comparison
 The model includes 3 scenar
 ios sho
@@ -1127,12 +1096,6 @@ e (15% more students)
 $508K
 $247K
 48.6%
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 5 of 7
---- PAGE 6 ---
 Grant 
 V
 er
@@ -1189,6 +1152,12 @@ anslates directly into
 students ser
 v
 ed against that mission.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 5 of 7
+--- PAGE 6 ---
 Philanthropic and other donor-dependent suppor
 t currently represents about 12% of our 
 Y
@@ -1196,14 +1165,14 @@ ear 1 re
 v
 en
 ue mix.
- 
-Gr
-ant funding is what br
+ Gr
+ant 
+funding is what br
 idges the gap betw
 een our enrollment r
 amp and oper
-ating sustainability - without it the 
-model w
+ating sustainability - without it the model 
+w
 ould not reach the tr
 ajector
 y descr
@@ -1213,8 +1182,8 @@ e
 .
  
 The plan does not assume an
-y single funder closes that 
-gap on their o
+y single funder closes that gap on 
+their o
 wn;
  instead, it relies on a por
 tf
@@ -1247,8 +1216,8 @@ ating break-e
 v
 en is reached in 
 Y
-ear 1, which is 
-the point at which ear
+ear 1, which is the 
+point at which ear
 ned re
 v
 en
@@ -1288,7 +1257,8 @@ xpenses
 .
  
 T
-arget at least 18 months of r
+arget 
+at least 18 months of r
 unw
 a
 y bef
@@ -1298,15 +1268,15 @@ k the enrollment r
 amp with e
 vidence
 .
- Our planned 
-response is to Bac
+ Our planned response 
+is to Bac
 k e
 v
 er
 y enrollment target with documented demand - signed letters of intent, w
-aitlist depth, 
-comm
-unity sur
+aitlist depth, comm
+unity 
+sur
 v
 e
 y results
@@ -1316,10 +1286,10 @@ uitment pipeline data.
 wth o
 v
 er 25% per y
-ear typically requires an 
-e
+ear typically requires an e
 xceptional recr
-uitment engine or f
+uitment 
+engine or f
 acility e
 xpansion..
 Strong 
@@ -1332,7 +1302,8 @@ ibed in the b
 udget.
  
 W
-e are happ
+e 
+are happ
 y to w
 alk through an
 y line of the model in detail with the funder
@@ -1444,12 +1415,6 @@ ul) $1,371
 Y
 ear-1 net income vs base:
  -$27,795
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 6 of 7
---- PAGE 7 ---
 ESA / Pub
 lic Funding Dela
 y
@@ -1529,6 +1494,12 @@ ul) $4,477
 Y
 ear-1 net income vs base:
  -$6,958
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 6 of 7
+--- PAGE 7 ---
 Founder Comp Normaliz
 ed to Market
 F

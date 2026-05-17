@@ -2964,43 +2964,6 @@ w hires to enrollment milestones:
 See Appendix f
 or complete assumption details
 .
-Decision Histor
-y
-No decisions ha
-v
-e been tr
-ac
-k
-ed with an outcome y
-et.
- As the team mar
-ks sa
-v
-ed scenar
-ios as Pursued, Declined, 
-or On hold, those outcomes (and an
-y retrospectiv
-e notes) will appear here so re
-vie
-w
-ers can see what actually 
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 34 of 38
---- PAGE 35 ---
-happened v
-ersus what w
-as modeled.
-Once decisions are sa
-v
-ed with a Pursued / Declined / On hold outcome inside the planner
-, the
-y will be summar
-iz
-ed here
-.
 Appendix:
  K
 e
@@ -3010,6 +2973,12 @@ ic tied to its dr
 iving 
 assumptions
 .
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 34 of 38
+--- PAGE 35 ---
 Suppor
 ting Assumptions
  Assumption sources b
@@ -3324,12 +3293,6 @@ ue
 .
   ...
  and 24 more (see Appendix)
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 35 of 38
---- PAGE 36 ---
 Break-Even & Do
 wnside Sensitivity
 Break-e
@@ -3355,6 +3318,12 @@ Y
 ear 2 (planned 26):
   9 students · 20% of 
 capacity
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 35 of 38
+--- PAGE 36 ---
 Y
 ear 3 (planned 32):
   9 students · 20% of 
@@ -3428,12 +3397,6 @@ Y
 ear 5 (32 students):
   DSCR 134.30x · Ending 
 cash $2,144,525
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 36 of 38
---- PAGE 37 ---
 Enr
 ollment × 
 T
@@ -3556,6 +3519,12 @@ or
 ma w
 or
 kbook.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 36 of 38
+--- PAGE 37 ---
 Base case:
   Min DSCR 58.39x · Min ending 
 cash $281,519 · Runwa
@@ -3707,12 +3676,6 @@ ul) $69,548
 Y
 ear-1 net income vs base:
  -$6,958
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 37 of 38
---- PAGE 38 ---
 Founder Comp Normaliz
 ed to Market
 F
@@ -3844,6 +3807,12 @@ ould cost).
  
 The lender adjustment is the gap underwr
 iters apply to staffing cost and DSCR.
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 37 of 38
+--- PAGE 38 ---
 Line
 Y1
 Y2

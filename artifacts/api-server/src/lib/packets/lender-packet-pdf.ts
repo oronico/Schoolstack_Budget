@@ -982,6 +982,11 @@ async function renderAssumptionsEvidenceAppendix(
 
 function renderSection(doc: PDFDoc, section: PacketSection, packet: LenderPacket) {
   if (section.id === "decision_history") {
+    // Task #920 — suppress the entire section (heading AND body) when no
+    // decisions with an outcome exist. A solitary "no decisions tracked
+    // yet" line telegraphs an unbuilt feature to lenders and adds no
+    // signal. The section reappears as soon as one outcome is recorded.
+    if (packet.decisionHistory.length === 0) return;
     renderDecisionHistorySection(doc, section, packet.decisionHistory, {
       emptyStateHint:
         "Once decisions are saved with a Pursued / Declined / On hold outcome inside the planner, they will be summarized here.",

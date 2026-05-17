@@ -123,7 +123,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 1 of 22
+age 1 of 23
 --- PAGE 2 ---
 Lender Commentar
 y
@@ -462,7 +462,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 2 of 22
+age 2 of 23
 --- PAGE 3 ---
 financial stor
 y y
@@ -622,7 +622,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 3 of 22
+age 3 of 23
 --- PAGE 4 ---
 Y
 ear 5 Enrollment
@@ -836,7 +836,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 4 of 22
+age 4 of 23
 --- PAGE 5 ---
 Donor-Dependent
 $267K (64.5%)
@@ -848,7 +848,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 5 of 22
+age 5 of 23
 --- PAGE 6 ---
 Hard re
 v
@@ -867,7 +867,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 6 of 22
+age 6 of 23
 --- PAGE 7 ---
 Re
 ven
@@ -1079,7 +1079,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 7 of 22
+age 7 of 23
 --- PAGE 8 ---
 Y
 ear
@@ -1247,7 +1247,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 8 of 22
+age 8 of 23
 --- PAGE 9 ---
 Expense Summar
 y
@@ -1446,7 +1446,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 9 of 22
+age 9 of 23
 --- PAGE 10 ---
 Y
 ear
@@ -1584,7 +1584,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 10 of 22
+age 10 of 23
 --- PAGE 11 ---
 Metric
 V
@@ -1765,7 +1765,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 11 of 22
+age 11 of 23
 --- PAGE 12 ---
 Y
 ear 2 Monthl
@@ -1968,7 +1968,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 12 of 22
+age 12 of 23
 --- PAGE 13 ---
 Month
 Beginning
@@ -2164,7 +2164,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 13 of 22
+age 13 of 23
 --- PAGE 14 ---
 Y
 ear
@@ -2408,7 +2408,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 14 of 22
+age 14 of 23
 --- PAGE 15 ---
 Stress 
 T
@@ -2700,7 +2700,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 15 of 22
+age 15 of 23
 --- PAGE 16 ---
 Da
 ys Cash
@@ -2717,7 +2717,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 16 of 22
+age 16 of 23
 --- PAGE 17 ---
 Reser
 v
@@ -2740,7 +2740,7 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 17 of 22
+age 17 of 23
 --- PAGE 18 ---
 K
 e
@@ -3076,37 +3076,6 @@ w hires to enrollment milestones:
 See Appendix f
 or complete assumption details
 .
-Decision Histor
-y
-No decisions ha
-v
-e been tr
-ac
-k
-ed with an outcome y
-et.
- As the team mar
-ks sa
-v
-ed scenar
-ios as Pursued, Declined, 
-or On hold, those outcomes (and an
-y retrospectiv
-e notes) will appear here so re
-vie
-w
-ers can see what actually 
-happened v
-ersus what w
-as modeled.
-Once decisions are sa
-v
-ed with a Pursued / Declined / On hold outcome inside the planner
-, the
-y will be summar
-iz
-ed here
-.
 Appendix:
  K
 e
@@ -3116,12 +3085,6 @@ ic tied to its dr
 iving 
 assumptions
 .
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 18 of 22
---- PAGE 19 ---
 Suppor
 ting Assumptions
  Assumption sources b
@@ -3166,6 +3129,12 @@ v
 en
 ue
 .
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 18 of 23
+--- PAGE 19 ---
 Y
 ear 1 total e
 xpenses
@@ -3461,12 +3430,6 @@ Y
 ear 2 (planned 26):
   11 students · 24% of 
 capacity
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 19 of 22
---- PAGE 20 ---
 Y
 ear 3 (planned 32):
   14 students · 31% of 
@@ -3479,6 +3442,12 @@ Y
 ear 5 (planned 40):
   20 students · 44% of 
 capacity
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 19 of 23
+--- PAGE 20 ---
 Do
 wnside Enr
 ollment Band
@@ -3662,12 +3631,6 @@ or
 ma w
 or
 kbook.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 20 of 22
---- PAGE 21 ---
 Base case:
   Min DSCR 52.98x · Min ending 
 cash $282,326 · Runwa
@@ -3677,6 +3640,12 @@ monthl
 y cash 
 Y1 J
 ul $136,919
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 20 of 23
+--- PAGE 21 ---
 Enr
 ollment -10%
 All fiv
@@ -3951,12 +3920,6 @@ ould cost).
  
 The lender adjustment is the gap underwr
 iters apply to staffing cost and DSCR.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 21 of 22
---- PAGE 22 ---
 Line
 Y1
 Y2
@@ -4004,13 +3967,17 @@ $79,661
 $81,814
 $85,044
 $399,382
-Lender adjustment (market - planned)
-$12,918
-$13,198
-$13,422
-$13,588
-$14,770
-$67,895
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 21 of 23
+--- PAGE 22 ---
+ ±O	KÔ¾¥ÌáHh_¯Û}x}æ¡z4¢(§pq5ýûÓ¦ß.c{
+4TÍT¥*­DHF^4qrÉZiÜÔ)"
+]i©â^ÖÄ´	Ð51UÎÂÔ$IÖÄ,gaæTVÝÍ¬'18oVÄÄéþÓ`ß°5åO1e`PzóôRÃóøÖ,/ÒÕ5v°¥øäGéY¯¡®ÈfÝWÊÑ÷f
+¯ZË=ÙÒ¶çÿÆnp4uæ¯
+--- PAGE 23 ---
 Note:
  F
 ounder is pa
@@ -4035,4 +4002,4 @@ SchoolStac
 k Budget - Gener
 ated <DATE>
 P
-age 22 of 22
+age 23 of 23

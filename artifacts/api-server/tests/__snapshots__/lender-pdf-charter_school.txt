@@ -3080,37 +3080,6 @@ w hires to enrollment milestones:
 See Appendix f
 or complete assumption details
 .
-Decision Histor
-y
-No decisions ha
-v
-e been tr
-ac
-k
-ed with an outcome y
-et.
- As the team mar
-ks sa
-v
-ed scenar
-ios as Pursued, Declined, 
-or On hold, those outcomes (and an
-y retrospectiv
-e notes) will appear here so re
-vie
-w
-ers can see what actually 
-happened v
-ersus what w
-as modeled.
-Once decisions are sa
-v
-ed with a Pursued / Declined / On hold outcome inside the planner
-, the
-y will be summar
-iz
-ed here
-.
 Appendix:
  K
 e
@@ -3366,12 +3335,6 @@ v
 en
 ue
 , Staffing, Capital & Financing.
-SchoolStac
-k Budget - Gener
-ated <DATE>
-P
-age 34 of 37
---- PAGE 35 ---
 Y
 ear 5 ending cash
   Star
@@ -3444,6 +3407,12 @@ ue
 .
   ...
  and 24 more (see Appendix)
+SchoolStac
+k Budget - Gener
+ated <DATE>
+P
+age 34 of 37
+--- PAGE 35 ---
 Break-Even & Do
 wnside Sensitivity
 Break-e
