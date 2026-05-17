@@ -2555,12 +2555,12 @@
         }
       ]
     },
-    "generatedAt": "2026-05-17T22:56:48.855Z"
+    "generatedAt": "2026-05-17T23:06:25.093Z"
   },
   "lenderPacket": {
     "packetType": "lender",
     "schoolName": "Oakwood Learning Studio",
-    "generatedAt": "2026-05-17T22:56:48.857Z",
+    "generatedAt": "2026-05-17T23:06:25.097Z",
     "modelId": 0,
     "narrative": {
       "headline": "This model shows promise but has areas that should be strengthened before presenting to lenders.",
@@ -6341,7 +6341,7 @@
         "negativeY5StressScenarios": [],
         "highPriorityActions": []
       },
-      "generatedAt": "2026-05-17T22:56:48.861Z"
+      "generatedAt": "2026-05-17T23:06:25.101Z"
     },
     "founderCompNormalization": {
       "reported": [

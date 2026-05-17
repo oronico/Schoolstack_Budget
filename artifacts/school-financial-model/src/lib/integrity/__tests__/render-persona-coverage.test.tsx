@@ -26,12 +26,14 @@
  *           headline KPIs (cash runway months, lender-readiness cap
  *           callout) — the class the rendered ⊆ props check cannot see.
  *
- * Stand-alone `pnpm --filter @workspace/school-financial-model run
- * test` invocations should still pass — when the snapshots directory
- * is absent (because nobody ran the api-server harness first) the
- * tests skip with a clear message. The api-server harness is the
- * authoritative driver and always regenerates the snapshots before
- * spawning this file.
+ * The snapshot files at `__fixtures__/render-props/<persona>.json`
+ * are committed as golden fixtures so stand-alone `pnpm --filter
+ * @workspace/school-financial-model run test` invocations pass
+ * without first running the api-server harness. The api-server
+ * harness is the authoritative driver and rewrites the fixtures
+ * in-place on every run, so any persona-data drift surfaces as a
+ * normal source-controlled diff. As a safety net, the tests `skipIf`
+ * with a clear message if the fixtures dir is somehow absent.
  *
  * Note on `LenderPacketPreview`: the top-level component fetches
  * `/api/models/:id/export/lender-packet` itself, so it can't render

@@ -67,10 +67,7 @@ import { spawnSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import {
-  CANONICAL_METRICS,
-  type CanonicalMetric,
-} from "@workspace/finance";
+import { CANONICAL_METRICS } from "@workspace/finance";
 
 import { composeMathIntegrity } from "../scripts/run-math-integrity-report.js";
 
@@ -94,8 +91,11 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, "..", "..", "..");
 // Snapshot directory consumed by the SFM render coverage vitest. Lives
 // inside SFM so vitest's default include pattern picks up the sibling
-// test file; the directory itself is git-ignored (regenerated on every
-// harness run) so a stale snapshot can never poison the test.
+// test file. The harness rewrites these files on every run, so the
+// committed copies behave as golden fixtures: they make the SFM test
+// runnable standalone (without first invoking the api-server harness),
+// and they're refreshed in-place whenever the api-server harness is
+// the driver — any persona-data drift surfaces as a normal source diff.
 const SFM_SNAPSHOT_DIR = resolve(
   REPO_ROOT,
   "artifacts/school-financial-model/src/lib/integrity/__fixtures__/render-props",
@@ -518,11 +518,6 @@ function countBySeverity(
   }
   return out;
 }
-
-// Reference the imports so they're not tree-shaken / flagged as
-// unused. (`CanonicalMetric` is re-used implicitly via CANONICAL_METRICS
-// element type inference; the explicit type is here for IDE assistance.)
-void (null as unknown as CanonicalMetric | null);
 
 main().catch((err) => {
   console.error("math-integrity-harness: unhandled error", err);
