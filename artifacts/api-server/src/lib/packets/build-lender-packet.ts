@@ -741,6 +741,39 @@ function enrichStaffingPlanSection(
       ],
     });
   }
+  // Task #915 cross-section consistency note. Both columns of this
+  // table come from `nv = co.normalizedView` (computeNormalizedFinancials
+  // → computeBaseFinancials path in lib/finance scenario-engine.ts),
+  // which is BY DESIGN a different computation pipeline from the
+  // canonical Op Stmt change-in-net-assets row driving the "5-Year
+  // Change in Net Assets Projection" table (which uses
+  // `computeYearFinancialsFromData` in consultant-engine.ts).
+  //
+  // The two pipelines differ in what they include in "net income":
+  //   - `computeBaseFinancials` (this table's source) is a cash /
+  //     EBITDA-style view that does NOT subtract depreciation.
+  //   - `computeYearFinancialsFromData` (canonical Op Stmt) is the
+  //     full GAAP change-in-net-assets that DOES subtract depreciation
+  //     (and uses the loaded staffing cost including founder-comp
+  //     normalization built into the model rows).
+  //
+  // Within this table, the two columns differ only in founder-comp
+  // treatment: `applyFounderCompDelta` adds the per-year delta to
+  // staffing cost and subtracts it from NI, so
+  //   normalized.netIncome[y] = reported.netIncome[y] − founderComp.delta[y]
+  //
+  // Concrete Riverside Y1 example (private_school demo): canonical
+  // NI = $2,176,259; nv.reported.NI = $2,297,688 (~$121K higher,
+  // matches the Y1 depreciation add-back); nv.normalized.NI =
+  // $2,187,485 (= reported − $110,203 founder-comp delta). All three
+  // figures are correct for their respective sources; the original
+  // 2.3 review called out the $121K reported↔canonical gap as the
+  // "by design" delta to document here.
+  //
+  // demo-math-smoke pins (a) the Reported Y1 figure to
+  // `nv.reported.netIncome[0]` near the column label and (b) both
+  // column labels' presence in this window, so a future refactor
+  // cannot silently collapse the two views.
   const comparisonTable: PacketTable = {
     title: "As-Planned vs Normalized: Net Income & DSCR",
     headers: ["Year", "Net Income (Reported)", "Net Income (Normalized)", "DSCR (Reported)", "DSCR (Normalized)"],

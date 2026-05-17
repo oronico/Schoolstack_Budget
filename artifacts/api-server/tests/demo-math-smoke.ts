@@ -904,6 +904,31 @@ async function runOne(c: DemoCase): Promise<void> {
         `window="${projWindow.slice(0, 300)}..." figures=[${projFigures.slice(0, 20).join(", ")}]`,
       );
     }
+    // Per-review (#915 follow-up): margin parity. Pre-fix Riverside
+    // showed 47.3% margin on the truncated revenue base; after
+    // routing the table to canonical, margin must derive from
+    // canonical NI / canonical Revenue per year. The renderer formats
+    // margin as `XX.X%` (build-packet-data.ts L725 `pct()` helper).
+    // Parse `XX.X%` figures in the same projection window and assert
+    // each year's canonical netMargin is present within ±0.2pp (the
+    // renderer rounds to 0.1pp, so 0.2 absorbs cumulative rounding).
+    const pctRe = /-?(\d+(?:\.\d+)?)\s*%/g;
+    const pctFigures: number[] = [];
+    for (const m of projWindow.matchAll(pctRe)) {
+      const v = Number(m[1]);
+      if (!Number.isFinite(v)) continue;
+      pctFigures.push(m[0].startsWith("-") ? -v : v);
+    }
+    for (let y = 0; y < Math.min(5, years.length); y++) {
+      const targetPctRaw = (years[y].netMargin ?? 0) * 100;
+      const targetPct = Math.round(targetPctRaw * 10) / 10;
+      const found = pctFigures.some((p) => Math.abs(p - targetPct) <= 0.2);
+      check(
+        `${tag} 5-Year Projection Y${y + 1} net margin matches canonical ${targetPct.toFixed(1)}% (engine=${(years[y].netMargin * 100).toFixed(3)}%)`,
+        found,
+        `pctFigures=[${pctFigures.slice(0, 25).map((p) => p.toFixed(1) + "%").join(", ")}]`,
+      );
+    }
     // Pre-fix Riverside stale figures must be absent — they were the
     // specific shorthand the broken locally-recomputed path emitted.
     if (c.label === "private_school") {
@@ -918,6 +943,35 @@ async function runOne(c: DemoCase): Promise<void> {
         `stale found — netIncome routing has regressed to pre-#915 local recompute`,
       );
     }
+  }
+
+  // Per-review (#915 sweep) — Rule 4 cross-section presence check on
+  // the OTHER NI surface: "As-Planned vs Normalized: Net Income &
+  // DSCR" table (build-lender-packet.ts). This table is sourced from
+  // `co.normalizedView` (computeBaseFinancials + founder-comp delta)
+  // and is BY DESIGN different from the 5-Year Change in Net Assets
+  // Projection above (which uses `computeYearFinancialsFromData` —
+  // full GAAP including depreciation). See doc comment in
+  // build-lender-packet.ts at the comparisonTable definition.
+  //
+  // Numeric anchoring for the Reported Y1 figure is already done at
+  // section 4c above (it pins `normalizedView.reported.netIncome[0]`
+  // to within ±5% near the column label, using findFigureNearLabel).
+  // The sweep here adds what 4c does not: presence of BOTH column
+  // labels in the same window, so a future refactor cannot silently
+  // collapse the two views into one column.
+  const cmpIdx = normText.search(/As.?Planned\s*vs\s*Normalized\s*:?\s*Net\s*Income\s*&\s*DSCR/i);
+  check(`${tag} packet renders "As-Planned vs Normalized: Net Income & DSCR" table heading`,
+    cmpIdx >= 0,
+    `(searched in normalized PDF text length=${normText.length})`);
+  if (cmpIdx >= 0) {
+    const cmpWindow = normText.slice(cmpIdx, cmpIdx + 700);
+    check(`${tag} As-Planned vs Normalized table preserves "Net Income (Reported)" column label`,
+      /Net\s*Income\s*\(\s*Reported\s*\)/i.test(cmpWindow),
+      `the two NI views must stay distinct — collapsing them erases the founder-comp normalization signal`);
+    check(`${tag} As-Planned vs Normalized table preserves "Net Income (Normalized)" column label`,
+      /Net\s*Income\s*\(\s*Normalized\s*\)/i.test(cmpWindow),
+      `the two NI views must stay distinct — collapsing them erases the founder-comp normalization signal`);
   }
   // ────────────────────────────────────────────────────────────────────
 

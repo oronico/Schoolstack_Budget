@@ -1,0 +1,31 @@
+This is correctly framed as a cascade fix from 2.2, which is exactly right. Three things to firm up before kickoff.
+
+What’s good:
+
+	•	Cascade recognition — “consumes the truncated tuition-only revenue base — cascading from the 2.2 source bug” shows clear understanding that 2.3 may auto-resolve if 2.2 actually landed
+	•	Verification-first — skeptical of subagent claim, requires output check
+	•	Concrete regression — per-year parity to specific Op Stmt cells
+	•	Tight scope — engine NI calc out of scope
+
+Dependency chain: Task 2.3 depends on 2.2 which depends on 2.1. Confirm both #912 and #914 are complete before starting #915, or run them in sequence. If 2.2 isn’t actually fixed, fixing 2.3 directly patches the symptom without addressing the cascade source.
+
+Missing consumer: the “As-Planned vs Normalized” table also shows NI values. From my original review, Riverside’s normalization table shows Y1 reported NI = $2,297,688 — that differs from canonical Op Stmt change $2,176,259 by $121K. Three possibilities:
+
+	•	The normalization table uses a different bottom-line definition (NI vs change-in-net-assets vs operating surplus)
+	•	It’s another broken consumer that wasn’t in the original Task 2.3 scope
+	•	It’s reading pre-normalization values from a different sheet
+
+Worth verifying explicitly whether this table also needs re-routing to canonical or whether the difference is by design. If by design, document it in code comments so the next reviewer doesn’t repeat the question.
+
+Margin verification needed too. The broken table shows 47.3% margin for Y1 Riverside. After fixing the revenue base, margin should change (canonical: $2.18M / $3.95M ≈ 55%). The task spec mentions absolute NI parity but not margin. Add: “per-year margin matches canonical (computed from Op Stmt B16:F16 / B5:F5)” to the regression assertion.
+
+Cross-section consistency check (per verification protocol Rule 4): NI / change-in-net-assets appears in at least five places: Executive Summary, 5-Year Change in Net Assets Projection, As-Planned vs Normalized table, Stress Test results, lender commentary. The regression test should sweep all of these and verify they match canonical, or differ for documented reasons (e.g., normalized vs as-planned views, stress scenarios applied).
+
+Recommendation: Approve as written with these adjustments:
+
+	1.	Confirm #912 and #914 are complete before starting (or sequence them)
+	2.	Add the “As-Planned vs Normalized” table as a verification target
+	3.	Include margin parity in the regression test, not just absolute NI
+	4.	Sweep all NI references in the rendered PDF per Rule 4
+
+This may be a no-op if 2.2 actually fixed things — the cascade should resolve automatically. Most of the work is verification across all consumers, which is the right way to spend the time on these source-of-truth tasks.
