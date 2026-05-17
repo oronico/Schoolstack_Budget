@@ -29,7 +29,19 @@ export interface MissingRequiredInput {
 }
 
 function isTuitionRevenueRow(r: RevenueRowLike): boolean {
-  return r.enabled !== false && r.category === "tuition_and_fees";
+  // Narrow the gate to tuition_and_fees rows that have an active
+  // billing method picked — those are the rows the engine would
+  // silently default to 100% collection if collectionRate were
+  // missing, and the rows whose Tuition Collection Rate shows up in
+  // the lender appendix. Auxiliary rows like Registration / Activity
+  // Fees live in the same `tuition_and_fees` bucket but don't carry
+  // a collection-method concept (they're paid up front), so we leave
+  // them alone — gating them would force founders to fill in a value
+  // that the appendix never displays.
+  if (r.enabled === false) return false;
+  if (r.category !== "tuition_and_fees") return false;
+  const method = (r as { collectionMethod?: string }).collectionMethod;
+  return typeof method === "string" && method.length > 0;
 }
 
 /**

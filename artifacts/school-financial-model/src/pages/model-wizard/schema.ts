@@ -1137,6 +1137,12 @@ export const fullModelSchema = z.object({
   rows.forEach((row, i) => {
     if (row.enabled === false) return;
     if (row.category !== "tuition_and_fees") return;
+    // Mirror the server gate in lib/finance/src/required-inputs.ts —
+    // only require collectionRate on tuition rows that have an active
+    // billing method picked. Auxiliary rows like Registration Fees
+    // sit in the same bucket but don't carry a collection concept.
+    const method = (row as { collectionMethod?: string }).collectionMethod;
+    if (typeof method !== "string" || method.length === 0) return;
     if (row.collectionRate !== undefined && row.collectionRate !== null) return;
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

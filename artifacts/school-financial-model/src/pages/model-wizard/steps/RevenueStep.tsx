@@ -1240,6 +1240,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                             locked={false}
                             rowErrors={rowErrors}
                             schoolType={schoolType}
+                            fundingProfile={fundingProfile}
                             fundingFragility={fragilityByRowId.get(row.id)}
                           />
                         );
@@ -1270,6 +1271,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                             locked={false}
                             rowErrors={rowErrors}
                             schoolType={schoolType}
+                            fundingProfile={fundingProfile}
                             fundingFragility={fragilityByRowId.get(row.id)}
                           />
                         );
@@ -1296,6 +1298,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                     lockedMessage="This amount is computed from your grade-band enrollment and per-pupil rates above. Edit those inputs to change funding."
                     rowErrors={rowErrors}
                     schoolType={schoolType}
+                    fundingProfile={fundingProfile}
                     fundingFragility={fragilityByRowId.get(row.id)}
                   />
                   );
@@ -1592,6 +1595,7 @@ interface RevenueLineItemProps {
   lockedMessage?: string;
   rowErrors?: Record<string, { message?: string }>;
   schoolType?: string;
+  fundingProfile?: string;
   /**
    * Task #455 — when set, render a status chip beside the line item label so
    * the founder can immediately see that the underlying state-choice program
@@ -1615,6 +1619,7 @@ function RevenueLineItem({
   lockedMessage,
   rowErrors,
   schoolType,
+  fundingProfile,
   fundingFragility,
 }: RevenueLineItemProps) {
   const [showTiming, setShowTiming] = useState(false);
@@ -1828,32 +1833,52 @@ function RevenueLineItem({
             </p>
           )}
 
-          {row.category === "tuition_and_fees" && row.driverType === "per_student" && schoolType !== "charter_school" && (
-            <div className="flex items-end gap-2 mt-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                  <GlossaryTerm termKey="collection_rate" schoolType={schoolType}>Collection rate</GlossaryTerm> %
-                </label>
-                <div className="relative">
-                  <input
-                    data-testid={`collection-rate-${row.id}`}
-                    type="number"
-                    value={row.collectionRate ?? DEFAULT_COLLECTION_RATE_BY_METHOD[(row.collectionMethod ?? "autopay") as "autopay" | "invoiced" | "mixed"]}
-                    onChange={(e) => { const v = parseFloat(e.target.value); onTimingChange("collectionRate", isNaN(v) ? 0 : v); }}
-                    className="w-24 rounded-lg border border-border bg-card pl-2 pr-6 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-                    min={0}
-                    max={100}
-                    step={0.5}
-                  />
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">%</span>
+          {row.category === "tuition_and_fees" && row.driverType === "per_student" && (schoolType !== "charter_school" || fundingProfile === "hybrid_mixed") && (
+            <div className="mt-3">
+              <div className="flex items-end gap-2">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                    <GlossaryTerm termKey="collection_rate" schoolType={schoolType}>Collection rate</GlossaryTerm> %
+                  </label>
+                  <div className="relative">
+                    <input
+                      data-testid={`collection-rate-${row.id}`}
+                      type="number"
+                      value={row.collectionRate ?? ""}
+                      placeholder={String(DEFAULT_COLLECTION_RATE_BY_METHOD[(row.collectionMethod ?? "autopay") as "autopay" | "invoiced" | "mixed"])}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === "") { onTimingChange("collectionRate", undefined as unknown as number); return; }
+                        const v = parseFloat(raw);
+                        onTimingChange("collectionRate", isNaN(v) ? 0 : v);
+                      }}
+                      aria-invalid={rowErrors?.collectionRate ? "true" : undefined}
+                      className={`w-24 rounded-lg border bg-card pl-2 pr-6 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 ${
+                        rowErrors?.collectionRate ? "border-destructive" : "border-border"
+                      }`}
+                      min={0}
+                      max={100}
+                      step={0.5}
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">%</span>
+                  </div>
                 </div>
+                <span
+                  className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200 cursor-help mb-2"
+                  title="Typical ranges: 95–100% for autopay, 88–95% for invoice-based billing. Lower rates compound across all 5 forecast years and materially reduce DSCR."
+                >
+                  {COLLECTION_RATE_BENCHMARK_COPY}
+                </span>
               </div>
-              <span
-                className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200 cursor-help mb-2"
-                title="Typical ranges: 95–100% for autopay, 88–95% for invoice-based billing. Lower rates compound across all 5 forecast years and materially reduce DSCR."
-              >
-                {COLLECTION_RATE_BENCHMARK_COPY}
-              </span>
+              {rowErrors?.collectionRate && (
+                <p
+                  data-testid={`collection-rate-error-${row.id}`}
+                  className="text-sm text-destructive font-medium animate-in fade-in mt-1"
+                >
+                  {rowErrors.collectionRate.message ||
+                    "Set the Tuition Collection Rate — typical ranges are 95–100% for autopay and 88–95% for invoice-based billing."}
+                </p>
+              )}
             </div>
           )}
 

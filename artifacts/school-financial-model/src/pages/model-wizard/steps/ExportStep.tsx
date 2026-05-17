@@ -27,7 +27,19 @@ interface SharedLinkItem {
   revokedAt: string | null;
 }
 
-export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId: number | null }) {
+export function ExportStep({
+  modelId,
+  jumpToStep,
+  revenueStepNumber,
+}: {
+  jumpToStep?: (s: number) => void;
+  modelId: number | null;
+  revenueStepNumber?: number;
+}) {
+  const [requiredInputError, setRequiredInputError] = useState<{
+    message: string;
+    missing: Array<{ field: string; message: string }>;
+  } | null>(null);
   const { watch, getValues, reset } = useFormContext();
   const schoolType = watch("schoolProfile.schoolType") as string | undefined;
   const modelDurationValue = watch("schoolProfile.modelDuration") as string | undefined;
@@ -247,6 +259,42 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
 
+      if (res.status === 422) {
+        // Backend gate (lib/finance required-inputs) refused the
+        // export because a tuition row is missing its Collection
+        // Rate. Surface a deep-link CTA back to the Revenue step
+        // instead of the generic "try again" alert so the founder
+        // can complete the step without guessing.
+        // Route guard in artifacts/api-server/src/routes/models.ts returns
+        // `{ error, code, missing }`. We also accept `message` for forward
+        // compatibility in case the contract is normalized later.
+        let payload: {
+          code?: string;
+          error?: string;
+          message?: string;
+          missing?: Array<{ field: string; message: string }>;
+        } = {};
+        try {
+          payload = await res.json();
+        } catch {
+          // body wasn't JSON; fall through to generic error below
+        }
+        if (payload?.code === "tuition_collection_rate_missing") {
+          setRequiredInputError({
+            message:
+              payload.message ??
+              payload.error ??
+              "Set the Tuition Collection Rate on each tuition row before exporting.",
+            missing: Array.isArray(payload.missing) ? payload.missing : [],
+          });
+          return;
+        }
+        throw new Error(
+          payload?.message ??
+            payload?.error ??
+            "We couldn't generate that export — try again, or open a model with revenue and expenses entered.",
+        );
+      }
       if (!res.ok) throw new Error("We couldn't generate that export — try again, or open a model with revenue and expenses entered.");
 
       const blob = await res.blob();
@@ -349,6 +397,43 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
       </p>
 
       <p className="text-sm text-muted-foreground mb-8 max-w-2xl mx-auto" data-testid="help-export">This workbook is a planning tool. It can support conversations with lenders, funders, boards, and advisors, but it is not a loan application or funding decision.</p>
+
+      {requiredInputError && (
+        <div
+          data-testid="required-input-error"
+          role="alert"
+          className="max-w-2xl mx-auto mb-8 text-left rounded-xl border-2 border-destructive/40 bg-destructive/5 p-5"
+        >
+          <h3 className="font-semibold text-destructive mb-2">
+            Finish a required step before exporting
+          </h3>
+          <p className="text-sm text-foreground/90 mb-3">
+            {requiredInputError.message}
+          </p>
+          {requiredInputError.missing.length > 0 && (
+            <ul className="text-xs text-muted-foreground mb-4 list-disc list-inside space-y-0.5">
+              {requiredInputError.missing.map((m) => (
+                <li key={m.field}>
+                  <code className="font-mono">{m.field}</code> — {m.message}
+                </li>
+              ))}
+            </ul>
+          )}
+          {jumpToStep && revenueStepNumber && (
+            <button
+              type="button"
+              data-testid="required-input-jump-revenue"
+              onClick={() => {
+                setRequiredInputError(null);
+                jumpToStep(revenueStepNumber);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90"
+            >
+              Complete this step <ArrowRight className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      )}
 
       {reviewAvailable && !reviewSubmitted && !showReviewForm && (
         <div className="max-w-2xl mx-auto mb-10">

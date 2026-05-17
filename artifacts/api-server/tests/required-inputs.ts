@@ -27,6 +27,10 @@ function model(over: {
     category?: string;
     collectionRate?: number | null;
     enabled?: boolean;
+    /** Defaults to "autopay" so the gate engages — pass undefined to
+     *  simulate an auxiliary row (e.g. registration fees) with no
+     *  billing-method concept. */
+    collectionMethod?: string | undefined;
   }>;
 }) {
   return {
@@ -35,6 +39,7 @@ function model(over: {
       id: `row-${i}`,
       category: r.category ?? "tuition_and_fees",
       enabled: r.enabled ?? true,
+      collectionMethod: "collectionMethod" in r ? r.collectionMethod : "autopay",
       collectionRate: r.collectionRate,
     })),
   } as unknown as Parameters<typeof checkRequiredInputs>[0];
@@ -158,6 +163,93 @@ function model(over: {
 {
   const result = checkRequiredInputs({} as Parameters<typeof checkRequiredInputs>[0]);
   check("empty data → not blocked", result.blocked === false);
+}
+
+// 11. Auxiliary tuition_and_fees row with NO collectionMethod (e.g. a
+//     registration fee that's paid up-front) must NOT trigger the gate
+//     — the engine never asks for its collection rate, so blocking it
+//     would force founders to fill in a value the appendix never shows.
+{
+  const result = checkRequiredInputs(
+    model({
+      fundingProfile: "tuition_based",
+      rows: [
+        { collectionRate: 95 }, // gross_tuition with autopay default
+        { collectionMethod: undefined, collectionRate: undefined }, // registration_fees
+      ],
+    }),
+  );
+  check(
+    "tuition_based + aux row without collectionMethod → not blocked",
+    result.blocked === false,
+  );
+}
+
+// 12. Route-level integration: simulate the export route's `requiredInputGuard`
+//     end-to-end (request body → guard → Express response). This locks the
+//     contract the wizard's ExportStep depends on (HTTP 422 + {code, missing[]}
+//     for the "Complete this step" CTA). We replay the guard's logic against
+//     a mock Response so the test stays hermetic (no DB, no auth, no HTTP
+//     listener) while still exercising the exact statusCode / body shape the
+//     wizard parses.
+{
+  type Captured = { status: number; body: unknown };
+  function mockRes(): { res: { status: (n: number) => unknown; json: (b: unknown) => unknown }; captured: Captured } {
+    const captured: Captured = { status: 0, body: undefined };
+    const res = {
+      status(n: number) {
+        captured.status = n;
+        return this;
+      },
+      json(b: unknown) {
+        captured.body = b;
+        return this;
+      },
+    };
+    return { res, captured };
+  }
+  function guard(data: unknown, res: { status: (n: number) => unknown; json: (b: unknown) => unknown }): boolean {
+    const required = checkRequiredInputs(data as Parameters<typeof checkRequiredInputs>[0]);
+    if (!required.blocked) return false;
+    res.status(422);
+    res.json({ error: required.message, code: required.code, missing: required.missing });
+    return true;
+  }
+
+  // 12a. Missing rate → 422 with documented payload shape.
+  {
+    const { res, captured } = mockRes();
+    const halted = guard(
+      model({ fundingProfile: "tuition_based", rows: [{ collectionRate: undefined }] }),
+      res,
+    );
+    check("route guard → halts request when rate missing", halted === true);
+    check("route guard → returns 422", captured.status === 422);
+    const body = captured.body as { code?: string; error?: string; missing?: Array<{ field: string; message: string }> };
+    check(
+      "route guard → code = tuition_collection_rate_missing",
+      body?.code === "tuition_collection_rate_missing",
+    );
+    check(
+      "route guard → missing[0].field references revenueRows[id].collectionRate",
+      /^revenueRows\[row-0\]\.collectionRate$/.test(body?.missing?.[0]?.field ?? ""),
+    );
+    check(
+      "route guard → payload includes a human-readable message",
+      typeof body?.error === "string" && (body.error?.length ?? 0) > 0,
+    );
+  }
+
+  // 12b. Rate supplied → guard returns false (request continues).
+  {
+    const { res, captured } = mockRes();
+    const halted = guard(
+      model({ fundingProfile: "tuition_based", rows: [{ collectionRate: 96 }] }),
+      res,
+    );
+    check("route guard → lets request through when rate supplied", halted === false);
+    check("route guard → does not write a response when allowed", captured.status === 0);
+  }
 }
 
 if (failures.length > 0) {
