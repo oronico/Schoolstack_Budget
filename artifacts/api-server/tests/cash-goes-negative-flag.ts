@@ -144,7 +144,26 @@ function baseInput() {
 // parallel cash_flow_timing signal must carry the burns-more phrase.
 {
   const consultant = await runConsultantEngine(OAKWOOD_CEO_SEED);
-  const signals = consultant.healthSignals || [];
+  // This assertion guards Task #909's contract: the *classification* logic
+  // in financial-health.ts must read `min(cumulative_cash_by_month)` (not
+  // monthly net cash flow) and, when the trough is thin-but-positive, must
+  // produce a `watch` liquidity signal with the "buffer thins to $X in Mon
+  // of Year N" copy (and a parallel `cash_flow_timing watch` with the
+  // burns-more phrase). Asserting against `consultant.healthSignals`
+  // directly would NOT guard #909 here because Task #965 later wraps the
+  // engine with a confidence-gated Health Dimensions cap that floors every
+  // signal to at_risk when assumption-tagging is < 25%. Oakwood's demo
+  // seed ships with no attached evidence, so the rendered (post-cap)
+  // signals are uniformly at_risk regardless of what classifier produced
+  // them — the #909 bug (mislabelled liquidity copy + wrong dimension)
+  // could regress silently. `consultant.healthDimensionCap.signalsBeforeCap`
+  // is the engine intermediate snapshotted at consultant-engine.ts L3297,
+  // before the cap mutation loop runs, so it preserves the raw classifier
+  // output we actually want to guard. The cap behaviour itself (and its
+  // floor-to-at_risk semantics) is exercised by the dedicated cap suite.
+  const signals = consultant.healthDimensionCap?.signalsBeforeCap
+    ?? consultant.healthSignals
+    ?? [];
   const liq = signals.find((s) => s.dimension === "liquidity");
   if (!liq) { bad("Oakwood real seed → liquidity signal emitted"); }
   else {
