@@ -1,0 +1,50 @@
+The container starts, runs migrations successfully, then immediately crashes on a Node.js TypeError before the application can serve any requests. It's restarting repeatedly — the log shows the same crash sequence five or six times.
+What the error actually says:
+TypeError: The "path" argument must be of type string or an instance of URL. Received undefined
+    at fileURLToPath (node:internal/url:1605:11)
+    at Object.<anonymous> (/app/index.cjs:1211:52297)
+fileURLToPath() is a Node.js built-in that converts a file:// URL to a filesystem path. It's getting called with undefined. The most common cause: code that uses import.meta.url (an ES modules feature) got bundled to CommonJS, where import.meta.url is undefined. The bundler produced /app/index.cjs (note the .cjs extension — CommonJS), and somewhere in that bundle, code that worked in ESM is now passing undefined to fileURLToPath.
+This is a build/bundling configuration issue, not a runtime application issue. The application code never gets to execute.
+Where this typically comes from:
+Common patterns that produce this error after a bundler emits CJS:
+javascript// Pattern 1 — direct
+const __filename = fileURLToPath(import.meta.url);
+
+// Pattern 2 — for __dirname equivalent in ESM
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Pattern 3 — resolving paths relative to the current module
+const configPath = fileURLToPath(new URL('./config.json', import.meta.url));
+In ESM these work. After bundling to CJS, import.meta.url is undefined, the URL constructor or fileURLToPath receives undefined, and the process crashes at module load time — before any request handler runs.
+Almost certainly related to recent work:
+Per the active engagement, recent tasks have introduced new file-based artifacts: migration plan generators, integrity report writers, baseline JSON files for M4, fixture auto-discovery, the math-integrity report at artifacts/api-server/reports/. Any of these that uses import.meta.url to locate its own directory or read sibling files would crash the bundle in production CJS mode.
+The fact that the crash is in /app/index.cjs at a specific offset (1211:52297) means the bundler concatenated the offending module into the main bundle. A source-map lookup or a search for fileURLToPath in the api-server codebase will find the culprit in minutes.
+Paste-able diagnosis prompt for the agent:
+
+Production is in a crash loop. The container starts, migrations succeed, then Node crashes immediately with:
+TypeError: The "path" argument must be of type string or an instance of URL. Received undefined
+    at fileURLToPath (node:internal/url:1605:11)
+    at Object.<anonymous> (/app/index.cjs:1211:52297)
+This is fileURLToPath() being called with undefined, which typically means import.meta.url got bundled to CommonJS where it's not defined.
+Action sequence:
+
+Search the api-server codebase for fileURLToPath and import.meta.url. Likely candidates given recent work: migration plan generator, integrity report writer, baseline JSON loader, fixture auto-discovery, anything that resolves paths relative to itself.
+For each match, confirm whether it's safe under the production CJS bundle. If import.meta.url is used in code that gets bundled to CJS, it needs a CJS-compatible fallback (__filename and __dirname are available in CJS natively).
+Check the bundler configuration. If output is .cjs but source uses import.meta.url, either the bundler needs to polyfill it or the source needs a runtime guard:
+
+javascriptconst here = typeof import.meta?.url === 'string'
+  ? path.dirname(fileURLToPath(import.meta.url))
+  : __dirname;
+
+Rollback option: if the offending code traces to a recent merge, identify the merge and roll it back as a stop-gap while the proper fix lands. Don't leave production crash-looping.
+Once fixed locally, verify the build artifact runs with node /app/index.cjs in an environment similar to production, not just pnpm dev which uses ESM. The crash is build-mode-specific; dev mode won't catch it.
+
+What recent task touched code that might be bundled into index.cjs and uses path resolution? Likely culprits given the active queue: anything from M4–M7 of #930 (integrity report, baseline writer, harness), or the #989/#990 schema-change tooling.
+
+Two things to flag to you directly:
+
+This is exactly the failure mode the #930 go-live gate is designed to prevent, but it's surfacing now because production deploy isn't gated by the harness yet. The harness runs against tests; the production build is a different code path with different module resolution rules. This is a strong argument for the §3 "Workbook downloads — Not yet verified for this cutover" and §4 "PDF render at scale — Not yet verified" gates being expanded to include "production build artifact starts cleanly." Right now no gate item verifies that the deployed binary can actually run.
+
+Worth adding to the gate doc: a §11 item "Production build artifact starts cleanly in a production-like environment" with explicit verification before cutover. Today's crash would have surfaced there instead of in production.
+
+Don't let this become an emergency that derails the gate work. The fix is small (one to three lines of code once located). The diagnosis is straightforward (search for fileURLToPath, fix the CJS-incompatible usage, redeploy). The risk is that the urgency of a production crash pulls focus away from #985 → #984 → #994 → #995 → #981, and the gate chain slips.

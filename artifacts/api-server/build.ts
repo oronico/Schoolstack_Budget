@@ -53,12 +53,29 @@ async function buildAll() {
     format: "cjs" as const,
     define: {
       "process.env.NODE_ENV": '"production"',
+      // Production crash fix (task #1000 follow-on): esbuild leaves
+      // `import.meta.url` as a literal when emitting CJS, which evaluates
+      // to `undefined` at runtime. Every top-level
+      // `fileURLToPath(import.meta.url)` then throws a TypeError before
+      // any request handler runs — the `/app/index.cjs` crash loop
+      // observed in production. We can't put an expression on the RHS
+      // of `define` (esbuild requires an entity name or JS literal), so
+      // the banner below injects a `__import_meta_url__` variable
+      // computed from the CJS-wrapper's natively-injected `__filename`,
+      // and this `define` rewrites every `import.meta.url` reference
+      // (in pdf-utils.ts, integrity/canonical/fixtures.ts, lib/db) to
+      // that variable. Result: both the bundled CJS and source ESM/tsx
+      // paths see a working `file://` URL string.
+      "import.meta.url": "__import_meta_url__",
     },
-    // Point @workspace/db at the migrations folder we copy below. Done in a
-    // banner (not via `define`) because we need the value computed at runtime
-    // from __dirname, which only exists inside the CJS module wrapper.
+    // Banner-injected runtime: see `define` above for the import.meta.url
+    // shim. The DRIZZLE_MIGRATIONS_DIR line points @workspace/db at the
+    // migrations folder we copy below, computed from `__dirname` which
+    // only exists inside the CJS module wrapper.
     banner: {
-      js: "process.env.DRIZZLE_MIGRATIONS_DIR = process.env.DRIZZLE_MIGRATIONS_DIR || require('path').resolve(__dirname, 'drizzle');",
+      js:
+        "var __import_meta_url__ = require('url').pathToFileURL(__filename).href;" +
+        "process.env.DRIZZLE_MIGRATIONS_DIR = process.env.DRIZZLE_MIGRATIONS_DIR || require('path').resolve(__dirname, 'drizzle');",
     },
     minify: true,
     external: externals,
