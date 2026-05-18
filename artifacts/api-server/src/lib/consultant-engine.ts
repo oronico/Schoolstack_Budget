@@ -3294,6 +3294,11 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     watch: 1,
     healthy: 2,
   };
+  // Load-bearing cross-file dependency: `artifacts/api-server/tests/cash-goes-negative-flag.ts`
+  // reads this pre-cap snapshot via `consultant.healthDimensionCap.signalsBeforeCap` to guard
+  // Task #909's classifier contract (the post-cap surface is uniformly at_risk on the Oakwood
+  // seed and would mask #909 regressions). Renaming or restructuring this intermediate must
+  // update that test in lock-step.
   const signalsBeforeCap: HealthSignal[] = healthSignals.map((s) => ({ ...s }));
   // Pick the *best* (highest-ranked) status across all dimensions
   // for the cap evaluation: that's the rating most exposed to the
