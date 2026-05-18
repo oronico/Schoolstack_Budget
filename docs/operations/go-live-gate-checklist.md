@@ -195,6 +195,24 @@ compute → workbook export → packet PDF → lender-facing presentation.
 | 10.3 | All blocking findings from the walkthrough have either been fixed same-day OR explicitly waived by the reviewer. | §D of the M7 completion summary names each finding, the disposition, and the reviewer's signoff. | [ ] |
 | 10.4 | Non-blocking findings have been filed as named follow-up tasks (NOT dismissed verbally). | Filed task numbers listed in §D. | [ ] |
 
+## 11. Encryption key management — documented storage, access roster, rotation procedure
+
+Triggered by the 2026-05-18 production boot crash-loop, which was
+ultimately caused by `SENSITIVE_ENCRYPTION_KEY` being unset on the
+Railway environment. This gate applies to **every** future
+production-equivalent environment (staging, disaster recovery,
+migration target) — not just today's production deploy. The
+operational risk is not "the key is wrong"; it is "no one remembers
+where the key lives, who can rotate it, or how to recover it" at the
+worst possible moment.
+
+| # | Gate | Evidence | State |
+|---|---|---|---|
+| 11.1 | `docs/operations/encryption-key-management.md` exists and is current. §2 names the storage location for every environment (prod, staging, dev, CI) AND a named off-platform backup of record (vault + item ID) for the production key value. The doc itself does NOT contain any key value. | `docs/operations/encryption-key-management.md` §2, including the "Backup of record" row at the bottom of the table being filled in (not `TBD`). | [ ] |
+| 11.2 | §3 access roster names the individuals (not "the team") with Read and Rotate access. The roster is reviewed quarterly and the off-boarding hook is wired into the team off-boarding checklist. | `docs/operations/encryption-key-management.md` §3 with both Read and Rotate rows filled in (not `TBD`); a link or reference to the off-boarding checklist showing the hook. | [ ] |
+| 11.3 | §5 rotation procedure has been **walked through** end-to-end at least once against a non-production environment, by at least one operator listed in the Rotate scope of §3. (Reading the doc is not enough — the rotator must have been run by a human who can repeat it under incident pressure.) | Walkthrough date, operator name, and the target environment recorded in `docs/operations/encryption-key-management.md` §6 (Rotation history), with `failed=0` confirmed. | [ ] |
+| 11.4 | The same gates (11.1–11.3) are repeated for every additional environment-bound secret of equivalent blast radius (`JWT_SECRET`, third-party API tokens whose loss would require a credential reset). Either the existing doc covers them with a per-secret section, or a sibling doc exists with the same §2 / §3 / §5 structure. | List the secret names covered and link each to its documented storage/access/rotation section. | [ ] |
+
 ---
 
 ## Sign-off
