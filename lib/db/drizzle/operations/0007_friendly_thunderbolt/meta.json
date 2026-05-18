@@ -1,0 +1,11 @@
+{
+  "tag": "0007_friendly_thunderbolt",
+  "file": "0007_friendly_thunderbolt.sql",
+  "task": "#620",
+  "what": "New tables `borrower_entities` and `founder_profiles` for Task #620 Phase 2 underwriting / KYC.",
+  "affectedRecords": "No existing rows.",
+  "approach": "`one-shot SQL` (Drizzle migrator).",
+  "rollback": "`DROP TABLE` in dependency order. Founder-side wizard does not reference these.",
+  "window": "`inline`.",
+  "appliedToProduction": false
+}

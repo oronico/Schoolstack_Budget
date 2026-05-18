@@ -1,0 +1,11 @@
+{
+  "tag": "0004_pending_signups",
+  "file": "0004_pending_signups.sql",
+  "task": "#527",
+  "what": "New table `pending_signups` for confirm-by-email signup (Task #527).",
+  "affectedRecords": "No existing rows; legacy direct-register users keep their `users` row.",
+  "approach": "`one-shot SQL` (Drizzle migrator).",
+  "rollback": "`DROP TABLE pending_signups`. No legacy data lives there.",
+  "window": "`inline`.",
+  "appliedToProduction": false
+}

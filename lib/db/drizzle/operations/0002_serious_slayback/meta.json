@@ -1,0 +1,11 @@
+{
+  "tag": "0002_serious_slayback",
+  "file": "0002_serious_slayback.sql",
+  "task": "share-link export provenance",
+  "what": "Add `shared_link_id`, `viewer_label` to `exports` so share-link comparison downloads can be distinguished from owner exports.",
+  "affectedRecords": "All rows in `exports`. Already applied to prod.",
+  "approach": "`one-shot SQL` (Drizzle migrator).",
+  "rollback": "`ALTER TABLE exports DROP CONSTRAINT IF EXISTS exports_shared_link_id_shared_links_id_fk; ALTER TABLE exports DROP COLUMN shared_link_id, DROP COLUMN viewer_label`. Pre-beta code does not read these columns.",
+  "window": "`inline`. Already applied; further runs are no-ops.",
+  "appliedToProduction": true
+}

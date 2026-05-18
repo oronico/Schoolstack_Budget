@@ -1,0 +1,11 @@
+{
+  "tag": "0000_baseline",
+  "file": "0000_baseline.sql",
+  "task": "pre-beta baseline",
+  "what": "Baseline schema — mirrors the pre-beta `drizzle-kit push` state. Live in prod since project genesis.",
+  "affectedRecords": "All pre-beta tables. Already applied to prod.",
+  "approach": "`one-shot SQL` (Drizzle migrator). Idempotent via IF NOT EXISTS.",
+  "rollback": "Not reversible in place. Restore the prod Postgres snapshot per `docs/RUNBOOK_DB_RESTORE.md`.",
+  "window": "`inline`. Already applied; further runs are no-ops.",
+  "appliedToProduction": true
+}

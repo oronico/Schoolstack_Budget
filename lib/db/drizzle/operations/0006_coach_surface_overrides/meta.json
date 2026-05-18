@@ -1,0 +1,11 @@
+{
+  "tag": "0006_coach_surface_overrides",
+  "file": "0006_coach_surface_overrides.sql",
+  "task": "#430",
+  "what": "New table `coach_surface_overrides` for admin snooze/retire (Task #430).",
+  "affectedRecords": "No existing rows.",
+  "approach": "`one-shot SQL` (Drizzle migrator).",
+  "rollback": "`DROP TABLE coach_surface_overrides`. The coach-surface read path falls back to \"no override\" when the table is empty or missing — the Task #430 implementation was written that way precisely so the migration is reversible.",
+  "window": "`inline`.",
+  "appliedToProduction": false
+}

@@ -52,6 +52,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Hard-gates any PR that adds a Drizzle migration without its
+      # sibling rollback.sql + affected-records.sql + meta.json. See
+      # docs/operations/schema-change-checklist.md.
+      - name: Lint schema-change siblings
+        run: pnpm --filter @workspace/scripts run schema-change:lint
+
+      # Proves the go-live plan generator still reproduces the
+      # hand-written M6 plan §1 byte-for-byte after any meta.json edits.
+      - name: Verify go-live plan regression
+        run: pnpm --filter @workspace/scripts run schema-change:test
+
       - name: Build api-server (produces dist/migrate.cjs + dist/drizzle/*)
         run: pnpm --filter @workspace/api-server run build
 

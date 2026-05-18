@@ -7,17 +7,23 @@
     "hello": "tsx ./src/hello.ts",
     "seed-admin": "tsx ./src/seed-admin.ts",
     "migrate:inline-evidence": "tsx ./src/migrate-inline-evidence.ts",
+    "schema-change:lint": "tsx ./src/lint-schema-changes.ts",
+    "schema-change:new": "tsx ./src/new-schema-change.ts",
+    "schema-change:test": "tsx ./src/__tests__/go-live-plan-regression.test.ts",
+    "go-live:plan": "tsx ./src/generate-go-live-plan.ts",
     "generate:og": "node ./src/generate-og-image.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
     "bcryptjs": "^2.4.3",
-    "drizzle-orm": "catalog:"
+    "drizzle-orm": "catalog:",
+    "pg": "^8.20.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "catalog:",
+    "@types/pg": "^8.18.0",
     "tsx": "catalog:"
   }
 }

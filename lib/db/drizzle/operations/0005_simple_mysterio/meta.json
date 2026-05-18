@@ -1,0 +1,11 @@
+{
+  "tag": "0005_simple_mysterio",
+  "file": "0005_simple_mysterio.sql",
+  "task": "#605",
+  "what": "New underwriting-side tables (`underwriting_applications`, `documents`, `evidence`, `metrics_snapshots`, `eligibility_gate_results`, `audit_log`) for Task #605 Phase 1.",
+  "affectedRecords": "No existing rows in any of the six new tables.",
+  "approach": "`one-shot SQL` (Drizzle migrator).",
+  "rollback": "`DROP TABLE` each in dependency order. None of the founder-side flows depend on these tables.",
+  "window": "`inline`.",
+  "appliedToProduction": false
+}

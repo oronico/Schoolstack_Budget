@@ -1,0 +1,11 @@
+{
+  "tag": "0001_skinny_banshee",
+  "file": "0001_skinny_banshee.sql",
+  "task": "#302",
+  "what": "Add `persona_stage`, `persona_comfort`, `lender_language_enabled` to `users` for founder persona segmentation (Task #302).",
+  "affectedRecords": "All rows in `users`. Already applied to prod.",
+  "approach": "`one-shot SQL` (Drizzle migrator).",
+  "rollback": "`ALTER TABLE users DROP COLUMN persona_stage, DROP COLUMN persona_comfort, DROP COLUMN lender_language_enabled`. Pre-beta code does not read these columns.",
+  "window": "`inline`. Already applied; further runs are no-ops.",
+  "appliedToProduction": true
+}

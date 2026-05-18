@@ -1,0 +1,11 @@
+{
+  "tag": "0003_grey_kabuki",
+  "file": "0003_grey_kabuki.sql",
+  "task": "#479",
+  "what": "`ALTER TABLE financial_models ADD COLUMN IF NOT EXISTS version integer NOT NULL DEFAULT 1` for Task #479 mandatory optimistic concurrency.",
+  "affectedRecords": "All rows in `financial_models`. Count: `SELECT count(*) FROM financial_models;` — the DEFAULT 1 backfills every existing row in a single statement.",
+  "approach": "`one-shot SQL` (Drizzle migrator).",
+  "rollback": "`ALTER TABLE financial_models DROP COLUMN version`. Pre-cutover code does not read or write `version`, so dropping is safe if M7 is rolled back.",
+  "window": "`inline` — Drizzle migrator runs on API boot before the server accepts traffic.",
+  "appliedToProduction": false
+}
