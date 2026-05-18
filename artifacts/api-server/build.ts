@@ -9,7 +9,15 @@ const __dirname = path.dirname(__filename);
 // server deps to bundle to reduce openat(2) syscalls
 // which helps cold start times without risking some
 // packages that are not bundle compatible
+// Anything NOT on this list is marked `external` by esbuild and must be
+// resolved from `node_modules` at runtime — but the Dockerfile's runtime
+// stage copies ONLY the bundle (no node_modules), so externalizing a
+// production-required dep crashes the container on boot with
+// "Cannot find module '<pkg>'". Every dep used by request handlers
+// MUST be in this allowlist.
 const allowlist = [
+  "@aws-sdk/client-s3",
+  "@aws-sdk/s3-request-presigner",
   "adm-zip",
   "bcryptjs",
   "compression",
