@@ -2,7 +2,10 @@
 
 **Milestone:** 930-M7 Go-Live Gate + Human End-to-End Review
 **Closes:** Task #930 (Pre-Launch Math Integrity epic).
-**Status:** Template populated; reviewer walkthrough pending (see §E).
+**Status:** **PRE-REVIEW STAGING DRAFT.** The gate checklist, evidence
+pack, and architectural follow-ups are in place. The milestone is NOT
+closed until §C–§E and §10.1–§10.4 of the gate checklist are filled
+in by the named human reviewer on Fri May 29, 2026.
 **Date drafted:** 2026-05-18.
 
 This summary is the five-section A–E template the milestone requires.
@@ -120,7 +123,8 @@ established by #930 should continue past launch:
    M6 hand-assembled migration plan so the next go-live plan is
    generated from the repo rather than re-assembled by hand.
 
-All three are filed as PROPOSED project tasks (see
-`.local/tasks/task-986.md`, `task-987.md`, `task-988.md`). They are
-NOT prerequisites for the M7 cutover — they are the post-launch
-architectural posture #930 leaves behind.
+All three were filed via `proposeFollowUpTasks` from this milestone
+and live in the project task tracker as PROPOSED (status visible in
+the task tracker UI; they have not yet been promoted into the active
+task list). They are NOT prerequisites for the M7 cutover — they are
+the post-launch architectural posture #930 leaves behind.
