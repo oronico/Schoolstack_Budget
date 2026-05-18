@@ -25,8 +25,11 @@ import { getCanonicalMetric } from "@workspace/finance";
 import {
   classifyDrift,
   computeDriftEvents,
+  getAlertDigestWindowMs,
   getConfiguredSampleRate,
+  planDigestPages,
   shouldSampleDriftCheck,
+  type DigestItem,
 } from "../src/lib/integrity/drift-monitor.js";
 import { runConsultantEngine } from "../src/lib/consultant-engine.js";
 import { buildLenderPacket } from "../src/lib/packets/build-lender-packet.js";
@@ -102,6 +105,96 @@ assert.ok(tolAbs > 0, "cash-runway-months should declare an abs tolerance");
   const v = classifyDrift(10 + tolAbs * 50, 10, runwayMetric);
   assert.equal(v.severity, "high", "50× tolerance → high severity");
 }
+
+// ── 3b. planDigestPages — per-metric digest (task #993) ───────────────
+
+function makeItem(modelId: number, metricId: string, surface: DriftSurface = "lender-packet"): DigestItem & { metricId: string } {
+  return {
+    metricId,
+    modelId,
+    surface,
+    extractedValue: 1,
+    canonicalValue: 0,
+    deltaAbs: 1,
+    toleranceAbs: 0.01,
+    location: `path.${modelId}`,
+    requestId: `req-${modelId}`,
+  };
+}
+
+type DriftSurface = "lender-packet" | "lender-packet-pdf" | "board-packet" | "board-packet-pdf";
+
+{
+  // Two different models drifting the SAME metric in the same window
+  // must produce exactly ONE digest plan (one page) listing both
+  // models — this is the core regression #993 was filed to prevent.
+  const plans = planDigestPages(
+    [makeItem(1, "cash-runway-months"), makeItem(2, "cash-runway-months")],
+    new Set(),
+  );
+  assert.equal(plans.length, 1, "two models, one metric → one digest page");
+  assert.equal(plans[0].metricId, "cash-runway-months");
+  assert.equal(plans[0].items.length, 2, "digest body lists both affected models");
+  const modelIds = plans[0].items.map((i) => i.modelId).sort();
+  assert.deepEqual(modelIds, [1, 2], "both model ids appear in the digest");
+}
+
+{
+  // If the metric was already paged in this window, skip entirely.
+  const plans = planDigestPages(
+    [makeItem(1, "cash-runway-months"), makeItem(2, "cash-runway-months")],
+    new Set(["cash-runway-months"]),
+  );
+  assert.equal(plans.length, 0, "already-paged metric is fully suppressed");
+}
+
+{
+  // Distinct metrics each get their own page.
+  const plans = planDigestPages(
+    [
+      makeItem(1, "cash-runway-months"),
+      makeItem(1, "dscr-y1"),
+      makeItem(2, "dscr-y1"),
+    ],
+    new Set(),
+  );
+  assert.equal(plans.length, 2, "distinct metrics → distinct pages");
+  const byId = new Map(plans.map((p) => [p.metricId, p.items.length]));
+  assert.equal(byId.get("cash-runway-months"), 1);
+  assert.equal(byId.get("dscr-y1"), 2);
+}
+
+// ── 3c. Digest window env parsing ─────────────────────────────────────
+
+function withEnv(name: string, value: string | undefined, fn: () => void): void {
+  const prior = process.env[name];
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+  try {
+    fn();
+  } finally {
+    if (prior === undefined) delete process.env[name];
+    else process.env[name] = prior;
+  }
+}
+
+withEnv("INTEGRITY_DRIFT_ALERT_DIGEST_MINUTES", undefined, () => {
+  withEnv("INTEGRITY_DRIFT_ALERT_DEDUPE_HOURS", undefined, () => {
+    assert.equal(getAlertDigestWindowMs(), 60 * 60 * 1000, "default is 60 minutes");
+  });
+});
+withEnv("INTEGRITY_DRIFT_ALERT_DIGEST_MINUTES", "15", () => {
+  assert.equal(getAlertDigestWindowMs(), 15 * 60 * 1000);
+});
+withEnv("INTEGRITY_DRIFT_ALERT_DIGEST_MINUTES", undefined, () => {
+  withEnv("INTEGRITY_DRIFT_ALERT_DEDUPE_HOURS", "2", () => {
+    assert.equal(
+      getAlertDigestWindowMs(),
+      2 * 60 * 60 * 1000,
+      "legacy hours env still honored when minutes is unset",
+    );
+  });
+});
 
 // ── 4. computeDriftEvents end-to-end ──────────────────────────────────
 

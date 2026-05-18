@@ -43,15 +43,16 @@ A `null` `tolerance.abs` is treated as `0`, so a metric with only a relative tol
 | Var | Default | Purpose |
 | --- | --- | --- |
 | `INTEGRITY_DRIFT_SAMPLE_RATE` | `0` | Share of packet builds sampled. `0` disables the check; `1` samples every request. Set to `1.0` for the first week after rollout, then ratchet down once the baseline drift rate is understood. |
-| `INTEGRITY_DRIFT_ALERT_DEDUPE_HOURS` | `24` | Skip ADMIN_EMAILS pages when an identical `(modelId, metricId, surface, severity=high)` event already fired within this window. Avoids alert fatigue when a single drifting model is re-rendered repeatedly. |
+| `INTEGRITY_DRIFT_ALERT_DIGEST_MINUTES` | `60` | Per-metric digest window (task #993). Within this window, ADMIN_EMAILS receive at most one page per registry metric — even when many founder models drift the same metric. The page body lists every affected `(modelId, surface)` in the window, so alert volume scales with the number of distinct drifting metrics, not the number of requests that triggered them. |
+| `INTEGRITY_DRIFT_ALERT_DEDUPE_HOURS` | (deprecated) | Legacy per-tuple dedupe window, retained only as a fallback when `INTEGRITY_DRIFT_ALERT_DIGEST_MINUTES` is unset. Reinterpreted as the digest window in hours. Prefer the new var. |
 | `ADMIN_EMAILS` | (existing) | Comma-separated recipients for high-severity drift pages. Reuses the same env var the key-rotation alert (`lib/key-rotation-alert.ts`) reads. |
 
 ## Triage runbook
 
-1. **Receive the page** — subject is `[integrity] N high-severity math drift event(s) on model #M`; body lists each `(metricId, surface, extracted, canonical, delta, tolerance, location)` row.
-2. **Pull the rows** — `SELECT * FROM integrity_drift_events WHERE model_id = M AND severity = 'high' ORDER BY request_timestamp DESC LIMIT 50;`. Cross-reference `request_id` against deployment logs for the original packet request.
-3. **Reproduce locally** — load the model into a dev DB (`SELECT data FROM financial_models WHERE id = M;`) and rebuild the offending surface (`POST /api/models/M/preview-lender-packet`). The drift monitor runs on dev too if `INTEGRITY_DRIFT_SAMPLE_RATE=1` is set.
-4. **Patch + verify** — fix the canonical resolver or the rendered-packet builder, then re-run the M4 report and the `integrity-drift-monitor` test. Once green, leave the row in place as the historical record; downstream dashboards (#986) filter by `request_timestamp`.
+1. **Receive the page** — subject is `[integrity] <metricId> drifted on N render(s) across M model(s)` (task #993, per-metric digest). The body lists one line per affected `(modelId, surface, extracted, canonical, delta, tolerance, location, request_id)` row observed in the current digest window — possibly across multiple founder models. A single page now covers every model that drifted the same metric.
+2. **Pull the rows** — for the metric the page named, run `SELECT model_id, surface, extracted_value, canonical_value, delta_abs, tolerance_abs, location, request_id, request_timestamp FROM integrity_drift_events WHERE metric_id = '<metricId>' AND severity = 'high' AND request_timestamp >= now() - interval '1 hour' ORDER BY request_timestamp DESC;`. Cross-reference each `request_id` against deployment logs. The row whose `details->>'digestPaged' = 'true'` is the one that triggered the page; rows after it in the window were folded into the same digest and did NOT re-page.
+3. **Reproduce locally** — pick any `model_id` from step 2, load the model into a dev DB (`SELECT data FROM financial_models WHERE id = M;`), and rebuild the offending surface (`POST /api/models/M/preview-lender-packet`). The drift monitor runs on dev too if `INTEGRITY_DRIFT_SAMPLE_RATE=1` is set.
+4. **Patch + verify** — fix the canonical resolver or the rendered-packet builder, then re-run the M4 report and the `integrity-drift-monitor` test. Once green, leave the rows in place as the historical record; downstream dashboards (#986) filter by `request_timestamp`.
 
 ## Adding a new metric to the production diff
 

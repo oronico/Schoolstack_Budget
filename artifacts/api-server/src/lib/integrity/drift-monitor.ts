@@ -287,16 +287,30 @@ export function computeDriftEvents(
 // ── Persistence + alerting ────────────────────────────────────────────
 
 /**
- * Window during which a `(modelId, metricId, surface, severity=high)`
- * alert is treated as duplicate. Mirrors `key-rotation-alert.ts` ‒
- * tunable via env so an operator can dial the cadence without a code
- * change.
+ * Digest window during which at most ONE admin page is emitted per
+ * registry metric. Replaces the old per-`(modelId, metricId, surface)`
+ * dedupe (task #993): with hundreds of founder models, the per-tuple
+ * key let admins still get paged twice for the same broken metric on
+ * two different models. Per-metric digesting makes alert volume scale
+ * with the number of distinct drifting metrics, not the number of
+ * requests that triggered them.
+ *
+ * Configured via `INTEGRITY_DRIFT_ALERT_DIGEST_MINUTES` (default 60).
+ * For backwards compatibility, the deprecated
+ * `INTEGRITY_DRIFT_ALERT_DEDUPE_HOURS` env var is still honored when
+ * the new var is unset.
  */
-const DEFAULT_ALERT_DEDUPE_HOURS = 24;
-function getAlertDedupeWindowMs(): number {
-  const raw = Number(process.env.INTEGRITY_DRIFT_ALERT_DEDUPE_HOURS);
-  const hours = Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_ALERT_DEDUPE_HOURS;
-  return Math.floor(hours * 60 * 60 * 1000);
+const DEFAULT_DIGEST_MINUTES = 60;
+export function getAlertDigestWindowMs(): number {
+  const rawMin = Number(process.env.INTEGRITY_DRIFT_ALERT_DIGEST_MINUTES);
+  if (Number.isFinite(rawMin) && rawMin > 0) {
+    return Math.floor(rawMin * 60 * 1000);
+  }
+  const rawHours = Number(process.env.INTEGRITY_DRIFT_ALERT_DEDUPE_HOURS);
+  if (Number.isFinite(rawHours) && rawHours > 0) {
+    return Math.floor(rawHours * 60 * 60 * 1000);
+  }
+  return DEFAULT_DIGEST_MINUTES * 60 * 1000;
 }
 
 function parseAdminEmails(): string[] {
@@ -305,6 +319,53 @@ function parseAdminEmails(): string[] {
     .split(",")
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
+}
+
+/**
+ * One row in the digest body — a model+surface where this metric drifted.
+ */
+export interface DigestItem {
+  modelId: number;
+  surface: DriftSurface;
+  extractedValue: number | null;
+  canonicalValue: number | null;
+  deltaAbs: number | null;
+  toleranceAbs: number | null;
+  location: string | null;
+  requestId: string | null;
+}
+
+/**
+ * Pure planner: given the high-severity events that drifted in the
+ * current digest window (across all models + surfaces) and the set of
+ * metricIds for which a digest page has ALREADY been emitted in this
+ * window, return one entry per metric that still needs a page, with
+ * every (model, surface) hit grouped under it.
+ */
+export function planDigestPages(
+  highEventsInWindow: ReadonlyArray<DigestItem & { metricId: string }>,
+  alreadyPagedMetricIds: ReadonlySet<string>,
+): Array<{ metricId: string; items: DigestItem[] }> {
+  const grouped = new Map<string, DigestItem[]>();
+  for (const ev of highEventsInWindow) {
+    if (alreadyPagedMetricIds.has(ev.metricId)) continue;
+    const list = grouped.get(ev.metricId) ?? [];
+    list.push({
+      modelId: ev.modelId,
+      surface: ev.surface,
+      extractedValue: ev.extractedValue,
+      canonicalValue: ev.canonicalValue,
+      deltaAbs: ev.deltaAbs,
+      toleranceAbs: ev.toleranceAbs,
+      location: ev.location,
+      requestId: ev.requestId,
+    });
+    grouped.set(ev.metricId, list);
+  }
+  return Array.from(grouped.entries()).map(([metricId, items]) => ({
+    metricId,
+    items,
+  }));
 }
 
 /**
@@ -334,7 +395,10 @@ export async function persistAndAlert(
     requestId: opts.requestId ?? null,
     details: null,
   }));
-  await db.insert(integrityDriftEventsTable).values(rows);
+  const inserted = await db
+    .insert(integrityDriftEventsTable)
+    .values(rows)
+    .returning({ id: integrityDriftEventsTable.id });
 
   const highEvents = events.filter((e) => e.severity === "high");
   if (highEvents.length === 0) {
@@ -346,65 +410,121 @@ export async function persistAndAlert(
     return { persistedCount: rows.length, alertedAdmins: false };
   }
 
-  // Throttle: skip if an identical (modelId, metricId, surface, high)
-  // alert already fired within the dedupe window. Avoids alert
-  // fatigue when a single drifting model is re-rendered repeatedly.
-  const windowStart = new Date(Date.now() - getAlertDedupeWindowMs());
-  const recentHighIds = new Set<string>();
-  for (const ev of highEvents) {
-    const existing = await db
-      .select({ id: integrityDriftEventsTable.id })
-      .from(integrityDriftEventsTable)
-      .where(
-        and(
-          eq(integrityDriftEventsTable.modelId, opts.modelId),
-          eq(integrityDriftEventsTable.metricId, ev.metricId),
-          eq(integrityDriftEventsTable.surface, ev.surface),
-          eq(integrityDriftEventsTable.severity, "high"),
-          gte(integrityDriftEventsTable.requestTimestamp, windowStart),
-          // Exclude the just-inserted row itself.
-          sql`${integrityDriftEventsTable.requestTimestamp} < now() - interval '1 second'`,
-        ),
-      )
-      .limit(1);
-    if (existing.length > 0) {
-      recentHighIds.add(`${ev.metricId}::${ev.surface}`);
-    }
+  // Per-metric digest (task #993). For each metricId in this batch,
+  // page admins at most once per digest window across ALL models and
+  // surfaces. The page body summarizes every high-severity drift for
+  // that metric in the window — not just the current request.
+  const windowStart = new Date(Date.now() - getAlertDigestWindowMs());
+  const batchMetricIds = Array.from(new Set(highEvents.map((e) => e.metricId)));
+
+  // Pull every high-severity row for these metrics in the window
+  // (including the rows we just inserted) so the digest body can list
+  // every affected model + surface, not only the current request.
+  const recentRows = await db
+    .select({
+      id: integrityDriftEventsTable.id,
+      modelId: integrityDriftEventsTable.modelId,
+      metricId: integrityDriftEventsTable.metricId,
+      surface: integrityDriftEventsTable.surface,
+      extractedValue: integrityDriftEventsTable.extractedValue,
+      canonicalValue: integrityDriftEventsTable.canonicalValue,
+      deltaAbs: integrityDriftEventsTable.deltaAbs,
+      toleranceAbs: integrityDriftEventsTable.toleranceAbs,
+      location: integrityDriftEventsTable.location,
+      requestId: integrityDriftEventsTable.requestId,
+      details: integrityDriftEventsTable.details,
+    })
+    .from(integrityDriftEventsTable)
+    .where(
+      and(
+        eq(integrityDriftEventsTable.severity, "high"),
+        gte(integrityDriftEventsTable.requestTimestamp, windowStart),
+        sql`${integrityDriftEventsTable.metricId} = ANY(${batchMetricIds})`,
+      ),
+    );
+
+  const alreadyPaged = new Set<string>();
+  for (const row of recentRows) {
+    const d = row.details as { digestPaged?: boolean } | null;
+    if (d && d.digestPaged === true) alreadyPaged.add(row.metricId);
   }
-  const freshHigh = highEvents.filter(
-    (e) => !recentHighIds.has(`${e.metricId}::${e.surface}`),
-  );
-  if (freshHigh.length === 0) {
+
+  const digestable = recentRows.map((r) => ({
+    metricId: r.metricId,
+    modelId: r.modelId,
+    surface: r.surface as DriftSurface,
+    extractedValue: r.extractedValue,
+    canonicalValue: r.canonicalValue,
+    deltaAbs: r.deltaAbs,
+    toleranceAbs: r.toleranceAbs,
+    location: r.location,
+    requestId: r.requestId,
+  }));
+  const plans = planDigestPages(digestable, alreadyPaged);
+  if (plans.length === 0) {
     return { persistedCount: rows.length, alertedAdmins: false };
   }
 
-  const subject = `[integrity] ${freshHigh.length} high-severity math drift event(s) on model #${opts.modelId}`;
-  const lines = freshHigh.map(
-    (e) =>
-      `- ${e.metricId} on ${e.surface}: extracted=${e.extractedValue} canonical=${e.canonicalValue} delta=${e.deltaAbs} (tol=${e.toleranceAbs}) @ ${e.location ?? "(no-location)"}`,
-  );
-  const body =
-    `The production drift monitor detected ${freshHigh.length} ` +
-    `metric value(s) on model #${opts.modelId} that drifted beyond ` +
-    `10× the registry tolerance.\n\n` +
-    lines.join("\n") +
-    `\n\nRequest id: ${opts.requestId ?? "(none)"}\n` +
-    `Sample rate: ${getConfiguredSampleRate()}\n\n` +
-    `See docs/operations/production-drift-monitor.md for triage.`;
+  const insertedIdByMetric = new Map<string, number>();
+  for (let i = 0; i < rows.length && i < inserted.length; i++) {
+    const row = rows[i];
+    if (row.severity === "high" && !insertedIdByMetric.has(row.metricId)) {
+      insertedIdByMetric.set(row.metricId, inserted[i].id);
+    }
+  }
 
   let alerted = false;
-  for (const to of recipients) {
-    const result = await deliverTransactionalEmail({
-      kind: "integrity-drift-alert",
-      to,
-      subject,
-      text: body,
-      html: `<pre style="font-family: ui-monospace, monospace; white-space: pre-wrap;">${body
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")}</pre>`,
-    });
-    if (result.success) alerted = true;
+  for (const plan of plans) {
+    const totalModels = new Set(plan.items.map((it) => it.modelId)).size;
+    const subject = `[integrity] ${plan.metricId} drifted on ${plan.items.length} render(s) across ${totalModels} model(s)`;
+    const lines = plan.items.map(
+      (it) =>
+        `- model #${it.modelId} on ${it.surface}: extracted=${it.extractedValue} canonical=${it.canonicalValue} delta=${it.deltaAbs} (tol=${it.toleranceAbs}) @ ${it.location ?? "(no-location)"} [req=${it.requestId ?? "(none)"}]`,
+    );
+    const windowMin = Math.round(getAlertDigestWindowMs() / 60000);
+    const body =
+      `The production drift monitor detected ${plan.items.length} ` +
+      `high-severity drift(s) of metric \`${plan.metricId}\` ` +
+      `across ${totalModels} model(s) in the last ${windowMin} minute(s).\n\n` +
+      lines.join("\n") +
+      `\n\nSample rate: ${getConfiguredSampleRate()}\n` +
+      `Digest window: ${windowMin} minute(s)\n\n` +
+      `See docs/operations/production-drift-monitor.md for triage.`;
+
+    let metricDelivered = false;
+    for (const to of recipients) {
+      const result = await deliverTransactionalEmail({
+        kind: "integrity-drift-alert",
+        to,
+        subject,
+        text: body,
+        html: `<pre style="font-family: ui-monospace, monospace; white-space: pre-wrap;">${body
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")}</pre>`,
+      });
+      if (result.success) metricDelivered = true;
+    }
+
+    if (metricDelivered) {
+      alerted = true;
+      // Mark one just-inserted row so future requests in this window
+      // see a `digestPaged: true` marker and skip re-paging.
+      const markerId = insertedIdByMetric.get(plan.metricId);
+      if (markerId !== undefined) {
+        await db
+          .update(integrityDriftEventsTable)
+          .set({
+            details: {
+              digestPaged: true,
+              digestSentAt: new Date().toISOString(),
+              digestItemCount: plan.items.length,
+              digestModelCount: totalModels,
+            },
+          })
+          .where(eq(integrityDriftEventsTable.id, markerId));
+      }
+    }
   }
 
   return { persistedCount: rows.length, alertedAdmins: alerted };
