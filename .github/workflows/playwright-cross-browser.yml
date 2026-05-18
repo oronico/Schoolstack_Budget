@@ -42,9 +42,17 @@ jobs:
       # registration tokens validate deterministically across browsers.
       JWT_SECRET: ci-playwright-cross-browser-fixed-secret
       CI: "true"
-      # Let DB-backed tests fall back to the artifact's bundled
-      # in-memory shim — DATABASE_URL is intentionally unset so the
-      # api-server boots without needing a Postgres service container.
+      # DATABASE_URL points at the Railway-hosted Postgres the app
+      # already uses. The api-server's validateEnv() treats
+      # DATABASE_URL as fatal at boot (intentionally — the app
+      # depends on persistent storage for auth/models/etc.), so an
+      # unset value crashes the webServer before Playwright ever
+      # runs. Configure the value in
+      #   GitHub → Settings → Secrets and variables → Actions →
+      #   New repository secret
+      # with name `DATABASE_URL` and the Railway connection string
+      # as its value.
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
     steps:
       - uses: actions/checkout@v4
