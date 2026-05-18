@@ -3167,7 +3167,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
 
   // Task #909 — re-point liquidity "goes negative" flag from monthly
   // net cash flow < 0 to min(cumulative cash) < 0, and add a parallel
-  // `cash_flow_timing` flag for the "burns more cash than it generates
+  // `cash_flow_timing` flag for the "uses more cash than it generates
   // in some months" case (cumulative stays positive). Pull both from
   // canonicalMetrics.monthlyCashFlowByYear (per-stream monthly series
   // already chained off prior-year ending cash) when available.

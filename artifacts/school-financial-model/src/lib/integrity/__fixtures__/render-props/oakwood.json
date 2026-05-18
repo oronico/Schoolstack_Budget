@@ -792,7 +792,7 @@
         "dimension": "cash_flow_timing",
         "status": "at_risk",
         "label": "Needs attention",
-        "explanation": "The school burns more cash than it generates in 10 months. Opening cash absorbs the gap today, but tight timing leaves no margin for late tuition or a delayed disbursement.",
+        "explanation": "The school uses more cash than it generates in 10 months. Opening cash absorbs the gap today, but tight timing leaves no margin for late tuition or a delayed disbursement.",
         "watchItem": "Track receivables and payroll dates against the trough month so a single late payment doesn't tip the cumulative balance negative.",
         "nextStep": "Open Step 5: Revenue and tighten billing cadence (or grow an enrollment-driven line), or trim Step 7: Expenses, until monthly net stays positive."
       },
@@ -2400,7 +2400,7 @@
           "dimension": "cash_flow_timing",
           "status": "watch",
           "label": "Watch closely",
-          "explanation": "The school burns more cash than it generates in 10 months. Opening cash absorbs the gap today, but tight timing leaves no margin for late tuition or a delayed disbursement.",
+          "explanation": "The school uses more cash than it generates in 10 months. Opening cash absorbs the gap today, but tight timing leaves no margin for late tuition or a delayed disbursement.",
           "watchItem": "Track receivables and payroll dates against the trough month so a single late payment doesn't tip the cumulative balance negative.",
           "nextStep": "Open Step 5: Revenue and tighten billing cadence (or grow an enrollment-driven line), or trim Step 7: Expenses, until monthly net stays positive."
         },
@@ -4860,7 +4860,7 @@
                 "label": "Cash Flow Timing",
                 "values": [
                   "Needs attention",
-                  "The school burns more cash than it generates in 10 months. Opening cash absorbs the gap today, but tight timing leaves no margin for late tuition or a delayed disbursement."
+                  "The school uses more cash than it generates in 10 months. Opening cash absorbs the gap today, but tight timing leaves no margin for late tuition or a delayed disbursement."
                 ]
               },
               {
@@ -4995,7 +4995,7 @@
                 "label": "Cash flow timing",
                 "values": [
                   "HIGH",
-                  "The school burns more cash than it generates in 10 months. Opening cash absorbs the gap today, but tight timing leaves no margin for late tuition or a delayed disbursement.",
+                  "The school uses more cash than it generates in 10 months. Opening cash absorbs the gap today, but tight timing leaves no margin for late tuition or a delayed disbursement.",
                   "Monitor this metric and develop a remediation plan if trends persist."
                 ],
                 "isBold": false
@@ -5348,7 +5348,7 @@
         "risk": "Cash flow timing",
         "severity": "high",
         "mitigant": "Monitor this metric and develop a remediation plan if trends persist.",
-        "whyItMatters": "The school burns more cash than it generates in 10 months. Opening cash absorbs the gap today, but tight timing leaves no margin for late tuition or a delayed disbursement.",
+        "whyItMatters": "The school uses more cash than it generates in 10 months. Opening cash absorbs the gap today, but tight timing leaves no margin for late tuition or a delayed disbursement.",
         "supportingMetrics": [
           {
             "label": "cash flow timing",

@@ -254,7 +254,7 @@ const DIMENSIONS: {
     },
   },
   {
-    // Task #909 — parallel signal for the "burns more cash than it
+    // Task #909 — parallel signal for the "uses more cash than it
     // generates in some months" case. Triggers when there is at least
     // one month with negative monthly net cash flow but the cumulative
     // balance never dips below zero (otherwise the at-risk liquidity
@@ -288,7 +288,7 @@ const DIMENSIONS: {
         dimension: "cash_flow_timing",
         status: "watch",
         label: "Watch closely",
-        explanation: `The school burns more cash than it generates in ${negativeNetCashFlowMonths} ${negativeNetCashFlowMonths === 1 ? "month" : "months"}. Opening cash absorbs the gap today, but tight timing leaves no margin for late tuition or a delayed disbursement.`,
+        explanation: `The school uses more cash than it generates in ${negativeNetCashFlowMonths} ${negativeNetCashFlowMonths === 1 ? "month" : "months"}. Opening cash absorbs the gap today, but tight timing leaves no margin for late tuition or a delayed disbursement.`,
         watchItem: "Track receivables and payroll dates against the trough month so a single late payment doesn't tip the cumulative balance negative.",
         nextStep: "Open Step 5: Revenue and tighten billing cadence (or grow an enrollment-driven line), or trim Step 7: Expenses, until monthly net stays positive.",
       };

@@ -92,8 +92,8 @@ function baseInput() {
   else {
     if (timing.status === "watch") ok("monthly net < 0 (cumulative ok) → cash_flow_timing watch");
     else bad(`cash_flow_timing should be watch, got ${timing.status}`);
-    if (/burns more cash than it generates/.test(timing.explanation)) ok("cash_flow_timing copy uses distinct burn phrase");
-    else bad(`cash_flow_timing copy should mention burns-more-than-generates: ${timing.explanation}`);
+    if (/uses more cash than it generates/.test(timing.explanation)) ok("cash_flow_timing copy uses distinct uses-more phrase");
+    else bad(`cash_flow_timing copy should mention uses-more-than-generates: ${timing.explanation}`);
   }
 }
 
@@ -190,8 +190,8 @@ function baseInput() {
   else {
     if (timing.status === "watch") ok("Oakwood real seed → cash_flow_timing watch");
     else bad(`Oakwood real seed cash_flow_timing should be watch, got ${timing.status} — ${timing.explanation}`);
-    if (/burns more cash than it generates/.test(timing.explanation)) ok("Oakwood real seed cash_flow_timing copy uses burns-more phrase");
-    else bad(`Oakwood real seed cash_flow_timing should say 'burns more cash than it generates': ${timing.explanation}`);
+    if (/uses more cash than it generates/.test(timing.explanation)) ok("Oakwood real seed cash_flow_timing copy uses uses-more phrase");
+    else bad(`Oakwood real seed cash_flow_timing should say 'uses more cash than it generates': ${timing.explanation}`);
   }
 }
 
