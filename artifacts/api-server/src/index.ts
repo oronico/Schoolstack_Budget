@@ -8,66 +8,11 @@ import { pool, db, runMigrations } from "@workspace/db";
 import { recordErrorLog } from "./lib/error-log";
 import { alertOnKeyRotationFailure } from "./lib/key-rotation-alert";
 import { applyMigrations as runApplyMigrations } from "./lib/apply-migrations";
+import { validateEnv } from "./lib/validate-env";
 import { seedPreviewDataIfEmpty } from "./lib/seed-preview-data";
 import type { Server } from "http";
 
 const isProduction = process.env.NODE_ENV === "production";
-
-function validateEnv() {
-  const required: [string, string][] = [
-    ["DATABASE_URL", "PostgreSQL connection string"],
-    ["JWT_SECRET", "Secret key for signing JWT tokens"],
-  ];
-
-  const requiredInProduction: [string, string][] = [
-    ["APP_URL", "Public URL of the frontend application"],
-  ];
-
-  const optional: [string, string][] = [
-    ["ALLOWED_ORIGINS", "Comma-separated list of allowed CORS origins"],
-    ["ADMIN_EMAILS", "Comma-separated list of admin email addresses"],
-    ["RESEND_API_KEY", "Resend API key for transactional emails"],
-    ["POSTMARK_SERVER_TOKEN", "Postmark server token (failover provider for transactional emails)"],
-    ["EMAIL_FROM", "Sender address for outgoing emails"],
-    ["EMAIL_PROVIDER", "Override email provider selection: resend | postmark | console"],
-  ];
-
-  let hasFatal = false;
-
-  for (const [key, desc] of required) {
-    if (!process.env[key]) {
-      if (isProduction) {
-        console.error(`[startup] FATAL: Missing required env var ${key} — ${desc}`);
-        hasFatal = true;
-      } else {
-        console.error(`[startup] ERROR: ${key} not set — ${desc}. Server may fail to start.`);
-        hasFatal = true;
-      }
-    }
-  }
-
-  for (const [key, desc] of requiredInProduction) {
-    if (!process.env[key]) {
-      if (isProduction) {
-        console.error(`[startup] FATAL: Missing required env var ${key} — ${desc}`);
-        hasFatal = true;
-      } else {
-        console.warn(`[startup] INFO: ${key} not set — ${desc}. Will use dev fallback.`);
-      }
-    }
-  }
-
-  for (const [key, desc] of optional) {
-    if (!process.env[key]) {
-      console.warn(`[startup] INFO: Optional env var ${key} not set — ${desc}`);
-    }
-  }
-
-  if (hasFatal) {
-    console.error("[startup] Server cannot start without required environment variables.");
-    process.exit(1);
-  }
-}
 
 function applyMigrations(): Promise<void> {
   return runApplyMigrations({
