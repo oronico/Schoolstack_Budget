@@ -47,6 +47,7 @@ import { and, eq, gte, sql } from "drizzle-orm";
 
 import { db } from "@workspace/db";
 import {
+  eventsTable,
   integrityDriftEventsTable,
   type InsertIntegrityDriftEvent,
 } from "@workspace/db/schema";
@@ -452,15 +453,33 @@ export function runDriftCheckInBackground(
   forceSample?: boolean,
 ): void {
   if (!shouldSampleDriftCheck(forceSample)) return;
-  setImmediate(() => {
-    runDriftCheck(modelData, consultantOutput, renderedPacket, opts).catch(
-      (err) => {
-        // Log only — never propagate. Drift monitor is observe-only.
-        console.error(
-          "[integrity-drift] background check failed:",
-          err instanceof Error ? err.message : err,
-        );
-      },
-    );
+  setImmediate(async () => {
+    // Record that this packet was sampled (regardless of whether any
+    // drift was found). Admin dashboard uses this as the denominator
+    // for "drift events per 1k sampled packets".
+    try {
+      await db.insert(eventsTable).values({
+        eventName: "integrity_drift_sampled",
+        metadata: {
+          surface: opts.surface,
+          modelId: opts.modelId,
+          requestId: opts.requestId ?? null,
+        },
+      });
+    } catch (err) {
+      console.error(
+        "[integrity-drift] sample-event log failed:",
+        err instanceof Error ? err.message : err,
+      );
+    }
+    try {
+      await runDriftCheck(modelData, consultantOutput, renderedPacket, opts);
+    } catch (err) {
+      // Log only — never propagate. Drift monitor is observe-only.
+      console.error(
+        "[integrity-drift] background check failed:",
+        err instanceof Error ? err.message : err,
+      );
+    }
   });
 }

@@ -34,6 +34,8 @@ import {
   MousePointerClick,
   Compass,
   KeyRound,
+  Activity,
+  Copy,
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -3103,6 +3105,439 @@ function SensitiveAccessSection() {
   );
 }
 
+// Task #992 — Math-integrity drift triage view. Reads the
+// `/admin/integrity-drift` endpoint backed by integrity_drift_events
+// (Task #987). The drift monitor only inserts rows for samples that
+// drifted, so the "per 1k" headline is per-1k-drifted-sample density,
+// not per-1k-rendered-packet. Copy in the UI calls that out so
+// admins don't misread it as a true sampling rate.
+interface IntegrityDriftEventRow {
+  id: number;
+  modelId: number;
+  metricId: string;
+  surface: string;
+  severity: "high" | "low" | "missing";
+  extractedValue: number | null;
+  canonicalValue: number | null;
+  deltaAbs: number | null;
+  toleranceAbs: number | null;
+  location: string | null;
+  note: string | null;
+  requestId: string | null;
+  requestTimestamp: string;
+}
+
+interface IntegrityDriftResponse {
+  window: "24h" | "7d" | "30d" | "all";
+  filters: {
+    surface: string | null;
+    severity: "high" | "low" | "missing" | null;
+    metric: string | null;
+  };
+  totals: {
+    events: number;
+    high: number;
+    low: number;
+    missing: number;
+    distinctSamples: number;
+    distinctModels: number;
+    sampledPackets: number;
+    eventsPer1kSampledPackets: number | null;
+    eventsPer1kDriftedSamples: number;
+  };
+  topMetrics: { metricId: string; eventCount: number; highCount: number }[];
+  bySurface: {
+    surface: string;
+    eventCount: number;
+    highCount: number;
+    sampledPackets: number;
+    eventsPer1kSampledPackets: number | null;
+  }[];
+  knownMetrics: string[];
+  knownSurfaces: string[];
+  events: IntegrityDriftEventRow[];
+  rowLimit: number;
+  truncated: boolean;
+}
+
+const INTEGRITY_WINDOW_OPTIONS: {
+  value: IntegrityDriftResponse["window"];
+  label: string;
+}[] = [
+  { value: "24h", label: "Last 24h" },
+  { value: "7d", label: "Last 7d" },
+  { value: "30d", label: "Last 30d" },
+  { value: "all", label: "All time" },
+];
+
+function formatDriftNumber(v: number | null): string {
+  if (v === null || !Number.isFinite(v)) return "—";
+  const abs = Math.abs(v);
+  if (abs === 0) return "0";
+  if (abs >= 1000 || abs < 0.001) return v.toExponential(3);
+  if (abs >= 1) return v.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+  return v.toPrecision(4);
+}
+
+function IntegrityDriftSection() {
+  const [data, setData] = useState<IntegrityDriftResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [windowParam, setWindowParam] =
+    useState<IntegrityDriftResponse["window"]>("7d");
+  const [surface, setSurface] = useState<string>("");
+  const [severity, setSeverity] = useState<string>("");
+  const [metric, setMetric] = useState<string>("");
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      setError(null);
+      const params = new URLSearchParams();
+      params.set("window", windowParam);
+      if (surface) params.set("surface", surface);
+      if (severity) params.set("severity", severity);
+      if (metric) params.set("metric", metric);
+      try {
+        const res = await fetch(
+          `/api/admin/integrity-drift?${params.toString()}`,
+        );
+        if (!res.ok) throw new Error("Failed to fetch drift events");
+        const json = (await res.json()) as IntegrityDriftResponse;
+        if (!cancelled) setData(json);
+      } catch {
+        if (!cancelled) setError("Failed to load math-integrity drift data.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [windowParam, surface, severity, metric]);
+
+  const topMetric = data?.topMetrics[0];
+  const severityBadgeClass: Record<string, string> = {
+    high: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+    low: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+    missing:
+      "bg-slate-200 text-slate-700 dark:bg-slate-700/50 dark:text-slate-200",
+  };
+
+  return (
+    <div className="space-y-6" data-testid="integrity-drift-section">
+      <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+        <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Activity className="h-5 w-5 text-primary" />
+              <h2 className="font-display text-lg font-bold">
+                Math-Integrity Drift
+              </h2>
+            </div>
+            <p className="text-xs text-muted-foreground max-w-2xl">
+              Live drift events from the production math-integrity monitor.
+              The monitor only records samples that drifted (or could not
+              project canonically), so the per-1k figure below is per
+              <span className="italic"> drifted</span> sample, not per
+              rendered packet.
+            </p>
+          </div>
+          <div
+            className="inline-flex rounded-lg border border-border/60 bg-secondary/40 p-0.5"
+            role="group"
+            aria-label="Integrity drift window"
+            data-testid="integrity-drift-window"
+          >
+            {INTEGRITY_WINDOW_OPTIONS.map((opt) => {
+              const active = windowParam === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setWindowParam(opt.value)}
+                  data-testid={`integrity-window-${opt.value}`}
+                  aria-pressed={active}
+                  className={`text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${
+                    active
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-10">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : error || !data ? (
+          <p className="text-sm text-destructive">
+            {error || "No drift data available."}
+          </p>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+              <div
+                className="rounded-xl border border-border/60 bg-secondary/30 p-4"
+                data-testid="integrity-card-rate"
+              >
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Drift events per 1k sampled packets
+                </div>
+                <div className="text-3xl font-bold mt-1">
+                  {data.totals.eventsPer1kSampledPackets == null
+                    ? "—"
+                    : data.totals.eventsPer1kSampledPackets.toFixed(1)}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {data.totals.events} events across{" "}
+                  {data.totals.sampledPackets} sampled packets
+                  {data.totals.sampledPackets === 0
+                    ? " — no samples logged in window yet"
+                    : ""}
+                </div>
+              </div>
+              <div
+                className="rounded-xl border border-border/60 bg-secondary/30 p-4"
+                data-testid="integrity-card-high"
+              >
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                  High-severity events
+                </div>
+                <div
+                  className={`text-3xl font-bold mt-1 ${data.totals.high > 0 ? "text-red-600" : ""}`}
+                >
+                  {data.totals.high}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  low {data.totals.low} · missing {data.totals.missing}
+                </div>
+              </div>
+              <div
+                className="rounded-xl border border-border/60 bg-secondary/30 p-4"
+                data-testid="integrity-card-top"
+              >
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Top drifting metric
+                </div>
+                <div className="text-lg font-semibold mt-1 break-all">
+                  {topMetric?.metricId ?? "—"}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {topMetric
+                    ? `${topMetric.eventCount} events (${topMetric.highCount} high)`
+                    : "No events in window"}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+              <label className="flex flex-col text-xs gap-1">
+                <span className="font-medium text-muted-foreground">
+                  Surface
+                </span>
+                <select
+                  value={surface}
+                  onChange={(e) => setSurface(e.target.value)}
+                  data-testid="integrity-filter-surface"
+                  className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
+                >
+                  <option value="">All surfaces</option>
+                  {data.knownSurfaces.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col text-xs gap-1">
+                <span className="font-medium text-muted-foreground">
+                  Severity
+                </span>
+                <select
+                  value={severity}
+                  onChange={(e) => setSeverity(e.target.value)}
+                  data-testid="integrity-filter-severity"
+                  className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
+                >
+                  <option value="">All severities</option>
+                  <option value="high">High</option>
+                  <option value="low">Low</option>
+                  <option value="missing">Missing</option>
+                </select>
+              </label>
+              <label className="flex flex-col text-xs gap-1">
+                <span className="font-medium text-muted-foreground">
+                  Metric
+                </span>
+                <select
+                  value={metric}
+                  onChange={(e) => setMetric(e.target.value)}
+                  data-testid="integrity-filter-metric"
+                  className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
+                >
+                  <option value="">All metrics</option>
+                  {data.knownMetrics.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            {data.bySurface.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold mb-2">
+                  Events by surface
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {data.bySurface.map((s) => (
+                    <div
+                      key={s.surface}
+                      className="rounded-lg border border-border/60 p-3 text-xs"
+                    >
+                      <div className="font-medium">{s.surface}</div>
+                      <div className="text-base font-semibold mt-1">
+                        {s.eventsPer1kSampledPackets == null
+                          ? "—"
+                          : `${s.eventsPer1kSampledPackets.toFixed(1)} / 1k`}
+                      </div>
+                      <div className="text-muted-foreground mt-0.5">
+                        {s.eventCount} events / {s.sampledPackets} sampled
+                        {s.highCount > 0 ? (
+                          <span className="text-red-600 ml-1">
+                            ({s.highCount} high)
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {!loading && !error && data && (
+        <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <h3 className="font-display text-base font-bold">
+              Recent drift events
+            </h3>
+            <span className="text-xs text-muted-foreground">
+              Showing {data.events.length} of up to {data.rowLimit}
+              {data.truncated ? " (truncated)" : ""}
+            </span>
+          </div>
+          {data.events.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No drift events match the current filters.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-left border-b border-border/60">
+                    <th className="py-2 pr-3 font-semibold">When</th>
+                    <th className="py-2 pr-3 font-semibold">Severity</th>
+                    <th className="py-2 pr-3 font-semibold">Metric</th>
+                    <th className="py-2 pr-3 font-semibold">Surface</th>
+                    <th className="py-2 pr-3 font-semibold">Model</th>
+                    <th className="py-2 pr-3 font-semibold">Extracted</th>
+                    <th className="py-2 pr-3 font-semibold">Canonical</th>
+                    <th className="py-2 pr-3 font-semibold">Δ (tol)</th>
+                    <th className="py-2 pr-3 font-semibold">Request</th>
+                  </tr>
+                </thead>
+                <tbody data-testid="integrity-drift-rows">
+                  {data.events.map((ev) => (
+                    <tr
+                      key={ev.id}
+                      className="border-b border-border/30 align-top"
+                    >
+                      <td className="py-2 pr-3 whitespace-nowrap text-muted-foreground">
+                        {format(
+                          new Date(ev.requestTimestamp),
+                          "MMM d, HH:mm:ss",
+                        )}
+                      </td>
+                      <td className="py-2 pr-3">
+                        <span
+                          className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${severityBadgeClass[ev.severity] || ""}`}
+                        >
+                          {ev.severity}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-3 font-mono break-all">
+                        {ev.metricId}
+                      </td>
+                      <td className="py-2 pr-3 font-mono">{ev.surface}</td>
+                      <td className="py-2 pr-3 font-mono">
+                        <a
+                          href={`/model/${ev.modelId}`}
+                          className="text-primary hover:underline inline-flex items-center gap-1"
+                          data-testid={`integrity-model-link-${ev.id}`}
+                        >
+                          #{ev.modelId}
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </td>
+                      <td className="py-2 pr-3 font-mono">
+                        {formatDriftNumber(ev.extractedValue)}
+                      </td>
+                      <td className="py-2 pr-3 font-mono">
+                        {formatDriftNumber(ev.canonicalValue)}
+                      </td>
+                      <td className="py-2 pr-3 font-mono">
+                        {formatDriftNumber(ev.deltaAbs)}
+                        {ev.toleranceAbs != null ? (
+                          <span className="text-muted-foreground">
+                            {" "}
+                            ({formatDriftNumber(ev.toleranceAbs)})
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="py-2 pr-3 font-mono text-muted-foreground break-all">
+                        {ev.requestId ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void navigator.clipboard?.writeText(
+                                ev.requestId!,
+                              );
+                            }}
+                            title="Click to copy request id for log lookup"
+                            className="text-primary hover:underline inline-flex items-center gap-1"
+                            data-testid={`integrity-request-link-${ev.id}`}
+                          >
+                            {ev.requestId}
+                            <Copy className="h-3 w-3" />
+                          </button>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AdminPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -3110,7 +3545,13 @@ export function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
-    "analytics" | "feedback" | "errors" | "reviews" | "coaching" | "sensitive-access"
+    | "analytics"
+    | "feedback"
+    | "errors"
+    | "reviews"
+    | "coaching"
+    | "sensitive-access"
+    | "integrity"
   >("analytics");
 
   useEffect(() => {
@@ -3249,6 +3690,18 @@ export function AdminPage() {
               Sensitive Access
             </button>
             <button
+              onClick={() => setActiveTab("integrity")}
+              data-testid="admin-tab-integrity"
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                activeTab === "integrity"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Activity className="h-4 w-4" />
+              Integrity
+            </button>
+            <button
               onClick={() => setActiveTab("errors")}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                 activeTab === "errors"
@@ -3264,6 +3717,8 @@ export function AdminPage() {
 
         {activeTab === "errors" ? (
           <ErrorsSection />
+        ) : activeTab === "integrity" ? (
+          <IntegrityDriftSection />
         ) : activeTab === "sensitive-access" ? (
           <SensitiveAccessSection />
         ) : activeTab === "reviews" ? (

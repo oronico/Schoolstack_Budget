@@ -8,6 +8,7 @@ import {
   coachSurfaceOverridesTable,
   auditLogTable,
   borrowerEntitiesTable,
+  integrityDriftEventsTable,
 } from "@workspace/db/schema";
 import { count, countDistinct, gte, desc, sql, eq, and, inArray } from "drizzle-orm";
 import { authMiddleware, type AuthRequest } from "../middlewares/auth";
@@ -2149,6 +2150,265 @@ router.get(
       res
         .status(500)
         .json({ error: "Failed to export sensitive-access audit entries." });
+    }
+  },
+);
+
+// ── Task #992 — Math-integrity drift trends ────────────────────────────
+//
+// Admin-only triage view over rows written by the production drift
+// monitor (`lib/integrity/drift-monitor.ts`, Task #987). Returns
+// headline counters plus the most-recent matching events so the
+// math/eng team can answer "is anything drifting right now?" without
+// hand-running SQL.
+//
+// The drift monitor inserts a row whenever a rendered surface value
+// disagrees with the canonical value beyond the registry tolerance
+// (severity = low/high) OR the surface emitted a value the canonical
+// layer cannot project (severity = missing). A "clean" sample does
+// NOT write a row, so we cannot compute a true denominator of
+// sampled-vs-drifted from this table alone. The headline therefore
+// reports per-1k *drifted-sample* density — events per 1k distinct
+// `(modelId, requestId, surface)` tuples — which is still useful as
+// a "how chatty is the drift firehose" signal while the operator
+// dials `INTEGRITY_DRIFT_SAMPLE_RATE`.
+
+type IntegrityDriftWindow = "24h" | "7d" | "30d" | "all";
+
+function getIntegrityDriftWindowMs(w: IntegrityDriftWindow): number | null {
+  const hour = 60 * 60 * 1000;
+  if (w === "24h") return 24 * hour;
+  if (w === "7d") return 7 * 24 * hour;
+  if (w === "30d") return 30 * 24 * hour;
+  return null;
+}
+
+function parseIntegrityDriftWindow(raw: unknown): IntegrityDriftWindow {
+  return raw === "24h" || raw === "30d" || raw === "all" ? raw : "7d";
+}
+
+const INTEGRITY_DRIFT_MAX_ROWS = 200;
+
+router.get(
+  "/admin/integrity-drift",
+  authMiddleware,
+  adminMiddleware,
+  async (req: AuthRequest, res) => {
+    try {
+      const windowParam = parseIntegrityDriftWindow(req.query.window);
+      const windowMs = getIntegrityDriftWindowMs(windowParam);
+      const windowStart =
+        windowMs != null ? new Date(Date.now() - windowMs) : null;
+
+      const surfaceParam =
+        typeof req.query.surface === "string" && req.query.surface.length > 0
+          ? req.query.surface
+          : null;
+      const severityParam =
+        req.query.severity === "high" ||
+        req.query.severity === "low" ||
+        req.query.severity === "missing"
+          ? req.query.severity
+          : null;
+      const metricParam =
+        typeof req.query.metric === "string" && req.query.metric.length > 0
+          ? req.query.metric
+          : null;
+
+      const filters = [];
+      if (windowStart)
+        filters.push(
+          gte(integrityDriftEventsTable.requestTimestamp, windowStart),
+        );
+      if (surfaceParam)
+        filters.push(eq(integrityDriftEventsTable.surface, surfaceParam));
+      if (severityParam)
+        filters.push(eq(integrityDriftEventsTable.severity, severityParam));
+      if (metricParam)
+        filters.push(eq(integrityDriftEventsTable.metricId, metricParam));
+      const whereClause = filters.length > 0 ? and(...filters) : undefined;
+
+      const [totalRow] = await db
+        .select({
+          total: count(),
+          high: sql<number>`COUNT(*) FILTER (WHERE ${integrityDriftEventsTable.severity} = 'high')`,
+          low: sql<number>`COUNT(*) FILTER (WHERE ${integrityDriftEventsTable.severity} = 'low')`,
+          missing: sql<number>`COUNT(*) FILTER (WHERE ${integrityDriftEventsTable.severity} = 'missing')`,
+          distinctSamples: sql<number>`COUNT(DISTINCT (${integrityDriftEventsTable.modelId}, COALESCE(${integrityDriftEventsTable.requestId}, ''), ${integrityDriftEventsTable.surface}))`,
+          distinctModels: sql<number>`COUNT(DISTINCT ${integrityDriftEventsTable.modelId})`,
+        })
+        .from(integrityDriftEventsTable)
+        .where(whereClause ?? sql`true`);
+
+      const total = Number(totalRow?.total ?? 0);
+      const high = Number(totalRow?.high ?? 0);
+      const low = Number(totalRow?.low ?? 0);
+      const missing = Number(totalRow?.missing ?? 0);
+      const distinctSamples = Number(totalRow?.distinctSamples ?? 0);
+      const distinctModels = Number(totalRow?.distinctModels ?? 0);
+      const eventsPer1kDriftedSamples =
+        distinctSamples > 0 ? (total / distinctSamples) * 1000 : 0;
+
+      // Total sampled packets in the same window (denominator for the
+      // "drift events per 1k sampled packets" headline). Written by
+      // runDriftCheckInBackground on every sampled packet, regardless
+      // of whether any drift was found. Surface filter is applied
+      // server-side so the headline matches the active filter.
+      const sampledFilters = [
+        eq(eventsTable.eventName, "integrity_drift_sampled"),
+      ];
+      if (windowStart)
+        sampledFilters.push(gte(eventsTable.createdAt, windowStart));
+      if (surfaceParam)
+        sampledFilters.push(
+          sql`${eventsTable.metadata}->>'surface' = ${surfaceParam}`,
+        );
+      const [sampledRow] = await db
+        .select({ total: count() })
+        .from(eventsTable)
+        .where(and(...sampledFilters));
+      const sampledPackets = Number(sampledRow?.total ?? 0);
+      const eventsPer1kSampledPackets =
+        sampledPackets > 0 ? (total / sampledPackets) * 1000 : null;
+
+      // Per-surface sampled-packet counts so we can normalize bySurface
+      // into a true rate per 1k sampled packets, not just raw counts.
+      const surfaceSampledFilters = [
+        eq(eventsTable.eventName, "integrity_drift_sampled"),
+      ];
+      if (windowStart)
+        surfaceSampledFilters.push(gte(eventsTable.createdAt, windowStart));
+      const sampledBySurfaceRows = await db
+        .select({
+          surface: sql<string>`${eventsTable.metadata}->>'surface'`,
+          total: count(),
+        })
+        .from(eventsTable)
+        .where(and(...surfaceSampledFilters))
+        .groupBy(sql`${eventsTable.metadata}->>'surface'`);
+      const sampledBySurface = new Map<string, number>();
+      for (const row of sampledBySurfaceRows) {
+        if (row.surface) sampledBySurface.set(row.surface, Number(row.total));
+      }
+
+      const topMetrics = await db
+        .select({
+          metricId: integrityDriftEventsTable.metricId,
+          eventCount: count(),
+          highCount: sql<number>`COUNT(*) FILTER (WHERE ${integrityDriftEventsTable.severity} = 'high')`,
+        })
+        .from(integrityDriftEventsTable)
+        .where(whereClause ?? sql`true`)
+        .groupBy(integrityDriftEventsTable.metricId)
+        .orderBy(desc(count()))
+        .limit(10);
+
+      const bySurface = await db
+        .select({
+          surface: integrityDriftEventsTable.surface,
+          eventCount: count(),
+          highCount: sql<number>`COUNT(*) FILTER (WHERE ${integrityDriftEventsTable.severity} = 'high')`,
+        })
+        .from(integrityDriftEventsTable)
+        .where(whereClause ?? sql`true`)
+        .groupBy(integrityDriftEventsTable.surface)
+        .orderBy(desc(count()));
+
+      // Distinct metric/surface/severity values across ALL time so the
+      // filter dropdowns aren't tied to whatever happens to be inside
+      // the current window. Capped to keep payload small — drift
+      // monitor only knows ~80 registry metrics anyway.
+      const knownMetrics = await db
+        .selectDistinct({ metricId: integrityDriftEventsTable.metricId })
+        .from(integrityDriftEventsTable)
+        .orderBy(integrityDriftEventsTable.metricId)
+        .limit(200);
+      const knownSurfaces = await db
+        .selectDistinct({ surface: integrityDriftEventsTable.surface })
+        .from(integrityDriftEventsTable)
+        .orderBy(integrityDriftEventsTable.surface);
+
+      const events = await db
+        .select({
+          id: integrityDriftEventsTable.id,
+          modelId: integrityDriftEventsTable.modelId,
+          metricId: integrityDriftEventsTable.metricId,
+          surface: integrityDriftEventsTable.surface,
+          severity: integrityDriftEventsTable.severity,
+          extractedValue: integrityDriftEventsTable.extractedValue,
+          canonicalValue: integrityDriftEventsTable.canonicalValue,
+          deltaAbs: integrityDriftEventsTable.deltaAbs,
+          toleranceAbs: integrityDriftEventsTable.toleranceAbs,
+          location: integrityDriftEventsTable.location,
+          note: integrityDriftEventsTable.note,
+          requestId: integrityDriftEventsTable.requestId,
+          requestTimestamp: integrityDriftEventsTable.requestTimestamp,
+        })
+        .from(integrityDriftEventsTable)
+        .where(whereClause ?? sql`true`)
+        .orderBy(desc(integrityDriftEventsTable.requestTimestamp))
+        .limit(INTEGRITY_DRIFT_MAX_ROWS);
+
+      res.json({
+        window: windowParam,
+        filters: {
+          surface: surfaceParam,
+          severity: severityParam,
+          metric: metricParam,
+        },
+        totals: {
+          events: total,
+          high,
+          low,
+          missing,
+          distinctSamples,
+          distinctModels,
+          sampledPackets,
+          eventsPer1kSampledPackets,
+          eventsPer1kDriftedSamples,
+        },
+        topMetrics: topMetrics.map((m) => ({
+          metricId: m.metricId,
+          eventCount: Number(m.eventCount),
+          highCount: Number(m.highCount),
+        })),
+        bySurface: bySurface.map((s) => {
+          const sampled = sampledBySurface.get(s.surface) ?? 0;
+          const eventCount = Number(s.eventCount);
+          return {
+            surface: s.surface,
+            eventCount,
+            highCount: Number(s.highCount),
+            sampledPackets: sampled,
+            eventsPer1kSampledPackets:
+              sampled > 0 ? (eventCount / sampled) * 1000 : null,
+          };
+        }),
+        knownMetrics: knownMetrics.map((m) => m.metricId),
+        knownSurfaces: knownSurfaces.map((s) => s.surface),
+        events: events.map((e) => ({
+          id: e.id,
+          modelId: e.modelId,
+          metricId: e.metricId,
+          surface: e.surface,
+          severity: e.severity,
+          extractedValue: e.extractedValue,
+          canonicalValue: e.canonicalValue,
+          deltaAbs: e.deltaAbs,
+          toleranceAbs: e.toleranceAbs,
+          location: e.location,
+          note: e.note,
+          requestId: e.requestId,
+          requestTimestamp: e.requestTimestamp.toISOString(),
+        })),
+        rowLimit: INTEGRITY_DRIFT_MAX_ROWS,
+        truncated: events.length === INTEGRITY_DRIFT_MAX_ROWS,
+      });
+    } catch (err) {
+      console.error("Admin integrity-drift error:", err);
+      res
+        .status(500)
+        .json({ error: "Failed to fetch math-integrity drift events." });
     }
   },
 );
