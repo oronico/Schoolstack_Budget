@@ -399,6 +399,24 @@ const shortCashRunwayRule: RuleFn = (input) => {
 // founders + lenders see the in-year crunch separately from the
 // `short_cash_runway` issue (which only catches a depleted year-end
 // balance).
+//
+// Task #909 / #994 — Intentional split with `cash_flow_timing` in
+// `financial-health.ts` (see the HealthSignal with `id:
+// "cash_flow_timing"` around L256-295). That sibling signal covers the
+// parallel "burns more cash than it generates in some months, but
+// cumulative never crosses zero" case. We deliberately do NOT mirror
+// it as a DecisionIssue rule here:
+//   - DecisionIssues feed the "Top Issues" surface in lender/board
+//     packets and the founder planner — they're escalations that
+//     demand an action this period.
+//   - HealthSignals feed the Health Dimensions grid — a status read
+//     across cash, margin, debt, etc.
+// Duplicating the timing signal as a rule would double-count the same
+// underlying risk in two surfaces. If product later wants the timing
+// risk surfaced in "Top Issues" too, add a `negativeNetCashFlowMonths`
+// rule below that mirrors the suppression contract in
+// `financial-health.ts` (do not fire when cumulative dips below zero
+// — `cumulative_cash_negative` already covers that case).
 const cumulativeCashNegativeRule: RuleFn = (input) => {
   // Prefer "first month cash crosses zero" — that's the concrete date a
   // bridge must clear. Fall back to the trough only when the canonical
