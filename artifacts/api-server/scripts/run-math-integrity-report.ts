@@ -1625,94 +1625,16 @@ function runM2Coverage(
 // listed in the report with its leaf count so it remains auditable and
 // can be promoted to a registry metric later if needed.
 
-interface M2LabelMapping {
-  metricId: string;
-  /** Project the canonical for `metricId` to the scalar shape the leaf carries. */
-  pickCanonical?: (canonical: unknown) => SurfaceValue;
-  /**
-   * Optional path-filter predicate. If set, only leaves whose path
-   * satisfies the predicate are routed to this metric. Used to exclude
-   * per-scenario sensitivity duplicates (`scenarios[N]` paths) so the
-   * mapped comparison stays anchored to the base/headline scenario.
-   */
-  pathFilter?: (path: string) => boolean;
-}
-
-/**
- * Default path filter for headline/base-scenario leaves only — excludes
- * any leaf inside `lenderStressTests.scenarios[N]` (per-scenario
- * sensitivity rows that intentionally deviate from base canonical) and
- * inside `deltaVsBase` (sensitivity deltas, not absolute values).
- */
-const BASE_SCENARIO_ONLY = (path: string): boolean =>
-  !/\.scenarios\[\d+\]/.test(path) && !/\.deltaVsBase\./.test(path);
-
-const pickFromObject = <K extends string>(key: K) =>
-  (c: unknown): SurfaceValue =>
-    typeof c === "object" && c !== null && key in c
-      ? ((c as Record<string, unknown>)[key] as SurfaceValue)
-      : null;
-
-const M2_LABEL_TO_METRIC: Record<string, M2LabelMapping> = {
-  cashRunwayMonths: {
-    metricId: "cash-runway-months",
-    pathFilter: BASE_SCENARIO_ONLY,
-  },
-  troughEndingCash: { metricId: "cash-trough-ending-cash" },
-  reserveMonthsLastYear: { metricId: "reserve-months-last-year" },
-  breakEvenYear: {
-    metricId: "break-even-year",
-    pathFilter: BASE_SCENARIO_ONLY,
-  },
-  breakEvenStudentsY1: { metricId: "break-even-students-y1" },
-  dscrY1Normalized: {
-    metricId: "dscr-year-series-normalized",
-    pickCanonical: (c) => (Array.isArray(c) ? (c[0] as SurfaceValue) : null),
-  },
-  dscrMinNormalized: {
-    metricId: "dscr-min-normalized",
-    pickCanonical: pickFromObject("min"),
-  },
-  founderCompTotalDelta: {
-    metricId: "founder-comp-adjustment",
-    pickCanonical: pickFromObject("totalDelta"),
-  },
-  taggedFraction: {
-    metricId: "lender-readiness-cap",
-    pickCanonical: pickFromObject("taggedFraction"),
-    // Only the lender-readiness "result.cap" exposes the realized
-    // overall tagged fraction. The intermediate dimension/severity
-    // caps are diagnostic and don't always equal the overall.
-    pathFilter: (p) => p.includes("lenderReadiness.result.cap"),
-  },
-  // Per-bucket Y1 percentage projections. Canonical is the per-year
-  // `pctByBucket` array (snake_case keys, 0-1 fractions). The leaves
-  // carry the camelCase pre-formatted percent (×100).
-  contractedPct: {
-    metricId: "revenue-quality-by-bucket",
-    pickCanonical: (c) => pickBucketPct(c, "contracted"),
-  },
-  projectedPct: {
-    metricId: "revenue-quality-by-bucket",
-    pickCanonical: (c) => pickBucketPct(c, "projected"),
-  },
-  donorDependentPct: {
-    metricId: "revenue-quality-by-bucket",
-    pickCanonical: (c) => pickBucketPct(c, "donor_dependent"),
-  },
-  policyDependentPct: {
-    metricId: "revenue-quality-by-bucket",
-    pickCanonical: (c) => pickBucketPct(c, "policy_dependent"),
-  },
-};
-
-function pickBucketPct(canonical: unknown, key: string): SurfaceValue {
-  if (!Array.isArray(canonical) || canonical.length === 0) return null;
-  const y1 = canonical[0] as Record<string, unknown> | undefined;
-  if (!y1 || typeof y1 !== "object") return null;
-  const v = y1[key];
-  return typeof v === "number" ? v * 100 : null;
-}
+// Task #987 — the M2 label → registry-metric mapping was extracted
+// into a shared module so the production drift monitor
+// (`src/lib/integrity/drift-monitor.ts`) and this CI integrity report
+// compare the same metrics on the same surfaces. See
+// `src/lib/integrity/label-mappings.ts` for the table and the
+// `PRODUCTION_DRIFT_EXCLUSIONS` allowlist.
+import {
+  M2_LABEL_TO_METRIC,
+  type LabelMapping as M2LabelMapping,
+} from "../src/lib/integrity/label-mappings.js";
 
 interface UnmappedLabelSummary {
   label: string;

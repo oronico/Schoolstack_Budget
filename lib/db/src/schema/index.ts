@@ -17,3 +17,4 @@ export * from "./audit-log";
 export * from "./coach-surface-overrides";
 export * from "./borrower-entities";
 export * from "./founder-profiles";
+export * from "./integrity-drift-events";

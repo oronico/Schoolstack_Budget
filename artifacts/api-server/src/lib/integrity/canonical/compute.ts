@@ -548,6 +548,56 @@ export async function computeCanonicalValues(
 }
 
 /**
+ * Task #987 — Production drift-monitor variant.
+ *
+ * Compute canonical values for an arbitrary production model when the
+ * caller already has a fresh `ConsultantOutput`. Skips the engine
+ * re-run inside `computeCanonicalValuesForFixture` so the sampled
+ * production-traffic harness adds only the resolver-dispatch cost on
+ * top of the work the request already did (the engine output is
+ * shared with whichever packet builder triggered the check).
+ *
+ * Returns the same `{ metricId -> value }` map shape
+ * `computeCanonicalValues` produces, so downstream diff code can
+ * treat the two paths interchangeably.
+ *
+ * Resolvers MUST not re-invoke the engine (see header note 1), so
+ * passing the existing output here is correct by construction.
+ */
+export function computeCanonicalValuesForModel(
+  modelData: ModelData,
+  consultant: ConsultantOutput,
+): Record<string, unknown> {
+  const narrativeBundle = buildNarrativeBundle(modelData, consultant);
+  // Synthetic fixture wrapper — the slug/label fields are only used
+  // for the richer CanonicalValueRecord shape (not exposed here), and
+  // resolvers read off `modelData` / `consultant` / `narrativeBundle`.
+  const ctx: ComputeResolverContext = {
+    fixture: {
+      slug: "production",
+      label: "production model",
+      segment: "PRODUCTION",
+      data: modelData as unknown as Record<string, unknown>,
+    },
+    modelData,
+    consultant,
+    narrativeBundle,
+  };
+  const out: Record<string, unknown> = {};
+  for (const metric of CANONICAL_METRICS) {
+    const resolver = RESOLVERS[metric.id];
+    if (!resolver) {
+      throw new Error(
+        `[canonical/compute] No resolver registered for metric "${metric.id}".`,
+      );
+    }
+    const { value } = resolver(ctx);
+    out[metric.id] = value;
+  }
+  return out;
+}
+
+/**
  * Convenience: compute canonical values for the entire persona
  * battery (Oakwood / Riverside / Liberty). Result is keyed by
  * `metricId` then `persona` for direct M5 anchor lookup.

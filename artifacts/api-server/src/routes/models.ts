@@ -166,6 +166,7 @@ function abortGuard(req: AuthRequest, res: Response): boolean {
 // (HARD_BLOCK_FLAG_TYPES, warning/critical reason flow, etc.).
 import { checkUnresolvedFlags } from "../lib/check-unresolved-flags";
 import { buildLenderPacket } from "../lib/packets/build-lender-packet";
+import { runDriftCheckInBackground } from "../lib/integrity/drift-monitor";
 import { generateLenderPacketPDF } from "../lib/packets/lender-packet-pdf";
 import { buildLenderSummary } from "../lib/packets/build-lender-summary";
 import { buildBoardPacket } from "../lib/packets/build-board-packet";
@@ -1115,6 +1116,14 @@ router.get("/models/:id/export/lender-packet", authMiddleware, async (req: AuthR
       forecastAccuracyFilter,
     );
 
+    // Task #987 — sampled production drift check. Fire-and-forget;
+    // gated by INTEGRITY_DRIFT_SAMPLE_RATE; never delays this response.
+    runDriftCheckInBackground(data, consultantOutput, packet, {
+      modelId: model.id,
+      surface: "lender-packet",
+      requestId: req.headers["x-request-id"] as string | undefined,
+    });
+
     res.json(packet);
   } catch (err) {
     console.error("Lender packet JSON error:", err);
@@ -1183,6 +1192,12 @@ router.get("/models/:id/export/lender-packet-pdf", authMiddleware, async (req: A
       personaComfort,
       forecastAccuracyFilter,
     );
+    // Task #987 — sampled production drift check (PDF surface).
+    runDriftCheckInBackground(data, consultantOutput, packet, {
+      modelId: model.id,
+      surface: "lender-packet-pdf",
+      requestId: req.headers["x-request-id"] as string | undefined,
+    });
     // Task #615 — lead the lender packet PDF with a one-page summary
     // sourced from the canonical engine. Same builder powers the new
     // workbook tab so the PDF and Excel one-pagers carry identical
@@ -1293,6 +1308,13 @@ router.get("/models/:id/export/board-packet", authMiddleware, async (req: AuthRe
       forecastAccuracyFilter,
     );
 
+    // Task #987 — sampled production drift check (board packet).
+    runDriftCheckInBackground(data, consultantOutput, packet, {
+      modelId: model.id,
+      surface: "board-packet",
+      requestId: req.headers["x-request-id"] as string | undefined,
+    });
+
     res.json(packet);
   } catch (err) {
     console.error("Board packet JSON error:", err);
@@ -1357,6 +1379,12 @@ router.get("/models/:id/export/board-packet-pdf", authMiddleware, async (req: Au
       personaComfort,
       forecastAccuracyFilter,
     );
+    // Task #987 — sampled production drift check (board PDF surface).
+    runDriftCheckInBackground(data, consultantOutput, packet, {
+      modelId: model.id,
+      surface: "board-packet-pdf",
+      requestId: req.headers["x-request-id"] as string | undefined,
+    });
     // Task #660 - Plain-English founder summary leads the body of the
     // Board and Funder Summary PDF (six sections, coach voice, every
     // figure sourced from the canonical engine).

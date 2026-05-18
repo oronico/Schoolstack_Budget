@@ -9,6 +9,7 @@ export {
   computeCanonicalValues,
   computeCanonicalValuesForFixture,
   computeCanonicalValuesForFixtures,
+  computeCanonicalValuesForModel,
   listResolverMetricIds,
   findRegistryGaps,
   findResolverGaps,
