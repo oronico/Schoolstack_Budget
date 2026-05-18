@@ -79,10 +79,14 @@ recalculate when an input cell is edited.
 
 ## 4. PDF render at scale — 10+ distinct fixtures, zero render errors
 
-The lender-packet, board-packet, decision-comparison, and pro-forma
-PDF generators must render every one of the named persona fixtures
+The lender-packet, board-packet, and decision-comparison PDF
+generators must render every one of the named persona fixtures
 without throwing, without producing the encoding-corruption pattern
-that #922 fixed, and without dropping any declared section.
+that #922 fixed, and without dropping any declared section. (Pro-forma
+PDF rendering is exercised indirectly by the lender-packet suite,
+which embeds the pro-forma section; a dedicated pro-forma text-
+snapshot suite is not in scope for M7 and is tracked by the existing
+follow-ups around packet coverage.)
 
 | # | Gate | Evidence | State |
 |---|---|---|---|
@@ -115,8 +119,14 @@ verification.
 
 | # | Gate | Evidence | State |
 |---|---|---|---|
-| 6.1 | Every field annotated `required_conditional` in the wizard schema produces a blocking validation error when the trigger condition is true and the field is empty. | Sweep: `rg -nP "required_conditional\|requiredConditional" artifacts/school-financial-model/src lib/ artifacts/api-server/src` returns the field list. For each, write a unit test asserting the validator fires; file blocker follow-up if any are uncovered. | [ ] |
+| 6.1 | Every field annotated `required_conditional` in the wizard schema produces a blocking validation error when the trigger condition is true and the field is empty. | Sweep with the command in the fenced block below `§6`; for each hit, write a unit test asserting the validator fires and file a blocker follow-up if any are uncovered. | [ ] |
 | 6.2 | The list of `required_conditional` fields is unchanged from the snapshot the M4 reviewer signed off on; any additions since require re-review. | Diff the rg output above against the snapshot kept in the M7 completion summary §B. | [ ] |
+
+Sweep command for §6 (use the fenced version — the table-cell version above is descriptive only and is NOT copy-paste-safe in markdown due to pipe escaping):
+
+```
+rg -nP "required_conditional|requiredConditional" artifacts/school-financial-model/src lib/ artifacts/api-server/src
+```
 
 ## 7. Confidence cap — verified at threshold boundaries (#929)
 
@@ -137,8 +147,27 @@ if a reviewer found it during walkthrough.
 
 | # | Gate | Evidence | State |
 |---|---|---|---|
-| 8.1 | The sweep below returns only entries documented as acknowledged sentinels. The sweep deliberately excludes the gate doc and the M7 completion summary themselves — they reference the tokens by name as part of documenting the gate, and including them in their own sweep would be self-referential. Run: `rg -nP "TODO\|FIXME\|\[citation pending\]" -g '*.ts' -g '*.tsx' -g '*.md' -g '!node_modules' -g '!dist' -g '!attached_assets' -g '!docs/operations/go-live-gate-checklist.md' -g '!docs/operations/m7-completion-summary.md'`. | Today's sweep returns three hits, all `[citation pending]`: (a) `artifacts/api-server/src/lib/lender-readiness-caps.ts:67` — JSDoc on the cap-tier table explicitly defining `[citation pending]` as an acknowledged value; (b) `artifacts/school-financial-model/src/lib/integrity/__tests__/extract-rendered.test.tsx:65` and (c) `artifacts/school-financial-model/src/components/consultant/__tests__/ConsultantAnalysisView.cap-preview.test.tsx:16` — test fixtures using the acknowledged sentinel as the `source` field. All three are acceptable; the gate is green. | [x] |
-| 8.2 | Re-run the same sweep against the post-M7 `main` HEAD on the morning of the review. New hits require triage before the walkthrough. | Same `rg` invocation (including the two exclude flags for this checklist and the completion summary); expected count: 3 (the three sentinel entries from §8.1). | [ ] |
+| 8.1 | The sweep below returns only entries documented as acknowledged sentinels. The sweep deliberately excludes the gate doc and the M7 completion summary themselves — they reference the tokens by name as part of documenting the gate, and including them in their own sweep would be self-referential. The copy-paste-safe form of the command is the fenced block under `§8` below (the cell text would otherwise have to escape the regex `\|` for markdown's table-pipe and become non-executable). | Today's sweep returns three hits, all `[citation pending]`: (a) `artifacts/api-server/src/lib/lender-readiness-caps.ts:67` — JSDoc on the cap-tier table explicitly defining `[citation pending]` as an acknowledged value; (b) `artifacts/school-financial-model/src/lib/integrity/__tests__/extract-rendered.test.tsx:65` and (c) `artifacts/school-financial-model/src/components/consultant/__tests__/ConsultantAnalysisView.cap-preview.test.tsx:16` — test fixtures using the acknowledged sentinel as the `source` field. All three are acceptable; the gate is green. | [x] |
+| 8.2 | Re-run the same fenced-block command against the post-M7 `main` HEAD on the morning of the review. New hits require triage before the walkthrough. | Same `rg` invocation as §8.1, executed against current `main`. Expected count: 3 (the three sentinel entries from §8.1). | [ ] |
+
+Sweep command for §8 (run from repo root, exactly as written):
+
+```
+rg -nP "TODO|FIXME|\[citation pending\]" -g '*.ts' -g '*.tsx' -g '*.md' -g '!node_modules' -g '!dist' -g '!attached_assets' -g '!docs/operations/go-live-gate-checklist.md' -g '!docs/operations/m7-completion-summary.md'
+```
+
+Verified output today (2026-05-18):
+
+```
+artifacts/school-financial-model/src/lib/integrity/__tests__/extract-rendered.test.tsx
+65:          source: "[citation pending]",
+
+artifacts/api-server/src/lib/lender-readiness-caps.ts
+67:  /** Citation for the threshold choice. `[citation pending]` is acknowledged. */
+
+artifacts/school-financial-model/src/components/consultant/__tests__/ConsultantAnalysisView.cap-preview.test.tsx
+16:  source: "[citation pending]",
+```
 
 ## 9. Production data migration plan — M6 ready to execute
 
