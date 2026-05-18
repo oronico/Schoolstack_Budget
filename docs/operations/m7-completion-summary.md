@@ -66,6 +66,51 @@ riverside under the current demo state (0/22 assumptions tagged);
 they classify as `exact-text-match` and are documented in the report
 itself.
 
+**Coverage-gap rationale for the three skipped-structural rows.**
+A domain reviewer will reasonably ask: "if all three M4 personas
+sit at `taggedFraction = 0`, is the cap subsystem actually exercised
+by the integrity report at non-zero tagged values?" The answer, and
+the rationale for accepting the gap at M7 cutover, is:
+
+1. **The cap MATH is fully covered, just not through the integrity
+   report.** `artifacts/api-server/tests/lender-readiness-cap.ts`
+   §B (Threshold-boundary assertions) exercises every relevant
+   `taggedFraction` boundary — `0.0`, `0.29`, `0.30`, `0.59`,
+   `0.60`, `0.99`, `1.0` — against every starting tier, and asserts
+   the resulting `effectiveRating` + `cap.applied` flag match the
+   tier table in `lender-readiness-caps.calibration.md`. That suite
+   runs first-in-chain in `api-tests` and gates the deploy. The
+   `Strong` floor (§C) and cross-surface callout determinism (§D)
+   are also covered there.
+
+2. **What the integrity report does NOT prove today.** It does not
+   prove that the *rendered* cap value on a lender packet for a
+   persona with `taggedFraction > 0` round-trips through the
+   wizard → compute → projector → packet pipeline byte-identically
+   to the canonical M3 value. The three current personas all sit
+   at zero, so the diff is degenerate (`0 ≡ 0`) and the report
+   classifies the row as `skipped-structural` rather than `pass`.
+
+3. **Why we did NOT build a tagged-evidence persona fixture for
+   M7.** Adding one cascades into baseline regeneration
+   (`tests/__baselines__/canonical-values.json`), lender-packet
+   PDF snapshot updates, consultant-engine cross-tests, and the
+   wizard-preview-matches-pdf golden — meaningfully exceeding the
+   "< 2 hours" budget the reviewer set for this refinement. The
+   risk/reward did not justify it at the cutover boundary: the
+   unit test in (1) already locks the cap behavior, and the
+   integrity report's role at `taggedFraction > 0` is duplicative
+   coverage rather than first-line proof.
+
+4. **Action that closes the gap, filed for post-cutover.** Follow-
+   up task **#988** (currently in-flight) covers building a fourth
+   persona fixture with `taggedFraction = 5/22` (lowest value that
+   actually exercises the `[0.0, 0.30)` cap-at-Needs-Work tier
+   with a non-degenerate diff) so the next M4 regeneration shows
+   three `pass` rows in this slot instead of three
+   `skipped-structural` rows. Until that lands, this rationale is
+   the reviewer-visible audit trail.
+
 ## Section C — Reviewer walkthrough notes (TO BE COMPLETED LIVE)
 
 This section captures the reviewer's notes from the live end-to-end
