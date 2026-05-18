@@ -1,0 +1,11 @@
+{
+  "tag": "0008_integrity_drift_events",
+  "file": "0008_integrity_drift_events.sql",
+  "task": "#987",
+  "what": "New table `integrity_drift_events` for the production math-integrity drift monitor (Task #987). One row per (model, metric, surface) tuple where the canonical value disagreed with the rendered value beyond the registry-driven tolerance, plus `integrity_drift_sampled` marker rows that record the sample denominator. Two btree indexes: `(model_id, metric_id)` and `(severity, request_timestamp)`.",
+  "affectedRecords": "No existing rows — the table is created by this migration.",
+  "approach": "`one-shot SQL` (Drizzle migrator).",
+  "rollback": "`DROP TABLE integrity_drift_events`. The drift monitor's write path (`artifacts/api-server/src/lib/integrity/drift-monitor.ts`) is best-effort and guards every insert against DB errors, so dropping the table only degrades the admin Integrity tab (Task #992) to an empty state — no founder-facing surface depends on it.",
+  "window": "`inline` — Drizzle migrator runs on API boot before the server accepts traffic.",
+  "appliedToProduction": false
+}
