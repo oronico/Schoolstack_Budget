@@ -1,6 +1,13 @@
-import { File } from "@google-cloud/storage";
+import { ObjectFile, ObjectNotFoundError } from "./objectStorage";
 
-const ACL_POLICY_METADATA_KEY = "custom:aclPolicy";
+// Stored as an S3 object tag under the key `aclPolicy`. The value is
+// base64-encoded JSON because S3/R2 restrict tag values to a small
+// character set that excludes JSON-meaningful characters like `{`, `}`,
+// `"`, and `,`. Base64 characters (A-Z, a-z, 0-9, +, /, =) are all
+// inside the allowed set. Typical policies (~40-80 chars of JSON →
+// ~60-110 chars of base64) sit comfortably under the 256-char per-tag
+// value limit.
+const ACL_POLICY_TAG_KEY = "aclPolicy";
 
 // Can be flexibly defined according to the use case.
 //
@@ -29,7 +36,6 @@ export interface ObjectAclRule {
   permission: ObjectPermission;
 }
 
-// Stored as object custom metadata under "custom:aclPolicy" (JSON string).
 export interface ObjectAclPolicy {
   owner: string;
   visibility: "public" | "private";
@@ -67,31 +73,47 @@ function createObjectAccessGroup(
   }
 }
 
+function encodePolicy(policy: ObjectAclPolicy): string {
+  return Buffer.from(JSON.stringify(policy), "utf8").toString("base64");
+}
+
+function decodePolicy(encoded: string): ObjectAclPolicy | null {
+  try {
+    const json = Buffer.from(encoded, "base64").toString("utf8");
+    const parsed = JSON.parse(json);
+    if (parsed && typeof parsed === "object" && typeof parsed.owner === "string") {
+      return parsed as ObjectAclPolicy;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function setObjectAclPolicy(
-  objectFile: File,
+  objectFile: ObjectFile,
   aclPolicy: ObjectAclPolicy,
 ): Promise<void> {
   const [exists] = await objectFile.exists();
   if (!exists) {
     throw new Error(`Object not found: ${objectFile.name}`);
   }
-
-  await objectFile.setMetadata({
-    metadata: {
-      [ACL_POLICY_METADATA_KEY]: JSON.stringify(aclPolicy),
-    },
-  });
+  await objectFile.setTagging({ [ACL_POLICY_TAG_KEY]: encodePolicy(aclPolicy) });
 }
 
 export async function getObjectAclPolicy(
-  objectFile: File,
+  objectFile: ObjectFile,
 ): Promise<ObjectAclPolicy | null> {
-  const [metadata] = await objectFile.getMetadata();
-  const aclPolicy = metadata?.metadata?.[ACL_POLICY_METADATA_KEY];
-  if (!aclPolicy) {
-    return null;
+  let tags: Record<string, string>;
+  try {
+    tags = await objectFile.getTagging();
+  } catch (err) {
+    if (err instanceof ObjectNotFoundError) return null;
+    throw err;
   }
-  return JSON.parse(aclPolicy as string);
+  const raw = tags[ACL_POLICY_TAG_KEY];
+  if (!raw) return null;
+  return decodePolicy(raw);
 }
 
 export async function canAccessObject({
@@ -100,7 +122,7 @@ export async function canAccessObject({
   requestedPermission,
 }: {
   userId?: string;
-  objectFile: File;
+  objectFile: ObjectFile;
   requestedPermission: ObjectPermission;
 }): Promise<boolean> {
   const aclPolicy = await getObjectAclPolicy(objectFile);

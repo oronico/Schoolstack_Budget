@@ -1,6 +1,16 @@
-import { Storage, File } from "@google-cloud/storage";
 import { Readable } from "stream";
 import { randomUUID } from "crypto";
+import {
+  S3Client,
+  HeadObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  ListObjectsV2Command,
+  GetObjectTaggingCommand,
+  PutObjectTaggingCommand,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import {
   ObjectAclPolicy,
   ObjectPermission,
@@ -9,31 +19,191 @@ import {
   setObjectAclPolicy,
 } from "./objectAcl";
 
-const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
+// Cloudflare R2 (S3-compatible). The AWS SDK is just the S3 protocol
+// client — no AWS account, no AWS endpoints. Every request goes to the
+// configured R2 endpoint. Replit App Storage / GCS sidecar removed
+// 2026-05-18 (Task #1004); no historical data carry-over (Task #1006
+// scoped out — DB-side scan confirmed zero referenced object paths
+// across all candidate tables).
 
-export const objectStorageClient = new Storage({
-  credentials: {
-    audience: "replit",
-    subject_token_type: "access_token",
-    token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
-    type: "external_account",
-    credential_source: {
-      url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
-      format: {
-        type: "json",
-        subject_token_field_name: "access_token",
-      },
-    },
-    universe_domain: "googleapis.com",
-  },
-  projectId: "",
-});
+let _client: S3Client | null = null;
+let _bucket: string | null = null;
+
+function r2Config(): { client: S3Client; bucket: string } {
+  if (_client && _bucket) return { client: _client, bucket: _bucket };
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+  const endpoint = process.env.R2_ENDPOINT;
+  const bucket = process.env.R2_BUCKET_NAME;
+  if (!accessKeyId || !secretAccessKey || !endpoint || !bucket) {
+    const missing = [
+      !accessKeyId && "R2_ACCESS_KEY_ID",
+      !secretAccessKey && "R2_SECRET_ACCESS_KEY",
+      !endpoint && "R2_ENDPOINT",
+      !bucket && "R2_BUCKET_NAME",
+    ]
+      .filter(Boolean)
+      .join(", ");
+    throw new Error(
+      `R2 object storage is not configured (missing: ${missing}). ` +
+        `Set the four R2_* env vars in the deployment environment.`,
+    );
+  }
+  _client = new S3Client({
+    region: "auto",
+    endpoint,
+    credentials: { accessKeyId, secretAccessKey },
+    forcePathStyle: true,
+  });
+  _bucket = bucket;
+  return { client: _client, bucket };
+}
+
+function stripSlashes(s: string): string {
+  return s.replace(/^\/+|\/+$/g, "");
+}
+
+function joinKey(prefix: string, file: string): string {
+  return `${stripSlashes(prefix)}/${file.replace(/^\/+/, "")}`;
+}
 
 export class ObjectNotFoundError extends Error {
   constructor() {
     super("Object not found");
     this.name = "ObjectNotFoundError";
     Object.setPrototypeOf(this, ObjectNotFoundError.prototype);
+  }
+}
+
+function is404(err: unknown): boolean {
+  const e = err as { $metadata?: { httpStatusCode?: number }; name?: string } | null;
+  if (!e) return false;
+  if (e.$metadata?.httpStatusCode === 404) return true;
+  return e.name === "NotFound" || e.name === "NoSuchKey";
+}
+
+/**
+ * Thin wrapper around an R2 object reference. The method shape mirrors
+ * the subset of @google-cloud/storage's `File` API that the rest of the
+ * api-server depends on (`.exists()`, `.getMetadata()`, `.download()`,
+ * `.createReadStream()`, `.delete()`, `.name`) so callers in
+ * `routes/storage.ts`, `routes/models.ts`, `scripts/cleanup-orphan-uploads.ts`,
+ * and `lib/packets/lender-packet-pdf.ts` keep working unchanged after
+ * the GCS → R2 swap. The two new methods (`getTagging`, `setTagging`)
+ * back the ACL policy storage that lived in GCS custom metadata under
+ * the old implementation; we use S3 object tags instead because object
+ * metadata is immutable post-PUT without a CopyObject, while tags are
+ * mutable in place.
+ */
+export class ObjectFile {
+  constructor(public readonly bucket: string, public readonly key: string) {}
+
+  get name(): string {
+    return this.key;
+  }
+
+  async exists(): Promise<[boolean]> {
+    const { client } = r2Config();
+    try {
+      await client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: this.key }));
+      return [true];
+    } catch (err) {
+      if (is404(err)) return [false];
+      throw err;
+    }
+  }
+
+  async getMetadata(): Promise<
+    [{ contentType?: string; size?: number; metadata?: Record<string, string> }]
+  > {
+    const { client } = r2Config();
+    try {
+      const head = await client.send(
+        new HeadObjectCommand({ Bucket: this.bucket, Key: this.key }),
+      );
+      return [
+        {
+          contentType: head.ContentType,
+          size: head.ContentLength,
+          metadata: head.Metadata,
+        },
+      ];
+    } catch (err) {
+      if (is404(err)) throw new ObjectNotFoundError();
+      throw err;
+    }
+  }
+
+  async download(): Promise<[Buffer]> {
+    const { client } = r2Config();
+    try {
+      const res = await client.send(
+        new GetObjectCommand({ Bucket: this.bucket, Key: this.key }),
+      );
+      if (!res.Body) throw new ObjectNotFoundError();
+      const chunks: Buffer[] = [];
+      for await (const chunk of res.Body as AsyncIterable<Uint8Array>) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+      return [Buffer.concat(chunks)];
+    } catch (err) {
+      if (is404(err)) throw new ObjectNotFoundError();
+      throw err;
+    }
+  }
+
+  createReadStream(): Readable {
+    const bucket = this.bucket;
+    const key = this.key;
+    async function* gen(): AsyncGenerator<Buffer> {
+      const { client } = r2Config();
+      const res = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+      if (!res.Body) return;
+      for await (const chunk of res.Body as AsyncIterable<Uint8Array>) {
+        yield Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      }
+    }
+    return Readable.from(gen());
+  }
+
+  async delete(opts?: { ignoreNotFound?: boolean }): Promise<void> {
+    const { client } = r2Config();
+    try {
+      await client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: this.key }));
+    } catch (err) {
+      if (opts?.ignoreNotFound && is404(err)) return;
+      throw err;
+    }
+  }
+
+  async getTagging(): Promise<Record<string, string>> {
+    const { client } = r2Config();
+    try {
+      const res = await client.send(
+        new GetObjectTaggingCommand({ Bucket: this.bucket, Key: this.key }),
+      );
+      const out: Record<string, string> = {};
+      for (const t of res.TagSet ?? []) {
+        if (t.Key && typeof t.Value === "string") out[t.Key] = t.Value;
+      }
+      return out;
+    } catch (err) {
+      if (is404(err)) throw new ObjectNotFoundError();
+      throw err;
+    }
+  }
+
+  async setTagging(tags: Record<string, string>): Promise<void> {
+    const { client } = r2Config();
+    await client.send(
+      new PutObjectTaggingCommand({
+        Bucket: this.bucket,
+        Key: this.key,
+        Tagging: {
+          TagSet: Object.entries(tags).map(([Key, Value]) => ({ Key, Value })),
+        },
+      }),
+    );
   }
 }
 
@@ -46,14 +216,14 @@ export class ObjectStorageService {
       new Set(
         pathsStr
           .split(",")
-          .map((path) => path.trim())
-          .filter((path) => path.length > 0)
-      )
+          .map((p) => p.trim())
+          .filter((p) => p.length > 0),
+      ),
     );
     if (paths.length === 0) {
       throw new Error(
-        "PUBLIC_OBJECT_SEARCH_PATHS not set. Create a bucket in 'Object Storage' " +
-          "tool and set PUBLIC_OBJECT_SEARCH_PATHS env var (comma-separated paths)."
+        "PUBLIC_OBJECT_SEARCH_PATHS not set. Set it to a comma-separated " +
+          "list of key prefixes inside the R2 bucket (e.g. `public`).",
       );
     }
     return paths;
@@ -63,31 +233,25 @@ export class ObjectStorageService {
     const dir = process.env.PRIVATE_OBJECT_DIR || "";
     if (!dir) {
       throw new Error(
-        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
-          "tool and set PRIVATE_OBJECT_DIR env var."
+        "PRIVATE_OBJECT_DIR not set. Set it to the key prefix inside the " +
+          "R2 bucket where uploads should land (e.g. `private`).",
       );
     }
     return dir;
   }
 
-  async searchPublicObject(filePath: string): Promise<File | null> {
-    for (const searchPath of this.getPublicObjectSearchPaths()) {
-      const fullPath = `${searchPath}/${filePath}`;
-
-      const { bucketName, objectName } = parseObjectPath(fullPath);
-      const bucket = objectStorageClient.bucket(bucketName);
-      const file = bucket.file(objectName);
-
+  async searchPublicObject(filePath: string): Promise<ObjectFile | null> {
+    const { bucket } = r2Config();
+    for (const prefix of this.getPublicObjectSearchPaths()) {
+      const key = joinKey(prefix, filePath);
+      const file = new ObjectFile(bucket, key);
       const [exists] = await file.exists();
-      if (exists) {
-        return file;
-      }
+      if (exists) return file;
     }
-
     return null;
   }
 
-  async downloadObject(file: File, cacheTtlSec: number = 3600): Promise<Response> {
+  async downloadObject(file: ObjectFile, cacheTtlSec: number = 3600): Promise<Response> {
     const [metadata] = await file.getMetadata();
     const aclPolicy = await getObjectAclPolicy(file);
     const isPublic = aclPolicy?.visibility === "public";
@@ -96,7 +260,7 @@ export class ObjectStorageService {
     const webStream = Readable.toWeb(nodeStream) as ReadableStream;
 
     const headers: Record<string, string> = {
-      "Content-Type": (metadata.contentType as string) || "application/octet-stream",
+      "Content-Type": metadata.contentType || "application/octet-stream",
       "Cache-Control": `${isPublic ? "public" : "private"}, max-age=${cacheTtlSec}`,
     };
     if (metadata.size) {
@@ -107,13 +271,8 @@ export class ObjectStorageService {
   }
 
   async getObjectEntityUploadURL(ownerUserId?: string | number): Promise<string> {
-    const privateObjectDir = this.getPrivateObjectDir();
-    if (!privateObjectDir) {
-      throw new Error(
-        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
-          "tool and set PRIVATE_OBJECT_DIR env var."
-      );
-    }
+    const { client, bucket } = r2Config();
+    const privateDir = stripSlashes(this.getPrivateObjectDir());
 
     const objectId = randomUUID();
     // Task #734 — encode the planned owner into the object name so the
@@ -124,68 +283,65 @@ export class ObjectStorageService {
       ownerUserId !== undefined && ownerUserId !== null && String(ownerUserId).length > 0
         ? `u-${String(ownerUserId)}`
         : "anon";
-    const fullPath = `${privateObjectDir}/uploads/${ownerSegment}/${objectId}`;
+    const key = `${privateDir}/uploads/${ownerSegment}/${objectId}`;
 
-    const { bucketName, objectName } = parseObjectPath(fullPath);
-
-    return signObjectURL({
-      bucketName,
-      objectName,
-      method: "PUT",
-      ttlSec: 900,
-    });
+    const cmd = new PutObjectCommand({ Bucket: bucket, Key: key });
+    return getSignedUrl(client, cmd, { expiresIn: 900 });
   }
 
-  async getObjectEntityFile(objectPath: string): Promise<File> {
+  async getObjectEntityFile(objectPath: string): Promise<ObjectFile> {
     if (!objectPath.startsWith("/objects/")) {
       throw new ObjectNotFoundError();
     }
-
-    const parts = objectPath.slice(1).split("/");
-    if (parts.length < 2) {
+    const entityId = objectPath.slice("/objects/".length);
+    if (!entityId) {
       throw new ObjectNotFoundError();
     }
-
-    const entityId = parts.slice(1).join("/");
-    let entityDir = this.getPrivateObjectDir();
-    if (!entityDir.endsWith("/")) {
-      entityDir = `${entityDir}/`;
-    }
-    const objectEntityPath = `${entityDir}${entityId}`;
-    const { bucketName, objectName } = parseObjectPath(objectEntityPath);
-    const bucket = objectStorageClient.bucket(bucketName);
-    const objectFile = bucket.file(objectName);
-    const [exists] = await objectFile.exists();
+    const { bucket } = r2Config();
+    const privateDir = stripSlashes(this.getPrivateObjectDir());
+    const key = `${privateDir}/${entityId}`;
+    const file = new ObjectFile(bucket, key);
+    const [exists] = await file.exists();
     if (!exists) {
       throw new ObjectNotFoundError();
     }
-    return objectFile;
+    return file;
   }
 
+  /**
+   * Accepts either an already-normalized `/objects/<entityId>` path or
+   * a presigned R2 URL produced by `getObjectEntityUploadURL`. In both
+   * cases returns the canonical `/objects/<entityId>` shape that gets
+   * persisted on the model. Anything else (including legacy GCS URLs —
+   * none exist per Task #1006 verification) passes through unchanged.
+   */
   normalizeObjectEntityPath(rawPath: string): string {
-    if (!rawPath.startsWith("https://storage.googleapis.com/")) {
-      return rawPath;
+    if (rawPath.startsWith("/objects/")) return rawPath;
+
+    let urlKey: string | null = null;
+    try {
+      const url = new URL(rawPath);
+      // R2 with forcePathStyle: true uses /<bucket>/<key> in the path.
+      const parts = url.pathname.split("/").filter(Boolean);
+      if (parts.length >= 2) {
+        urlKey = parts.slice(1).join("/");
+      }
+    } catch {
+      // Not a URL — fall through and treat rawPath as a key/path.
     }
 
-    const url = new URL(rawPath);
-    const rawObjectPath = url.pathname;
-
-    let objectEntityDir = this.getPrivateObjectDir();
-    if (!objectEntityDir.endsWith("/")) {
-      objectEntityDir = `${objectEntityDir}/`;
+    const key = urlKey ?? rawPath.replace(/^\/+/, "");
+    const privateDir = stripSlashes(this.getPrivateObjectDir());
+    const prefix = `${privateDir}/`;
+    if (key.startsWith(prefix)) {
+      return `/objects/${key.slice(prefix.length)}`;
     }
-
-    if (!rawObjectPath.startsWith(objectEntityDir)) {
-      return rawObjectPath;
-    }
-
-    const entityId = rawObjectPath.slice(objectEntityDir.length);
-    return `/objects/${entityId}`;
+    return rawPath;
   }
 
   async trySetObjectEntityAclPolicy(
     rawPath: string,
-    aclPolicy: ObjectAclPolicy
+    aclPolicy: ObjectAclPolicy,
   ): Promise<string> {
     const normalizedPath = this.normalizeObjectEntityPath(rawPath);
     if (!normalizedPath.startsWith("/")) {
@@ -200,23 +356,21 @@ export class ObjectStorageService {
   /**
    * Task #736 — delete an evidence object referenced by a model.
    * Accepts either the canonical `/objects/<id>` path stored on the
-   * model or a raw `https://storage.googleapis.com/...` upload URL.
-   * Returns true if the underlying GCS object was deleted (or never
-   * existed); false on any other failure so callers can decide to log
-   * and continue rather than fail the surrounding operation.
+   * model or a raw presigned upload URL. Returns true if the underlying
+   * object was deleted (or never existed); false on any other failure
+   * so callers can decide to log and continue rather than fail the
+   * surrounding operation.
    */
   async deleteObjectEntity(rawPath: string): Promise<boolean> {
     try {
       const normalized = this.normalizeObjectEntityPath(rawPath);
       if (!normalized.startsWith("/objects/")) return false;
-      const parts = normalized.slice(1).split("/");
-      if (parts.length < 2) return false;
-      const entityId = parts.slice(1).join("/");
-      let entityDir = this.getPrivateObjectDir();
-      if (!entityDir.endsWith("/")) entityDir = `${entityDir}/`;
-      const fullPath = `${entityDir}${entityId}`;
-      const { bucketName, objectName } = parseObjectPath(fullPath);
-      const file = objectStorageClient.bucket(bucketName).file(objectName);
+      const entityId = normalized.slice("/objects/".length);
+      if (!entityId) return false;
+      const { bucket } = r2Config();
+      const privateDir = stripSlashes(this.getPrivateObjectDir());
+      const key = `${privateDir}/${entityId}`;
+      const file = new ObjectFile(bucket, key);
       await file.delete({ ignoreNotFound: true });
       return true;
     } catch (err) {
@@ -227,40 +381,70 @@ export class ObjectStorageService {
 
   /**
    * Task #736 — list every `uploads/<id>` object under PRIVATE_OBJECT_DIR.
-   * Used by the orphan-uploads sweeper to compare against the set of
-   * objectPaths currently referenced by `financial_models` rows.
    * Returns `/objects/<id>` paths so callers can compare directly with
    * what's persisted on the model.
    */
   async listUploadObjectPaths(): Promise<string[]> {
-    let entityDir = this.getPrivateObjectDir();
-    if (!entityDir.endsWith("/")) entityDir = `${entityDir}/`;
-    const prefixPath = `${entityDir}uploads/`;
-    const { bucketName, objectName: prefix } = parseObjectPath(prefixPath);
-    const bucket = objectStorageClient.bucket(bucketName);
-    const [files] = await bucket.getFiles({ prefix });
-    const dirEntity = entityDir.replace(/^\//, "").split("/").slice(1).join("/");
-    return files.map((f) => {
-      const name = f.name;
-      const rel = name.startsWith(dirEntity) ? name.slice(dirEntity.length) : name;
-      return `/objects/${rel}`;
-    });
+    const { client, bucket } = r2Config();
+    const privateDir = stripSlashes(this.getPrivateObjectDir());
+    const prefix = `${privateDir}/uploads/`;
+    const out: string[] = [];
+    let continuationToken: string | undefined;
+    do {
+      const res = await client.send(
+        new ListObjectsV2Command({
+          Bucket: bucket,
+          Prefix: prefix,
+          ContinuationToken: continuationToken,
+        }),
+      );
+      for (const c of res.Contents ?? []) {
+        if (c.Key && c.Key.startsWith(`${privateDir}/`)) {
+          const entityId = c.Key.slice(privateDir.length + 1);
+          out.push(`/objects/${entityId}`);
+        }
+      }
+      continuationToken = res.IsTruncated ? res.NextContinuationToken : undefined;
+    } while (continuationToken);
+    return out;
   }
 
   // Task #734 — derive the planned owner userId from a normalized
   // object path produced by `getObjectEntityUploadURL(ownerUserId)`.
-  // Object paths look like `/objects/uploads/u-<userId>/<uuid>`.
-  // Returns undefined for legacy/anonymous paths.
+  //
+  // Canonical shape is *exactly* `/objects/uploads/u-<userId>/<objectId>`:
+  // three segments after `/objects/`, the first must be the literal
+  // string `uploads`, the second must start with `u-`, the third must
+  // be a non-empty single segment. Anything else (extra segments, a
+  // different prefix, an empty userId, slashes inside the objectId)
+  // returns undefined.
+  //
+  // This is used as a defense-in-depth authorization fallback in
+  // `/storage/objects/*` and `/storage/evidence-thumbnail/objects/*`
+  // when no ACL policy has been written yet (e.g. uploaded but never
+  // finalized). A loose match here would let a caller dress up a
+  // request path with an attacker-chosen `u-<self-id>` segment in
+  // front of the real owner's segment and get past the fallback.
+  // Even though the actual R2 key is derived from the same request
+  // path (so a forged path resolves to a non-existent object and
+  // would 404 today), anchoring the parser keeps the contract honest
+  // for any future caller that adds a non-canonical key shape.
   parseOwnerUserIdFromObjectPath(objectPath: string): string | undefined {
     if (!objectPath.startsWith("/objects/")) return undefined;
-    const parts = objectPath.split("/").filter(Boolean);
-    for (const seg of parts) {
-      if (seg.startsWith("u-")) {
-        const id = seg.slice(2);
-        if (id.length > 0) return id;
-      }
-    }
-    return undefined;
+    const entityId = objectPath.slice("/objects/".length);
+    const parts = entityId.split("/");
+    if (parts.length !== 3) return undefined;
+    if (parts[0] !== "uploads") return undefined;
+    const ownerSeg = parts[1];
+    if (!ownerSeg.startsWith("u-")) return undefined;
+    const id = ownerSeg.slice(2);
+    if (id.length === 0) return undefined;
+    // userIds in this codebase are numeric (serial PKs) but we accept
+    // the standard URL-safe alphanumeric+_- set to avoid coupling
+    // this parser to any one ID scheme.
+    if (!/^[A-Za-z0-9_-]+$/.test(id)) return undefined;
+    if (parts[2].length === 0) return undefined;
+    return id;
   }
 
   async canAccessObjectEntity({
@@ -269,7 +453,7 @@ export class ObjectStorageService {
     requestedPermission,
   }: {
     userId?: string;
-    objectFile: File;
+    objectFile: ObjectFile;
     requestedPermission?: ObjectPermission;
   }): Promise<boolean> {
     return canAccessObject({
@@ -278,64 +462,4 @@ export class ObjectStorageService {
       requestedPermission: requestedPermission ?? ObjectPermission.READ,
     });
   }
-}
-
-function parseObjectPath(path: string): {
-  bucketName: string;
-  objectName: string;
-} {
-  if (!path.startsWith("/")) {
-    path = `/${path}`;
-  }
-  const pathParts = path.split("/");
-  if (pathParts.length < 3) {
-    throw new Error("Invalid path: must contain at least a bucket name");
-  }
-
-  const bucketName = pathParts[1];
-  const objectName = pathParts.slice(2).join("/");
-
-  return {
-    bucketName,
-    objectName,
-  };
-}
-
-async function signObjectURL({
-  bucketName,
-  objectName,
-  method,
-  ttlSec,
-}: {
-  bucketName: string;
-  objectName: string;
-  method: "GET" | "PUT" | "DELETE" | "HEAD";
-  ttlSec: number;
-}): Promise<string> {
-  const request = {
-    bucket_name: bucketName,
-    object_name: objectName,
-    method,
-    expires_at: new Date(Date.now() + ttlSec * 1000).toISOString(),
-  };
-  const response = await fetch(
-    `${REPLIT_SIDECAR_ENDPOINT}/object-storage/signed-object-url`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(request),
-      signal: AbortSignal.timeout(30_000),
-    }
-  );
-  if (!response.ok) {
-    throw new Error(
-      `Failed to sign object URL, errorcode: ${response.status}, ` +
-        `make sure you're running on Replit`
-    );
-  }
-
-  const { signed_url: signedURL } = (await response.json()) as { signed_url: string };
-  return signedURL;
 }

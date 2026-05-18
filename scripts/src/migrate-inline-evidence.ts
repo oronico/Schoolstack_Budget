@@ -25,6 +25,35 @@ import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
 import { db, pool, financialModelsTable } from "@workspace/db";
 
+// ── FROZEN 2026-05-18 (Task #1004 — Cloudflare R2 migration) ───────
+// This script targeted the now-removed Replit App Storage sidecar at
+// 127.0.0.1:1106. The migration it performed (lifting inline-base64
+// evidence out of the model JSON into App Storage) was completed in
+// production well before the storage backend swap. A pre-migration DB
+// scan during Task #1004 found zero remaining inline `dataBase64`
+// payloads across all 11,751 model rows, so there is nothing left for
+// this script to do.
+//
+// The code is kept on disk only as historical reference for how the
+// one-time migration was performed. Running it now would (a) fail
+// instantly because the sidecar endpoint no longer exists in any
+// deployment, and (b) be a no-op against the current DB even if it
+// somehow succeeded.
+//
+// To re-enable (do not do this without a clear reason): set
+// MIGRATE_INLINE_EVIDENCE_ACK_FROZEN=i-know-what-im-doing and rewrite
+// signPutUrl/uploadBytes to target R2 instead of the GCS sidecar.
+if (
+  process.env.MIGRATE_INLINE_EVIDENCE_ACK_FROZEN !== "i-know-what-im-doing"
+) {
+  console.error(
+    "[migrate-inline-evidence] FROZEN — this script targets the removed " +
+      "Replit App Storage sidecar and the migration it performed is complete. " +
+      "See script header for details.",
+  );
+  process.exit(1);
+}
+
 const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
 
 interface InlineFile {
