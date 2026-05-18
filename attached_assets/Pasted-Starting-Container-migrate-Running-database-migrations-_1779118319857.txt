@@ -1,0 +1,118 @@
+Starting Container
+[migrate] Running database migrations...
+[migrate] Schema up to date.
+[cleanup-orphan-uploads] mode=DRY-RUN
+[cleanup-orphan-uploads] loading referenced objectPaths from financial_models…
+[rotate-sensitive-encryption-key] mode=dry-run limit=all
+[startup] INFO: Optional env var POSTMARK_SERVER_TOKEN not set — Postmark server token (failover provider for transactional emails)
+[startup] INFO: Optional env var EMAIL_PROVIDER not set — Override email provider selection: resend | postmark | console
+(node:1) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[rotate-sensitive-encryption-key] active KEK id: 2a57c442
+[rotate-sensitive-encryption-key] loaded KEK ids: [2a57c442]
+  borrower_entities: scanned=0 already_on_active=0 rewrapped=0 failed=0
+  founder_profiles: scanned=0 already_on_active=0 rewrapped=0 failed=0
+[rotate-sensitive-encryption-key] nothing to do — every row is already on the active KEK.
+[cleanup-orphan-uploads] scanned 22 models, 0 referenced objectPaths
+[cleanup-orphan-uploads] listing uploads/* in App Storage…
+[cleanup-orphan-uploads] fatal error: Error: PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' tool and set PRIVATE_OBJECT_DIR env var.
+    at p6.getPrivateObjectDir (/app/index.cjs:1211:48261)
+    at p6.listUploadObjectPaths (/app/index.cjs:1211:50573)
+    at mCe (/app/index.cjs:1236:1118)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async con (/app/index.cjs:1236:1970)
+[migrate] Running database migrations...
+[migrate] Schema up to date.
+[cleanup-orphan-uploads] mode=DRY-RUN
+[cleanup-orphan-uploads] loading referenced objectPaths from financial_models…
+[rotate-sensitive-encryption-key] mode=dry-run limit=all
+[startup] INFO: Optional env var POSTMARK_SERVER_TOKEN not set — Postmark server token (failover provider for transactional emails)
+[startup] INFO: Optional env var EMAIL_PROVIDER not set — Override email provider selection: resend | postmark | console
+(node:1) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[rotate-sensitive-encryption-key] active KEK id: 2a57c442
+[rotate-sensitive-encryption-key] loaded KEK ids: [2a57c442]
+  borrower_entities: scanned=0 already_on_active=0 rewrapped=0 failed=0
+  founder_profiles: scanned=0 already_on_active=0 rewrapped=0 failed=0
+[rotate-sensitive-encryption-key] nothing to do — every row is already on the active KEK.
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async con (/app/index.cjs:1236:1970)
+[cleanup-orphan-uploads] scanned 22 models, 0 referenced objectPaths
+[cleanup-orphan-uploads] listing uploads/* in App Storage…
+[cleanup-orphan-uploads] fatal error: Error: PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' tool and set PRIVATE_OBJECT_DIR env var.
+    at p6.getPrivateObjectDir (/app/index.cjs:1211:48261)
+    at p6.listUploadObjectPaths (/app/index.cjs:1211:50573)
+    at mCe (/app/index.cjs:1236:1118)
+[migrate] Running database migrations...
+[migrate] Schema up to date.
+[cleanup-orphan-uploads] mode=DRY-RUN
+[cleanup-orphan-uploads] loading referenced objectPaths from financial_models…
+[rotate-sensitive-encryption-key] mode=dry-run limit=all
+[startup] INFO: Optional env var POSTMARK_SERVER_TOKEN not set — Postmark server token (failover provider for transactional emails)
+[startup] INFO: Optional env var EMAIL_PROVIDER not set — Override email provider selection: resend | postmark | console
+(node:1) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[rotate-sensitive-encryption-key] active KEK id: 2a57c442
+[rotate-sensitive-encryption-key] loaded KEK ids: [2a57c442]
+  borrower_entities: scanned=0 already_on_active=0 rewrapped=0 failed=0
+  founder_profiles: scanned=0 already_on_active=0 rewrapped=0 failed=0
+[rotate-sensitive-encryption-key] nothing to do — every row is already on the active KEK.
+[cleanup-orphan-uploads] scanned 22 models, 0 referenced objectPaths
+[cleanup-orphan-uploads] listing uploads/* in App Storage…
+[cleanup-orphan-uploads] fatal error: Error: PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' tool and set PRIVATE_OBJECT_DIR env var.
+    at p6.getPrivateObjectDir (/app/index.cjs:1211:48261)
+    at p6.listUploadObjectPaths (/app/index.cjs:1211:50573)
+    at mCe (/app/index.cjs:1236:1118)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async con (/app/index.cjs:1236:1970)
+[migrate] Running database migrations...
+[migrate] Schema up to date.
+[cleanup-orphan-uploads] mode=DRY-RUN
+[cleanup-orphan-uploads] loading referenced objectPaths from financial_models…
+[rotate-sensitive-encryption-key] mode=dry-run limit=all
+[startup] INFO: Optional env var POSTMARK_SERVER_TOKEN not set — Postmark server token (failover provider for transactional emails)
+[startup] INFO: Optional env var EMAIL_PROVIDER not set — Override email provider selection: resend | postmark | console
+(node:1) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[rotate-sensitive-encryption-key] active KEK id: 2a57c442
+[rotate-sensitive-encryption-key] loaded KEK ids: [2a57c442]
+  borrower_entities: scanned=0 already_on_active=0 rewrapped=0 failed=0
+  founder_profiles: scanned=0 already_on_active=0 rewrapped=0 failed=0
+[rotate-sensitive-encryption-key] nothing to do — every row is already on the active KEK.
+[cleanup-orphan-uploads] scanned 22 models, 0 referenced objectPaths
+[cleanup-orphan-uploads] listing uploads/* in App Storage…
+[cleanup-orphan-uploads] fatal error: Error: PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' tool and set PRIVATE_OBJECT_DIR env var.
+    at p6.getPrivateObjectDir (/app/index.cjs:1211:48261)
+    at p6.listUploadObjectPaths (/app/index.cjs:1211:50573)
+    at mCe (/app/index.cjs:1236:1118)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async con (/app/index.cjs:1236:1970)
+[migrate] Running database migrations...
+[migrate] Schema up to date.
+[cleanup-orphan-uploads] mode=DRY-RUN
+[cleanup-orphan-uploads] loading referenced objectPaths from financial_models…
+[rotate-sensitive-encryption-key] mode=dry-run limit=all
+[startup] INFO: Optional env var POSTMARK_SERVER_TOKEN not set — Postmark server token (failover provider for transactional emails)
+[startup] INFO: Optional env var EMAIL_PROVIDER not set — Override email provider selection: resend | postmark | console
+(node:1) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[rotate-sensitive-encryption-key] active KEK id: 2a57c442
+[rotate-sensitive-encryption-key] loaded KEK ids: [2a57c442]
+  borrower_entities: scanned=0 already_on_active=0 rewrapped=0 failed=0
+  founder_profiles: scanned=0 already_on_active=0 rewrapped=0 failed=0
+[rotate-sensitive-encryption-key] nothing to do — every row is already on the active KEK.
+[cleanup-orphan-uploads] scanned 22 models, 0 referenced objectPaths
+[cleanup-orphan-uploads] listing uploads/* in App Storage…
+[cleanup-orphan-uploads] fatal error: Error: PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' tool and set PRIVATE_OBJECT_DIR env var.
+    at p6.getPrivateObjectDir (/app/index.cjs:1211:48261)
+    at p6.listUploadObjectPaths (/app/index.cjs:1211:50573)
+    at mCe (/app/index.cjs:1236:1118)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async con (/app/index.cjs:1236:1970)
+[migrate] Running database migrations...
+[migrate] Schema up to date.
+[cleanup-orphan-uploads] mode=DRY-RUN
+[cleanup-orphan-uploads] loading referenced objectPaths from financial_models…
+[rotate-sensitive-encryption-key] mode=dry-run limit=all
+[startup] INFO: Optional env var POSTMARK_SERVER_TOKEN not set — Postmark server token (failover provider for transactional emails)
+[startup] INFO: Optional env var EMAIL_PROVIDER not set — Override email provider selection: resend | postmark | console

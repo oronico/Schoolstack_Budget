@@ -50,9 +50,9 @@ For each change, the table records:
 
 ---
 
-## 1. Schema migrations (Drizzle, `lib/db/drizzle/000[3-7]*.sql`)
+## 1. Schema migrations (Drizzle, `lib/db/drizzle/000[3-8]*.sql`)
 
-All five migrations below land via the standard
+All six migrations below land via the standard
 `pnpm --filter @workspace/db run migrate` chain (Task #283 wired the
 Drizzle migrator into the API server boot). They use `IF NOT EXISTS`
 guards and are idempotent — re-running is safe.
@@ -64,10 +64,11 @@ guards and are idempotent — re-running is safe.
 | 1.3 | `0005_simple_mysterio.sql` | New underwriting-side tables (`underwriting_applications`, `documents`, `evidence`, `metrics_snapshots`, `eligibility_gate_results`, `audit_log`) for Task #605 Phase 1. | No existing rows in any of the six new tables. | `one-shot SQL` (Drizzle migrator). | `DROP TABLE` each in dependency order. None of the founder-side flows depend on these tables. | `inline`. |
 | 1.4 | `0006_coach_surface_overrides.sql` | New table `coach_surface_overrides` for admin snooze/retire (Task #430). | No existing rows. | `one-shot SQL` (Drizzle migrator). | `DROP TABLE coach_surface_overrides`. The coach-surface read path falls back to "no override" when the table is empty or missing — the Task #430 implementation was written that way precisely so the migration is reversible. | `inline`. |
 | 1.5 | `0007_friendly_thunderbolt.sql` | New tables `borrower_entities` and `founder_profiles` for Task #620 Phase 2 underwriting / KYC. | No existing rows. | `one-shot SQL` (Drizzle migrator). | `DROP TABLE` in dependency order. Founder-side wizard does not reference these. | `inline`. |
+| 1.6 | `0008_integrity_drift_events.sql` | New table `integrity_drift_events` for the production math-integrity drift monitor (Task #987). One row per (model, metric, surface) tuple where the canonical value disagreed with the rendered value beyond the registry-driven tolerance, plus `integrity_drift_sampled` marker rows that record the sample denominator. Two btree indexes: `(model_id, metric_id)` and `(severity, request_timestamp)`. | No existing rows — the table is created by this migration. | `one-shot SQL` (Drizzle migrator). | `DROP TABLE integrity_drift_events`. The drift monitor's write path (`artifacts/api-server/src/lib/integrity/drift-monitor.ts`) is best-effort and guards every insert against DB errors, so dropping the table only degrades the admin Integrity tab (Task #992) to an empty state — no founder-facing surface depends on it. | `inline` — Drizzle migrator runs on API boot before the server accepts traffic. |
 
 **Notes:**
 
-- The five migrations are independent of one another and of the JSON
+- The six migrations are independent of one another and of the JSON
   blob changes in §3. They are all `ADD`/`CREATE` operations — none
   drop or rename a column on an existing populated table, so there is
   no risk of data loss.

@@ -162,14 +162,88 @@ established by #930 should continue past launch:
    just test fixtures.** Sampled production-traffic check that
    computes the canonical value alongside the rendered value for
    every registered metric and pages the team on a delta above the
-   registry-driven severity threshold.
+   registry-driven severity threshold. **Update 2026-05-18 —
+   promoted from post-launch into M6/M7 cutover scope.** The
+   implementation (migration `0008_integrity_drift_events.sql`,
+   schema, monitor module, four `routes/models.ts` call sites, admin
+   UI route, operational doc, tests) all landed under the #987
+   banner and are in main. The migration is row 1.6 of
+   `docs/operations/go-live-data-migration-plan.md` §1. The activation
+   posture (`INTEGRITY_DRIFT_SAMPLE_RATE=0` at cutover; flag raised
+   only after the criteria in §"Production drift monitor — cutover
+   posture" below are met) is the live decision; flip-the-flag is a
+   post-cutover operational step, not part of the M7 review.
 3. **Task #988 — Make schema changes ship with their migration,
    rollback, and impact count built in.** Tooling layer above the
    M6 hand-assembled migration plan so the next go-live plan is
    generated from the repo rather than re-assembled by hand.
 
 All three were filed via `proposeFollowUpTasks` from this milestone
-and live in the project task tracker as PROPOSED (status visible in
-the task tracker UI; they have not yet been promoted into the active
-task list). They are NOT prerequisites for the M7 cutover — they are
-the post-launch architectural posture #930 leaves behind.
+and live in the project task tracker as PROPOSED. **Task #987 was
+subsequently promoted into M6/M7 cutover scope on 2026-05-18 —
+see the inline update on item 2 above and §"Production drift
+monitor — cutover posture" below.** Tasks #986 and #988 remain
+post-launch architectural posture #930 leaves behind and are NOT
+prerequisites for the M7 cutover.
+
+---
+
+## Production drift monitor — cutover posture (Task #987)
+
+**Why this section exists.** A future reviewer opening `psql` after
+cutover and asking "the `integrity_drift_events` table exists but
+shows no rows — is the drift monitor broken?" should find the answer
+here, not in commit messages or in someone's head. The empty table is
+by design; the monitor is shipped **dark** at cutover and activated
+deliberately once the conditions below are met.
+
+### Cutover-day posture
+
+- **Migration:** `0008_integrity_drift_events.sql` runs inline at
+  Drizzle migrator boot (row 1.6 of the M6 plan §1). After cutover
+  the table exists in production and the two btree indexes are built.
+- **Code path:** the four `routes/models.ts` call sites (lines 1119,
+  1195, 1311, 1382) DO call into `drift-monitor.ts` on every
+  consultant / PDF / board / board-PDF response — fire-and-forget via
+  `setImmediate`, never blocking the user response.
+- **Sample gate:** `INTEGRITY_DRIFT_SAMPLE_RATE` is **unset (treated
+  as `0`)** on the production Railway environment at cutover. With
+  the gate at zero, the monitor short-circuits before any DB write,
+  so the table stays empty by design.
+- **Alert path:** ADMIN_EMAILS is wired but no digest can fire while
+  `SAMPLE_RATE=0`. The first time the flag is raised above zero is
+  also the first time the alert path is live against real traffic;
+  treat that change as its own operational event.
+
+### Criteria for raising `INTEGRITY_DRIFT_SAMPLE_RATE` above zero
+
+These are go/no-go gates, not a target date. "Should we turn this on
+yet?" has a yes/no answer when every box below is checked. If any
+box is `[ ]`, the answer is no.
+
+| # | Gate | Signal | State |
+|---|---|---|---|
+| DM.1 | **Real-founder packet volume.** At least **25** distinct real-founder financial models have rendered a lender or board packet end-to-end (not demos, not internal QA) since cutover, with zero PDF render errors and zero workbook export errors logged across those renders. | Count from the audit log; PDF/workbook error count from the structured log channel for the same window. | [ ] |
+| DM.2 | **Stability window.** **7 consecutive calendar days** of post-cutover production traffic with no P0/P1 incident on a math-affecting code path (engine, packet builder, workbook writer, drift monitor itself). | Incident log + on-call rotation handoff notes. | [ ] |
+| DM.3 | **CI integrity harness green.** The `api-tests` workflow has been green on `main` for the same 7-day window — specifically the `test:math-integrity-harness`, `test:integrity-canonical-compute`, `test:integrity-canonical-baseline`, `test:integrity-drift-monitor`, and `test:integrity-drift-monitor-coverage` lines. A red harness during the stability window resets the clock; alert fatigue from a monitor whose own CI is failing would be worse than no monitor. | Latest 7-day CI history. | [ ] |
+| DM.4 | **Coverage gate green AND complete.** Every metric in `CANONICAL_METRICS` is either mapped to a packet leaf in `M2_LABEL_TO_METRIC` OR present in `PRODUCTION_DRIFT_EXCLUSIONS` with an auditable rationale. (`test:integrity-drift-monitor-coverage` enforces this; if it has been waived or skipped in the window, the answer is no.) | Test output + manual read of `src/lib/integrity/label-mappings.ts`. | [ ] |
+| DM.5 | **Alert path proven.** A synthetic high-severity drift event has been injected (e.g. via a one-off script in a non-production environment with the same alerting wiring) and the digest landed in the ADMIN_EMAILS inbox within the configured `INTEGRITY_DRIFT_ALERT_DIGEST_MINUTES`. Live testing the paging mechanism on the same change that activates production paging is unacceptable. | Inbox screenshot + log line showing `digestPaged=true`. | [ ] |
+| DM.6 | **First-48h owner named.** A specific engineer has agreed (calendar-confirmed) to be primary on-call for the first 48 hours after the flag is raised — to triage every digest, distinguish real drift from monitor false positives, and pull the flag back to zero if signal-to-noise is below 1:1. | Calendar invite + name recorded here. | [ ] |
+
+### Activation procedure (when DM.1–DM.6 are all checked)
+
+1. Start at `INTEGRITY_DRIFT_SAMPLE_RATE=0.01` (1% of traffic), not
+   at `1.0`. Run for 24 hours. Read the first digest under no time
+   pressure.
+2. If signal-to-noise on the 24h window is ≥ 1:1 (real drift events
+   outnumber monitor false positives), raise to `0.1` (10%) for
+   another 24 hours.
+3. Raise to `1.0` (full traffic) only after a second clean 24h window
+   at `0.1`. Record each transition (timestamp, prior rate, new rate,
+   reason) in this section as an append-only log below.
+
+### Activation log (append-only)
+
+| Date | Prior rate | New rate | Operator | Reason / signal |
+|---|---|---|---|---|
+| _(none — flag is at 0 as of cutover)_ | | | | |
